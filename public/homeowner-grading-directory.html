@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <title>HomeProHub – Homeowner Grading Directory</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .hero {
+      max-width: 900px;
+      margin: 48px auto 24px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #111827;
+    }
+    .hero-subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .directory-list-container {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+    }
+    .job-card {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f3f4f6;
+      padding-bottom: 10px;
+    }
+    .job-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .job-status {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      background: #f0fdf4;
+      color: #16a34a;
+      font-weight: 600;
+      border: 1px solid #dcfce7;
+    }
+    .grade-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      margin-left: 10px;
+    }
+    .grade-a { background: #10b981; } 
+    .grade-b { background: #3b82f6; } 
+    .grade-c { background: #f59e0b; } 
+    .grade-d { background: #fb923c; } 
+    .grade-f { background: #ef4444; } 
+    .job-meta {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .job-meta strong {
+      color: #1f2937;
+    }
+    .job-details {
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .grade-A-color { color: #10b981; }
+    .grade-B-color { color: #3b82f6; }
+    .grade-C-color { color: #f59e0b; }
+    .grade-F-color { color: #ef4444; }
+  </style></head><body><header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">HH</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="contractor.html">Dashboard</a>
+      <div class="profile-area">
+        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div></header><main>
+  <section class="hero">
+    <h1 class="hero-title">Homeowner Grading Directory.</h1>
+    <p class="hero-subtitle">
+      View and filter active job leads. Homeowner Grades (A+ to F) reflect communication, clarity, and payment history to help you qualify leads faster.
+    </p>
+  </section>
+
+  <section class="directory-list-container">
+    <div class="card" style="margin-bottom: 25px;">
+        <h3 style="margin-top: 0; font-size: 18px;">Filter Leads:</h3>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <input type="text" class="input" id="searchBar" placeholder="Search by job title or description..." style="flex-grow: 1;">
+            
+            <select id="gradeFilter" class="input" style="width: 150px;">
+                <option value="">Grade (All)</option>
+                <option value="A+">A+ / A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="F">D / F</option>
+            </select>
+
+            <select id="tradeFilter" class="input" style="width: 150px;">
+                <option value="">Trade (All)</option>
+                <option value="GC">General Contractor</option>
+                <option value="Plumber">Plumber</option>
+                <option value="Electrician">Electrician</option>
+                <option value="HVAC">HVAC</option>
+            </select>
+
+            <button class="btn-primary" id="applyFilters" style="padding: 8px 16px; font-size: 14px;">Apply Filters</button>
+        </div>
+    </div>
+
+    <div id="jobListings">
+        <p style="text-align: center; color: #6b7280;">Loading job leads...</p>
+    </div>
+  </section></main><script>
+  // --- MOCK DATA ---
+  const MOCK_JOBS = [
+      { id: 1, title: "Full Kitchen Remodel & Load-Bearing Wall Removal", grade: "A+", trade: "GC", zip: "68105", status: "New Lead - 2 Bids", details: "Client has detailed architectural plans, budget is confirmed in the high range, and all fixture selections are finalized. Requires structural engineer and plumbing permit." },
+      { id: 2, title: "Basement Bathroom Addition (Rough-in Only)", grade: "C", trade: "Plumber", zip: "90210", status: "Needs Bids - 1 Bid", details: "Homeowner description is vague and budget is not finalized. They have requested 3 separate scope changes in pre-bid messaging." },
+      { id: 3, title: "Panel Upgrade to 200 Amp Service", grade: "B", trade: "Electrician", zip: "78701", status: "New Lead - 0 Bids", details: "Straightforward panel replacement, photos of existing setup provided. Clear requirements, homeowner is responsive." },
+      { id: 4, title: "Emergency Water Heater Replacement", grade: "A", trade: "Plumber", zip: "33602", status: "Urgent - 4 Bids", details: "Water heater burst, needs immediate replacement with similar model. Homeowner is ready to approve quote immediately." },
+      { id: 5, title: "HVAC System Tune-Up & Duct Cleaning", grade: "F", trade: "HVAC", zip: "01001", status: "Old Lead - 5 Bids", details: "Homeowner has a history of delaying payments and cancelling appointments last minute. Low budget expectations." }
+  ];
+
+  // --- UTILITY FUNCTIONS ---
+  function getGradeClass(grade) {
+      if (grade === 'A' || grade === 'A+') return 'grade-a';
+      if (grade === 'B') return 'grade-b';
+      if (grade === 'C') return 'grade-c';
+      return 'grade-f';
+  }
+
+  function renderJobCard(job) {
+      const gradeClass = getGradeClass(job.grade);
+      return `
+          <div class="job-card">
+              <div class="job-header">
+                  <h4 class="job-title">${job.title}</h4>
+                  <span class="job-status">${job.status}</span>
+              </div>
+              <div class="job-meta">
+                  Homeowner Grade: <span class="grade-tag ${gradeClass}">${job.grade}</span> | 
+                  <strong>Trade Needed:</strong> ${job.trade} | 
+                  <strong>Location:</strong> ${job.zip} | 
+                  <strong>Posted:</strong> ${job.id % 2 === 0 ? '1 day ago' : '3 days ago'}
+              </div>
+              <p class="job-details">${job.details}</p>
+              <a href="#" class="btn-primary" style="width: 150px; font-size: 14px; padding: 8px;">View & Bid</a>
+          </div>
+      `;
+  }
+
+  function filterJobs() {
+      const search = document.getElementById('searchBar').value.toLowerCase();
+      const gradeFilter = document.getElementById('gradeFilter').value;
+      const tradeFilter = document.getElementById('tradeFilter').value;
+      const jobListingsEl = document.getElementById('jobListings');
+
+      let filteredJobs = MOCK_JOBS.filter(job => {
+          // 1. Search Filter (Job title or details)
+          const matchesSearch = job.title.toLowerCase().includes(search) || job.details.toLowerCase().includes(search);
+
+          // 2. Grade Filter
+          let matchesGrade = true;
+          if (gradeFilter === 'A+') {
+              matchesGrade = job.grade === 'A' || job.grade === 'A+';
+          } else if (gradeFilter === 'F') {
+              matchesGrade = job.grade === 'D' || job.grade === 'F';
+          } else if (gradeFilter) {
+              matchesGrade = job.grade === gradeFilter;
+          }
+
+          // 3. Trade Filter
+          const matchesTrade = !tradeFilter || job.trade === tradeFilter;
+
+          return matchesSearch && matchesGrade && matchesTrade;
+      });
+
+      if (filteredJobs.length === 0) {
+          jobListingsEl.innerHTML = `<p style="text-align: center; color: #ef4444; margin-top: 30px; font-weight: 600;">No leads found matching your criteria. Try adjusting your filters.</p>`;
+      } else {
+          jobListingsEl.innerHTML = filteredJobs.map(renderJobCard).join('');
+      }
+  }
+
+  // --- AUTH AND EVENT LISTENERS ---
+  function getUserData() {
+    try {
+      const role = localStorage.getItem("homeprohub_user_role");
+      return role ? { role: role, name: "User" } : null; 
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("homeprohub_user_role");
+    localStorage.removeItem("homeprohub_history_v1");
+    window.location.href = "index.html"; 
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Run auth check
+    const profileLinkEl = document.getElementById("profileLink");
+    const user = getUserData();
+    
+    if (user && user.role === 'contractor') {
+      // Optional: Load company name if present
+      try {
+          const profile = JSON.parse(localStorage.getItem('homeprohub_contractor_profile')) || {};
+          profileLinkEl.textContent = profile.companyName ? profile.companyName.split(' ')[0] : 'Profile';
+      } catch (e) {
+          profileLinkEl.textContent = 'Profile';
+      }
+      
+    } else {
+      window.location.href = "role-selection.html"; 
+    }
+
+    // Initial load and wire up filters
+    filterJobs(MOCK_JOBS);
+    document.getElementById('applyFilters').addEventListener('click', filterJobs);
+    document.getElementById('searchBar').addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') filterJobs();
+    });
+  });
+</script></body></html>

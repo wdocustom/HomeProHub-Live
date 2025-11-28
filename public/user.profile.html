@@ -1,0 +1,85 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <title>HomeProHub – Profile</title>
+  <link rel="stylesheet" href="styles.css" /></head><body><header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="#" id="dashboardLink">Dashboard</a>
+      <div class="profile-area">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+</header><main>
+  <div style="max-width: 900px; margin: 40px auto; padding: 0 24px;">
+    <div class="card" style="max-width: 500px; margin: 0 auto;">
+      <h1 class="form-title" style="margin-bottom: 20px;">Your Profile Details</h1>
+      
+      <p class="small-text">
+        This is a demo profile using local browser storage (localStorage). To log out, click the button in the navigation bar.
+      </p>
+
+      <div style="margin-top: 20px;">
+        <p><strong>Role:</strong> <span id="userRole">N/A</span></p>
+        <p><strong>Name:</strong> <span id="userName">N/A</span></p>
+        <p><strong>Email:</strong> <span id="userEmail">N/A</span></p>
+        <p><strong>Location:</strong> <span id="userLocation">N/A</span></p>
+        <p id="userTradeRow"><strong>Trade:</strong> <span id="userTrade">N/A</span></p>
+      </div>
+      
+      <div style="margin-top: 30px;">
+        <button class="btn-secondary" onclick="logout()">Logout of HomeProHub</button>
+      </div>
+    </div>
+  </div></main>
+  
+  <script>
+    const userRoleEl = document.getElementById('userRole');
+    const userNameEl = document.getElementById('userName');
+    const userEmailEl = document.getElementById('userEmail');
+    const userLocationEl = document.getElementById('userLocation');
+    const userTradeRowEl = document.getElementById('userTradeRow');
+    const userTradeEl = document.getElementById('userTrade');
+    const dashboardLinkEl = document.getElementById('dashboardLink'); // New element
+
+    // 1. Load user data from local storage
+    let user = null;
+    try {
+      const raw = localStorage.getItem("homeprohub_user");
+      user = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.error("Error parsing user data:", e);
+    }
+
+    // 2. Display user data & set dashboard link
+    if (user && user.name) {
+      userNameEl.textContent = user.name;
+      userRoleEl.textContent = user.role;
+      userEmailEl.textContent = user.email;
+      userLocationEl.textContent = user.location;
+      
+      // Set the Dashboard Link based on role
+      if (user.role === 'contractor') {
+        userTradeEl.textContent = user.trade;
+        dashboardLinkEl.href = "contractor.html"; // Contractor Dashboard
+      } else {
+        userTradeRowEl.style.display = 'none'; // Hide trade for homeowners
+        dashboardLinkEl.href = "home.html"; // Homeowner Dashboard
+      }
+    } else {
+      // If no user data, redirect to index/login
+      alert("You must be signed in to view your profile.");
+      window.location.href = "index.html";
+    }
+
+    // 3. Logout function
+    function logout() {
+      localStorage.removeItem("homeprohub_user");
+      localStorage.removeItem("homeprohub_history_v1"); 
+      window.location.href = "index.html";
+    }
+  </script></body></html>

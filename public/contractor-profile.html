@@ -1,0 +1,203 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <title>HomeProHub – Contractor Profile Setup</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .form-container {
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 30px 24px;
+      text-align: left;
+    }
+    .form-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .form-sub {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 600px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: #4b5563;
+      margin-bottom: 3px;
+      margin-top: 8px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      background: white;
+      font-size: 14px;
+    }
+    .full-width {
+      grid-column: 1 / -1;
+    }
+    .save-btn {
+      margin-top: 30px;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+  </style></head><body><header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">HH</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="contractor.html">Dashboard</a>
+    </div>
+  </div></header><main>
+  <div class="form-container card">
+    <h1 class="form-title">Contractor Profile & Verification</h1>
+    <p class="form-sub">
+      Please complete your profile. This information is used to verify your business status and calculate your initial HomeProHub Contractor Grade.
+    </p>
+
+    <form id="profileForm">
+      <div class="form-grid">
+        <div class="full-width">
+          <h3 style="font-size: 18px; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Verification & Trade Info</h3>
+        </div>
+        
+        <div>
+          <label for="companyName">Company Name</label>
+          <input id="companyName" type="text" required>
+        </div>
+        <div>
+          <label for="trade">Primary Trade</label>
+          <select id="trade" required>
+            <option value="gc">General Contractor / Remodeling</option>
+            <option value="electrical">Electrical</option>
+            <option value="plumbing">Plumbing</option>
+            <option value="hvac">HVAC / Mechanical</option>
+            <option value="carpentry">Carpentry / Framing</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        
+        <div class="full-width">
+          <label for="license">State/City License Number (Required for Grade)</label>
+          <input id="license" type="text" placeholder="e.g. CBC1234567" required>
+        </div>
+        
+        <div>
+          <label for="yearsExperience">Years of Experience in Trade</label>
+          <input id="yearsExperience" type="number" min="1" required>
+        </div>
+        <div>
+          <label for="zipCode">Primary Service ZIP Code</label>
+          <input id="zipCode" type="text" placeholder="e.g. 33602" required>
+        </div>
+        
+        <div class="full-width">
+          <label for="description">Company Description / Specialties</label>
+          <textarea id="description" placeholder="Max 250 characters. Describe what makes your business unique or the types of projects you focus on." maxlength="250"></textarea>
+        </div>
+      </div>
+      
+      <div class="full-width" style="text-align: center;">
+        <button type="submit" class="btn-primary save-btn">Save Profile & Access Tools</button>
+      </div>
+    </form>
+
+    <p id="statusMessage" class="small-text" style="text-align: center; margin-top: 15px; color: #16a34a;"></p>
+  </div></main>
+
+<script>
+  // --- AUTH AND LOGIC ---
+  function getProfileData() {
+    try {
+      const rawRole = localStorage.getItem("homeprohub_user_role");
+      
+      if (!rawRole || rawRole !== 'contractor') {
+          window.location.href = "role-selection.html"; // Not logged in or wrong role
+          return null;
+      }
+
+      return true; // Simple check passed
+    } catch (e) {
+      window.location.href = "role-selection.html"; 
+      return null;
+    }
+  }
+
+  getProfileData(); // Run check on load
+
+  const form = document.getElementById('profileForm');
+  const statusMessage = document.getElementById('statusMessage');
+
+  form.addEventListener('submit', (e) => {
+    // 🚨 CRITICAL FIX: Prevent the browser's default page refresh
+    e.preventDefault(); 
+
+    // Collect Data
+    const profileData = {
+      companyName: document.getElementById('companyName').value.trim(),
+      trade: document.getElementById('trade').value,
+      license: document.getElementById('license').value.trim(),
+      yearsExperience: document.getElementById('yearsExperience').value.trim(),
+      zipCode: document.getElementById('zipCode').value.trim(),
+      description: document.getElementById('description').value.trim(),
+      profileComplete: true // Flag for completeness
+    };
+
+    // Save profile data merged with existing user role
+    try {
+      // We will now save the full profile object under the dedicated key
+      localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
+      
+      // Safety check: ensure role key exists
+      localStorage.setItem('homeprohub_user_role', 'contractor'); 
+
+      statusMessage.textContent = 'Profile saved! Accessing your dashboard...';
+
+      // --- Success: Redirect to the main contractor dashboard ---
+      setTimeout(() => {
+        window.location.href = 'contractor.html';
+      }, 500); 
+
+    } catch (err) {
+      statusMessage.textContent = 'Error saving profile. Please check your browser settings or storage space.';
+      console.error("Local Storage Save Error:", err);
+    }
+  });
+
+  // Functionality to Load Existing Data (If they come back to edit)
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
+      if (rawProfile) {
+        const profile = JSON.parse(rawProfile);
+        document.getElementById('companyName').value = profile.companyName || '';
+        document.getElementById('trade').value = profile.trade || 'gc';
+        document.getElementById('license').value = profile.license || '';
+        document.getElementById('yearsExperience').value = profile.yearsExperience || '';
+        document.getElementById('zipCode').value = profile.zipCode || '';
+        document.getElementById('description').value = profile.description || '';
+        
+        // Change button text if profile is already complete
+        if (profile.profileComplete) {
+            document.querySelector('.save-btn').textContent = 'Update Profile & Access Dashboard';
+        }
+      }
+    } catch (e) {
+      console.warn("No valid existing contractor profile found.");
+    }
+  });
+</script></body></html>

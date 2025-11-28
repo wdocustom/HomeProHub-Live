@@ -1,0 +1,206 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <title>HomeScope AI – Homeowner Tools</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Match landing-page hero look, but homeowner-focused */
+    .hero {
+      max-width: 900px;
+      margin: 64px auto 32px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .hero-title {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #111827;
+    }
+    .hero-subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* Plan badges (same style idea as before) */
+    .tier-pill {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid #e5e7eb;
+      background: #f3f4f6;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .tier-pill--free {
+      border-color: #4ade80;
+      background: #ecfdf5;
+      color: #166534;
+    }
+    .tier-pill--guided {
+      border-color: #60a5fa;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+    .tier-pill--concierge {
+      border-color: #c4b5fd;
+      background: #f5f3ff;
+      color: #5b21b6;
+    }
+    
+    /* Layout for the main content grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+    @media (max-width: 800px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style></head><body><header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeScope AI</div>
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Dashboard</a>
+      <a href="ask.html">Assistant</a>
+      <div class="profile-area">
+        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div></header><main>
+  <section class="hero">
+    <div class="hero-kicker">For homeowners</div>
+    <h1 class="hero-title">Understand your home and choose the right pros.</h1>
+    <p class="hero-subtitle">
+      Use AI, education, and access to vetted contractors to make better decisions
+      about leaks, cracks, remodels, and bigger projects.
+    </p><a href="upgrade-options.html" class="btn-primary" style="font-size:14px; padding: 10px 20px; margin-top:15px;">View Upgrade Options</a>
+  </section>
+
+  <section style="max-width: 900px; margin: 0 auto 60px; padding: 0 24px;">
+    <div class="grid-2">
+      <div class="card">
+        <h2 style="margin-top:0; margin-bottom:8px;">What you can do here</h2>
+        <p style="margin:0 0 10px; font-size:14px; color:#4b5563;">
+          Plans: <strong>Basic (Free)</strong>, <strong>Guided</strong>, <strong>Concierge</strong>
+        </p>
+
+        <ul style="margin: 8px 0 6px 20px; padding: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+        <li>
+          <a href="contractor-directory.html" style="color: #2563eb; text-decoration: none;">
+            <strong>Contractor Directory with Grades:</strong>
+            See verified pros scored A–F with transparent notes.
+          </a>
+          <span class="tier-pill tier-pill--free">Free</span>
+        </li>
+        <li>
+          <a href="contact-pro.html" style="color: #2563eb; text-decoration: none;">
+            <strong>Contact a Pro:</strong>
+            Send details, photos, and questions to vetted contractors and request a callback.
+          </a>
+          <span class="tier-pill tier-pill--guided">Guided & Concierge</span>
+        </li>
+        <li>
+          <a href="contact-pro.html" style="color: #2563eb; text-decoration: none;">
+            <strong>Live video with a pro:</strong>
+            Walk through your home or project live with a contractor or specialist.
+          </a>
+          <span class="tier-pill tier-pill--concierge">Concierge</span>
+        </li>
+        <li>
+          <a href="contact-pro.html" style="color: #2563eb; text-decoration: none;">
+            <strong>Advocate / Owner’s Rep:</strong>
+            Get neutral support reviewing bids, scope, and expectations so you’re not alone.
+          </a>
+          <span class="tier-pill tier-pill--guided">Guided & Concierge</span>
+        </li>
+        <li>
+          <strong>Red flags when hiring:</strong>
+          Learn what to ask, what to avoid, and how to spot risky contractors before you sign.
+          <span class="tier-pill tier-pill--free">Free</span>
+        </li>
+      </ul>
+        
+        <p class="small-text" style="margin-top: 15px;">
+          Learn more about the grading criteria: <a href="grading-details.html" style="color: #2563eb;">View Grading Logic</a>
+        </p>
+      </div>
+
+      <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; gap:20px;">
+        <div>
+          <h2 style="margin-top:0; margin-bottom:8px;">Home Issue Assistant</h2>
+          <p style="margin:0 0 8px; font-size:14px; color:#4b5563;">
+            Describe leaks, cracks, noises, or smells. Get a structured breakdown, DIY checks, and safety notes.
+          </p>
+          <p class="small-text" style="margin-top:0; margin-bottom:14px;">
+            Included in all plans: <strong>Basic</strong>, <strong>Guided</strong>, and <strong>Concierge</strong>.
+          </p>
+          <a href="ask.html" class="btn-primary">Open Home Issue Assistant</a>
+        </div>
+        
+        <div style="border-top:1px solid #e5e7eb; padding-top:20px;">
+          <h2 style="margin-top:0; margin-bottom:8px;">AI Project Planner</h2>
+          <p style="margin:0 0 8px; font-size:14px; color:#4b5563;">
+            Input your remodel idea (e.g., bathroom renovation) and get a phased plan, required trades, rough timeline, and placeholder budget.
+          </p>
+          <p class="small-text" style="margin-top:0; margin-bottom:14px;">
+            Included in all plans: <strong>Basic</strong>, <strong>Guided</strong>, and <strong>Concierge</strong>.
+          </p>
+          <a href="project-planner.html" class="btn-secondary" style="background:#f0f4ff; color:#2563eb; border-color:#2563eb80;">Open Project Planner</a>
+        </div>
+      </div>
+    </div>
+  </section></main><script>
+  // Function to read user data
+  function getUserData() {
+    try {
+      // Check for user role key (set during role selection)
+      const role = localStorage.getItem("homeprohub_user_role");
+      
+      // If role exists, try to get the full profile name for the nav bar
+      const rawProfile = localStorage.getItem("homeprohub_user");
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+
+      return role ? { role: role, name: profile.name || "Profile" } : null; 
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Check if user is logged in and set name
+  const user = getUserData();
+  const profileLinkEl = document.getElementById('profileLink');
+  
+  if (user && user.role) {
+    profileLinkEl.textContent = user.name.split(' ')[0]; // Show first name in nav
+  } else {
+    // If not logged in, redirect them back to choose role
+    window.location.href = "role-selection.html";
+  }
+
+  // Logout function (also in user-profile.html)
+  function logout() {
+    localStorage.removeItem("homeprohub_user_role"); // Clear the role
+    localStorage.removeItem("homeprohub_user");      // Clear the user profile (if stored)
+    localStorage.removeItem("homeprohub_history_v1"); // Clear history
+    window.location.href = "index.html";
+  }
+</script></body></html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HomeProHub – Contractor Tools</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Darker, more "pro" hero just for contractors */
+    .hero-contractor {
+      background: linear-gradient(to right, #020617, #0b1120, #111827);
+      color: #e5e7eb;
+      padding: 40px 24px;
+      margin-bottom: 32px;
+    }
+    .hero-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .hero-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+    .hero-title {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      color: #f9fafb;
+    }
+    .hero-subtitle {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #9ca3af;
+      max-width: 620px;
+    }
+
+    /* Plan badges for contractors */
+    .tier-pill {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid #e5e7eb;
+      background: #f3f4f6;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .tier-pill--starter {
+      border-color: #4ade80;
+      background: #ecfdf5;
+      color: #166534;
+    }
+    .tier-pill--pro {
+      border-color: #60a5fa;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+    .tier-pill--elite {
+      border-color: #c4b5fd;
+      background: #f5f3ff;
+      color: #5b21b6;
+    }
+
+    .contractor-grid {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 860px) {
+      .contractor-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .clarify-label {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+    .clarify-box {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      font-size: 13px;
+      resize: vertical;
+    }
+  </style>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <div class="profile-area">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+</header>
+
+<!-- Dark, pro-focused hero band -->
+<section class="hero-contractor">
+  <div class="hero-inner">
+    <div class="hero-kicker">For contractors & trades</div>
+    <h1 class="hero-title">Estimate better. Run tighter. Handle tougher jobs.</h1>
+    <p class="hero-subtitle">
+      Use HomeProHub as a second brain for bids, scope, field decisions, and building a real operation.
+      It’s built for GCs, remodelers, and trades who want fewer surprises and stronger numbers.
+    </p>
+  </div>
+</section>
+
+<main>
+  <!-- Two-column layout: features + contractor coach -->
+  <section class="contractor-grid">
+    <!-- Left card: features + tiers -->
+    <div class="card">
+      <h2 style="margin-top:0; margin-bottom:8px;">What you can do here</h2>
+      <p style="margin:0 0 10px; font-size:14px; color:#4b5563;">
+        Plans: <strong>Starter (Free)</strong>, <strong>Pro</strong>, <strong>Elite</strong>
+      </p>
+
+      <ul style="margin: 8px 0 6px 20px; padding: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+        <li>
+          <strong>Price jobs with confidence:</strong>
+          Break work into clear scope, allowances, and exclusions so your numbers hold up.
+          <span class="tier-pill tier-pill--starter">Starter / Pro / Elite</span>
+        </li>
+        <li>
+          <strong>Field support on tough projects:</strong>
+          Ask trade-specific questions or diagnose issues with photos and a few details.
+          <span class="tier-pill tier-pill--starter">Starter / Pro / Elite</span>
+        </li>
+        <li>
+          <strong>Licensing & setup done right:</strong>
+          Help getting licensed in your jurisdiction, plus what you need after—insurance, bond, registrations.
+          <span class="tier-pill tier-pill--pro">Pro & Elite</span>
+        </li>
+        <li>
+          <strong>Build a real operation:</strong>
+          Guidance on branding, uniforms, logo, website, project management tools, and customer financing options.
+          <span class="tier-pill tier-pill--pro">Pro & Elite</span>
+        </li>
+        <li>
+          <strong>Access to experts:</strong>
+          Tap into designers, architects, engineers, and 1-on-1 business coaching when jobs get complex.
+          <span class="tier-pill tier-pill--elite">Elite</span>
+        <li style="margin-top: 10px; border-top: 1px solid #e5e7eb; padding-top: 8px;">
+  <a href="homeowner-grading-directory.html"" style="color: #2563eb; text-decoration: none;">
+    <strong>Homeowner Grading Directory:</strong>
+    Filter job leads by homeowner communication, decision speed, and payment reliability grade.
+  </a>
+  <span class="tier-pill tier-pill--pro">Pro & Elite</span>
+</li>
+      </ul>
+    </div>
+
+    <!-- Right card: Contractor Coach tool -->
+    <div class="card">
+      <h2 style="margin-top:0; margin-bottom:8px;">Contractor Coach</h2>
+      <p style="margin:0 0 12px; font-size:14px; color:#4b5563;">
+        Describe the job, client situation, or business problem you’re dealing with.
+        The coach responds like a seasoned GC or trade business mentor.
+      </p>
+      <p class="small-text" style="margin-top:0; margin-bottom:14px;">
+        Contractor Coach (AI) is available on all plans: <strong>Starter</strong>, <strong>Pro</strong>, and <strong>Elite</strong>.
+      </p>
+
+      <label for="focus" style="font-size:12px; color:#4b5563;">What do you need help with?</label>
+      <select id="focus">
+        <option value="general">General contractor / project advice</option>
+        <option value="pricing">Pricing & estimating</option>
+        <option value="materials">Materials & methods</option>
+        <option value="licensing">Licensing, insurance & compliance</option>
+        <option value="client_comms">Client communication & expectations</option>
+        <option value="business">Business systems & profitability</option>
+      </select>
+
+      <label for="zip" style="font-size:12px; color:#4b5563;">Job ZIP code (Required for estimate):</label>
+      <input id="zip" type="text" placeholder="e.g. 33602" required />
+      
+      <label for="scopeLevel" style="font-size:12px; color:#4b5563;">Material & Finish Level</label>
+      <select id="scopeLevel">
+        <option value="budget">Budget / Builder Grade</option>
+        <option value="mid">Mid-Range / Standard</option>
+        <option value="high">High-End / Custom</option>
+      </select>
+
+      <label for="size" style="font-size:12px; color:#4b5563; margin-top:8px;">Project Size/Units (e.g., 200 sq ft, 5x8 bath)</label>
+      <input id="size" type="text" placeholder="e.g. 150 sq ft of tiling, or 6x10 kitchen" />
+
+      <label for="question" style="font-size:12px; color:#4b5563;">Describe the situation (What exactly needs to be done?):</label>
+      <textarea
+        id="question"
+        placeholder="Example: Full master bath remodel. Client wants custom glass shower enclosure, heated floors, and mid-range tile."
+      ></textarea>
+
+      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button id="askBtn" class="btn-primary">🧰 Ask Coach</button>
+        <div id="status" class="status"></div>
+      </div>
+
+      <div id="answer" class="answer-box"></div>
+
+    </div>
+  </section>
+</main>
+
+<script>
+  // --- ELEMENT SELECTORS ---
+  const askButton = document.getElementById("askBtn");
+  const textarea = document.getElementById("question");
+  const statusText = document.getElementById("status");
+  const answerBox = document.getElementById("answer");
+  const focusSelect = document.getElementById("focus");
+  const zipInput = document.getElementById("zip");
+  const profileLinkEl = document.getElementById("profileLink");
+  
+  // New element for follow-up questions
+  const followUpBox = document.getElementById("followUp"); 
+
+  // Variables for the PDF/Email Controls
+  let lastQuestion = null;
+  let lastFocus = null;
+  let lastZip = null;
+  let lastEstimateData = null; 
+  
+  const pdfEmailControls = document.createElement('div');
+  pdfEmailControls.id = 'pdfEmailControlsContainer'; 
+  pdfEmailControls.style.cssText = 'margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
+  
+  // --- AUTH AND ONBOARDING CHECK (FAIL-SAFE) ---
+  function getProfileData(runRedirect = true) {
+    try {
+      const rawRole = localStorage.getItem("homeprohub_user_role");
+      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
+      
+      if (!rawRole || rawRole !== 'contractor') {
+          if (runRedirect) window.location.href = "role-selection.html"; 
+          return null;
+      }
+      
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      
+      if (!profile.profileComplete) {
+          if (runRedirect) window.location.href = "contractor-profile.html"; 
+          return null;
+      }
+
+      return profile;
+
+    } catch (e) {
+      if (runRedirect) window.location.href = "role-selection.html"; 
+      return null;
+    }
+  }
+
+  const profile = getProfileData(); 
+
+  function logout() {
+    localStorage.removeItem("homeprohub_user_role");
+    localStorage.removeItem("homeprohub_contractor_profile"); 
+    localStorage.removeItem("homeprohub_history_v1");
+    window.location.href = "index.html";
+  }
+  // --- END AUTH CHECK ---
+  
+  // --- PDF Generation Function (Client-Side) ---
+  function generatePdfEstimate(data) {
+    const printWindow = window.open('', '', 'height=800,width=800');
+    
+    const contractorName = profile ? profile.companyName : 'HomeProHub Contractor';
+    const contractorLicense = profile ? profile.license : 'N/A';
+    const contractorZip = profile ? profile.zipCode : 'N/A';
+
+    const lineItemsHtml = data.line_items.map(item => `
+      <tr>
+        <td style="padding: 8px; border: 1px solid #ddd;">${item.item}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">$${item.low.toLocaleString()} - $${item.high.toLocaleString()}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${item.notes || '-'}</td>
+      </tr>
+    `).join('');
+
+    const templateHtml = `
+      <html>
+        <head>
+          <title>${data.project_title || 'Project Estimate'}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #1f2937; }
+            h1 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+            .header-info { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 20px; }
+            .table-container { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            .table-container th { background-color: #f3f4f6; text-align: left; padding: 10px; border: 1px solid #ddd; }
+            .total-row { font-weight: bold; background-color: #e5e7eb; }
+          </style>
+        </head>
+        <body>
+          <div class="header-info">
+            <div>
+              <strong>Contractor:</strong> ${contractorName}<br>
+              <strong>License:</strong> ${contractorLicense}<br>
+              <strong>Service Area:</strong> ${contractorZip}
+            </div>
+            <div>
+              <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
+              <strong>Estimate ID:</strong> HPH-${Math.floor(Math.random() * 90000) + 10000}
+            </div>
+          </div>
+          <h1>Estimate: ${data.project_title || 'Project Estimate'}</h1>
+          
+          <h3>Line Item Breakdown (Rough Estimate)</h3>
+          <table class="table-container">
+            <thead>
+              <tr>
+                <th style="width: 40%;">Item / Service</th>
+                <th style="width: 30%;">Low - High Range</th>
+                <th style="width: 30%;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lineItemsHtml}
+              <tr><td colspan="3" style="height: 10px;"></td></tr>
+              <tr class="total-row"><td colspan="2" style="text-align: right; padding: 8px;">Subtotal (Labor & Materials)</td><td style="padding: 8px;">$${data.subtotal_low.toLocaleString()} - $${data.subtotal_high.toLocaleString()}</td></tr>
+              <tr><td colspan="2" style="text-align: right; padding: 5px;">Overhead & Profit (${data.overhead_profit_percent}%)</td><td style="padding: 5px;"></td></tr>
+              <tr><td colspan="2" style="text-align: right; padding: 5px;">Contingency (${data.contingency_percent}%)</td><td style="padding: 5px;"></td></tr>
+              <tr><td colspan="3" style="height: 10px;"></td></tr>
+              <tr class="total-row" style="background-color: #bfdbfe;"><td colspan="2" style="text-align: right; padding: 8px;">TOTAL ESTIMATE RANGE</td><td style="padding: 8px;">$${data.total_projected_low.toLocaleString()} - $${data.total_projected_high.toLocaleString()}</td></tr>
+            </tbody>
+          </table>
+
+          <h3 style="margin-top: 30px;">Disclaimers</h3>
+          <ul style="font-size: 12px; color: #4b5563;">
+            ${data.disclaimers.map(d => `<li>${d}</li>`).join('')}
+            <li>This document is a computer-generated budget estimate, not a binding quote.</li>
+          </ul>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(templateHtml);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print(); // Triggers the browser's print dialog (Print to PDF)
+  }
+  // --- END PDF Generation Function ---
+
+  // --- NEW: Email Function (Client-Side) ---
+  function emailEstimate(data) {
+      const contractorName = profile ? profile.companyName : 'HomeProHub Contractor';
+
+      const subject = `Rough Estimate: ${data.project_title || 'Your Project'}`;
+      const body = `
+Dear Customer,
+
+Thank photo: ${data.project_title}
+Total Estimated Range: $${data.total_projected_low.toLocaleString()} - $${data.total_projected_high.toLocaleString()}
+---
+
+Please note that this is a non-binding ballpark figure created for initial budgeting. A formal, binding quote will require a site visit to assess all existing conditions and final material selections.
+
+We look forward to speaking with you!
+
+Best regards,
+${contractorName}
+${profile && profile.license ? 'License: ' + profile.license : ''}
+`;
+      // Use the browser's native mail client
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  // --- END Email Function ---
+  
+  // --- NEW: Render Controls Function ---
+  function renderEstimateControls(data, isUpdate = false) {
+      // Create the controls container if it doesn't exist
+      let controlsContainer = document.getElementById('pdfEmailControlsContainer');
+      if (!controlsContainer) {
+          controlsContainer = document.createElement('div');
+          controlsContainer.id = 'pdfEmailControlsContainer';
+          controlsContainer.style.cssText = 'margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
+          
+          // CRITICAL INSERTION: Place it after the answer box
+          const mainAnswerBox = document.getElementById("answer");
+          if (mainAnswerBox && mainAnswerBox.parentNode) {
+              mainAnswerBox.parentNode.insertBefore(controlsContainer, mainAnswerBox.nextSibling);
+          } else {
+              console.error("Could not find answer box to insert controls.");
+              return; // Stop function if insertion fails
+          }
+      }
+      
+      // Clear old buttons
+      controlsContainer.innerHTML = '';
+      
+      // 1. PDF Button (triggers the print/save-as-pdf dialog)
+      const pdfBtn = document.createElement('button');
+      pdfBtn.className = 'btn-primary';
+      pdfBtn.textContent = '📄 Download PDF Estimate';
+      pdfBtn.addEventListener('click', () => generatePdfEstimate(data));
+      controlsContainer.appendChild(pdfBtn);
+
+      // 2. Email Button (triggers mailto client)
+      const emailBtn = document.createElement('button');
+      emailBtn.className = 'btn-secondary';
+      emailBtn.textContent = '✉️ Email to Customer';
+      emailBtn.addEventListener('click', () => emailEstimate(data));
+      controlsContainer.appendChild(emailBtn);
+      
+      // Store the estimate data globally
+      lastEstimateData = data;
+
+      // Update status text on successful response
+      statusText.textContent = isUpdate ? 'Updated' : 'Done.'; 
+      askButton.textContent = 'Update'; // Set button to Update after first successful ask
+  }
+  // --- END Render Controls Function ---
+
+  async function askContractorBackend(question, focus, zip, scopeLevel, size) {
+    const response = await fetch("http://localhost:3000/contractor-ask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ question, focus, zip, scopeLevel, size })
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(
+        data.error || "Request failed with status " + response.status
+      );
+    }
+
+    const data = await response.json();
+    return data; // Return full response object, not just answer
+  }
+
+  askButton.addEventListener("click", async () => {
+    if (!profile) {
+        window.location.href = "contractor-profile.html"; 
+        return;
+    }
+    
+    // --- GRAB INPUTS SAFELY ---
+    // Use optional chaining (?) and nullish coalescing (|| '') for maximum stability.
+    // This guarantees the script does not crash if an element is null/missing.
+    
+    // Check if the input element exists before reading its value
+    const scopeLevel = document.getElementById('scopeLevel')?.value || '';
+    const size = document.getElementById('size')?.value.trim() || '';
+    
+    // Note: textarea, focusSelect, and zipInput are global consts, so we must assume 
+    // they are defined but may not have values.
+    const q = textarea.value.trim();
+    const followUp = followUpBox?.value.trim() || ''; // Use safe access on followUpBox
+    const focus = focusSelect?.value || '';
+    const zip = zipInput?.value.trim() || '';
+    
+    // The previous crash was likely related to one of the global consts (like zipInput)
+    // being read as 'null' because the DOM hadn't finished loading fully.
+
+    // --- DETERMINE QUESTION MODE (Initial Ask or Refinement) ---
+    let finalQuestion = q;
+    let isRefinement = false;
+    
+    // Check if we have previous context AND the followUp box has new text
+    if (lastQuestion && followUp) {
+        isRefinement = true;
+        finalQuestion =
+            `Original question from contractor:\n` +
+            lastQuestion +
+            `\n\nNew details / clarifications/follow-up:\n` +
+            followUp +
+            `\n\nPlease update and refine your previous guidance based on these new details. ` +
+            `If this is a pricing question, return a new, updated JSON estimate.`;
+        // Clear follow-up box immediately
+        followUpBox.value = '';
+    } else if (!q) {
+        // If neither the initial box nor the follow-up box has text, exit.
+        answerBox.textContent = "Please describe your situation first.";
+        return;
+    }
+    // ------------------------------------------------------------------
+
+    if (focus === 'pricing' && zip.length !== 5) {
+        answerBox.textContent = "ZIP code is required for pricing estimates.";
+        return;
+    }
+
+    // Set UI state to disabled/thinking
+    askButton.disabled = true;
+    statusText.textContent = "Thinking…";
+    answerBox.textContent = "";
+    
+    // Clear zip code input if focus is not pricing (Keep original behavior)
+    if (focus !== 'pricing') {
+        zipInput.value = '';
+    }
+
+    try {
+      const response = await askContractorBackend(finalQuestion, focus, zip, scopeLevel, size);
+      
+      if (response.format === 'json' && focus === 'pricing') {
+          // --- SUCCESS: JSON ESTIMATE RECEIVED ---
+          answerBox.textContent = isRefinement ? "✅ Estimate Updated! (See Controls Below)" : "✅ Estimate Generated! (See Controls Below)";
+          renderEstimateControls(response.answer, isRefinement); // Pass the status of the request
+          answerBox.style.whiteSpace = 'normal';
+          
+          // Store context for refinement 
+          lastQuestion = finalQuestion; 
+          lastFocus = focus;
+          lastZip = zip;
+          
+      } else {
+          // --- TEXT RESPONSE RECEIVED (Non-Pricing or Error) ---
+          answerBox.textContent = response.answer;
+          pdfEmailControls.innerHTML = ''; 
+          
+          // Store context only if it was an initial text ask for later follow-up
+          lastQuestion = finalQuestion; 
+          lastFocus = focus;
+          lastZip = zip;
+      }
+      
+      // Update status text and button state correctly
+      statusText.textContent = isRefinement ? 'Updated' : 'Done.';
+      askButton.textContent = 'Update'; // Ensure button says 'Update' after the first ask/update
+
+    } catch (err) {
+      console.error(err);
+      answerBox.textContent = "Something went wrong: " + err.message;
+      statusText.textContent = "";
+      pdfEmailControls.innerHTML = '';
+      askButton.textContent = 'Ask Coach'; // Revert button on error
+    } finally {
+      askButton.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

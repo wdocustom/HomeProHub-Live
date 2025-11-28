@@ -1,0 +1,192 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <title>HomeProHub – Urgent Pro Contact</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .cta-card {
+        max-width: 700px;
+        margin: 60px auto;
+        padding: 40px;
+        text-align: center;
+        border: 2px solid #2563eb;
+        background: #f0f4ff;
+        border-radius: 16px;
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.15);
+    }
+    .cta-card--warning {
+        border-color: #f59e0b;
+        background: #fffbeb;
+    }
+    .cta-title {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #2563eb;
+    }
+    .cta-title--warning {
+        color: #f59e0b;
+    }
+    .cta-subtitle {
+        font-size: 16px;
+        color: #4b5563;
+        margin-bottom: 30px;
+    }
+    .option-btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 15px;
+        padding: 15px 20px;
+        font-size: 18px;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    .option-btn--primary {
+        background: #2563eb;
+        color: white;
+        border: none;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+    }
+    .option-btn--secondary {
+        background: #ffffff;
+        color: #2563eb;
+        border: 1px solid #2563eb;
+    }
+    .option-btn--secondary:hover {
+        background: #f0f4ff;
+    }
+    .price-tag {
+        font-size: 14px;
+        font-weight: 700;
+        margin-left: 10px;
+    }
+    .small-note {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #6b7280;
+    }
+  </style></head><body><header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">HH</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Dashboard</a>
+      <a href="ask.html">Assistant</a>
+      <div class="profile-area">
+        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div></header><main>
+  <div id="contentArea" class="cta-card">
+    <p style="font-size: 18px; color: #f59e0b; font-weight: 600;">⚠️ URGENT ACTION RECOMMENDED</p>
+    <h1 class="cta-title">Connect to a Pro Now.</h1>
+    <p class="cta-subtitle">
+      The AI flagged your issue as **High Severity**. Get immediate human assistance to assess the risk and scope the job.
+    </p>
+
+    <div id="premiumOptions">
+        <a href="#" class="option-btn option-btn--primary">
+            Schedule Live Video Call (Immediate/48hr slot) 
+            <span class="price-tag">(Included in Concierge/Elite)</span>
+        </a>
+        <a href="#" class="option-btn option-btn--secondary">
+            Urgent Call Back (Pro calls within 4 hours)
+            <span class="price-tag">(One-Time Fee: $75)</span>
+        </a>
+    </div>
+
+    <a href="contractor-directory.html" class="option-btn option-btn--secondary" style="margin-top: 30px; border-color: #d1d5db; color: #4b5563;">
+        OR Post Project to Bid Board (Free)
+    </a>
+
+    <p id="upgradeMessage" class="small-note" style="display:none;"></p>
+    <p id="currentPlan" class="small-note">Current Plan: Basic (Free)</p>
+  </div></main><script>
+  // --- AUTH/NAV SCRIPT START ---
+  function getUserData() {
+    try {
+      const role = localStorage.getItem("homeprohub_user_role");
+      const rawProfile = localStorage.getItem("homeprohub_user");
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      return role ? { role: role, name: profile.name || "Profile" } : null; 
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const profileLinkEl = document.getElementById("profileLink");
+  const currentPlanEl = document.getElementById("currentPlan");
+  const premiumOptionsEl = document.getElementById("premiumOptions");
+  const upgradeMessageEl = document.getElementById("upgradeMessage");
+  const contentAreaEl = document.getElementById("contentArea");
+
+  // Mock Plan Check (For Demo Purposes)
+  // This value will be checked by the script below.
+  const MOCK_USER_PLAN = 'basic'; // SET THIS TO TEST: 'basic', 'guided', or 'concierge'
+
+  function checkAccessAndRender() {
+    const user = getUserData();
+    
+    if (!user || user.role !== 'homeowner') {
+        window.location.href = "role-selection.html";
+        return;
+    }
+
+    profileLinkEl.textContent = user.name.split(' ')[0]; 
+    
+    const isPremium = MOCK_USER_PLAN === 'guided' || MOCK_USER_PLAN === 'concierge' || MOCK_USER_PLAN === 'elite';
+    const isConcierge = MOCK_USER_PLAN === 'concierge' || MOCK_USER_PLAN === 'elite';
+
+    currentPlanEl.textContent = `Current Plan: ${MOCK_USER_PLAN.charAt(0).toUpperCase() + MOCK_USER_PLAN.slice(1)}`;
+
+    if (isConcierge) {
+        // CONCIERGE / ELITE: Access to both options
+        premiumOptionsEl.innerHTML = `
+            <a href="#" class="option-btn option-btn--primary">
+                Schedule Live Video Call 
+                <span class="price-tag">— Included —</span>
+            </a>
+            <a href="#" class="option-btn option-btn--secondary">
+                Urgent Call Back (Pro calls within 4 hours)
+                <span class="price-tag">— Included —</span>
+            </a>
+        `;
+    } else if (isPremium) {
+        // GUIDED: Access to Message/Callback, but Video is a premium upgrade
+        premiumOptionsEl.innerHTML = `
+            <a href="#" class="option-btn option-btn--primary">
+                Urgent Call Back (Pro calls within 4 hours) 
+                <span class="price-tag">— Included —</span>
+            </a>
+            <a href="upgrade-options.html" class="option-btn option-btn--secondary">
+                Upgrade to Concierge for Live Video
+            </a>
+        `;
+    } else {
+        // BASIC (FREE): No direct contact options
+        premiumOptionsEl.innerHTML = `
+            <p style="font-size: 14px; color: #4b5563; margin-bottom: 20px;">
+                You are on the Basic (Free) plan. Direct Pro contact is not included.
+            </p>
+            <a href="upgrade-options.html" class="option-btn option-btn--primary">
+                Upgrade Now to Contact a Pro
+            </a>
+        `;
+        contentAreaEl.classList.add('cta-card--warning');
+        document.querySelector('.cta-title').classList.add('cta-title--warning');
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("homeprohub_user_role");
+    localStorage.removeItem("homeprohub_history_v1");
+    window.location.href = "index.html"; 
+  }
+
+  document.addEventListener('DOMContentLoaded', checkAccessAndRender);
+  // --- AUTH/NAV SCRIPT END ---
+</script></body></html>

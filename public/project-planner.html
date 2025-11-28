@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <title>HomeScope AI – Project Planner</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .hero {
+      max-width: 900px;
+      margin: 48px auto 24px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .hero-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #111827;
+    }
+    .hero-subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .planner-layout {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .small-hint {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    .answer-card {
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+    }
+  </style></head><body><header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeScope AI</div>
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Dashboard</a>
+      <a href="ask.html">Assistant</a>
+      <div class="profile-area">
+        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div></header><main>
+  <section class="hero">
+    <div class="hero-kicker">Project planning assistant</div>
+    <h1 class="hero-title">Plan Your Remodel Project.</h1>
+    <p class="hero-subtitle">
+      Describe your remodel idea (e.g., "Full kitchen renovation") and get a structured, multi-phase plan, required trades, rough timeline, and placeholder budget.
+    </p>
+  </section>
+
+  <section class="planner-layout">
+    <div class="card">
+      <label for="project" style="font-size:13px; color:#374151;">Project Description</label>
+      <textarea
+        id="project"
+        class="textarea"
+        placeholder="Example: We want to tear down the wall between the kitchen and dining room, add an island, and install new floors and cabinets throughout the first floor. Budget is mid-range."
+      ></textarea>
+
+      <label for="location" style="font-size:13px; color:#374151; margin-top:12px;">Job Location (City, State or ZIP)</label>
+      <input id="location" class="input" type="text" placeholder="e.g. 33602 or Tampa, FL" />
+
+      <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button id="planBtn" class="btn-primary">🏗️ Generate Project Plan</button>
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+    
+    <div id="answer" class="answer-box" style="display:none;"></div>
+  </section></main>
+<script>
+  const planBtn = document.getElementById("planBtn");
+  const projectInput = document.getElementById("project");
+  const locationInput = document.getElementById("location");
+  const statusText = document.getElementById("status");
+  const answerBox = document.getElementById("answer");
+  const profileLinkEl = document.getElementById("profileLink");
+
+  // --- USER AUTH/NAV SCRIPT START ---
+  function getUserData() {
+    try {
+      const raw = localStorage.getItem("homescope_user");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const user = getUserData();
+  if (user && user.name) {
+    profileLinkEl.textContent = user.name.split(' ')[0]; // Show first name
+  } else {
+    window.location.href = "index.html"; // Redirect if not signed in
+  }
+
+  function logout() {
+    localStorage.removeItem("homescope_user");
+    localStorage.removeItem("homescope_history_v1");
+    window.location.href = "index.html";
+  }
+  // --- USER AUTH/NAV SCRIPT END ---
+
+  async function planProject(projectDescription, location) {
+    const response = await fetch("http://localhost:3000/plan-project", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ projectDescription, location })
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(
+        data.error || "Request failed with status " + response.status
+      );
+    }
+
+    const data = await response.json();
+    return data.answer;
+  }
+
+  planBtn.addEventListener("click", async () => {
+    const projectDescription = projectInput.value.trim();
+    const location = locationInput.value.trim();
+
+    if (!projectDescription) {
+      statusText.textContent = "Please describe your project first.";
+      return;
+    }
+
+    planBtn.disabled = true;
+    statusText.textContent = "Generating plan...";
+    answerBox.textContent = "";
+    answerBox.style.display = 'none';
+
+    try {
+      // **THIS IS THE FIX:** Calling the correct function name: planProject
+      const plan = await planProject(projectDescription, location); 
+      answerBox.textContent = plan;
+      statusText.textContent = "Plan ready.";
+      answerBox.style.display = 'block';
+    } catch (err) {
+      console.error(err);
+      statusText.textContent = "Error generating plan: " + err.message;
+    } finally {
+      planBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

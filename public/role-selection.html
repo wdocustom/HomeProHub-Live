@@ -1,0 +1,97 @@
+<!DOCTYPE html><html><head>
+  <title>HomeProHub – Choose Role</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .form-container {
+      max-width: 480px;
+      margin: 80px auto;
+      padding: 30px 24px;
+      text-align: center;
+    }
+    .form-title {
+      font-size: 26px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .form-sub {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+    .role-btn {
+      padding: 15px 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f9fafb;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+      cursor: pointer;
+      display: block;
+    }
+    .role-btn:hover {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+    }
+  </style></head><body>
+    <main>
+        <div class="form-container card">
+            <h1 class="form-title">Welcome! How are you using HomeProHub?</h1>
+            <p class="form-sub">
+                Please select your primary role to access the correct tools and content.
+            </p>
+
+            <div class="role-grid">
+                <button class="role-btn" data-role="homeowner">🏡 I am a Homeowner</button>
+                <button class="role-btn" data-role="contractor">🧰 I am a Contractor / Trades Pro</button>
+            </div>
+            
+            <p class="small-text" style="margin-top: 30px;">
+                Your Google login is complete. You only need to choose your role once.
+            </p>
+        </div>
+    </main>
+
+    <script>
+    const roleButtons = document.querySelectorAll('.role-btn');
+
+    // Check if user is authenticated via server session
+    fetch('/api/user')
+        .then(res => res.json())
+        .then(sessionData => {
+            if (sessionData.error) {
+                // Not authenticated, redirect to login
+                window.location.href = '/index.html';
+            }
+            // Store the essential session data (ID and Name)
+            localStorage.setItem('homeprohub_session_id', sessionData.id); 
+            localStorage.setItem('homeprohub_user_name', sessionData.name || 'User');
+        })
+        .catch(() => {
+             // Basic connectivity check failed, redirect
+             window.location.href = '/index.html';
+        });
+        
+    roleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const role = button.getAttribute('data-role');
+            
+            // CRITICAL FIX: Save the chosen role to a dedicated key
+            localStorage.setItem('homeprohub_user_role', role); 
+            
+            // Redirect to the appropriate dashboard
+            if (role === 'homeowner') {
+                window.location.href = 'home.html';
+            } else if (role === 'contractor') {
+                window.location.href = 'contractor.html';
+            }
+        });
+    });
+</script>
+</body></html>
