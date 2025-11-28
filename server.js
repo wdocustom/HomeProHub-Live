@@ -17,10 +17,9 @@ const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 // 🔐 Put your real Anthropic API key here (KEEP THE QUOTES)
-const ANTHROPIC_API_KEY = "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";
-
+const ANTHROPIC_API_KEY = "process.env.ANTHROPIC_API_KEY"
 if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY === "YOUR_ANTHROPIC_API_KEY_HERE") {
-  console.warn("⚠️ ANTHROPIC_API_KEY is not set in server.js");
+  console.warn("⚠️ ANTHROPIC_API_KEY is not set i-+n server.js");
 }
 
 const app = express();
