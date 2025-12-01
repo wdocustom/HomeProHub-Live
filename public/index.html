@@ -1,20 +1,19 @@
 <!DOCTYPE html><html><head>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <title>HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* Simple, clean hero just for this page */
     .hero {
       max-width: 900px;
-      margin: 64px auto 40px;
+      margin: 40px auto 40px;
       padding: 0 24px;
       text-align: center;
     }
     .hero-title {
-      font-size: 40px;
+      font-size: 36px;
       font-weight: 700;
       letter-spacing: -0.03em;
       margin-bottom: 12px;
-      color: #111827;
     }
     .hero-subtitle {
       font-size: 16px;
@@ -23,31 +22,34 @@
       max-width: 640px;
       margin: 0 auto;
     }
-    .hero-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #9ca3af;
-      margin-bottom: 10px;
+    .auth-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 24px;
     }
-    .google-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 30px;
-        padding: 12px 24px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        background-color: white;
-        color: #1f2937;
-        font-weight: 600;
-        text-decoration: none;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    @media (max-width: 800px) {
+        .auth-grid {
+            grid-template-columns: 1fr;
+        }
     }
-    .google-btn img {
-        width: 18px;
-        height: 18px;
+    .auth-card {
+        padding: 25px;
+        text-align: left;
+    }
+    .auth-card h2 {
+        margin-top: 0;
+        font-size: 22px;
+    }
+    .auth-card input {
+        margin-bottom: 15px;
+    }
+    .status-message {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #ef4444;
     }
     .grid-2 {
         display: grid;
@@ -67,31 +69,134 @@
     </div>
     <div class="nav-links"></div>
   </div></header><section class="hero">
-  <div class="hero-kicker">AI for real-world projects</div>
-  <h1 class="hero-title">One secure hub for homeowners and contractors.</h1>
+  <div class="hero-kicker">Local Account Required</div>
+  <h1 class="hero-title">Sign up or Login to Access Your Tools.</h1>
   <p class="hero-subtitle">
-    Please sign in using Google to access the full suite of AI tools, planning assistants, and professional directories.
+    Create a simple account to access the full suite of AI tools, planning assistants, and professional directories.
   </p>
-
-  <a class="google-btn" href="/auth/google">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/100px-Google_%22G%22_logo.svg.png" alt="Google logo">
-      Sign in with Google
-  </a>
 </section>
 
-<section style="max-width: 900px; margin: 0 auto 60px; padding: 0 24px;">
-  <div class="grid-2">
-    <div class="card">
-      <h2>🏡 Homeowners</h2>
-      <p>
-        Get structured diagnosis, DIY guides, and transparent professional directories with verified grades.
-      </p>
+<div class="auth-grid">
+    <div class="card auth-card">
+        <h2>New User Signup</h2>
+        <form id="signupForm">
+            <input type="email" id="signupUsername" class="input" placeholder="Email (Required)" required>
+            <input type="password" id="signupPassword" class="input" placeholder="Password (Min 6 characters)" required>
+            <button type="submit" class="btn-primary" style="width: 100%;">Create Secure Account</button>
+            <p id="signupStatus" class="status-message" style="color: #10b981;"></p>
+        </form>
     </div>
 
-    <div class="card">
-      <h2>🧰 Contractors</h2>
-      <p>
-        Utilize AI for pricing, scope writing, licensing guidance, and accessing 1-on-1 business coaching.
-      </p>
+    <div class="card auth-card">
+        <h2>Existing User Login</h2>
+        <form id="loginForm">
+            <input type="email" id="loginUsername" class="input" placeholder="Email" required>
+            <input type="password" id="loginPassword" class="input" placeholder="Password" required>
+            <button type="submit" class="btn-primary" style="width: 100%;">Login to HomeProHub</button>
+            <p id="loginStatus" class="status-message"></p>
+        </form>
     </div>
-  </div></section></body></html>
+</div>
+
+<section style="max-width: 900px; margin: 40px auto 60px; padding: 0 24px;">
+    <div class="grid-2">
+        <div class="card">
+            <h2>🏡 Homeowners</h2>
+            <p>
+                Get structured diagnosis, DIY guides, and transparent professional directories with verified grades.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>🧰 Contractors</h2>
+            <p>
+                Utilize AI for pricing, scope writing, licensing guidance, and accessing 1-on-1 business coaching.
+            </p>
+        </div>
+    </div>
+</section>
+
+<script>
+    // --- LIVE SUPABASE INTEGRATION ---
+    // NOTE: Replace YOUR_SUPABASE_PROJECT_URL and YOUR_SUPABASE_ANON_KEY with your actual keys.
+    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL'; 
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    
+    // Check if the supabase global object exists (due to the SDK inclusion in <head>)
+    const { createClient } = window.supabase;
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    const signupForm = document.getElementById('signupForm');
+    const loginForm = document.getElementById('loginForm');
+    const signupStatus = document.getElementById('signupStatus');
+    const loginStatus = document.getElementById('loginStatus');
+
+    // --- UTILITY (MOCK) ---
+    async function mockSupabaseAuth(endpoint, username, password) {
+        // Mocks a successful call to the Supabase Auth API
+        if (password.length < 6) return { success: false, error: 'Password too short.' };
+        if (endpoint === '/api/signup' && username === 'exists') return { success: false, error: 'User already exists.' };
+        return { success: true, token: 'mock-jwt-token-123', user: { id: username, email: username + '@example.com' } };
+    }
+    
+    // --- SIGNUP LOGIC (Live Supabase) ---
+    signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        signupStatus.textContent = 'Creating secure account...';
+        
+        const username = document.getElementById('signupUsername').value; // This is the Email
+        const password = document.getElementById('signupPassword').value;
+
+        try {
+            // --- REPLACE with live Supabase call ---
+            const { data, error } = await client.auth.signUp({ 
+                email: username, 
+                password: password,
+            });
+
+            if (error) {
+                signupStatus.textContent = `Error: ${error.message}`;
+            } else {
+                signupStatus.textContent = `✅ Success! Check your email (${username}) to confirm registration.`;
+                document.getElementById('signupUsername').value = '';
+                document.getElementById('signupPassword').value = '';
+            }
+        } catch (error) {
+            signupStatus.textContent = 'Network error. Try again.';
+        }
+    });
+
+    // --- LOGIN LOGIC (Live Supabase) ---
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginStatus.textContent = 'Logging in...';
+
+        const username = document.getElementById('loginUsername').value; // This is the Email
+        const password = document.getElementById('loginPassword').value;
+
+        try {
+            // --- REPLACE with live Supabase call ---
+            const { data, error } = await client.auth.signInWithPassword({ 
+                email: username, 
+                password: password 
+            });
+
+            if (error) {
+                loginStatus.textContent = `Error: ${error.message || 'Invalid credentials.'}`;
+            } else if (data.user) {
+                // User successfully logged in. Save session data.
+                localStorage.setItem('homeprohub_auth_token', data.session.access_token);
+                localStorage.setItem('homeprohub_username', data.user.email);
+                
+                // Redirect to the role picker to determine path
+                window.location.href = 'role-selection.html';
+
+            } else {
+                 loginStatus.textContent = 'Login failed. Check console for details.';
+            }
+        } catch (error) {
+            loginStatus.textContent = 'Network error. Try again.';
+        }
+    });
+</script>
+</body></html>
