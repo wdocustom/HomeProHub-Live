@@ -157,6 +157,7 @@ app.post("/contractor-ask", async (req, res) => {
     const laborPath = path.resolve(__dirname, 'public', 'labor-rates.json');
     const permitPath = path.resolve(__dirname, 'public', 'permit-fees.json');
     
+    // NOTE: Using synchronous read for RAG data for simplicity/stability
     const laborData = JSON.parse(fs.readFileSync(laborPath, 'utf8'));
     const permitData = JSON.parse(fs.readFileSync(permitPath, 'utf8'));
 
@@ -210,8 +211,6 @@ SPECIAL INSTRUCTIONS FOR DOWNLOADABLE ESTIMATE (OVERRIDE):
       : "";
 
   const contentText = `You are an experienced, licensed contractor and business mentor.
-You are talking to another contractor (or aspiring contractor).
-They may be in residential trades (GC, plumbing, electrical, HVAC, remodeling, etc.).
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
@@ -245,7 +244,7 @@ Respond using EXACTLY this structure:
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-03-01" // Note: Reverting API version to 2023-03-01 for stability
+        "anthropic-version": "2023-03-01" // Reverting to a known stable API version
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
