@@ -47,15 +47,27 @@ app.use(express.static("public"));
 
 // --- FINAL AUTH API ROUTES (Client-Side Auth) ---
 
-// Route for Saving User Role (Used by role-selection.html)
-app.post('/api/set-role', (req, res) => {
-    // In a live application, the server would save the role to the database here.
-    // For now, we confirm success as the client manages the role locally (Supabase pattern).
-    const { username } = req.body;
-    if (username) {
-        return res.json({ success: true, message: 'Role received and processed.' });
+// ====== ROUTE: /api/get-role (Checks user's existing role from DB) ======
+app.get('/api/get-role', (req, res) => {
+    // NOTE: In a live Supabase environment, this route would query the user's metadata table.
+    // We will simulate a check here: assume the first user is a contractor, the second is null.
+    
+    // For local testing, we assume the user who logged in is authenticated.
+    // The role is returned via localStorage lookup, but for a server call, we must mock the result.
+    
+    // The client sends the username (email) in the query params.
+    const username = req.query.username;
+
+    // MOCK SCENARIO: For stability, we assume 50% of users have a role saved.
+    // In a real app, this would be a database lookup.
+    if (username && username.includes('contractor')) {
+        return res.json({ role: 'contractor' });
+    } else if (username && username.includes('homeowner')) {
+        return res.json({ role: 'homeowner' });
+    } else {
+        // If no role found (first time signing in)
+        return res.json({ role: null }); 
     }
-    return res.status(400).json({ error: 'Username not provided for role assignment.' });
 });
 
 // ====== ROUTE: /ask (HOMEOWNER AI) ======

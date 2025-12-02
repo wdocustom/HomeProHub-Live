@@ -124,12 +124,18 @@
     
     // Check if the supabase global object exists (due to the SDK inclusion in <head>)
     const { createClient } = window.supabase;
-    // FIX: Use the single object parameter method to resolve the deprecation warning
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
             persistSession: true, // Recommended for production session management
         }
     });
+
+    // --- ELEMENT SELECTORS (CRITICAL: Must be defined before use) ---
+    const signupForm = document.getElementById('signupForm');
+    const loginForm = document.getElementById('loginForm');
+    const signupStatus = document.getElementById('signupStatus');
+    const loginStatus = document.getElementById('loginStatus');
+
     
     // --- SIGNUP LOGIC (Live Supabase) ---
     signupForm.addEventListener('submit', async (e) => {
@@ -180,9 +186,18 @@
                 localStorage.setItem('homeprohub_auth_token', data.session.access_token);
                 localStorage.setItem('homeprohub_username', data.user.email);
                 
-                // Redirect to the role picker to determine path
-                window.location.href = 'role-selection.html';
-
+                // --- NEW STEP: Check for existing role on server ---
+                const roleResponse = await fetch(`/api/get-role?username=${data.user.email}`);
+                const roleData = await roleResponse.json();
+                
+                if (roleData.role) {
+                    // ROLE FOUND: Bypass role picker and go straight to dashboard
+                    localStorage.setItem('homeprohub_user_role', roleData.role);
+                    window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
+                } else {
+                    // NO ROLE FOUND: Go to role selection for the first time setup
+                    window.location.href = 'role-selection.html';
+                }
             } else {
                  loginStatus.textContent = 'Login failed. Check console for details.';
             }
