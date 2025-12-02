@@ -173,7 +173,7 @@
         const password = document.getElementById('loginPassword').value;
 
         try {
-            // --- REPLACE with live Supabase call ---
+            // --- 1. LIVE SUPABASE LOGIN CALL ---
             const { data, error } = await client.auth.signInWithPassword({ 
                 email: username, 
                 password: password 
@@ -186,16 +186,22 @@
                 localStorage.setItem('homeprohub_auth_token', data.session.access_token);
                 localStorage.setItem('homeprohub_username', data.user.email);
                 
-                // --- NEW STEP: Check for existing role on server ---
+                // --- 2. NEW STEP: Check for existing role on server ---
                 const roleResponse = await fetch(`/api/get-role?username=${data.user.email}`);
                 const roleData = await roleResponse.json();
                 
                 if (roleData.role) {
                     // ROLE FOUND: Bypass role picker and go straight to dashboard
                     localStorage.setItem('homeprohub_user_role', roleData.role);
-                    window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
+                    loginStatus.textContent = 'Success! Directing to dashboard...';
+                    
+                    // Small delay to ensure localStorage saves before redirect
+                    setTimeout(() => {
+                        window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
+                    }, 500);
                 } else {
                     // NO ROLE FOUND: Go to role selection for the first time setup
+                    loginStatus.textContent = 'Success! Please select your role...';
                     window.location.href = 'role-selection.html';
                 }
             } else {
