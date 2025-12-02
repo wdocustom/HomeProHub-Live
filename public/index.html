@@ -124,20 +124,12 @@
     
     // Check if the supabase global object exists (due to the SDK inclusion in <head>)
     const { createClient } = window.supabase;
-    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    const signupForm = document.getElementById('signupForm');
-    const loginForm = document.getElementById('loginForm');
-    const signupStatus = document.getElementById('signupStatus');
-    const loginStatus = document.getElementById('loginStatus');
-
-    // --- UTILITY (MOCK) ---
-    async function mockSupabaseAuth(endpoint, username, password) {
-        // Mocks a successful call to the Supabase Auth API
-        if (password.length < 6) return { success: false, error: 'Password too short.' };
-        if (endpoint === '/api/signup' && username === 'exists') return { success: false, error: 'User already exists.' };
-        return { success: true, token: 'mock-jwt-token-123', user: { id: username, email: username + '@example.com' } };
-    }
+    // FIX: Use the single object parameter method to resolve the deprecation warning
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+            persistSession: true, // Recommended for production session management
+        }
+    });
     
     // --- SIGNUP LOGIC (Live Supabase) ---
     signupForm.addEventListener('submit', async (e) => {
