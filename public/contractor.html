@@ -430,7 +430,8 @@ ${profile && profile.license ? 'License: ' + profile.license : ''}
   // --- END Render Controls Function ---
 
   async function askContractorBackend(question, focus, zip, scopeLevel, size) {
-    const response = await fetch("http://localhost:3000/contractor-ask", {
+    // FIX: Use a relative path, which automatically resolves to the current live domain (www.homeprohub.today)
+    const response = await fetch("/contractor-ask", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
