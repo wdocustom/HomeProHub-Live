@@ -244,7 +244,7 @@ Respond using EXACTLY this structure:
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-03-01" // Reverting to a known stable API version
+        "anthropic-version": "2023-06-01" // Reverting to a known stable API version
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
@@ -343,7 +343,7 @@ Respond using EXACTLY this structure:
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-03-01" // Note: Reverting API version to 2023-03-01 for stability
+        "anthropic-version": "2023-06-01" 
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
