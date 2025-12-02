@@ -247,9 +247,18 @@
   // --- AUTH AND ONBOARDING CHECK (FAIL-SAFE) ---
   function getProfileData(runRedirect = true) {
     try {
+      const username = localStorage.getItem('homeprohub_username');
+      const token = localStorage.getItem('homeprohub_auth_token');
       const rawRole = localStorage.getItem("homeprohub_user_role");
       const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
+
+      // Check if user has an auth token and username
+      if (!username || !token) {
+          if (runRedirect) window.location.href = "index.html"; 
+          return null;
+      }
       
+      // Check if user is the correct role
       if (!rawRole || rawRole !== 'contractor') {
           if (runRedirect) window.location.href = "role-selection.html"; 
           return null;
@@ -257,15 +266,23 @@
       
       const profile = rawProfile ? JSON.parse(rawProfile) : {};
       
-      if (!profile.profileComplete) {
+      // 2. Check Profile Completion (Onboarding Funnel)
+      // CRITICAL FIX: Only redirect if profile is explicitly marked incomplete OR if the profile object is empty.
+      if (rawProfile === null || profile.profileComplete === false) { 
           if (runRedirect) window.location.href = "contractor-profile.html"; 
           return null;
       }
 
-      return profile;
+      // Return combined data
+      return { 
+          ...profile, 
+          username: username,
+          role: rawRole,
+          name: profile.companyName || username.split('@')[0]
+      };
 
     } catch (e) {
-      if (runRedirect) window.location.href = "role-selection.html"; 
+      if (runRedirect) window.location.href = "index.html"; 
       return null;
     }
   }
