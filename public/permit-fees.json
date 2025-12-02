@@ -1,0 +1,17 @@
+{
+  "description": "Mocked average permit costs and requirements for common projects.",
+  "projects": {
+    "bathroom_remodel": {
+      "permits_required": ["Building (Structural changes)", "Electrical", "Plumbing"],
+      "average_fee_range": [300, 1500]
+    },
+    "kitchen_remodel": {
+      "permits_required": ["Building (Structural changes)", "Electrical, Mechanical (HVAC)", "Plumbing"],
+      "average_fee_range": [500, 2500]
+    },
+    "general_repair": {
+      "permits_required": ["None required for non-structural/non-utility fixes"],
+      "average_fee_range": [0, 0]
+    }
+  }
+}

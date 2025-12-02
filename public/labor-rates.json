@@ -1,0 +1,16 @@
+{
+  "description": "Mocked average hourly rates for trades, used to augment AI estimation.",
+  "rates_by_trade": {
+    "GC": 85,
+    "Plumber": 110,
+    "Electrician": 105,
+    "HVAC": 95
+  },
+  "regional_multipliers": {
+    "902": 1.45,
+    "010": 0.85,
+    "336": 1.15,
+    "681": 0.90,
+    "other": 1.05
+  }
+}

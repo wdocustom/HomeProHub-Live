@@ -59,13 +59,38 @@
     const username = localStorage.getItem('homeprohub_username');
     const token = localStorage.getItem('homeprohub_auth_token');
 
-    if (!username || !token) {
-        // If not authenticated, redirect to login
+    // --- CRITICAL PERSISTENCE CHECK ---
+    // If the token exists, check if the user already completed the profile/role setup.
+    if (username && token) {
+        const role = localStorage.getItem('homeprohub_user_role');
+        const profileRaw = localStorage.getItem('homeprohub_contractor_profile');
+
+        if (role) {
+            // SCENARIO 1: Role is already saved locally (Successful past login)
+            const target = role === 'homeowner' ? 'home.html' : 'contractor.html';
+            
+            // Check if it's a contractor and the profile is COMPLETE
+            if (role === 'contractor' && profileRaw) {
+                const profile = JSON.parse(profileRaw);
+                if (profile.profileComplete) {
+                    window.location.href = 'contractor.html';
+                    return;
+                }
+            } else if (role === 'homeowner') {
+                 window.location.href = 'home.html';
+                 return;
+            }
+        }
+        // If they fall through, they stay on the role selection page.
+    } else {
+        // SCENARIO 2: Not authenticated. Go to login.
         window.location.href = 'index.html';
+        return;
     }
 
     // --- UTILITY ---
     async function postData(url, data) {
+        // This function calls your Node.js server route to save the role.
         const response = await fetch(url, {
             method: 'POST',
             headers: { 
@@ -87,14 +112,12 @@
                 const response = await postData('/api/set-role', { username, role });
 
                 if (response.ok) {
-                    // 1. Save the role locally for quick checks
                     localStorage.setItem('homeprohub_user_role', role);
                     
-                    // 2. Redirect to the appropriate dashboard
                     if (role === 'homeowner') {
                         window.location.href = 'home.html';
                     } else if (role === 'contractor') {
-                        // After selecting role, redirect to profile setup page (onboarding funnel)
+                        // CRITICAL: New contractors must go to the profile setup page
                         window.location.href = 'contractor-profile.html'; 
                     }
                 } else {
@@ -105,7 +128,5 @@
             }
         });
     });
-    
-    // The previous error was a missing brace here. This closure now ensures balance.
 </script>
 </body></html>
