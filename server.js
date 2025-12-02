@@ -1,11 +1,6 @@
 // Load environment variables from .env file
 require('dotenv').config();
 
-// New imports for authentication
-const session = require('express-session');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-
 // ====== IMPORTS ======
 const express = require("express");
 const cors = require("cors");
@@ -16,10 +11,11 @@ const fs = require('fs');
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
-// 🔐 Put your real Anthropic API key here (KEEP THE QUOTES)
-const ANTHROPIC_API_KEY = "process.env.ANTHROPIC_API_KEY"
-if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY === "YOUR_ANTHROPIC_API_KEY_HERE") {
-  console.warn("⚠️ ANTHROPIC_API_KEY is not set i-+n server.js");
+// 🔐 Securely load Anthropic API key from process.env (FIXED SYNTAX)
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+
+if (!ANTHROPIC_API_KEY) {
+  console.warn("⚠️ ANTHROPIC_API_KEY is not set in environment variables.");
 }
 
 const app = express();
@@ -27,95 +23,40 @@ const app = express();
 // Allow JSON bodies (increase limit for images)
 app.use(express.json({ limit: "10mb" }));
 
-// Allow browser requests
-// --- CORS Configuration ---
+// Allow browser requests (Final CORS Configuration)
 const allowedOrigins = [
-  'http://localhost:3000', // 1. Your Local Development Environment
-  'https://www.homeprohub.today', // 2. Your Live Domain (with www)
-  'https://homeprohub.today', // 3. Your Live Domain (without www)
-  // If your host gives you a default deployment URL (e.g., render.com), add it here
+  'http://localhost:3000',
+  'https://www.homeprohub.today',
+  'https://homeprohub.today',
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Logic to allow requests only from the domains listed above
-    if (!origin) return callback(null, true); // Allows requests with no origin (e.g., postman, mobile apps)
+    if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
     return callback(null, true);
   },
-  credentials: true // Crucial for passing cookies/session data (like Passport.js needs)
+  credentials: true
 }));
-
-// --- PASSPORT & SESSION CONFIGURATION ---
-app.use(session({
-  secret: process.env.SESSION_SECRET, 
-  resave: false,
-  saveUninitialized: true
-}));
-app.use(passport.initialize());
-app.use(passport.session());
-// --- END AUTH CONFIG ---
 
 // Serve files from /public (home.html, ask.html, etc.)
 app.use(express.static("public"));
 
-// --- PASSPORT GOOGLE STRATEGY ---
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/callback"
-  },
-  function(accessToken, refreshToken, profile, done) {
-    // This is where you would normally save the user to a database.
-    // For this demo, we simply pass the profile (user) data forward.
-    // We'll use profile.id as a unique identifier.
-    return done(null, profile);
-  }
-));
+// --- FINAL AUTH API ROUTES (Client-Side Auth) ---
 
-// Serialization: Store the user's ID in the session
-passport.serializeUser(function(user, done) {
-  done(null, user.id);
-});
-
-// Deserialization: Retrieve the user profile from the session ID
-passport.deserializeUser(function(id, done) {
-  // In a real app, you would fetch the full user object from your database here
-  // For this demo, we'll use the ID as the identifier.
-  // We need the full profile object (which we passed in strategy function)
-  // Since we don't have a DB, this step is simplified:
-  done(null, id);
-});
-// --- END PASSPORT GOOGLE STRATEGY ---
-
-// --- AUTHENTICATION ROUTES ---
-// 1. Route to initiate Google Sign-In
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
-
-// 2. Route that Google redirects back to after successful login
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login-error.html' }),
-  function(req, res) {
-    // Successful authentication, determine role and redirect
-    // For this demo, we redirect to a mock role selection page
-    res.redirect('/role-selection.html');
-  }
-);
-
-// 3. Simple API endpoint to check if the user is authenticated (useful for client-side JS)
-app.get('/api/user', (req, res) => {
-    if (req.isAuthenticated()) {
-        res.json({ id: req.user, name: req.user.displayName, role: 'unknown' });
-    } else {
-        res.status(401).json({ error: 'User not authenticated' });
+// Route for Saving User Role (Used by role-selection.html)
+app.post('/api/set-role', (req, res) => {
+    // In a live application, the server would save the role to the database here.
+    // For now, we confirm success as the client manages the role locally (Supabase pattern).
+    const { username } = req.body;
+    if (username) {
+        return res.json({ success: true, message: 'Role received and processed.' });
     }
+    return res.status(400).json({ error: 'Username not provided for role assignment.' });
 });
-// --- END AUTHENTICATION ROUTES ---
 
 // ====== ROUTE: /ask (HOMEOWNER AI) ======
 app.post("/ask", async (req, res) => {
@@ -192,8 +133,8 @@ Respond using EXACTLY this structure:
 
     const answer =
       data.content && data.content[0]?.text
-        ? data.content[0].text
-        : "Claude didn't return any text.";
+      ? data.content[0].text
+      : "Claude didn't return any text.";
 
     res.json({ answer });
   } catch (err) {
@@ -210,6 +151,31 @@ app.post("/contractor-ask", async (req, res) => {
     return res.status(400).json({ error: "No question provided." });
   }
 
+  // --- RAG IMPLEMENTATION: LOAD COST DATA ---
+  let ragData = { laborRates: 'unavailable', permits: 'unavailable' };
+  try {
+    const laborPath = path.resolve(__dirname, 'public', 'labor-rates.json');
+    const permitPath = path.resolve(__dirname, 'public', 'permit-fees.json');
+    
+    const laborData = JSON.parse(fs.readFileSync(laborPath, 'utf8'));
+    const permitData = JSON.parse(fs.readFileSync(permitPath, 'utf8'));
+
+    // Determine regional multiplier based on ZIP prefix
+    const zipPrefix = zip ? zip.substring(0, 3) : 'other';
+    const multiplier = laborData.regional_multipliers[zipPrefix] || laborData.regional_multipliers['other'];
+    
+    // Inject key RAG data points
+    ragData = {
+        laborRates: laborData.rates_by_trade,
+        regionalMultiplier: multiplier,
+        samplePermitFees: permitData.projects
+    };
+
+  } catch (e) {
+      console.warn("RAG DATA LOAD FAILED:", e.message);
+  }
+  // --- END RAG IMPLEMENTATION ---
+
   const focusDescription = {
     general: "General contractor / project advice",
     pricing: "Pricing and estimating jobs profitably and fairly",
@@ -225,6 +191,8 @@ app.post("/contractor-ask", async (req, res) => {
 
 SPECIAL INSTRUCTIONS FOR DOWNLOADABLE ESTIMATE (OVERRIDE):
 - Input Data: Scope Level: ${scopeLevel}, Size: ${size}.
+- INJECTED RAG DATA: You MUST reference the provided regional Labor Rates and Multiplier (${ragData.regionalMultiplier}).
+- Use the Trades required (Plumber, Electrician, etc.) and multiply their base rate by the Regional Multiplier to calculate labor costs.
 - Your response MUST be a single, raw JSON object. Do not wrap it in any text, markdown, or commentary.
 - The ZIP code must be provided. If not, the JSON output MUST contain only: {"error": "ZIP code missing."}.
 - If ZIP is provided, generate a detailed estimate object (always in USD) containing the following fields:
@@ -245,6 +213,12 @@ SPECIAL INSTRUCTIONS FOR DOWNLOADABLE ESTIMATE (OVERRIDE):
 You are talking to another contractor (or aspiring contractor).
 They may be in residential trades (GC, plumbing, electrical, HVAC, remodeling, etc.).
 
+--- BEGIN RAG CONTEXT ---
+Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
+Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
+Regional Multiplier: ${ragData.regionalMultiplier}
+--- END RAG CONTEXT ---
+
 FOCUS AREA: ${focusDescription}
 JOB ZIP (if provided): ${zip || "Not provided"}${pricingExtra}
 
@@ -254,7 +228,6 @@ Give practical, grounded advice based on real-world experience.
 Avoid guessing about local code specifics—remind them to check their local code and licensing board if needed.
 
 Respond using EXACTLY this structure:
-
 1. Quick Summary (2–4 sentences)
 2. Key Considerations (3–7 bullet points)
 3. Suggested Approach / Strategy (Numbered steps)
@@ -272,7 +245,7 @@ Respond using EXACTLY this structure:
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
+        "anthropic-version": "2023-03-01" // Note: Reverting API version to 2023-03-01 for stability
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
@@ -302,15 +275,14 @@ Respond using EXACTLY this structure:
     const data = await apiResponse.json();
     const rawAnswer = data.content[0].text.trim();
 
-    // **CRITICAL CHANGE**: Attempt to parse JSON only if pricing is requested
+    // Attempt to parse JSON only if pricing is requested
     if (focus === "pricing") {
         try {
-            // Claude sometimes wraps JSON in ```json...```, so we remove that for clean parsing.
             const cleanedJson = rawAnswer.replace(/```json\s*|```/g, '').trim();
             const jsonAnswer = JSON.parse(cleanedJson);
             return res.json({ answer: jsonAnswer, format: 'json' });
         } catch (jsonErr) {
-            // If parsing fails, send the raw text and an error flag to the frontend
+            console.error("JSON PARSE FAILURE:", jsonErr);
             return res.json({ answer: rawAnswer, format: 'text', error: "AI response was not valid JSON." });
         }
     } else {
@@ -372,7 +344,7 @@ Respond using EXACTLY this structure:
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
+        "anthropic-version": "2023-03-01" // Note: Reverting API version to 2023-03-01 for stability
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
@@ -403,8 +375,8 @@ Respond using EXACTLY this structure:
 
     const answer =
       data.content && data.content[0]?.text
-        ? data.content[0].text
-        : "Claude didn't return any text.";
+      ? data.content[0].text
+      : "Claude didn't return any text.";
 
     res.json({ answer });
   } catch (err) {
@@ -412,36 +384,37 @@ Respond using EXACTLY this structure:
     res.status(500).json({ error: "Server error talking to Claude (planner)." });
   }
 });
+
 // ====== ROUTE: /grading-data (SERVES GRADING JSON DATA) ======
 app.get("/grading-data", (req, res) => {
-  // This uses the path module which MUST be declared at the top of the file.
-  const filePath = path.resolve(__dirname, 'public', 'grading-logic.json');
+  // This uses the path module which MUST be declared at the top of the file.
+  const filePath = path.resolve(__dirname, 'public', 'grading-logic.json');
 
-  // Check if file exists (using fs module, which MUST be declared at the top)
-  if (!fs.existsSync(filePath)) {
-    console.error(`ERROR: Grading logic file not found at: ${filePath}`);
-    return res.status(404).json({ error: "Grading logic file not found on server." });
-  }
+  // Check if file exists (using fs module, which MUST be declared at the top)
+  if (!fs.existsSync(filePath)) {
+    console.error(`ERROR: Grading logic file not found at: ${filePath}`);
+    return res.status(404).json({ error: "Grading logic file not found on server." });
+  }
 
-  // Read the file and serve the data
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error("Error reading grading logic file:", err);
-      return res.status(500).json({ error: "Could not read grading data." });
-    }
-    
-    // Serve the data as JSON
-    try {
-      const jsonData = JSON.parse(data);
-      res.json(jsonData);
-    } catch (parseError) {
-      console.error("Error parsing grading logic file:", parseError);
-      res.status(500).json({ error: "Invalid JSON format in grading file." });
-    }
-  });
+  // Read the file and serve the data
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error("Error reading grading logic file:", err);
+      return res.status(500).json({ error: "Could not read grading data." });
+    }
+    
+    // Serve the data as JSON
+    try {
+      const jsonData = JSON.parse(data);
+      res.json(jsonData);
+    } catch (parseError) {
+      console.error("Error parsing grading logic file:", parseError);
+      res.status(500).json({ error: "Invalid JSON format in grading file." });
+    }
+  });
 });
 // ====== START SERVER ======
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
