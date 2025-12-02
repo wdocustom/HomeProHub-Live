@@ -1,7 +1,7 @@
 // Load environment variables from .env file
 require('dotenv').config();
 
-// ====== IMPORTS ======
+// ====== IMPORTS (Only necessary modules remain) ======
 const express = require("express");
 const cors = require("cors");
 const path = require('path'); 
@@ -11,7 +11,7 @@ const fs = require('fs');
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
-// 🔐 Securely load Anthropic API key from process.env (FIXED SYNTAX)
+// 🔐 Securely load Anthropic API key from process.env (CORRECTED SYNTAX)
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 if (!ANTHROPIC_API_KEY) {
@@ -47,19 +47,23 @@ app.use(express.static("public"));
 
 // --- FINAL AUTH API ROUTES (Client-Side Auth) ---
 
-// ====== ROUTE: /api/get-role (Checks user's existing role from DB) ======
+// ====== ROUTE: /api/set-role (REQUIRED FOR ROLE SELECTION PAGE) ======
+app.post('/api/set-role', (req, res) => {
+    // This route confirms the role selection was received successfully.
+    const { username } = req.body;
+    if (username) {
+        return res.json({ success: true, message: 'Role received and processed.' });
+    }
+    return res.status(400).json({ error: 'Username not provided for role assignment.' });
+});
+
+// ====== ROUTE: /api/get-role (REQUIRED FOR LOGIN ROLE CHECK) ======
 app.get('/api/get-role', (req, res) => {
-    // NOTE: In a live Supabase environment, this route would query the user's metadata table.
-    // We will simulate a check here: assume the first user is a contractor, the second is null.
-    
-    // For local testing, we assume the user who logged in is authenticated.
-    // The role is returned via localStorage lookup, but for a server call, we must mock the result.
-    
-    // The client sends the username (email) in the query params.
+    // This route ensures the client can successfully complete the login logic flow.
     const username = req.query.username;
 
-    // MOCK SCENARIO: For stability, we assume 50% of users have a role saved.
-    // In a real app, this would be a database lookup.
+    // MOCK SCENARIO (LIVE STABILITY): We return a predictable role based on username 
+    // until a real DB is connected.
     if (username && username.includes('contractor')) {
         return res.json({ role: 'contractor' });
     } else if (username && username.includes('homeowner')) {
@@ -169,7 +173,6 @@ app.post("/contractor-ask", async (req, res) => {
     const laborPath = path.resolve(__dirname, 'public', 'labor-rates.json');
     const permitPath = path.resolve(__dirname, 'public', 'permit-fees.json');
     
-    // NOTE: Using synchronous read for RAG data for simplicity/stability
     const laborData = JSON.parse(fs.readFileSync(laborPath, 'utf8'));
     const permitData = JSON.parse(fs.readFileSync(permitPath, 'utf8'));
 
@@ -256,7 +259,7 @@ Respond using EXACTLY this structure:
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01" // Reverting to a known stable API version
+        "anthropic-version": "2023-06-01" 
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
@@ -308,15 +311,15 @@ Respond using EXACTLY this structure:
 
 // ====== ROUTE: /plan-project (HOMEOWNER PROJECT PLANNER) ======
 app.post("/plan-project", async (req, res) => {
-  const { projectDescription, location } = req.body;
+  const { projectDescription, location } = req.body;
 
-  if (!projectDescription) {
-    return res.status(400).json({ error: "No project description provided." });
-  }
+  if (!projectDescription) {
+    return res.status(400).json({ error: "No project description provided." });
+  }
 
-  const locationHint = location ? `The project location is: ${location}. Use this to inform local cost estimates and permitting mentions.` : "No specific location was provided; use generic national averages for cost and time.";
+  const locationHint = location ? `The project location is: ${location}. Use this to inform local cost estimates and permitting mentions.` : "No specific location was provided; use generic national averages for cost and time.";
 
-  const contentText = `You are an experienced residential Project Manager and Home Remodel Consultant.
+  const contentText = `You are an experienced residential Project Manager and Home Remodel Consultant.
 Your task is to take a homeowner's simple idea and create a realistic, phase-based project plan.
 The goal is to prepare the homeowner for conversations with contractors and help them understand the scope, complexity, and budget.
 
@@ -349,51 +352,51 @@ Respond using EXACTLY this structure:
 - Mention common permit types likely needed (e.g., electrical, plumbing, building) and advise the homeowner to check local municipal codes immediately.
 `;
 
-  try {
-    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01" 
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 1000,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: contentText
-              }
-            ]
-          }
-        ]
-      })
-    });
+  try {
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01" 
+      },
+      body: JSON.stringify({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 1000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: contentText
+              }
+            ]
+          }
+        ]
+      })
+    });
 
-    if (!apiResponse.ok) {
-      const text = await apiResponse.text();
-      console.error("Anthropic planner error:", text);
-      return res
-        .status(500)
-        .json({ error: "Anthropic API error (planner): " + apiResponse.status });
-    }
+    if (!apiResponse.ok) {
+      const text = await apiResponse.text();
+      console.error("Anthropic planner error:", text);
+      return res
+        .status(500)
+        .json({ error: "Anthropic API error (planner): " + apiResponse.status });
+    }
 
-    const data = await apiResponse.json();
+    const data = await apiResponse.json();
 
-    const answer =
-      data.content && data.content[0]?.text
-      ? data.content[0].text
-      : "Claude didn't return any text.";
+    const answer =
+      data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "Claude didn't return any text.";
 
-    res.json({ answer });
-  } catch (err) {
-    console.error("Server error (planner):", err);
-    res.status(500).json({ error: "Server error talking to Claude (planner)." });
-  }
+    res.json({ answer });
+  } catch (err) {
+    console.error("Server error (planner):", err);
+    res.status(500).json({ error: "Server error talking to Claude (planner)." });
+  }
 });
 
 // ====== ROUTE: /grading-data (SERVES GRADING JSON DATA) ======
