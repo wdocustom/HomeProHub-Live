@@ -59,39 +59,62 @@
     </main>
 
     <script>
-    const roleButtons = document.querySelectorAll('.role-btn');
+    // --- UTILITY ---
+    async function postData(url, data) {
+        // This function calls your Node.js mock route to save the role in the mock database
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('homeprohub_auth_token')}` 
+            },
+            body: JSON.stringify(data)
+        });
+        return response;
+    }
 
-    // Check if user is authenticated via server session
-    fetch('/api/user')
-        .then(res => res.json())
-        .then(sessionData => {
-            if (sessionData.error) {
-                // Not authenticated, redirect to login
-                window.location.href = '/index.html';
-            }
-            // Store the essential session data (ID and Name)
-            localStorage.setItem('homeprohub_session_id', sessionData.id); 
-            localStorage.setItem('homeprohub_user_name', sessionData.name || 'User');
-        })
-        .catch(() => {
-             // Basic connectivity check failed, redirect
-             window.location.href = '/index.html';
-        });
+    // --- MAIN AUTH CHECK FUNCTION ---
+    function checkAuthAndLoad() {
+        const roleButtons = document.querySelectorAll('.role-btn');
+        const username = localStorage.getItem('homeprohub_username');
+        const token = localStorage.getItem('homeprohub_auth_token');
+
+        if (!username || !token) {
+            // If username or token is missing, redirect to login
+            window.location.href = 'index.html';
+            return; // Stop execution
+        }
         
-    roleButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const role = button.getAttribute('data-role');
-            
-            // CRITICAL FIX: Save the chosen role to a dedicated key
-            localStorage.setItem('homeprohub_user_role', role); 
-            
-            // Redirect to the appropriate dashboard
-            if (role === 'homeowner') {
-                window.location.href = 'home.html';
-            } else if (role === 'contractor') {
-                window.location.href = 'contractor.html';
-            }
+        // If authenticated, attach listeners
+        roleButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const role = button.getAttribute('data-role');
+                
+                try {
+                    // Call the server to save the role to the MOCK_DB
+                    const response = await postData('/api/set-role', { username, role });
+
+                    if (response.ok) {
+                        // Save the role locally for quick checks
+                        localStorage.setItem('homeprohub_user_role', role);
+                        
+                        // Redirect to the appropriate dashboard
+                        if (role === 'homeowner') {
+                            window.location.href = 'home.html';
+                        } else if (role === 'contractor') {
+                            window.location.href = 'contractor.html';
+                        }
+                    } else {
+                        alert('Error saving role on server. Please try again.');
+                    }
+                } catch (error) {
+                    alert('Network error during role selection.');
+                }
+            });
         });
-    });
+    }
+
+    // CRITICAL FIX: Only run the check after the entire page structure is ready
+    document.addEventListener('DOMContentLoaded', checkAuthAndLoad);
 </script>
 </body></html>
