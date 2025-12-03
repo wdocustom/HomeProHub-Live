@@ -57,6 +57,37 @@ app.post('/api/set-role', (req, res) => {
     return res.status(400).json({ error: 'Username not provided for role assignment.' });
 });
 
+// ====== ROUTE: /api/get-full-user-status (Final Login Check) ======
+app.get('/api/get-full-user-status', (req, res) => {
+    // NOTE: This simulates querying the user's profile table in the database.
+    const username = req.query.username;
+
+    // We rely on the local storage file system state (which the user committed) 
+    // to determine their status for the demo.
+    
+    // 1. Determine Role (Based on username mock)
+    let role = null;
+    if (username && username.includes('contractor')) {
+        role = 'contractor';
+    } else if (username && username.includes('homeowner')) {
+        role = 'homeowner';
+    }
+
+    // 2. Determine Profile Status (Simulate DB check)
+    // We assume the user has completed their profile setup if their role is contractor.
+    const profileCompleted = role === 'contractor' ? true : false; 
+    
+    // 3. Return ALL essential data needed for the client's local storage
+    return res.json({ 
+        role: role, 
+        profileComplete: profileCompleted,
+        // Mock profile data for display (replace with real DB values in production)
+        companyName: profileCompleted ? `${username.split('@')[0]} Inc.` : null,
+        license: profileCompleted ? 'CBC-98765' : null,
+        zipCode: profileCompleted ? '33602' : null
+    });
+});
+
 // ====== ROUTE: /api/get-role (REQUIRED FOR LOGIN ROLE CHECK) ======
 app.get('/api/get-role', (req, res) => {
     // This route ensures the client can successfully complete the login logic flow.
