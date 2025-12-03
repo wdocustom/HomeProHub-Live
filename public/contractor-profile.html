@@ -72,7 +72,13 @@
     <form id="profileForm">
       <div class="form-grid">
         <div class="full-width">
-          <h3 style="font-size: 18px; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Verification & Trade Info</h3>
+          <h3 style="font-size: 18px; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Verification & Trade Info</h3><div class="full-width">
+          <label for="userRole">Primary Role</label>
+          <select id="userRole" required>
+            <option value="contractor">Contractor / Trades Pro</option>
+            <option value="homeowner">Homeowner / DIYer</option>
+          </select>
+        </div>
         </div>
         
         <div>
@@ -121,33 +127,52 @@
 
 <script>
   // --- AUTH AND LOGIC ---
-  function getProfileData() {
+  function getProfileData(runRedirect = true) {
+    // This check is now simplified to confirm authentication status
     try {
-      const rawRole = localStorage.getItem("homeprohub_user_role");
-      
-      if (!rawRole || rawRole !== 'contractor') {
-          window.location.href = "role-selection.html"; // Not logged in or wrong role
+      const username = localStorage.getItem('homeprohub_username');
+      const token = localStorage.getItem('homeprohub_auth_token');
+      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
+
+      if (!username || !token) {
+          if (runRedirect) window.location.href = "index.html"; 
           return null;
       }
+      
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
 
-      return true; // Simple check passed
+      // If the profile exists, we return the data
+      if (profile.profileComplete) {
+          return { 
+              ...profile, 
+              username: username,
+              name: profile.companyName || username.split('@')[0]
+          };
+      }
+
+      // If we reach here, the user is authenticated but the profile is incomplete.
+      return { username: username, name: username.split('@')[0], profileComplete: false }; 
+
     } catch (e) {
-      window.location.href = "role-selection.html"; 
+      if (runRedirect) window.location.href = "index.html"; 
       return null;
     }
   }
 
-  getProfileData(); // Run check on load
+  const profile = getProfileData(); 
 
+  // --- FORM SUBMISSION ---
   const form = document.getElementById('profileForm');
   const statusMessage = document.getElementById('statusMessage');
 
-  form.addEventListener('submit', (e) => {
-    // 🚨 CRITICAL FIX: Prevent the browser's default page refresh
-    e.preventDefault(); 
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
+    const role = document.getElementById('userRole').value;
+    
     // Collect Data
     const profileData = {
+      role: role,
       companyName: document.getElementById('companyName').value.trim(),
       trade: document.getElementById('trade').value,
       license: document.getElementById('license').value.trim(),
@@ -157,33 +182,40 @@
       profileComplete: true // Flag for completeness
     };
 
-    // Save profile data merged with existing user role
+    // --- CRITICAL STEP: Save Role and Profile Status to Server/Local ---
     try {
-      // We will now save the full profile object under the dedicated key
+      // 1. Save Role to server (Required to bypass login loop next time)
+      const username = localStorage.getItem('homeprohub_username');
+      await fetch('/api/set-role', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, role })
+      });
+      
+      // 2. Save full profile data locally
+      localStorage.setItem('homeprohub_user_role', role); // Final role save
       localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
       
-      // Safety check: ensure role key exists
-      localStorage.setItem('homeprohub_user_role', 'contractor'); 
+      statusMessage.textContent = 'Profile saved! Directing to dashboard...';
 
-      statusMessage.textContent = 'Profile saved! Accessing your dashboard...';
-
-      // --- Success: Redirect to the main contractor dashboard ---
+      // --- Success: Redirect to the correct dashboard ---
       setTimeout(() => {
-        window.location.href = 'contractor.html';
+        window.location.href = role === 'homeowner' ? 'home.html' : 'contractor.html';
       }, 500); 
 
     } catch (err) {
-      statusMessage.textContent = 'Error saving profile. Please check your browser settings or storage space.';
-      console.error("Local Storage Save Error:", err);
+      statusMessage.textContent = 'Error saving profile. Please try again.';
+      console.error(err);
     }
   });
 
-  // Functionality to Load Existing Data (If they come back to edit)
+  // Functionality to Load Existing Data 
   document.addEventListener('DOMContentLoaded', () => {
     try {
       const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
       if (rawProfile) {
         const profile = JSON.parse(rawProfile);
+        document.getElementById('userRole').value = profile.role || 'contractor'; // Set role if exists
         document.getElementById('companyName').value = profile.companyName || '';
         document.getElementById('trade').value = profile.trade || 'gc';
         document.getElementById('license').value = profile.license || '';
@@ -191,13 +223,13 @@
         document.getElementById('zipCode').value = profile.zipCode || '';
         document.getElementById('description').value = profile.description || '';
         
-        // Change button text if profile is already complete
+        // Update button text if profile is already complete
         if (profile.profileComplete) {
             document.querySelector('.save-btn').textContent = 'Update Profile & Access Dashboard';
         }
       }
     } catch (e) {
-      console.warn("No valid existing contractor profile found.");
+      console.warn("No existing contractor profile found.");
     }
   });
 </script></body></html>

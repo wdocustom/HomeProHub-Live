@@ -193,7 +193,7 @@
                 const roleData = await roleResponse.json();
                 
                 if (roleData.role) {
-                    // ROLE FOUND: Bypass role picker and go straight to dashboard
+                    // ROLE FOUND: Bypass role picker and profile setup, go straight to dashboard
                     localStorage.setItem('homeprohub_user_role', roleData.role);
                     loginStatus.textContent = 'Success! Directing to dashboard...';
                     
@@ -202,11 +202,10 @@
                         window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
                     }, 500);
                 } else {
-                    // NO ROLE FOUND: Go to role selection for the first time setup
-                    loginStatus.textContent = 'Success! Please select your role...';
-                    window.location.href = 'role-selection.html';
+                    // NO ROLE FOUND: Go directly to profile setup, where they will select their role first.
+                    loginStatus.textContent = 'Success! Directing to Profile Setup...';
+                    window.location.href = 'contractor-profile.html'; // NOTE: Direct to profile for *all* new users
                 }
-            } else {
                  loginStatus.textContent = 'Login failed. Check console for details.';
             }
         } catch (error) {
