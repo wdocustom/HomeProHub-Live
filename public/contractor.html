@@ -252,23 +252,17 @@
       const rawRole = localStorage.getItem("homeprohub_user_role");
       const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
 
-      // Check if user has an auth token and username
-      if (!username || !token) {
+      // 1. Check Authentication (must have token and username)
+      if (!username || !token || rawRole !== 'contractor') {
           if (runRedirect) window.location.href = "index.html"; 
-          return null;
-      }
-      
-      // Check if user is the correct role
-      if (!rawRole || rawRole !== 'contractor') {
-          if (runRedirect) window.location.href = "role-selection.html"; 
           return null;
       }
       
       const profile = rawProfile ? JSON.parse(rawProfile) : {};
       
-      // 2. Check Profile Completion (Onboarding Funnel)
-      // CRITICAL FIX: Only redirect if profile is explicitly marked incomplete OR if the profile object is empty.
-      if (rawProfile === null || profile.profileComplete === false) { 
+      // 2. CRITICAL CHECK: ONLY redirect if profileComplete flag is explicitly false or missing.
+      // We assume if the profile key exists, the data is valid enough to proceed.
+      if (!profile.profileComplete) { 
           if (runRedirect) window.location.href = "contractor-profile.html"; 
           return null;
       }
