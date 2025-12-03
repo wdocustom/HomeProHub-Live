@@ -258,9 +258,9 @@
                         window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
                     }, 500);
                 } else {
-                    // NO ROLE FOUND: Go to role selection for the first time setup
-                    loginStatus.textContent = 'Success! Please select your role...';
-                    window.location.href = 'role-selection.html';
+                    // NO ROLE FOUND: Go directly to the Unified Profile Setup page
+                    loginStatus.textContent = 'Success! Directing to Profile Setup...';
+                    window.location.href = 'contractor-profile.html'; // <--- CORRECTED REDIRECT
                 }
             } else {
                  loginStatus.textContent = 'Login failed.';
