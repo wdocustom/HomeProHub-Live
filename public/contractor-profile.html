@@ -1,6 +1,5 @@
-<!DOCTYPE html><html lang="en"><head>
-  <meta charset="UTF-8" />
-  <title>HomeProHub – Contractor Profile Setup</title>
+<!DOCTYPE html><html><head>
+  <title>HomeProHub – Unified Profile Setup</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
     .form-container {
@@ -64,30 +63,33 @@
     </div>
   </div></header><main>
   <div class="form-container card">
-    <h1 class="form-title">Contractor Profile & Verification</h1>
+    <h1 class="form-title">Unified Profile Setup</h1>
     <p class="form-sub">
-      Please complete your profile. This information is used to verify your business status and calculate your initial HomeProHub Contractor Grade.
+      Please select your role and complete your profile. This information is needed for local project matching and grading.
     </p>
 
     <form id="profileForm">
       <div class="form-grid">
         <div class="full-width">
-          <h3 style="font-size: 18px; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Verification & Trade Info</h3><div class="full-width">
           <label for="userRole">Primary Role</label>
           <select id="userRole" required>
             <option value="contractor">Contractor / Trades Pro</option>
             <option value="homeowner">Homeowner / DIYer</option>
           </select>
         </div>
+        
+        <div class="full-width">
+          <h3 style="font-size: 18px; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Contact & Verification Info</h3>
         </div>
         
-        <div>
-          <label for="companyName">Company Name</label>
+        <div class="full-width">
+          <label for="companyName">Full Name / Company Name</label>
           <input id="companyName" type="text" required>
         </div>
+
         <div>
-          <label for="trade">Primary Trade</label>
-          <select id="trade" required>
+          <label for="trade">Primary Trade (Contractors Only)</label>
+          <select id="trade">
             <option value="gc">General Contractor / Remodeling</option>
             <option value="electrical">Electrical</option>
             <option value="plumbing">Plumbing</option>
@@ -97,23 +99,23 @@
           </select>
         </div>
         
-        <div class="full-width">
-          <label for="license">State/City License Number (Required for Grade)</label>
-          <input id="license" type="text" placeholder="e.g. CBC1234567" required>
+        <div>
+          <label for="license">State/City License Number (Contractors Only)</label>
+          <input id="license" type="text" placeholder="e.g. CBC1234567">
         </div>
         
         <div>
-          <label for="yearsExperience">Years of Experience in Trade</label>
-          <input id="yearsExperience" type="number" min="1" required>
+          <label for="yearsExperience">Years of Experience</label>
+          <input id="yearsExperience" type="number" min="0">
         </div>
         <div>
-          <label for="zipCode">Primary Service ZIP Code</label>
+          <label for="zipCode">Primary Service ZIP Code / Home ZIP Code</label>
           <input id="zipCode" type="text" placeholder="e.g. 33602" required>
         </div>
         
         <div class="full-width">
-          <label for="description">Company Description / Specialties</label>
-          <textarea id="description" placeholder="Max 250 characters. Describe what makes your business unique or the types of projects you focus on." maxlength="250"></textarea>
+          <label for="description">Company Description / Homeowner Notes</label>
+          <textarea id="description" placeholder="Max 250 characters. Describe your specialties or common projects." maxlength="250"></textarea>
         </div>
       </div>
       
@@ -128,30 +130,29 @@
 <script>
   // --- AUTH AND LOGIC ---
   function getProfileData(runRedirect = true) {
-    // This check is now simplified to confirm authentication status
     try {
       const username = localStorage.getItem('homeprohub_username');
       const token = localStorage.getItem('homeprohub_auth_token');
-      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
 
       if (!username || !token) {
           if (runRedirect) window.location.href = "index.html"; 
           return null;
       }
       
+      // Get role and profile data (if it exists)
+      const rawRole = localStorage.getItem('homeprohub_user_role');
+      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
+      
       const profile = rawProfile ? JSON.parse(rawProfile) : {};
 
-      // If the profile exists, we return the data
-      if (profile.profileComplete) {
-          return { 
-              ...profile, 
-              username: username,
-              name: profile.companyName || username.split('@')[0]
-          };
-      }
-
-      // If we reach here, the user is authenticated but the profile is incomplete.
-      return { username: username, name: username.split('@')[0], profileComplete: false }; 
+      // If we reach here, the user is authenticated.
+      return { 
+          ...profile, 
+          username: username,
+          role: rawRole,
+          name: profile.companyName || username.split('@')[0],
+          isAuthenticated: true
+      };
 
     } catch (e) {
       if (runRedirect) window.location.href = "index.html"; 
@@ -164,11 +165,13 @@
   // --- FORM SUBMISSION ---
   const form = document.getElementById('profileForm');
   const statusMessage = document.getElementById('statusMessage');
+  const userRoleSelect = document.getElementById('userRole');
+
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const role = document.getElementById('userRole').value;
+    const role = userRoleSelect.value;
     
     // Collect Data
     const profileData = {
@@ -179,22 +182,23 @@
       yearsExperience: document.getElementById('yearsExperience').value.trim(),
       zipCode: document.getElementById('zipCode').value.trim(),
       description: document.getElementById('description').value.trim(),
-      profileComplete: true // Flag for completeness
+      profileComplete: true // CRITICAL: Flag for completeness
     };
 
-    // --- CRITICAL STEP: Save Role and Profile Status to Server/Local ---
+    // --- CRITICAL FIX: Ensure the system saves the role and profile status consistently ---
     try {
-      // 1. Save Role to server (Required to bypass login loop next time)
       const username = localStorage.getItem('homeprohub_username');
+
+      // 1. Server Call to save role (This is the critical step for subsequent logins)
       await fetch('/api/set-role', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, role })
       });
       
-      // 2. Save full profile data locally
-      localStorage.setItem('homeprohub_user_role', role); // Final role save
-      localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
+      // 2. Save ALL necessary keys locally for immediate and future use
+      localStorage.setItem('homeprohub_user_role', role); 
+      localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData)); // This holds the profileComplete flag
       
       statusMessage.textContent = 'Profile saved! Directing to dashboard...';
 
@@ -209,13 +213,15 @@
     }
   });
 
-  // Functionality to Load Existing Data 
+  // Functionality to Load Existing Data
   document.addEventListener('DOMContentLoaded', () => {
     try {
       const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
       if (rawProfile) {
         const profile = JSON.parse(rawProfile);
-        document.getElementById('userRole').value = profile.role || 'contractor'; // Set role if exists
+        
+        // Load data into fields
+        userRoleSelect.value = profile.role || 'contractor'; 
         document.getElementById('companyName').value = profile.companyName || '';
         document.getElementById('trade').value = profile.trade || 'gc';
         document.getElementById('license').value = profile.license || '';
@@ -229,7 +235,7 @@
         }
       }
     } catch (e) {
-      console.warn("No existing contractor profile found.");
+      console.warn("No existing profile data found.");
     }
   });
 </script></body></html>

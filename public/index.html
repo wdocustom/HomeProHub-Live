@@ -163,43 +163,33 @@
     
     // Check if the supabase global object exists
     const { createClient } = window.supabase;
-    // FIX: Use the single object parameter method and pass persistSession for stability
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
-            persistSession: true, // Recommended for production session management
+            persistSession: true,
         }
     });
     
     // --- ELEMENT SELECTORS ---
-    const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
-    const loginStatus = document.getElementById('loginStatus');
+    const loginForm = document.getElementById('loginForm');
     const signupStatus = document.getElementById('signupStatus');
-    const showSignupLink = document.getElementById('showSignup');
-    const showLoginLink = document.getElementById('showLogin');
+    const loginStatus = document.getElementById('loginStatus');
+
+    // --- UTILITY ---
+    async function postData(url, data) {
+        const token = localStorage.getItem('homeprohub_auth_token');
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify(data)
+        });
+        return response;
+    }
     
-    // --- UI TOGGLES ---
-    showSignupLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        loginForm.style.display = 'none';
-        signupForm.style.display = 'block';
-        showSignupLink.parentNode.style.display = 'none';
-        showLoginLink.parentNode.style.display = 'block';
-        loginStatus.textContent = '';
-        signupStatus.textContent = '';
-    });
-
-    showLoginLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        signupForm.style.display = 'none';
-        loginForm.style.display = 'block';
-        showLoginLink.parentNode.style.display = 'none';
-        showSignupLink.parentNode.style.display = 'block';
-        loginStatus.textContent = '';
-        signupStatus.textContent = '';
-    });
-
-    // --- SIGNUP LOGIC (Live Supabase) ---
+    // --- SIGNUP LOGIC (Remaining the same) ---
     signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         signupStatus.textContent = 'Creating secure account...';
@@ -225,7 +215,7 @@
         }
     });
 
-    // --- LOGIN LOGIC (Live Supabase) ---
+    // --- LOGIN LOGIC (Final Fix for Persistent Profile Setup Loop) ---
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         loginStatus.textContent = 'Logging in...';
@@ -234,7 +224,7 @@
         const password = document.getElementById('loginPassword').value;
 
         try {
-            // --- 1. LIVE SUPABASE LOGIN CALL ---
+            // 1. LIVE SUPABASE LOGIN CALL
             const { data, error } = await client.auth.signInWithPassword({ 
                 email: username, 
                 password: password 
@@ -243,35 +233,43 @@
             if (error) {
                 loginStatus.textContent = `Error: ${error.message || 'Invalid credentials.'}`;
             } else if (data.user) {
-                // User successfully logged in. Save session data.
+                const userEmail = data.user.email;
+
+                // 2. Save session data (Token and Username)
                 localStorage.setItem('homeprohub_auth_token', data.session.access_token);
-                localStorage.setItem('homeprohub_username', data.user.email);
+                localStorage.setItem('homeprohub_username', userEmail);
                 
-                // --- 2. NEW STEP: Check for existing role on server ---
-                const roleResponse = await fetch(`/api/get-role?username=${data.user.email}`);
-                const roleData = await roleResponse.json();
+                // 3. CRITICAL STEP: Get the full user status from the server
+                const statusResponse = await fetch(`/api/get-full-user-status?username=${userEmail}`);
+                const statusData = await statusResponse.json(); // Contains role, profileComplete, companyName, etc.
+
+                const role = statusData.role;
                 
-                if (roleData.role) {
-                    // ROLE FOUND: Bypass role picker and go straight to dashboard
-                    localStorage.setItem('homeprohub_user_role', roleData.role);
+                if (role) {
+                    // ROLE FOUND: Save ALL profile data received from the server
+                    localStorage.setItem('homeprohub_user_role', role);
+
+                    // --- FIX: Save the full, completed profile object on every successful login ---
+                    // This ensures the next page (the Dashboard) passes the 'profileComplete' check.
+                    if (statusData.profileComplete) {
+                        localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(statusData));
+                    }
+                    
+                    // Direct to Dashboard (BYPASSING ROLE/PROFILE SETUP)
                     loginStatus.textContent = 'Success! Directing to dashboard...';
-                    
-                    // Small delay to ensure localStorage saves before redirect
                     setTimeout(() => {
-                        window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
+                        window.location.href = role === 'homeowner' ? 'home.html' : 'contractor.html';
                     }, 500);
+
                 } else {
-                    // NO ROLE FOUND: Go directly to the Unified Profile Setup page
+                    // NO ROLE FOUND: Go to profile setup for first time setup
                     loginStatus.textContent = 'Success! Directing to Profile Setup...';
-                    
-                    // CRITICAL FIX: Redirect to the unified setup page where they select their role
                     window.location.href = 'contractor-profile.html'; 
                 }
             } else {
-                 loginStatus.textContent = 'Login failed. Check console for details.';
+                 loginStatus.textContent = 'Login failed.';
             }
         } catch (error) {
-            // CATCH BLOCK FOR TRY/CATCH
             loginStatus.textContent = 'Network error. Try again.';
         }
     });
