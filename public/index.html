@@ -1,92 +1,41 @@
-<!DOCTYPE html><html><head>
+<!DOCTYPE html>
+<html>
+<head>
   <title>HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* New Styles for Desktop Optimization */
+    /* Simplified for clarity */
     body {
         background-color: #f8f9fa; 
         display: flex;
         justify-content: center;
         align-items: flex-start;
         min-height: 100vh;
-        padding-top: 80px; /* More space from the top */
+        padding-top: 80px; 
     }
     .login-container {
-        max-width: 800px; /* Increased max width for desktop layout */
+        max-width: 800px; 
         width: 90%;
         background: white;
-        padding: 50px 40px; /* Increased padding */
-        border-radius: 16px; /* Slightly larger border radius */
+        padding: 50px 40px;
+        border-radius: 16px; 
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        text-align: left; /* Aligns content better for professional look */
-        
-        display: grid;
-        grid-template-columns: 1.5fr 1fr; /* Two main columns for professional look */
-        gap: 60px;
-        align-items: center;
-    }
-    @media (max-width: 800px) {
-        .login-container {
-            grid-template-columns: 1fr;
-            text-align: center;
-        }
-    }
-    
-    .logo-area {
-        margin-bottom: 25px;
-        text-align: center; /* Center logo in its column */
-    }
-    .logo-circle {
-        width: 70px; /* Larger logo */
-        height: 70px;
-        background-color: #ffd700; 
-        border-radius: 50%;
-        margin: 0 auto 15px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 36px;
-        font-weight: 700;
-        color: #1f2937;
-        font-family: monospace; 
     }
     .welcome-text {
-        font-size: 32px; /* Larger title */
+        font-size: 32px;
         font-weight: 700;
-        margin-bottom: 5px;
-        color: #1f2937;
+        margin-bottom: 10px;
     }
-    .welcome-sub {
-        font-size: 16px; /* Larger subtext */
-        color: #6b7280;
-        margin-bottom: 30px;
-        max-width: 400px;
-    }
-
-    /* Form Column Styling */
-    .form-column {
-        padding-left: 30px;
-        border-left: 1px solid #e5e7eb; /* Separator line */
-    }
-    @media (max-width: 800px) {
-        .form-column {
-            padding-left: 0;
-            border-left: none;
-        }
-    }
-    
-    /* Form Elements */
     .input-group input {
         width: 100%;
-        padding: 14px 15px; /* Larger input fields */
+        padding: 14px 15px;
         margin-bottom: 18px;
         border: 1px solid #d1d5db;
         border-radius: 8px;
-        font-size: 16px;
     }
     .btn-login {
         width: 100%;
-        padding: 18px; /* Larger button */
+        padding: 18px; 
         border: none;
         border-radius: 8px;
         background-color: #ffd700; 
@@ -95,12 +44,6 @@
         font-weight: 700;
         cursor: pointer;
     }
-    .signup-text {
-        margin-top: 25px;
-        font-size: 14px;
-        color: #6b7280;
-        text-align: center;
-    }
     .status-message {
         margin-top: 10px;
         font-size: 14px;
@@ -108,114 +51,34 @@
         text-align: center;
     }
   </style>
-</head><body>
+</head>
+<body>
 <div class="login-container">
-    
-    <div class="info-column">
-        <div class="logo-area">
-            <div class="logo-circle">HH</div>
+    <div class="welcome-text">Welcome to HomeProHub!</div>
+    <form id="loginForm">
+        <div class="input-group">
+            <input type="email" id="loginUsername" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
         </div>
-        <div class="welcome-text">Welcome to HomeProHub!</div>
-        <div class="welcome-sub">The single hub for contractors and homeowners. Sign in to access secure tools, client data, and AI assistance.</div>
-
-        <p style="font-size: 14px; color: #4b5563;">
-            <strong style="color: #2563eb;">Note:</strong> Your account status (Homeowner or Contractor) will be confirmed after login, directing you to the correct tools automatically.
-        </p>
-    </div>
-
-    <div class="form-column">
-        <form id="loginForm">
-            <h2 style="margin-top: 0;">Log In to Access</h2>
-            <div class="input-group">
-                <input type="email" id="loginUsername" placeholder="Email" required>
-                <input type="password" id="loginPassword" placeholder="Password" required>
-            </div>
-            <button type="submit" class="btn-login">LOGIN</button>
-            <a href="#" class="forgot-password">Forgot password?</a>
-            <p id="loginStatus" class="status-message"></p>
-        </form>
-
-        <form id="signupForm" style="display:none;">
-            <h2 style="margin-top: 0;">Create Account</h2>
-            <div class="input-group">
-                <input type="email" id="signupUsername" placeholder="Email (Required)" required>
-                <input type="password" id="signupPassword" placeholder="Password (Min 6 chars)" required>
-            </div>
-            <button type="submit" class="btn-login" style="background-color: #10b981;">REGISTER</button>
-            <p id="signupStatus" class="status-message" style="color: #10b981;"></p>
-        </form>
-        
-        <div class="signup-text">
-            Don't have an account? <a href="#" id="showSignup">Register Now!</a>
-        </div>
-        <div class="signup-text" style="display:none;">
-            Already have an account? <a href="#" id="showLogin">Log In!</a>
-        </div>
-    </div>
+        <button type="submit" class="btn-login">LOGIN</button>
+        <p id="loginStatus" class="status-message"></p>
+    </form>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-    // --- LIVE SUPABASE INTEGRATION ---
     const SUPABASE_URL = 'https://artcgqykrmliskbkzunz.supabase.co'; 
     const SUPABASE_ANON_KEY = 'sb_publishable_93uN7DNKNFnNQ2ZH9fMuvA_jGCWHifP';
-    
-    // Check if the supabase global object exists
     const { createClient } = window.supabase;
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
             persistSession: true,
         }
     });
-    
-    // --- ELEMENT SELECTORS ---
-    const signupForm = document.getElementById('signupForm');
+
     const loginForm = document.getElementById('loginForm');
-    const signupStatus = document.getElementById('signupStatus');
     const loginStatus = document.getElementById('loginStatus');
 
-    // --- UTILITY ---
-    async function postData(url, data) {
-        const token = localStorage.getItem('homeprohub_auth_token');
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
-            body: JSON.stringify(data)
-        });
-        return response;
-    }
-    
-    // --- SIGNUP LOGIC (Remaining the same) ---
-    signupForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        signupStatus.textContent = 'Creating secure account...';
-        
-        const username = document.getElementById('signupUsername').value;
-        const password = document.getElementById('signupPassword').value;
-
-        try {
-            const { data, error } = await client.auth.signUp({ 
-                email: username, 
-                password: password,
-            });
-
-            if (error) {
-                signupStatus.textContent = `Error: ${error.message}`;
-            } else {
-                signupStatus.textContent = `✅ Success! Check your email (${username}) to confirm registration.`;
-                document.getElementById('signupUsername').value = '';
-                document.getElementById('signupPassword').value = '';
-            }
-        } catch (error) {
-            signupStatus.textContent = 'Network error. Try again.';
-        }
-    });
-
-    // --- LOGIN LOGIC (Final Fix for Persistent Profile Setup Loop) ---
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         loginStatus.textContent = 'Logging in...';
@@ -224,7 +87,6 @@
         const password = document.getElementById('loginPassword').value;
 
         try {
-            // 1. LIVE SUPABASE LOGIN CALL
             const { data, error } = await client.auth.signInWithPassword({ 
                 email: username, 
                 password: password 
@@ -234,44 +96,42 @@
                 loginStatus.textContent = `Error: ${error.message || 'Invalid credentials.'}`;
             } else if (data.user) {
                 const userEmail = data.user.email;
+                const token = data.session.access_token;
 
-                // 2. Save session data (Token and Username)
-                localStorage.setItem('homeprohub_auth_token', data.session.access_token);
+                // Save session data
+                localStorage.setItem('homeprohub_auth_token', token);
                 localStorage.setItem('homeprohub_username', userEmail);
-                
-                // 3. CRITICAL STEP: Get the full user status from the server
-                const statusResponse = await fetch(`/api/get-full-user-status?username=${userEmail}`);
-                const statusData = await statusResponse.json(); // Contains role, profileComplete, companyName, etc.
 
+                // Retrieve complete profile status from server
+                const statusResponse = await fetch(`/api/get-full-user-status?username=${userEmail}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const statusData = await statusResponse.json();
+
+                // Update localStorage and redirect
                 const role = statusData.role;
-                
-                if (role) {
-                    // ROLE FOUND: Save ALL profile data received from the server
-                    localStorage.setItem('homeprohub_user_role', role);
+                localStorage.setItem('homeprohub_user_role', role);
+                localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(statusData || { profileComplete: false, role }));
 
-                    // --- FIX: Save the full, completed profile object on every successful login ---
-                    // This ensures the next page (the Dashboard) passes the 'profileComplete' check.
-                    if (statusData.profileComplete) {
-                        localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(statusData));
-                    }
-                    
-                    // Direct to Dashboard (BYPASSING ROLE/PROFILE SETUP)
+                if (statusData.profileComplete) {
                     loginStatus.textContent = 'Success! Directing to dashboard...';
                     setTimeout(() => {
                         window.location.href = role === 'homeowner' ? 'home.html' : 'contractor.html';
                     }, 500);
-
                 } else {
-                    // NO ROLE FOUND: Go to profile setup for first time setup
-                    loginStatus.textContent = 'Success! Directing to Profile Setup...';
-                    window.location.href = 'contractor-profile.html'; 
+                    loginStatus.textContent = 'Success! Redirecting to Profile Setup...';
+                    setTimeout(() => {
+                        window.location.href = 'contractor-profile.html';
+                    }, 500);
                 }
             } else {
-                 loginStatus.textContent = 'Login failed.';
+                loginStatus.textContent = 'Login failed.';
             }
         } catch (error) {
             loginStatus.textContent = 'Network error. Try again.';
+            console.error(error);
         }
     });
 </script>
-</body></html>
+</body>
+</html>

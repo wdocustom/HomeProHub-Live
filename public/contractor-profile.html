@@ -1,5 +1,7 @@
-<!DOCTYPE html><html><head>
-  <title>HomeProHub – Unified Profile Setup</title>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HomeProHub – Profile Setup</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
     .form-container {
@@ -8,234 +10,85 @@
       padding: 30px 24px;
       text-align: left;
     }
-    .form-title {
-      font-size: 26px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .form-sub {
-      font-size: 14px;
-      color: #6b7280;
-      margin-bottom: 24px;
-    }
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-    @media (max-width: 600px) {
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-    }
     label {
       display: block;
       font-size: 12px;
-      color: #4b5563;
-      margin-bottom: 3px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
     input, select {
       width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
+      padding: 10px;
       border: 1px solid #d1d5db;
-      background: white;
-      font-size: 14px;
-    }
-    .full-width {
-      grid-column: 1 / -1;
+      border-radius: 8px;
     }
     .save-btn {
-      margin-top: 30px;
-      padding: 10px 20px;
+      margin-top: 20px;
+      padding: 12px 20px;
       font-size: 16px;
-      font-weight: 600;
+      background-color: #4caf50;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">HH</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="contractor.html">Dashboard</a>
-    </div>
-  </div></header><main>
-  <div class="form-container card">
-    <h1 class="form-title">Unified Profile Setup</h1>
-    <p class="form-sub">
-      Please select your role and complete your profile. This information is needed for local project matching and grading.
-    </p>
-
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h1>Complete Your Profile</h1>
     <form id="profileForm">
-      <div class="form-grid">
-        <div class="full-width">
-          <label for="userRole">Primary Role</label>
-          <select id="userRole" required>
-            <option value="contractor">Contractor / Trades Pro</option>
-            <option value="homeowner">Homeowner / DIYer</option>
-          </select>
-        </div>
-        
-        <div class="full-width">
-          <h3 style="font-size: 18px; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Contact & Verification Info</h3>
-        </div>
-        
-        <div class="full-width">
-          <label for="companyName">Full Name / Company Name</label>
-          <input id="companyName" type="text" required>
-        </div>
+      <label for="userRole">Primary Role</label>
+      <select id="userRole" required>
+        <option value="contractor">Contractor</option>
+        <option value="homeowner">Homeowner</option>
+      </select>
 
-        <div>
-          <label for="trade">Primary Trade (Contractors Only)</label>
-          <select id="trade">
-            <option value="gc">General Contractor / Remodeling</option>
-            <option value="electrical">Electrical</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="hvac">HVAC / Mechanical</option>
-            <option value="carpentry">Carpentry / Framing</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        
-        <div>
-          <label for="license">State/City License Number (Contractors Only)</label>
-          <input id="license" type="text" placeholder="e.g. CBC1234567">
-        </div>
-        
-        <div>
-          <label for="yearsExperience">Years of Experience</label>
-          <input id="yearsExperience" type="number" min="0">
-        </div>
-        <div>
-          <label for="zipCode">Primary Service ZIP Code / Home ZIP Code</label>
-          <input id="zipCode" type="text" placeholder="e.g. 33602" required>
-        </div>
-        
-        <div class="full-width">
-          <label for="description">Company Description / Homeowner Notes</label>
-          <textarea id="description" placeholder="Max 250 characters. Describe your specialties or common projects." maxlength="250"></textarea>
-        </div>
-      </div>
-      
-      <div class="full-width" style="text-align: center;">
-        <button type="submit" class="btn-primary save-btn">Save Profile & Access Tools</button>
-      </div>
+      <label for="companyName">Company Name</label>
+      <input id="companyName" type="text" required />
+
+      <label for="zipCode">ZIP Code</label>
+      <input id="zipCode" type="text" required />
+
+      <button type="submit" class="save-btn">Save Profile</button>
+      <p id="statusMessage"></p>
     </form>
-
-    <p id="statusMessage" class="small-text" style="text-align: center; margin-top: 15px; color: #16a34a;"></p>
-  </div></main>
+  </div>
 
 <script>
-  // --- AUTH AND LOGIC ---
-  function getProfileData(runRedirect = true) {
-    try {
-      const username = localStorage.getItem('homeprohub_username');
-      const token = localStorage.getItem('homeprohub_auth_token');
-
-      if (!username || !token) {
-          if (runRedirect) window.location.href = "index.html"; 
-          return null;
-      }
-      
-      // Get role and profile data (if it exists)
-      const rawRole = localStorage.getItem('homeprohub_user_role');
-      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
-      
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
-
-      // If we reach here, the user is authenticated.
-      return { 
-          ...profile, 
-          username: username,
-          role: rawRole,
-          name: profile.companyName || username.split('@')[0],
-          isAuthenticated: true
-      };
-
-    } catch (e) {
-      if (runRedirect) window.location.href = "index.html"; 
-      return null;
-    }
-  }
-
-  const profile = getProfileData(); 
-
-  // --- FORM SUBMISSION ---
-  const form = document.getElementById('profileForm');
-  const statusMessage = document.getElementById('statusMessage');
-  const userRoleSelect = document.getElementById('userRole');
-
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const role = userRoleSelect.value;
-    
-    // Collect Data
-    const profileData = {
-      role: role,
-      companyName: document.getElementById('companyName').value.trim(),
-      trade: document.getElementById('trade').value,
-      license: document.getElementById('license').value.trim(),
-      yearsExperience: document.getElementById('yearsExperience').value.trim(),
-      zipCode: document.getElementById('zipCode').value.trim(),
-      description: document.getElementById('description').value.trim(),
-      profileComplete: true // CRITICAL: Flag for completeness
-    };
-
-    // --- CRITICAL FIX: Ensure the system saves the role and profile status consistently ---
-    try {
-      const username = localStorage.getItem('homeprohub_username');
-
-      // 1. Server Call to save role (This is the critical step for subsequent logins)
-      await fetch('/api/set-role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, role })
-      });
-      
-      // 2. Save ALL necessary keys locally for immediate and future use
-      localStorage.setItem('homeprohub_user_role', role); 
-      localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData)); // This holds the profileComplete flag
-      
-      statusMessage.textContent = 'Profile saved! Directing to dashboard...';
-
-      // --- Success: Redirect to the correct dashboard ---
-      setTimeout(() => {
-        window.location.href = role === 'homeowner' ? 'home.html' : 'contractor.html';
-      }, 500); 
-
-    } catch (err) {
-      statusMessage.textContent = 'Error saving profile. Please try again.';
-      console.error(err);
-    }
-  });
-
-  // Functionality to Load Existing Data
-  document.addEventListener('DOMContentLoaded', () => {
-    try {
-      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
-      if (rawProfile) {
-        const profile = JSON.parse(rawProfile);
-        
-        // Load data into fields
-        userRoleSelect.value = profile.role || 'contractor'; 
-        document.getElementById('companyName').value = profile.companyName || '';
-        document.getElementById('trade').value = profile.trade || 'gc';
-        document.getElementById('license').value = profile.license || '';
-        document.getElementById('yearsExperience').value = profile.yearsExperience || '';
-        document.getElementById('zipCode').value = profile.zipCode || '';
-        document.getElementById('description').value = profile.description || '';
-        
-        // Update button text if profile is already complete
-        if (profile.profileComplete) {
-            document.querySelector('.save-btn').textContent = 'Update Profile & Access Dashboard';
+    document.addEventListener('DOMContentLoaded', async () => {
+        const username = localStorage.getItem('homeprohub_username');
+        if (!username) {
+            window.location.href = 'index.html';
+            return;
         }
-      }
-    } catch (e) {
-      console.warn("No existing profile data found.");
-    }
-  });
-</script></body></html>
+
+        // Load profile data
+        const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
+        if (rawProfile) {
+            const profile = JSON.parse(rawProfile);
+            document.getElementById('userRole').value = profile.role || 'contractor';
+            document.getElementById('companyName').value = profile.companyName || '';
+            document.getElementById('zipCode').value = profile.zipCode || '';
+        }
+    });
+
+    const form = document.getElementById('profileForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const profileData = {
+            role: document.getElementById('userRole').value,
+            companyName: document.getElementById('companyName').value,
+            zipCode: document.getElementById('zipCode').value,
+            profileComplete: true
+        };
+
+        // Update localStorage and redirect
+        localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
+        setTimeout(() => {
+            window.location.href = profileData.role === 'homeowner' ? 'home.html' : 'contractor.html';
+        }, 500);
+    });
+</script>
+</body>
+</html>
