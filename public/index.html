@@ -226,6 +226,7 @@
     });
 
     // --- LOGIN LOGIC (Live Supabase) ---
+    // --- LOGIN LOGIC (Live Supabase) ---
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         loginStatus.textContent = 'Logging in...';
@@ -234,6 +235,7 @@
         const password = document.getElementById('loginPassword').value;
 
         try {
+            // --- 1. LIVE SUPABASE LOGIN CALL ---
             const { data, error } = await client.auth.signInWithPassword({ 
                 email: username, 
                 password: password 
@@ -246,42 +248,29 @@
                 localStorage.setItem('homeprohub_auth_token', data.session.access_token);
                 localStorage.setItem('homeprohub_username', data.user.email);
                 
-                // --- CRITICAL STEP: Check for existing role on server ---
+                // --- 2. NEW STEP: Check for existing role on server ---
                 const roleResponse = await fetch(`/api/get-role?username=${data.user.email}`);
                 const roleData = await roleResponse.json();
                 
                 if (roleData.role) {
-                    // SCENARIO 1: ROLE FOUND (Existing User)
+                    // ROLE FOUND: Bypass role picker and go straight to dashboard
                     localStorage.setItem('homeprohub_user_role', roleData.role);
+                    loginStatus.textContent = 'Success! Directing to dashboard...';
                     
-                    // --- CRITICAL CHECK: Check local storage for profile completion status ---
-                    const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
-                    let profileComplete = false;
-                    if (rawProfile) {
-                        try {
-                            profileComplete = JSON.parse(rawProfile).profileComplete === true;
-                        } catch (e) {}
-                    }
-                    
-                    // If the user is a contractor AND the profile is NOT complete, they still must go to setup.
-                    if (roleData.role === 'contractor' && !profileComplete) {
-                        loginStatus.textContent = 'Success! Directing to Profile Setup...';
-                        setTimeout(() => {
-                            window.location.href = 'contractor-profile.html'; 
-                        }, 500);
-                    } else {
-                        // Profile is complete or user is a Homeowner (no further setup required)
-                        loginStatus.textContent = 'Success! Directing to dashboard...';
-                        setTimeout(() => {
-                            window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
-                        }, 500);
-                    }
+                    // Small delay to ensure localStorage saves before redirect
+                    setTimeout(() => {
+                        window.location.href = roleData.role === 'homeowner' ? 'home.html' : 'contractor.html';
+                    }, 500);
                 } else {
-                    // SCENARIO 2: NO ROLE FOUND (New User) - Go to role selection for setup
+                    // NO ROLE FOUND: Go to role selection for the first time setup
                     loginStatus.textContent = 'Success! Please select your role...';
-                    window.location.href = 'contractor-profile.html'; // NOTE: Redirect to the unified profile setup page
+                    window.location.href = 'role-selection.html';
                 }
+            } else {
+                 loginStatus.textContent = 'Login failed. Check console for details.';
+            }
         } catch (error) {
+            // CATCH BLOCK FOR TRY/CATCH
             loginStatus.textContent = 'Network error. Try again.';
         }
     });
