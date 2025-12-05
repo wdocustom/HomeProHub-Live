@@ -3,133 +3,50 @@
 <head>
   <title>HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* Simplified for clarity */
-    body {
-        background-color: #f8f9fa; 
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        min-height: 100vh;
-        padding-top: 80px; 
-    }
-    .login-container {
-        max-width: 800px; 
-        width: 90%;
-        background: white;
-        padding: 50px 40px;
-        border-radius: 16px; 
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-    .welcome-text {
-        font-size: 32px;
-        font-weight: 700;
-        margin-bottom: 10px;
-    }
-    .input-group input {
-        width: 100%;
-        padding: 14px 15px;
-        margin-bottom: 18px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-    }
-    .btn-login {
-        width: 100%;
-        padding: 18px; 
-        border: none;
-        border-radius: 8px;
-        background-color: #ffd700; 
-        color: #1f2937;
-        font-size: 18px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-    .status-message {
-        margin-top: 10px;
-        font-size: 14px;
-        color: #ef4444;
-        text-align: center;
-    }
-  </style>
 </head>
 <body>
 <div class="login-container">
-    <div class="welcome-text">Welcome to HomeProHub!</div>
+    <h1>Welcome to HomeProHub!</h1>
     <form id="loginForm">
-        <div class="input-group">
-            <input type="email" id="loginUsername" placeholder="Email" required>
-            <input type="password" id="loginPassword" placeholder="Password" required>
-        </div>
+        <input type="email" id="loginUsername" placeholder="Email" required />
+        <input type="password" id="loginPassword" placeholder="Password" required />
         <button type="submit" class="btn-login">LOGIN</button>
-        <p id="loginStatus" class="status-message"></p>
+        <p id="loginStatus"></p>
     </form>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const SUPABASE_URL = 'https://artcgqykrmliskbkzunz.supabase.co'; 
+    const SUPABASE_URL = 'https://artcgqykrmliskbkzunz.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_93uN7DNKNFnNQ2ZH9fMuvA_jGCWHifP';
-    const { createClient } = window.supabase;
-    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-            persistSession: true,
-        }
-    });
 
-    const loginForm = document.getElementById('loginForm');
-    const loginStatus = document.getElementById('loginStatus');
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    loginForm.addEventListener('submit', async (e) => {
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        loginStatus.textContent = 'Logging in...';
-
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
+        const username = document.getElementById("loginUsername").value;
+        const password = document.getElementById("loginPassword").value;
 
         try {
-            const { data, error } = await client.auth.signInWithPassword({ 
-                email: username, 
-                password: password 
-            });
-
+            const { data, error } = await client.auth.signInWithPassword({ email: username, password });
             if (error) {
-                loginStatus.textContent = `Error: ${error.message || 'Invalid credentials.'}`;
-            } else if (data.user) {
-                const userEmail = data.user.email;
-                const token = data.session.access_token;
-
-                // Save session data
-                localStorage.setItem('homeprohub_auth_token', token);
-                localStorage.setItem('homeprohub_username', userEmail);
-
-                // Retrieve complete profile status from server
-                const statusResponse = await fetch(`/api/get-full-user-status?username=${userEmail}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const statusData = await statusResponse.json();
-
-                // Update localStorage and redirect
-                const role = statusData.role;
-                localStorage.setItem('homeprohub_user_role', role);
-                localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(statusData || { profileComplete: false, role }));
-
-                if (statusData.profileComplete) {
-                    loginStatus.textContent = 'Success! Directing to dashboard...';
-                    setTimeout(() => {
-                        window.location.href = role === 'homeowner' ? 'home.html' : 'contractor.html';
-                    }, 500);
-                } else {
-                    loginStatus.textContent = 'Success! Redirecting to Profile Setup...';
-                    setTimeout(() => {
-                        window.location.href = 'contractor-profile.html';
-                    }, 500);
-                }
-            } else {
-                loginStatus.textContent = 'Login failed.';
+                document.getElementById("loginStatus").textContent = "Login failed: " + error.message;
+                return;
             }
-        } catch (error) {
-            loginStatus.textContent = 'Network error. Try again.';
-            console.error(error);
+
+            if (data.user) {
+                const statusResponse = await fetch(`/api/get-user-status?username=${data.user.email}`);
+                if (!statusResponse.ok) throw new Error("Failed to fetch profile data.");
+
+                const userProfile = await statusResponse.json();
+                localStorage.setItem("profileComplete", userProfile.profileComplete);
+                localStorage.setItem("role", userProfile.role);
+
+                const redirectPage = userProfile.profileComplete ? "dashboard.html" : "contractor-profile.html";
+                window.location.href = redirectPage;
+            }
+        } catch (err) {
+            document.getElementById("loginStatus").textContent = "Error: " + err.message;
         }
     });
 </script>

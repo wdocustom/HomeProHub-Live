@@ -2,92 +2,48 @@
 <html>
 <head>
   <title>HomeProHub – Profile Setup</title>
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    .form-container {
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 30px 24px;
-      text-align: left;
-    }
-    label {
-      display: block;
-      font-size: 12px;
-      margin-top: 10px;
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-    }
-    .save-btn {
-      margin-top: 20px;
-      padding: 12px 20px;
-      font-size: 16px;
-      background-color: #4caf50;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="form-container">
     <h1>Complete Your Profile</h1>
     <form id="profileForm">
-      <label for="userRole">Primary Role</label>
+      <label for="userRole">Role:</label>
       <select id="userRole" required>
         <option value="contractor">Contractor</option>
         <option value="homeowner">Homeowner</option>
       </select>
-
-      <label for="companyName">Company Name</label>
+      <label for="companyName">Company Name:</label>
       <input id="companyName" type="text" required />
-
-      <label for="zipCode">ZIP Code</label>
-      <input id="zipCode" type="text" required />
-
-      <button type="submit" class="save-btn">Save Profile</button>
-      <p id="statusMessage"></p>
+      <button type="submit">Save</button>
     </form>
   </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        const username = localStorage.getItem('homeprohub_username');
-        if (!username) {
-            window.location.href = 'index.html';
-            return;
-        }
+    const username = localStorage.getItem("username");
+    if (!username) window.location.href = "index.html";
 
-        // Load profile data
-        const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
-        if (rawProfile) {
-            const profile = JSON.parse(rawProfile);
-            document.getElementById('userRole').value = profile.role || 'contractor';
-            document.getElementById('companyName').value = profile.companyName || '';
-            document.getElementById('zipCode').value = profile.zipCode || '';
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            const profileData = localStorage.getItem("contractorProfile");
+            if (profileData) {
+                const profile = JSON.parse(profileData);
+                document.getElementById("userRole").value = profile.role || "contractor";
+                document.getElementById("companyName").value = profile.companyName || "";
+            }
+        } catch (err) {
+            console.error("Error loading profile data:", err);
         }
     });
 
-    const form = document.getElementById('profileForm');
-    form.addEventListener('submit', async (e) => {
+    document.getElementById("profileForm").addEventListener("submit", (e) => {
         e.preventDefault();
+        const role = document.getElementById("userRole").value;
+        const companyName = document.getElementById("companyName").value;
 
-        const profileData = {
-            role: document.getElementById('userRole').value,
-            companyName: document.getElementById('companyName').value,
-            zipCode: document.getElementById('zipCode').value,
-            profileComplete: true
-        };
-
-        // Update localStorage and redirect
-        localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
-        setTimeout(() => {
-            window.location.href = profileData.role === 'homeowner' ? 'home.html' : 'contractor.html';
-        }, 500);
+        const profile = { role, companyName, profileComplete: true };
+        localStorage.setItem("contractorProfile", JSON.stringify(profile));
+        window.location.href = "dashboard.html";
     });
 </script>
 </body>
