@@ -1,29 +1,56 @@
 // Load environment variables from .env file
 require('dotenv').config();
 
-// ====== IMPORTS (Only necessary modules remain) ======
+// ====== IMPORTS ======
 const express = require("express");
 const cors = require("cors");
-const path = require('path'); 
+const path = require('path');
 const fs = require('fs');
 
 // node-fetch v3 for CommonJS
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
-// 🔐 Securely load Anthropic API key from process.env (CORRECTED SYNTAX)
+// ====== ENVIRONMENT VALIDATION ======
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 if (!ANTHROPIC_API_KEY) {
-  console.warn("⚠️ ANTHROPIC_API_KEY is not set in environment variables.");
+  console.error("❌ CRITICAL: ANTHROPIC_API_KEY is not set in environment variables.");
+  console.error("   Please add it to your .env file to enable AI features.");
 }
 
 const app = express();
 
-// Allow JSON bodies (increase limit for images)
+// ====== MIDDLEWARE ======
+
+// Request logging
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
+  next();
+});
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// JSON body parser with size limit for image uploads
 app.use(express.json({ limit: "10mb" }));
 
-// Allow browser requests (Final CORS Configuration)
+// Error handler for JSON parsing errors
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON format in request body.' });
+  }
+  next(err);
+});
+
+// CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
   'https://www.homeprohub.today',
@@ -32,9 +59,12 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
+
     if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      const msg = `CORS policy violation: Origin ${origin} is not allowed.`;
+      console.warn(`⚠️  ${msg}`);
       return callback(new Error(msg), false);
     }
     return callback(null, true);
@@ -42,87 +72,240 @@ app.use(cors({
   credentials: true
 }));
 
-// Serve files from /public (home.html, ask.html, etc.)
+// Serve static files from /public directory
 app.use(express.static("public"));
+
+// ====== UTILITY FUNCTIONS ======
+
+/**
+ * Validates and sanitizes string inputs
+ */
+function sanitizeInput(input, maxLength = 5000) {
+  if (typeof input !== 'string') return '';
+  return input.trim().substring(0, maxLength);
+}
+
+/**
+ * Validates ZIP code format
+ */
+function isValidZip(zip) {
+  if (!zip) return false;
+  return /^\d{5}(-\d{4})?$/.test(zip.trim());
+}
+
+/**
+ * Loads JSON file safely with error handling
+ */
+function loadJsonFile(filename) {
+  try {
+    const filePath = path.resolve(__dirname, 'public', filename);
+    if (!fs.existsSync(filePath)) {
+      console.warn(`⚠️  JSON file not found: ${filename}`);
+      return null;
+    }
+    const data = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(`❌ Error loading ${filename}:`, error.message);
+    return null;
+  }
+}
 
 // --- FINAL AUTH API ROUTES (Client-Side Auth) ---
 
-// ====== ROUTE: /api/set-role (REQUIRED FOR ROLE SELECTION PAGE) ======
+// ====== API ROUTES ======
+
+/**
+ * POST /api/set-role
+ * Confirms role selection for user (placeholder for future database integration)
+ */
 app.post('/api/set-role', (req, res) => {
-    // This route confirms the role selection was received successfully.
-    const { username } = req.body;
-    if (username) {
-        return res.json({ success: true, message: 'Role received and processed.' });
-    }
-    return res.status(400).json({ error: 'Username not provided for role assignment.' });
-});
+  try {
+    const { username, role } = req.body;
 
-// ====== ROUTE: /api/get-full-user-status (Final Login Check) ======
-app.get('/api/get-full-user-status', (req, res) => {
-    // NOTE: This simulates querying the user's profile table in the database.
-    const username = req.query.username;
-
-    // We rely on the local storage file system state (which the user committed) 
-    // to determine their status for the demo.
-    
-    // 1. Determine Role (Based on username mock)
-    let role = null;
-    if (username && username.includes('contractor')) {
-        role = 'contractor';
-    } else if (username && username.includes('homeowner')) {
-        role = 'homeowner';
+    // Input validation
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username is required and must be a string.',
+        field: 'username'
+      });
     }
 
-    // 2. Determine Profile Status (Simulate DB check)
-    // We assume the user has completed their profile setup if their role is contractor.
-    const profileCompleted = role === 'contractor' ? true : false; 
-    
-    // 3. Return ALL essential data needed for the client's local storage
-    return res.json({ 
-        role: role, 
-        profileComplete: profileCompleted,
-        // Mock profile data for display (replace with real DB values in production)
-        companyName: profileCompleted ? `${username.split('@')[0]} Inc.` : null,
-        license: profileCompleted ? 'CBC-98765' : null,
-        zipCode: profileCompleted ? '33602' : null
+    if (role && !['contractor', 'homeowner'].includes(role)) {
+      return res.status(400).json({
+        error: 'Role must be either "contractor" or "homeowner".',
+        field: 'role'
+      });
+    }
+
+    // TODO: Save to database when implemented
+    console.log(`✓ Role set for user: ${username} -> ${role || 'not specified'}`);
+
+    return res.json({
+      success: true,
+      message: 'Role received and processed.',
+      username: username,
+      role: role
     });
+
+  } catch (error) {
+    console.error('Error in /api/set-role:', error);
+    return res.status(500).json({ error: 'Internal server error processing role.' });
+  }
 });
 
-// ====== ROUTE: /api/get-role (REQUIRED FOR LOGIN ROLE CHECK) ======
-app.get('/api/get-role', (req, res) => {
-    // This route ensures the client can successfully complete the login logic flow.
+/**
+ * GET /api/get-full-user-status
+ * Returns user profile status (mock implementation - replace with database)
+ */
+app.get('/api/get-full-user-status', (req, res) => {
+  try {
     const username = req.query.username;
 
-    // MOCK SCENARIO (LIVE STABILITY): We return a predictable role based on username 
-    // until a real DB is connected.
-    if (username && username.includes('contractor')) {
-        return res.json({ role: 'contractor' });
-    } else if (username && username.includes('homeowner')) {
-        return res.json({ role: 'homeowner' });
-    } else {
-        // If no role found (first time signing in)
-        return res.json({ role: null }); 
+    // Input validation
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username query parameter is required.',
+        field: 'username'
+      });
     }
+
+    // MOCK: Determine role based on username pattern
+    // TODO: Replace with actual database query
+    let role = null;
+    const lowerUsername = username.toLowerCase();
+
+    if (lowerUsername.includes('contractor')) {
+      role = 'contractor';
+    } else if (lowerUsername.includes('homeowner')) {
+      role = 'homeowner';
+    }
+
+    // MOCK: Profile completion status
+    const profileCompleted = role === 'contractor' ? true : false;
+
+    // MOCK: Generate sample profile data
+    const responseData = {
+      role: role,
+      profileComplete: profileCompleted,
+      companyName: profileCompleted ? `${username.split('@')[0]} Inc.` : null,
+      license: profileCompleted ? 'CBC-98765' : null,
+      zipCode: profileCompleted ? '33602' : null,
+      _mockData: true // Flag indicating this is mock data
+    };
+
+    console.log(`✓ User status requested: ${username} -> Role: ${role || 'none'}`);
+
+    return res.json(responseData);
+
+  } catch (error) {
+    console.error('Error in /api/get-full-user-status:', error);
+    return res.status(500).json({ error: 'Internal server error fetching user status.' });
+  }
 });
 
-// ====== ROUTE: /ask (HOMEOWNER AI) ======
-app.post("/ask", async (req, res) => {
-  const { question, imageBase64, imageType } = req.body;
+/**
+ * GET /api/get-role
+ * Returns user role (mock implementation - replace with database)
+ */
+app.get('/api/get-role', (req, res) => {
+  try {
+    const username = req.query.username;
 
-  if (!question) {
-    return res.status(400).json({ error: "No question provided." });
+    // Input validation
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username query parameter is required.',
+        field: 'username'
+      });
+    }
+
+    // MOCK: Determine role based on username pattern
+    // TODO: Replace with actual database query
+    const lowerUsername = username.toLowerCase();
+    let role = null;
+
+    if (lowerUsername.includes('contractor')) {
+      role = 'contractor';
+    } else if (lowerUsername.includes('homeowner')) {
+      role = 'homeowner';
+    }
+
+    console.log(`✓ Role check: ${username} -> ${role || 'no role assigned'}`);
+
+    return res.json({
+      role: role,
+      _mockData: true
+    });
+
+  } catch (error) {
+    console.error('Error in /api/get-role:', error);
+    return res.status(500).json({ error: 'Internal server error fetching role.' });
   }
+});
 
-  // Content blocks to send to Claude
-  const contentBlocks = [];
+/**
+ * POST /ask
+ * Homeowner AI assistant - analyzes home issues with optional image
+ */
+app.post("/ask", async (req, res) => {
+  try {
+    const { question, imageBase64, imageType } = req.body;
 
-  // 1) Text instruction + user question (Simplified Prompt for Stability)
-  contentBlocks.push({
-    type: "text",
-    text: `You are an experienced home contractor and home inspector.
+    // Input validation
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({
+        error: "Question is required and must be a string.",
+        field: 'question'
+      });
+    }
+
+    const sanitizedQuestion = sanitizeInput(question, 3000);
+
+    if (sanitizedQuestion.length === 0) {
+      return res.status(400).json({
+        error: "Question cannot be empty after sanitization.",
+        field: 'question'
+      });
+    }
+
+    // Validate image data if provided
+    if (imageBase64) {
+      if (!imageType || typeof imageType !== 'string') {
+        return res.status(400).json({
+          error: "imageType is required when imageBase64 is provided.",
+          field: 'imageType'
+        });
+      }
+
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(imageType)) {
+        return res.status(400).json({
+          error: `Invalid imageType. Must be one of: ${validImageTypes.join(', ')}`,
+          field: 'imageType'
+        });
+      }
+    }
+
+    // Check if API key is configured
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // Build content blocks for Claude
+    const contentBlocks = [];
+
+    // Text prompt
+    contentBlocks.push({
+      type: "text",
+      text: `You are an experienced home contractor and home inspector.
 Explain things simply and focus on safety.
 
-The homeowner described this issue with their home:${question}
+The homeowner described this issue with their home:
+${sanitizedQuestion}
 
 If an image is provided, use it as additional context.
 
@@ -134,21 +317,21 @@ Respond using EXACTLY this structure:
 5. Safety Warnings: [Clear bullet points]
 6. When to Call a Pro: [Explain when and what type of contractor]
 7. What to Tell a Contractor: [Short script]`
-  });
-
-  // 2) Optional image block
-  if (imageBase64 && imageType) {
-    contentBlocks.push({
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: imageType, // e.g. "image/jpeg"
-        data: imageBase64
-      }
     });
-  }
 
-  try {
+    // Optional image
+    if (imageBase64 && imageType) {
+      contentBlocks.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: imageType,
+          data: imageBase64
+        }
+      });
+    }
+
+    // Call Anthropic API
     const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -169,75 +352,125 @@ Respond using EXACTLY this structure:
     });
 
     if (!apiResponse.ok) {
-      const text = await apiResponse.text();
-      console.error("Anthropic error:", text);
-      return res
-        .status(500)
-        .json({ error: "Anthropic API error: " + apiResponse.status });
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (${apiResponse.status}):`, errorText);
+
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
     }
 
     const data = await apiResponse.json();
 
-    const answer =
-      data.content && data.content[0]?.text
+    const answer = data.content && data.content[0]?.text
       ? data.content[0].text
-      : "Claude didn't return any text.";
+      : "No response generated.";
+
+    console.log(`✓ Homeowner question answered (${answer.length} chars)`);
 
     res.json({ answer });
+
   } catch (err) {
-    console.error("Server error:", err);
-    res.status(500).json({ error: "Server error talking to Claude." });
+    console.error("❌ Error in /ask:", err);
+    res.status(500).json({
+      error: "Internal server error processing your question.",
+      code: 'INTERNAL_ERROR'
+    });
   }
 });
 
-// ====== ROUTE: /contractor-ask (CONTRACTOR COACH) ======
+/**
+ * POST /contractor-ask
+ * Contractor coach AI with RAG (Retrieval-Augmented Generation) for pricing
+ */
 app.post("/contractor-ask", async (req, res) => {
-  const { question, focus, zip, scopeLevel, size } = req.body;
-
-  if (!question) {
-    return res.status(400).json({ error: "No question provided." });
-  }
-
-  // --- RAG IMPLEMENTATION: LOAD COST DATA ---
-  let ragData = { laborRates: 'unavailable', permits: 'unavailable' };
   try {
-    const laborPath = path.resolve(__dirname, 'public', 'labor-rates.json');
-    const permitPath = path.resolve(__dirname, 'public', 'permit-fees.json');
-    
-    const laborData = JSON.parse(fs.readFileSync(laborPath, 'utf8'));
-    const permitData = JSON.parse(fs.readFileSync(permitPath, 'utf8'));
+    const { question, focus, zip, scopeLevel, size } = req.body;
 
-    // Determine regional multiplier based on ZIP prefix
-    const zipPrefix = zip ? zip.substring(0, 3) : 'other';
-    const multiplier = laborData.regional_multipliers[zipPrefix] || laborData.regional_multipliers['other'];
-    
-    // Inject key RAG data points
-    ragData = {
-        laborRates: laborData.rates_by_trade,
-        regionalMultiplier: multiplier,
-        samplePermitFees: permitData.projects
+    // Input validation
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({
+        error: "Question is required and must be a string.",
+        field: 'question'
+      });
+    }
+
+    const sanitizedQuestion = sanitizeInput(question, 3000);
+
+    if (sanitizedQuestion.length === 0) {
+      return res.status(400).json({
+        error: "Question cannot be empty after sanitization.",
+        field: 'question'
+      });
+    }
+
+    // Validate focus area
+    const validFocus = ['general', 'pricing', 'materials', 'licensing', 'client_comms', 'business'];
+    const selectedFocus = focus && validFocus.includes(focus) ? focus : 'general';
+
+    // Validate ZIP code if provided
+    if (zip && !isValidZip(zip)) {
+      return res.status(400).json({
+        error: "Invalid ZIP code format. Must be 5 digits (e.g., 12345) or ZIP+4 (e.g., 12345-6789).",
+        field: 'zip'
+      });
+    }
+
+    // Check if API key is configured
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // --- RAG IMPLEMENTATION: LOAD COST DATA ---
+    let ragData = {
+      laborRates: 'unavailable',
+      permits: 'unavailable',
+      regionalMultiplier: 1.0
     };
 
-  } catch (e) {
-      console.warn("RAG DATA LOAD FAILED:", e.message);
-  }
-  // --- END RAG IMPLEMENTATION ---
+    const laborData = loadJsonFile('labor-rates.json');
+    const permitData = loadJsonFile('permit-fees.json');
 
-  const focusDescription = {
-    general: "General contractor / project advice",
-    pricing: "Pricing and estimating jobs profitably and fairly",
-    materials: "Materials, methods, and build quality trade-offs",
-    licensing: "Licensing, insurance, permitting and compliance",
-    client_comms: "Client communication, expectations and change orders",
-    business: "Business systems, profitability and long-term strategy"
-  }[focus] || "General contractor guidance";
+    if (laborData && permitData) {
+      // Determine regional multiplier based on ZIP prefix
+      const zipPrefix = zip ? zip.substring(0, 3) : 'other';
+      const multiplier = laborData.regional_multipliers?.[zipPrefix]
+        || laborData.regional_multipliers?.['other']
+        || 1.0;
 
-  const pricingExtra =
-    focus === "pricing"
+      ragData = {
+        laborRates: laborData.rates_by_trade || {},
+        regionalMultiplier: multiplier,
+        samplePermitFees: permitData.projects || []
+      };
+
+      console.log(`✓ RAG data loaded: ZIP ${zip || 'N/A'}, Multiplier ${multiplier}`);
+    } else {
+      console.warn('⚠️  RAG data unavailable, using fallback');
+    }
+    // --- END RAG IMPLEMENTATION ---
+
+    // Build focus description
+    const focusDescription = {
+      general: "General contractor / project advice",
+      pricing: "Pricing and estimating jobs profitably and fairly",
+      materials: "Materials, methods, and build quality trade-offs",
+      licensing: "Licensing, insurance, permitting and compliance",
+      client_comms: "Client communication, expectations and change orders",
+      business: "Business systems, profitability and long-term strategy"
+    }[selectedFocus] || "General contractor guidance";
+
+    // Special instructions for pricing estimates
+    const pricingExtra = selectedFocus === "pricing"
       ? `
 
 SPECIAL INSTRUCTIONS FOR DOWNLOADABLE ESTIMATE (OVERRIDE):
-- Input Data: Scope Level: ${scopeLevel}, Size: ${size}.
+- Input Data: Scope Level: ${scopeLevel || 'Not specified'}, Size: ${size || 'Not specified'}.
 - INJECTED RAG DATA: You MUST reference the provided regional Labor Rates and Multiplier (${ragData.regionalMultiplier}).
 - Use the Trades required (Plumber, Electrician, etc.) and multiply their base rate by the Regional Multiplier to calculate labor costs.
 - Your response MUST be a single, raw JSON object. Do not wrap it in any text, markdown, or commentary.
@@ -256,7 +489,8 @@ SPECIAL INSTRUCTIONS FOR DOWNLOADABLE ESTIMATE (OVERRIDE):
 `
       : "";
 
-  const contentText = `You are an experienced, licensed contractor and business mentor.
+    // Build prompt
+    const contentText = `You are an experienced, licensed contractor and business mentor.
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
@@ -267,7 +501,8 @@ Regional Multiplier: ${ragData.regionalMultiplier}
 FOCUS AREA: ${focusDescription}
 JOB ZIP (if provided): ${zip || "Not provided"}${pricingExtra}
 
-Contractor's situation:${question}
+Contractor's situation:
+${sanitizedQuestion}
 
 Give practical, grounded advice based on real-world experience.
 Avoid guessing about local code specifics—remind them to check their local code and licensing board if needed.
@@ -277,20 +512,20 @@ Respond using EXACTLY this structure:
 2. Key Considerations (3–7 bullet points)
 3. Suggested Approach / Strategy (Numbered steps)
 4. Pricing & Scope Guidance (if relevant):
-- **Pricing:** If a ZIP is provided, use the override instructions above to generate a detailed, structured estimate table including O&P and Contingency.
-- **Scope:** How to structure allowances, exclusions, and define clear contract limits to minimize change orders.
+   - **Pricing:** If a ZIP is provided, use the override instructions above to generate a detailed, structured estimate table including O&P and Contingency.
+   - **Scope:** How to structure allowances, exclusions, and define clear contract limits to minimize change orders.
 5. Licensing, Code & Risk
 6. Communication Script
 7. Next Moves (3–5 concrete actions)
 `;
 
-  try {
+    // Call Anthropic API
     const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01" 
+        "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
@@ -310,51 +545,91 @@ Respond using EXACTLY this structure:
     });
 
     if (!apiResponse.ok) {
-      const text = await apiResponse.text();
-      console.error("Anthropic contractor error:", text);
-      return res
-        .status(500)
-        .json({ error: "Anthropic API error (contractor): " + apiResponse.status });
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (contractor) (${apiResponse.status}):`, errorText);
+
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
     }
 
     const data = await apiResponse.json();
-    const rawAnswer = data.content[0].text.trim();
+    const rawAnswer = data.content[0]?.text?.trim() || "No response generated.";
 
-    // Attempt to parse JSON only if pricing is requested
-    if (focus === "pricing") {
-        try {
-            const cleanedJson = rawAnswer.replace(/```json\s*|```/g, '').trim();
-            const jsonAnswer = JSON.parse(cleanedJson);
-            return res.json({ answer: jsonAnswer, format: 'json' });
-        } catch (jsonErr) {
-            console.error("JSON PARSE FAILURE:", jsonErr);
-            return res.json({ answer: rawAnswer, format: 'text', error: "AI response was not valid JSON." });
-        }
+    // For pricing questions, attempt JSON parsing
+    if (selectedFocus === "pricing") {
+      try {
+        const cleanedJson = rawAnswer.replace(/```json\s*|```/g, '').trim();
+        const jsonAnswer = JSON.parse(cleanedJson);
+
+        console.log(`✓ Contractor estimate generated (JSON)`);
+        return res.json({ answer: jsonAnswer, format: 'json' });
+
+      } catch (jsonErr) {
+        console.warn('⚠️  JSON parse failed for pricing response:', jsonErr.message);
+        return res.json({
+          answer: rawAnswer,
+          format: 'text',
+          parseError: "AI response was not valid JSON."
+        });
+      }
     } else {
-        // For non-pricing questions, return plain text
-        return res.json({ answer: rawAnswer, format: 'text' });
+      console.log(`✓ Contractor question answered (${selectedFocus}, ${rawAnswer.length} chars)`);
+      return res.json({ answer: rawAnswer, format: 'text' });
     }
+
   } catch (err) {
-    console.error("Server error (contractor):", err);
-    res.status(500).json({ error: "Server error talking to Claude (contractor)." });
+    console.error("❌ Error in /contractor-ask:", err);
+    res.status(500).json({
+      error: "Internal server error processing your question.",
+      code: 'INTERNAL_ERROR'
+    });
   }
 });
 
-// ====== ROUTE: /plan-project (HOMEOWNER PROJECT PLANNER) ======
+/**
+ * POST /plan-project
+ * Homeowner project planner - creates detailed project breakdown
+ */
 app.post("/plan-project", async (req, res) => {
-  const { projectDescription, location } = req.body;
+  try {
+    const { projectDescription, location } = req.body;
 
-  if (!projectDescription) {
-    return res.status(400).json({ error: "No project description provided." });
-  }
+    if (!projectDescription || typeof projectDescription !== 'string') {
+      return res.status(400).json({
+        error: "Project description is required and must be a string.",
+        field: 'projectDescription'
+      });
+    }
 
-  const locationHint = location ? `The project location is: ${location}. Use this to inform local cost estimates and permitting mentions.` : "No specific location was provided; use generic national averages for cost and time.";
+    const sanitizedDescription = sanitizeInput(projectDescription, 2000);
+    if (sanitizedDescription.length === 0) {
+      return res.status(400).json({
+        error: "Project description cannot be empty after sanitization.",
+        field: 'projectDescription'
+      });
+    }
 
-  const contentText = `You are an experienced residential Project Manager and Home Remodel Consultant.
+    const sanitizedLocation = location ? sanitizeInput(location, 100) : null;
+
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    const locationHint = sanitizedLocation
+      ? `The project location is: ${sanitizedLocation}. Use this to inform local cost estimates and permitting mentions.`
+      : "No specific location was provided; use generic national averages for cost and time.";
+
+    const contentText = `You are an experienced residential Project Manager and Home Remodel Consultant.
 Your task is to take a homeowner's simple idea and create a realistic, phase-based project plan.
 The goal is to prepare the homeowner for conversations with contractors and help them understand the scope, complexity, and budget.
 
-Project Idea: ${projectDescription}
+Project Idea: ${sanitizedDescription}
 ${locationHint}
 
 Respond using EXACTLY this structure:
@@ -383,83 +658,105 @@ Respond using EXACTLY this structure:
 - Mention common permit types likely needed (e.g., electrical, plumbing, building) and advise the homeowner to check local municipal codes immediately.
 `;
 
-  try {
-    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01" 
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 1000,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: contentText
-              }
-            ]
-          }
-        ]
-      })
-    });
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 1000,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: contentText }]
+          }
+        ]
+      })
+    });
 
-    if (!apiResponse.ok) {
-      const text = await apiResponse.text();
-      console.error("Anthropic planner error:", text);
-      return res
-        .status(500)
-        .json({ error: "Anthropic API error (planner): " + apiResponse.status });
-    }
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (planner) (${apiResponse.status}):`, errorText);
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
+    }
 
-    const data = await apiResponse.json();
+    const data = await apiResponse.json();
+    const answer = data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "No response generated.";
 
-    const answer =
-      data.content && data.content[0]?.text
-      ? data.content[0].text
-      : "Claude didn't return any text.";
+    console.log(`✓ Project plan generated (${answer.length} chars)`);
+    res.json({ answer });
 
-    res.json({ answer });
-  } catch (err) {
-    console.error("Server error (planner):", err);
-    res.status(500).json({ error: "Server error talking to Claude (planner)." });
-  }
+  } catch (err) {
+    console.error("❌ Error in /plan-project:", err);
+    res.status(500).json({
+      error: "Internal server error processing your project.",
+      code: 'INTERNAL_ERROR'
+    });
+  }
 });
 
-// ====== ROUTE: /grading-data (SERVES GRADING JSON DATA) ======
+/**
+ * GET /grading-data
+ * Returns contractor/homeowner grading logic and criteria
+ */
 app.get("/grading-data", (req, res) => {
-  // This uses the path module which MUST be declared at the top of the file.
-  const filePath = path.resolve(__dirname, 'public', 'grading-logic.json');
+  try {
+    const gradingData = loadJsonFile('grading-logic.json');
 
-  // Check if file exists (using fs module, which MUST be declared at the top)
-  if (!fs.existsSync(filePath)) {
-    console.error(`ERROR: Grading logic file not found at: ${filePath}`);
-    return res.status(404).json({ error: "Grading logic file not found on server." });
-  }
+    if (!gradingData) {
+      return res.status(404).json({
+        error: "Grading logic file not found or could not be read.",
+        code: 'FILE_NOT_FOUND'
+      });
+    }
 
-  // Read the file and serve the data
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error("Error reading grading logic file:", err);
-      return res.status(500).json({ error: "Could not read grading data." });
-    }
-    
-    // Serve the data as JSON
-    try {
-      const jsonData = JSON.parse(data);
-      res.json(jsonData);
-    } catch (parseError) {
-      console.error("Error parsing grading logic file:", parseError);
-      res.status(500).json({ error: "Invalid JSON format in grading file." });
-    }
-  });
+    console.log('✓ Grading data served');
+    res.json(gradingData);
+
+  } catch (err) {
+    console.error("❌ Error in /grading-data:", err);
+    res.status(500).json({
+      error: "Internal server error loading grading data.",
+      code: 'INTERNAL_ERROR'
+    });
+  }
 });
+
+// ====== 404 HANDLER ======
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    path: req.path,
+    method: req.method
+  });
+});
+
+// ====== GLOBAL ERROR HANDLER ======
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message
+  });
+});
+
 // ====== START SERVER ======
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log('========================================');
+  console.log(`🚀 HomeProHub Server`);
+  console.log(`📍 Running at: http://localhost:${PORT}`);
+  console.log(`🔑 Anthropic API: ${ANTHROPIC_API_KEY ? '✓ Configured' : '❌ Missing'}`);
+  console.log(`⏰ Started: ${new Date().toISOString()}`);
+  console.log('========================================');
 });
