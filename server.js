@@ -186,6 +186,51 @@ app.post('/api/set-role', (req, res) => {
 });
 
 /**
+ * GET /api/get-user-status (alias for get-full-user-status)
+ * Returns user profile status (mock implementation - replace with database)
+ */
+app.get('/api/get-user-status', (req, res) => {
+  try {
+    const username = req.query.username;
+
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username query parameter is required.',
+        field: 'username'
+      });
+    }
+
+    const lowerUsername = username.toLowerCase();
+    let role = null;
+
+    if (lowerUsername.includes('contractor')) {
+      role = 'contractor';
+    } else if (lowerUsername.includes('homeowner')) {
+      role = 'homeowner';
+    }
+
+    const profileCompleted = role === 'contractor' ? true : false;
+
+    const responseData = {
+      role: role,
+      profileComplete: profileCompleted,
+      companyName: profileCompleted ? `${username.split('@')[0]} Inc.` : null,
+      license: profileCompleted ? 'CBC-98765' : null,
+      zipCode: profileCompleted ? '33602' : null,
+      _mockData: true
+    };
+
+    console.log(`✓ User status requested: ${username} -> Role: ${role || 'none'}`);
+
+    return res.json(responseData);
+
+  } catch (error) {
+    console.error('Error in /api/get-user-status:', error);
+    return res.status(500).json({ error: 'Internal server error fetching user status.' });
+  }
+});
+
+/**
  * GET /api/get-full-user-status
  * Returns user profile status (mock implementation - replace with database)
  */
