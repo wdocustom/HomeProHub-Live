@@ -1,0 +1,189 @@
+# ====================================
+# DEPLOYMENT GUIDE - HomeProHub
+# ====================================
+
+## Prerequisites
+1. Server with Node.js 18+ installed
+2. Domain DNS configured to point to your server
+3. SSL certificate (Let's Encrypt recommended)
+4. PM2 installed globally: npm install -g pm2
+
+## Quick Deploy Steps
+
+### 1. On Your Server:
+
+# Clone the repository
+git clone https://github.com/wdocustom/HomeProHub-Live.git
+cd HomeProHub-Live
+
+# Install dependencies
+npm install
+
+# Create .env file with production credentials
+cp .env.example .env
+nano .env  # Add your production API keys
+
+# Create logs directory
+mkdir -p logs
+
+# Start with PM2 (process manager)
+npm run pm2:start
+
+# Save PM2 process list
+pm2 save
+
+# Set PM2 to start on system boot
+pm2 startup
+
+
+### 2. Nginx Configuration (Reverse Proxy)
+
+Create: /etc/nginx/sites-available/homeprohub
+
+server {
+    listen 80;
+    server_name homeprohub.today www.homeprohub.today;
+
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name homeprohub.today www.homeprohub.today;
+
+    # SSL Certificate (Let's Encrypt)
+    ssl_certificate /etc/letsencrypt/live/homeprohub.today/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/homeprohub.today/privkey.pem;
+
+    # SSL Security
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # Proxy to Node.js app
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json;
+}
+
+# Enable site
+sudo ln -s /etc/nginx/sites-available/homeprohub /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+
+### 3. SSL Certificate (Let's Encrypt)
+
+# Install certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get certificate
+sudo certbot --nginx -d homeprohub.today -d www.homeprohub.today
+
+
+### 4. Firewall Configuration
+
+# Allow HTTP and HTTPS
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+
+
+## Deployment Commands
+
+# Pull latest changes
+git pull origin claude/code-review-refactor-adPWF
+
+# Install new dependencies (if any)
+npm install
+
+# Restart app
+npm run pm2:restart
+
+# View logs
+npm run pm2:logs
+
+
+## Health Check
+
+curl https://homeprohub.today
+
+
+## Alternative: Deploy to Cloud Platforms
+
+### Option 1: Railway.app (Easiest)
+1. Go to railway.app
+2. Connect your GitHub repository
+3. Add environment variables from .env
+4. Deploy automatically
+
+### Option 2: DigitalOcean App Platform
+1. Create new app from GitHub
+2. Set environment variables
+3. Deploy with one click
+
+### Option 3: Render.com
+1. New Web Service from GitHub
+2. Build: npm install
+3. Start: npm start
+4. Add environment variables
+
+
+## Environment Variables Required
+
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+SESSION_SECRET=your-session-secret
+ANTHROPIC_API_KEY=your-anthropic-key
+PORT=3000
+NODE_ENV=production
+
+
+## Monitoring
+
+# Check app status
+pm2 status
+
+# Monitor in real-time
+pm2 monit
+
+# View logs
+pm2 logs homeprohub --lines 100
+
+
+## Backup
+
+# Backup .env file
+cp .env .env.backup
+
+# Backup database (when implemented)
+# pg_dump homeprohub > backup.sql
+
+
+## Rollback
+
+# Revert to previous version
+git log --oneline -10
+git checkout <commit-hash>
+npm run pm2:restart
