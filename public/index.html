@@ -1,54 +1,321 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>HomeProHub</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub - Login</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <div class="login-container">
     <h1>Welcome to HomeProHub!</h1>
-    <form id="loginForm">
-        <input type="email" id="loginUsername" placeholder="Email" required />
-        <input type="password" id="loginPassword" placeholder="Password" required />
-        <button type="submit" class="btn-login">LOGIN</button>
-        <p id="loginStatus"></p>
+    <form id="loginForm" novalidate>
+        <input
+            type="email"
+            id="loginUsername"
+            placeholder="Email"
+            required
+            autocomplete="email"
+            aria-label="Email address"
+            maxlength="255"
+        />
+        <input
+            type="password"
+            id="loginPassword"
+            placeholder="Password"
+            required
+            autocomplete="current-password"
+            aria-label="Password"
+            minlength="6"
+            maxlength="128"
+        />
+        <button type="submit" class="btn-login" id="loginButton">LOGIN</button>
+        <p id="loginStatus" role="alert" aria-live="polite"></p>
     </form>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const SUPABASE_URL = 'https://artcgqykrmliskbkzunz.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_93uN7DNKNFnNQ2ZH9fMuvA_jGCWHifP';
+(function() {
+    'use strict';
 
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Configuration - fetch from server instead of hardcoding
+    let supabaseClient = null;
 
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const username = document.getElementById("loginUsername").value;
-        const password = document.getElementById("loginPassword").value;
+    // DOM Elements
+    const loginForm = document.getElementById("loginForm");
+    const loginButton = document.getElementById("loginButton");
+    const usernameInput = document.getElementById("loginUsername");
+    const passwordInput = document.getElementById("loginPassword");
+    const statusElement = document.getElementById("loginStatus");
+
+    // Standardized localStorage keys
+    const STORAGE_KEYS = {
+        USER_PROFILE: 'homeprohub_user',
+        USER_ROLE: 'homeprohub_user_role',
+        AUTH_TOKEN: 'homeprohub_auth_token',
+        USERNAME: 'homeprohub_username',
+        PROFILE_COMPLETE: 'homeprohub_profile_complete'
+    };
+
+    /**
+     * Initialize Supabase client with config from server
+     */
+    async function initializeSupabase() {
+        try {
+            const response = await fetch('/api/config');
+            if (!response.ok) {
+                throw new Error('Failed to fetch configuration');
+            }
+            const config = await response.json();
+            supabaseClient = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+            return true;
+        } catch (error) {
+            displayError('Unable to initialize authentication. Please try again later.');
+            return false;
+        }
+    }
+
+    /**
+     * Validate email format
+     */
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    /**
+     * Sanitize string input to prevent XSS
+     */
+    function sanitizeInput(input) {
+        if (typeof input !== 'string') return '';
+        return input.trim().replace(/[<>]/g, '');
+    }
+
+    /**
+     * Display error message to user
+     */
+    function displayError(message) {
+        statusElement.textContent = message;
+        statusElement.style.color = '#ef4444';
+    }
+
+    /**
+     * Display success message to user
+     */
+    function displaySuccess(message) {
+        statusElement.textContent = message;
+        statusElement.style.color = '#10b981';
+    }
+
+    /**
+     * Clear status message
+     */
+    function clearStatus() {
+        statusElement.textContent = '';
+    }
+
+    /**
+     * Set loading state
+     */
+    function setLoading(isLoading) {
+        loginButton.disabled = isLoading;
+        usernameInput.disabled = isLoading;
+        passwordInput.disabled = isLoading;
+
+        if (isLoading) {
+            loginButton.textContent = 'LOGGING IN...';
+            clearStatus();
+        } else {
+            loginButton.textContent = 'LOGIN';
+        }
+    }
+
+    /**
+     * Validate form inputs
+     */
+    function validateForm(email, password) {
+        if (!email || !password) {
+            displayError('Please enter both email and password.');
+            return false;
+        }
+
+        if (!isValidEmail(email)) {
+            displayError('Please enter a valid email address.');
+            return false;
+        }
+
+        if (password.length < 6) {
+            displayError('Password must be at least 6 characters.');
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Clear sensitive data from localStorage
+     */
+    function clearAuthData() {
+        Object.values(STORAGE_KEYS).forEach(key => {
+            try {
+                localStorage.removeItem(key);
+            } catch (e) {
+                // Silent fail for localStorage issues
+            }
+        });
+    }
+
+    /**
+     * Store user data securely
+     */
+    function storeUserData(userProfile, authToken) {
+        try {
+            localStorage.setItem(STORAGE_KEYS.USER_ROLE, userProfile.role);
+            localStorage.setItem(STORAGE_KEYS.USERNAME, userProfile.email || userProfile.username);
+            localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, String(userProfile.profileComplete));
+            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, authToken);
+
+            // Store full profile for display purposes (non-sensitive data only)
+            const profileData = {
+                role: userProfile.role,
+                email: userProfile.email || userProfile.username,
+                name: userProfile.name || '',
+                profileComplete: userProfile.profileComplete
+            };
+            localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profileData));
+        } catch (e) {
+            throw new Error('Failed to store user data. Please check browser storage settings.');
+        }
+    }
+
+    /**
+     * Determine redirect page based on user profile
+     */
+    function getRedirectPage(userProfile) {
+        // If profile is not complete, redirect to profile setup
+        if (!userProfile.profileComplete) {
+            return 'contractor-profile.html';
+        }
+
+        // Role-based routing
+        if (userProfile.role === 'contractor') {
+            return 'contractor.html';
+        } else if (userProfile.role === 'homeowner') {
+            return 'home.html';
+        }
+
+        // Default fallback
+        return 'contractor-profile.html';
+    }
+
+    /**
+     * Handle login form submission
+     */
+    async function handleLogin(event) {
+        event.preventDefault();
+
+        // Get and sanitize inputs
+        const email = sanitizeInput(usernameInput.value);
+        const password = passwordInput.value; // Don't sanitize password (could contain special chars)
+
+        // Validate inputs
+        if (!validateForm(email, password)) {
+            return;
+        }
+
+        // Set loading state
+        setLoading(true);
 
         try {
-            const { data, error } = await client.auth.signInWithPassword({ email: username, password });
+            // Ensure Supabase is initialized
+            if (!supabaseClient) {
+                const initialized = await initializeSupabase();
+                if (!initialized) {
+                    return;
+                }
+            }
+
+            // Attempt authentication
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
             if (error) {
-                document.getElementById("loginStatus").textContent = "Login failed: " + error.message;
+                displayError('Login failed: ' + error.message);
                 return;
             }
 
-            if (data.user) {
-                const statusResponse = await fetch(`/api/get-user-status?username=${data.user.email}`);
-                if (!statusResponse.ok) throw new Error("Failed to fetch profile data.");
-
-                const userProfile = await statusResponse.json();
-                localStorage.setItem("profileComplete", userProfile.profileComplete);
-                localStorage.setItem("role", userProfile.role);
-
-                const redirectPage = userProfile.profileComplete ? "dashboard.html" : "contractor-profile.html";
-                window.location.href = redirectPage;
+            if (!data.user) {
+                displayError('Login failed: No user data returned.');
+                return;
             }
+
+            // Fetch user profile from server
+            const statusResponse = await fetch(`/api/get-user-status?username=${encodeURIComponent(data.user.email)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!statusResponse.ok) {
+                throw new Error('Failed to fetch user profile. Please try again.');
+            }
+
+            const userProfile = await statusResponse.json();
+
+            // Store authentication token and user data
+            const authToken = data.session?.access_token || '';
+            storeUserData(userProfile, authToken);
+
+            // Show success message briefly
+            displaySuccess('Login successful! Redirecting...');
+
+            // Redirect to appropriate page
+            const redirectPage = getRedirectPage(userProfile);
+
+            // Small delay for UX (show success message)
+            setTimeout(() => {
+                window.location.href = redirectPage;
+            }, 500);
+
         } catch (err) {
-            document.getElementById("loginStatus").textContent = "Error: " + err.message;
+            displayError('Error: ' + (err.message || 'An unexpected error occurred. Please try again.'));
+        } finally {
+            setLoading(false);
         }
-    });
+    }
+
+    /**
+     * Initialize the login page
+     */
+    async function initialize() {
+        // Clear any existing auth data on page load
+        clearAuthData();
+
+        // Initialize Supabase client
+        await initializeSupabase();
+
+        // Add form submit listener
+        loginForm.addEventListener("submit", handleLogin);
+
+        // Add Enter key support for both inputs
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                passwordInput.focus();
+            }
+        });
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+        initialize();
+    }
+})();
 </script>
 </body>
 </html>

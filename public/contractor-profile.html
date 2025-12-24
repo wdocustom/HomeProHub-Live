@@ -1,50 +1,348 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HomeProHub – Profile Setup</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="form-container">
     <h1>Complete Your Profile</h1>
-    <form id="profileForm">
-      <label for="userRole">Role:</label>
-      <select id="userRole" required>
-        <option value="contractor">Contractor</option>
+    <form id="profileForm" novalidate>
+      <label for="userRole">I am a:</label>
+      <select id="userRole" required aria-label="Select your role">
+        <option value="">-- Select Role --</option>
+        <option value="contractor">Contractor / Trade Professional</option>
         <option value="homeowner">Homeowner</option>
       </select>
-      <label for="companyName">Company Name:</label>
-      <input id="companyName" type="text" required />
-      <button type="submit">Save</button>
+
+      <label for="companyName">Name / Company Name:</label>
+      <input
+        id="companyName"
+        type="text"
+        required
+        placeholder="Enter your name or company name"
+        aria-label="Name or company name"
+        maxlength="100"
+      />
+
+      <div id="additionalFields"></div>
+
+      <button type="submit" id="saveButton">Save Profile</button>
+      <p id="statusMessage" role="alert" aria-live="polite"></p>
     </form>
   </div>
 
 <script>
-    const username = localStorage.getItem("username");
-    if (!username) window.location.href = "index.html";
+(function() {
+    'use strict';
 
-    document.addEventListener("DOMContentLoaded", async () => {
+    // Standardized localStorage keys
+    const STORAGE_KEYS = {
+        USER_PROFILE: 'homeprohub_user',
+        USER_ROLE: 'homeprohub_user_role',
+        AUTH_TOKEN: 'homeprohub_auth_token',
+        USERNAME: 'homeprohub_username',
+        PROFILE_COMPLETE: 'homeprohub_profile_complete',
+        CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
+    };
+
+    // DOM Elements
+    const profileForm = document.getElementById('profileForm');
+    const userRoleSelect = document.getElementById('userRole');
+    const companyNameInput = document.getElementById('companyName');
+    const saveButton = document.getElementById('saveButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const additionalFieldsContainer = document.getElementById('additionalFields');
+
+    /**
+     * Sanitize string input to prevent XSS
+     */
+    function sanitizeInput(input) {
+        if (typeof input !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = input.trim();
+        return div.innerHTML;
+    }
+
+    /**
+     * Display status message
+     */
+    function displayStatus(message, isError = false) {
+        statusMessage.textContent = message;
+        statusMessage.style.color = isError ? '#ef4444' : '#10b981';
+    }
+
+    /**
+     * Clear status message
+     */
+    function clearStatus() {
+        statusMessage.textContent = '';
+    }
+
+    /**
+     * Set loading state
+     */
+    function setLoading(isLoading) {
+        saveButton.disabled = isLoading;
+        userRoleSelect.disabled = isLoading;
+        companyNameInput.disabled = isLoading;
+
+        if (isLoading) {
+            saveButton.textContent = 'Saving...';
+        } else {
+            saveButton.textContent = 'Save Profile';
+        }
+    }
+
+    /**
+     * Check if user is authenticated
+     */
+    function checkAuth() {
+        const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
+        const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+
+        if (!username || !authToken) {
+            window.location.href = 'index.html';
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Load existing profile data
+     */
+    function loadExistingProfile() {
         try {
-            const profileData = localStorage.getItem("contractorProfile");
+            // Check for existing user role
+            const existingRole = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+            if (existingRole) {
+                userRoleSelect.value = existingRole;
+            }
+
+            // Check for existing profile data
+            const profileData = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
             if (profileData) {
                 const profile = JSON.parse(profileData);
-                document.getElementById("userRole").value = profile.role || "contractor";
-                document.getElementById("companyName").value = profile.companyName || "";
+
+                if (profile.role) {
+                    userRoleSelect.value = profile.role;
+                }
+
+                if (profile.companyName) {
+                    companyNameInput.value = profile.companyName;
+                }
+
+                // Load any additional fields
+                if (profile.additionalInfo) {
+                    // Handle additional fields if needed
+                }
+            }
+
+            // Also check main user profile
+            const userProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+            if (userProfile) {
+                const profile = JSON.parse(userProfile);
+                if (profile.name && !companyNameInput.value) {
+                    companyNameInput.value = profile.name;
+                }
             }
         } catch (err) {
-            console.error("Error loading profile data:", err);
+            // Error loading profile - use defaults
+            displayStatus('Could not load existing profile data.', true);
         }
-    });
+    }
 
-    document.getElementById("profileForm").addEventListener("submit", (e) => {
-        e.preventDefault();
-        const role = document.getElementById("userRole").value;
-        const companyName = document.getElementById("companyName").value;
+    /**
+     * Update additional fields based on role
+     */
+    function updateAdditionalFields(role) {
+        additionalFieldsContainer.innerHTML = '';
 
-        const profile = { role, companyName, profileComplete: true };
-        localStorage.setItem("contractorProfile", JSON.stringify(profile));
-        window.location.href = "dashboard.html";
-    });
+        if (role === 'contractor') {
+            // Add contractor-specific fields
+            const licenseLabel = document.createElement('label');
+            licenseLabel.textContent = 'License Number (Optional):';
+            licenseLabel.setAttribute('for', 'licenseNumber');
+
+            const licenseInput = document.createElement('input');
+            licenseInput.id = 'licenseNumber';
+            licenseInput.type = 'text';
+            licenseInput.placeholder = 'Enter your license number';
+            licenseInput.setAttribute('aria-label', 'License number');
+            licenseInput.maxLength = 50;
+
+            additionalFieldsContainer.appendChild(licenseLabel);
+            additionalFieldsContainer.appendChild(licenseInput);
+        }
+    }
+
+    /**
+     * Validate form inputs
+     */
+    function validateForm(role, companyName) {
+        if (!role) {
+            displayStatus('Please select your role.', true);
+            return false;
+        }
+
+        if (!companyName || companyName.trim().length === 0) {
+            displayStatus('Please enter your name or company name.', true);
+            return false;
+        }
+
+        if (companyName.trim().length < 2) {
+            displayStatus('Name must be at least 2 characters.', true);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get redirect page based on role
+     */
+    function getRedirectPage(role) {
+        if (role === 'contractor') {
+            return 'contractor.html';
+        } else if (role === 'homeowner') {
+            return 'home.html';
+        }
+        return 'index.html';
+    }
+
+    /**
+     * Handle form submission
+     */
+    async function handleSubmit(event) {
+        event.preventDefault();
+        clearStatus();
+
+        // Get and sanitize inputs
+        const role = userRoleSelect.value;
+        const companyName = sanitizeInput(companyNameInput.value);
+
+        // Validate
+        if (!validateForm(role, companyName)) {
+            return;
+        }
+
+        // Get license number if contractor
+        let licenseNumber = '';
+        if (role === 'contractor') {
+            const licenseInput = document.getElementById('licenseNumber');
+            if (licenseInput) {
+                licenseNumber = sanitizeInput(licenseInput.value);
+            }
+        }
+
+        setLoading(true);
+
+        try {
+            // Get existing username
+            const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
+
+            // Build profile object
+            const profile = {
+                role: role,
+                companyName: companyName,
+                profileComplete: true,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (licenseNumber) {
+                profile.licenseNumber = licenseNumber;
+            }
+
+            // Store in localStorage
+            localStorage.setItem(STORAGE_KEYS.USER_ROLE, role);
+            localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, 'true');
+            localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
+
+            // Update main user profile
+            const existingProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+            let userProfile = existingProfile ? JSON.parse(existingProfile) : {};
+            userProfile = {
+                ...userProfile,
+                role: role,
+                name: companyName,
+                profileComplete: true
+            };
+            localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(userProfile));
+
+            // Send to backend for persistence
+            try {
+                const response = await fetch('/api/update-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        profile: profile
+                    })
+                });
+
+                if (!response.ok) {
+                    // Backend save failed, but we'll continue with local save
+                    throw new Error('Could not save to server');
+                }
+            } catch (backendError) {
+                // Continue anyway - local storage is saved
+                displayStatus('Profile saved locally. Server sync may retry later.', false);
+            }
+
+            // Show success message
+            displayStatus('Profile saved successfully! Redirecting...', false);
+
+            // Redirect to appropriate dashboard
+            const redirectPage = getRedirectPage(role);
+            setTimeout(() => {
+                window.location.href = redirectPage;
+            }, 1000);
+
+        } catch (err) {
+            displayStatus('Error saving profile: ' + (err.message || 'Please try again.'), true);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    /**
+     * Initialize the profile setup page
+     */
+    function initialize() {
+        // Check authentication
+        if (!checkAuth()) {
+            return;
+        }
+
+        // Load existing profile data
+        loadExistingProfile();
+
+        // Add role change listener
+        userRoleSelect.addEventListener('change', (e) => {
+            updateAdditionalFields(e.target.value);
+        });
+
+        // Trigger initial field update if role is pre-selected
+        if (userRoleSelect.value) {
+            updateAdditionalFields(userRoleSelect.value);
+        }
+
+        // Add form submit listener
+        profileForm.addEventListener('submit', handleSubmit);
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+        initialize();
+    }
+})();
 </script>
 </body>
 </html>

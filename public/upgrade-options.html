@@ -170,33 +170,117 @@
       <a href="#" class="tier-cta btn-primary btn-secondary" style="background:#f3f4f6; color:#2563eb; border:1px solid #d1d5db; box-shadow:none;">Select Elite</a>
     </div>
   </section></main><script>
-  // --- AUTH/NAV SCRIPT START ---
+(function() {
+  'use strict';
+
+  // Standardized localStorage keys
+  const STORAGE_KEYS = {
+    USER_PROFILE: 'homeprohub_user',
+    USER_ROLE: 'homeprohub_user_role',
+    AUTH_TOKEN: 'homeprohub_auth_token',
+    USERNAME: 'homeprohub_username',
+    PROFILE_COMPLETE: 'homeprohub_profile_complete',
+    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
+    HISTORY: 'homeprohub_history_v1'
+  };
+
+  /**
+   * Sanitize text for display (prevent XSS)
+   */
+  function sanitizeText(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  /**
+   * Get user data from localStorage
+   */
   function getUserData() {
     try {
-      const role = localStorage.getItem("homeprohub_user_role");
-      const rawProfile = localStorage.getItem("homeprohub_user");
+      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+
+      if (!role || !authToken) {
+        return null;
+      }
+
       const profile = rawProfile ? JSON.parse(rawProfile) : {};
-      return role ? { role: role, name: profile.name || "Profile" } : null; 
+      return {
+        role: role,
+        name: profile.name || 'User',
+        email: profile.email || ''
+      };
     } catch (e) {
       return null;
     }
   }
 
-  const profileLinkEl = document.getElementById("profileLink");
-  const user = getUserData();
+  /**
+   * Clear all user data from localStorage
+   */
+  function clearAllData() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Silent fail
+      }
+    });
+  }
 
-  if (user && user.role) {
-    profileLinkEl.textContent = user.name.split(' ')[0]; 
-    document.querySelector('.nav-links a[href="home.html"]').textContent = user.role === 'homeowner' ? 'Dashboard' : 'Contractor Dash';
+  /**
+   * Logout function
+   */
+  window.logout = function() {
+    clearAllData();
+
+    try {
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      if (authToken) {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    window.location.href = 'index.html';
+  };
+
+  /**
+   * Initialize the page
+   */
+  function initialize() {
+    const profileLinkEl = document.getElementById('profileLink');
+    const dashboardLinkEl = document.querySelector('.nav-links a[href="home.html"]');
+    const user = getUserData();
+
+    if (!user || !user.role) {
+      clearAllData();
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Set profile link text (sanitized)
+    if (profileLinkEl && user.name) {
+      const firstName = sanitizeText(user.name.split(' ')[0]);
+      profileLinkEl.textContent = firstName;
+    }
+
+    // Update dashboard link text based on role
+    if (dashboardLinkEl) {
+      dashboardLinkEl.textContent = user.role === 'homeowner' ? 'Dashboard' : 'Contractor Dash';
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
   } else {
-    window.location.href = "index.html"; 
+    initialize();
   }
-
-  function logout() {
-    localStorage.removeItem("homeprohub_user_role");
-    localStorage.removeItem("homeprohub_user");
-    localStorage.removeItem("homeprohub_history_v1");
-    window.location.href = "index.html"; 
-  }
-  // --- AUTH/NAV SCRIPT END ---
+})();
 </script></body></html>

@@ -211,44 +211,124 @@
   }
 
   // --- AUTH AND EVENT LISTENERS ---
+  // Standardized localStorage keys
+  const STORAGE_KEYS = {
+    USER_PROFILE: 'homeprohub_user',
+    USER_ROLE: 'homeprohub_user_role',
+    AUTH_TOKEN: 'homeprohub_auth_token',
+    USERNAME: 'homeprohub_username',
+    PROFILE_COMPLETE: 'homeprohub_profile_complete',
+    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
+    HISTORY: 'homeprohub_history_v1'
+  };
+
+  /**
+   * Sanitize text for display (prevent XSS)
+   */
+  function sanitizeText(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  /**
+   * Get user data from localStorage
+   */
   function getUserData() {
     try {
-      const role = localStorage.getItem("homeprohub_user_role");
-      return role ? { role: role, name: "User" } : null; 
+      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const rawProfile = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+
+      if (!role || !authToken) {
+        return null;
+      }
+
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      return {
+        role: role,
+        name: profile.companyName || 'User'
+      };
     } catch (e) {
       return null;
     }
   }
 
-  function logout() {
-    localStorage.removeItem("homeprohub_user_role");
-    localStorage.removeItem("homeprohub_history_v1");
-    window.location.href = "index.html"; 
+  /**
+   * Clear all user data from localStorage
+   */
+  function clearAllData() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Silent fail
+      }
+    });
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Run auth check
-    const profileLinkEl = document.getElementById("profileLink");
-    const user = getUserData();
-    
-    if (user && user.role === 'contractor') {
-      // Optional: Load company name if present
-      try {
-          const profile = JSON.parse(localStorage.getItem('homeprohub_contractor_profile')) || {};
-          profileLinkEl.textContent = profile.companyName ? profile.companyName.split(' ')[0] : 'Profile';
-      } catch (e) {
-          profileLinkEl.textContent = 'Profile';
+  /**
+   * Logout function
+   */
+  function logout() {
+    clearAllData();
+
+    try {
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      if (authToken) {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        }).catch(() => {});
       }
-      
-    } else {
-      window.location.href = "role-selection.html"; 
+    } catch (e) {}
+
+    window.location.href = 'index.html';
+  }
+
+  /**
+   * Initialize page
+   */
+  document.addEventListener('DOMContentLoaded', () => {
+    const profileLinkEl = document.getElementById('profileLink');
+    const user = getUserData();
+
+    // Check if user is logged in and is a contractor
+    if (!user || user.role !== 'contractor') {
+      clearAllData();
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Set profile link (sanitized)
+    if (profileLinkEl && user.name) {
+      const firstName = sanitizeText(user.name.split(' ')[0]);
+      profileLinkEl.textContent = firstName;
     }
 
     // Initial load and wire up filters
-    filterJobs(MOCK_JOBS);
-    document.getElementById('applyFilters').addEventListener('click', filterJobs);
-    document.getElementById('searchBar').addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') filterJobs();
-    });
+    try {
+      filterJobs();
+
+      const applyFiltersBtn = document.getElementById('applyFilters');
+      const searchBar = document.getElementById('searchBar');
+
+      if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', filterJobs);
+      }
+
+      if (searchBar) {
+        searchBar.addEventListener('keyup', (e) => {
+          if (e.key === 'Enter') filterJobs();
+        });
+      }
+    } catch (error) {
+      // Error initializing filters
+      const jobListingsEl = document.getElementById('jobListings');
+      if (jobListingsEl) {
+        jobListingsEl.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading job listings. Please refresh the page.</p>';
+      }
+    }
   });
 </script></body></html>

@@ -1,6 +1,8 @@
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="UTF-8" />
-  <title>HomeScope AI – Contractor Directory</title>
+  <title>HomeProHub – Contractor Directory</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
     /* Styling for the Contractor List */
@@ -103,19 +105,31 @@
       color: #4b5563;
       margin-top: 8px;
     }
-  </style></head><body><header class="navbar">
+  </style>
+</head>
+<body>
+
+<header class="navbar">
   <div class="nav-inner">
     <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeScope AI</div>
+      <div class="brand-logo">HH</div>
+      <div class="brand-name">HomeProHub</div>
     </div>
     <div class="nav-links">
-      <a href="home.html">Homeowner dashboard</a>
+      <a href="home.html">Dashboard</a>
+      <a href="ask.html">Assistant</a>
+      <div class="profile-area">
+        <a href="user-profile.html" class="profile-link">Profile</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
     </div>
-  </div></header><main>
+  </div>
+</header>
+
+<main>
   <section class="hero">
     <div class="hero-kicker">Find your pro</div>
-    <h1 class="hero-title">Verified Contractor Directory.</h1>
+    <h1 class="hero-title">Verified Contractor Directory</h1>
     <p class="hero-subtitle">
       Search local general contractors and trades. Every pro listed is vetted and scored based on transparent criteria, not just reviews.
     </p>
@@ -194,4 +208,61 @@
             </p>
         </div>
     </div>
-  </section></main></body></html>
+  </section>
+</main>
+
+<script>
+(function() {
+  'use strict';
+
+  // Auth: Logout
+  function logout() {
+    try {
+      localStorage.removeItem("homeprohub_username");
+      localStorage.removeItem("homeprohub_auth_token");
+      localStorage.removeItem("homeprohub_user_role");
+      localStorage.removeItem("homeprohub_contractor_profile");
+      localStorage.removeItem("homeprohub_profile_complete");
+      localStorage.removeItem("homeprohub_history_v1");
+    } catch (e) {
+      // Silent error
+    }
+    window.location.href = "index.html";
+  }
+  window.logout = logout;
+
+  // Auth check
+  function getUserData() {
+    try {
+      const username = localStorage.getItem("homeprohub_username");
+      const token = localStorage.getItem("homeprohub_auth_token");
+      const role = localStorage.getItem("homeprohub_user_role");
+
+      if (username && token && role === "homeowner") {
+        return {
+          username: username,
+          token: token,
+          role: role,
+          name: username.split('@')[0] || "User"
+        };
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const user = getUserData();
+  if (!user) {
+    window.location.href = "index.html";
+  } else {
+    const profileLink = document.querySelector('.profile-link');
+    if (profileLink) {
+      profileLink.textContent = user.name;
+    }
+  }
+
+})();
+</script>
+</body>
+</html>

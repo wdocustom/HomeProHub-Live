@@ -201,6 +201,10 @@
       </div>
     </div>
   </section></main><script>
+(function() {
+  'use strict';
+
+  // DOM elements
   const button = document.getElementById("askBtn");
   const textarea = document.getElementById("question");
   const statusText = document.getElementById("status");
@@ -209,89 +213,138 @@
   const historyList = document.getElementById("historyList");
   const historyEmpty = document.getElementById("historyEmpty");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
-
-  // --- NEW ELEMENT SELECTORS ---
   const clarifyButton = document.getElementById("clarifyBtn");
   const clarifyStatus = document.getElementById("clarifyStatus");
   const clarifyBox = document.getElementById("clarify");
   const jobPostArea = document.getElementById("jobPostArea");
   const postJobBtn = document.getElementById("postJobBtn");
-  // -----------------------------
-
   const profileLinkEl = document.getElementById("profileLink");
+
+  // Constants
   const HISTORY_KEY = "homeprohub_history_v1";
+  const MAX_HISTORY_ITEMS = 15;
+  const MAX_QUESTION_LENGTH = 5000;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-  // --- AUTH/NAV SCRIPT START ---
-  function getUserData() {
-    try {
-      // Check for the role (set by role selection page) AND the session ID
-      const role = localStorage.getItem("homeprohub_user_role");
-      const sessionId = localStorage.getItem("homeprohub_session_id");
-
-      if (role && sessionId) {
-          return { role: role, name: localStorage.getItem("homeprohub_user_name") || "User" };
-      }
-      return null; 
-    } catch (e) {
-      return null;
-    }
-  }
-// ... (rest of the script)
-
-  const user = getUserData();
-  if (user && user.name) {
-    profileLinkEl.textContent = user.name.split(' ')[0];
-  } else {
-    window.location.href = "index.html"; 
-  }
-
-  function logout() {
-    localStorage.removeItem("homeprohub_user");
-    localStorage.removeItem("homeprohub_history_v1");
-    window.location.href = "index.html";
-  }
-  // --- AUTH/NAV SCRIPT END ---
-
-
-  function readImageAsBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        const base64 = result.split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function askBackend(question, imageBase64, imageType) {
-    const response = await fetch("http://localhost:3000/ask", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ question, imageBase64, imageType })
-    });
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(
-        data.error || "Request failed with status " + response.status
-      );
-    }
-
-    const data = await response.json();
-    return data.answer;
-  }
-
-  // Store last context for refinements
+  // State
   let lastQuestion = null;
   let lastImageBase64 = null;
   let lastImageType = null;
 
+  // Utility: Sanitize user input
+  function sanitizeInput(input) {
+    if (!input || typeof input !== 'string') return '';
+    return input.trim().slice(0, MAX_QUESTION_LENGTH);
+  }
 
+  // Auth: Get user data
+  function getUserData() {
+    try {
+      const username = localStorage.getItem("homeprohub_username");
+      const token = localStorage.getItem("homeprohub_auth_token");
+      const role = localStorage.getItem("homeprohub_user_role");
+
+      if (username && token && role === "homeowner") {
+        return {
+          username: username,
+          token: token,
+          role: role,
+          name: username.split('@')[0] || "User"
+        };
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Auth: Logout
+  function logout() {
+    try {
+      localStorage.removeItem("homeprohub_username");
+      localStorage.removeItem("homeprohub_auth_token");
+      localStorage.removeItem("homeprohub_user_role");
+      localStorage.removeItem("homeprohub_profile_complete");
+      localStorage.removeItem("homeprohub_history_v1");
+    } catch (e) {
+      // Silent error
+    }
+    window.location.href = "index.html";
+  }
+  window.logout = logout;
+
+  // Auth check
+  const user = getUserData();
+  if (!user) {
+    window.location.href = "index.html";
+  } else if (profileLinkEl) {
+    profileLinkEl.textContent = user.name;
+  }
+
+  // Image: Read as base64
+  function readImageAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) {
+        resolve(null);
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        reject(new Error('File size exceeds 5MB limit'));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const result = reader.result;
+          const base64 = result.split(",")[1];
+          resolve(base64);
+        } catch (e) {
+          reject(new Error('Failed to process image'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read image file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // API: Ask backend
+  async function askBackend(question, imageBase64, imageType) {
+    const sanitizedQuestion = sanitizeInput(question);
+
+    if (!sanitizedQuestion) {
+      throw new Error('Question cannot be empty');
+    }
+
+    const user = getUserData();
+    if (!user) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch("/ask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${user.token}`
+      },
+      body: JSON.stringify({
+        question: sanitizedQuestion,
+        imageBase64,
+        imageType
+      })
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `Request failed (${response.status})`);
+    }
+
+    const data = await response.json();
+    return data.answer || '';
+  }
+
+  // History: Load
   function loadHistory() {
     try {
       const raw = localStorage.getItem(HISTORY_KEY);
@@ -300,178 +353,231 @@
       if (!Array.isArray(parsed)) return [];
       return parsed;
     } catch (e) {
-      console.warn("Failed to read history:", e);
       return [];
     }
   }
 
+  // History: Save
   function saveHistory(history) {
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     } catch (e) {
-      console.error("Failed to save history:", e);
+      // Silent error - history is non-critical
     }
   }
 
+  // History: Add entry
   function addToHistory(question, answer) {
-    const history = loadHistory();
-    const entry = { question, answer, timestamp: new Date().toISOString() };
-    history.unshift(entry);
-    const trimmed = history.slice(0, 15);
-    saveHistory(trimmed);
-    renderHistory();
+    try {
+      const history = loadHistory();
+      const entry = {
+        question: sanitizeInput(question),
+        answer: sanitizeInput(answer),
+        timestamp: new Date().toISOString()
+      };
+      history.unshift(entry);
+      const trimmed = history.slice(0, MAX_HISTORY_ITEMS);
+      saveHistory(trimmed);
+      renderHistory();
+    } catch (e) {
+      // Silent error
+    }
   }
 
+  // History: Render
   function renderHistory() {
-    const history = loadHistory();
-    historyList.innerHTML = "";
+    try {
+      const history = loadHistory();
+      historyList.innerHTML = "";
 
-    if (!history.length) {
-      historyEmpty.style.display = "block";
-      return;
-    } else {
+      if (!history.length) {
+        historyEmpty.style.display = "block";
+        return;
+      }
+
       historyEmpty.style.display = "none";
-    }
 
-    history.forEach((entry) => {
-      const li = document.createElement("li");
-      li.style.marginBottom = "6px";
+      history.forEach((entry) => {
+        const li = document.createElement("li");
+        li.style.marginBottom = "6px";
 
-      const title = document.createElement("div");
-      title.className = "history-item-title";
-      const text =
-        entry.question.length > 80
+        const title = document.createElement("div");
+        title.className = "history-item-title";
+        const text = entry.question.length > 80
           ? entry.question.slice(0, 80) + "..."
           : entry.question;
-      title.textContent = "“" + text + "”";
+        title.textContent = """ + text + """;
 
-      const time = document.createElement("div");
-      time.className = "history-item-time";
-      const date = new Date(entry.timestamp);
-      time.textContent = date.toLocaleString();
+        const time = document.createElement("div");
+        time.className = "history-item-time";
+        const date = new Date(entry.timestamp);
+        time.textContent = date.toLocaleString();
 
-      li.appendChild(title);
-      li.appendChild(time);
-      historyList.appendChild(li);
+        li.appendChild(title);
+        li.appendChild(time);
+        historyList.appendChild(li);
+      });
+    } catch (e) {
+      // Silent error
+    }
+  }
+
+  // History: Clear
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener("click", () => {
+      try {
+        localStorage.removeItem(HISTORY_KEY);
+        renderHistory();
+      } catch (e) {
+        // Silent error
+      }
     });
   }
 
-  clearHistoryBtn.addEventListener("click", () => {
-    localStorage.removeItem(HISTORY_KEY);
-    renderHistory();
-  });
+  // Main ask handler
+  if (button) {
+    button.addEventListener("click", async () => {
+      const q = textarea ? textarea.value.trim() : '';
 
-  button.addEventListener("click", async () => {
-    const q = textarea.value.trim();
-
-    if (!q) {
-      answerBox.textContent = "Please type your question first.";
-      return;
-    }
-
-    button.disabled = true;
-    clarifyButton.disabled = true;
-    statusText.textContent = "Thinking…";
-    clarifyStatus.textContent = "";
-    answerBox.textContent = "";
-    jobPostArea.style.display = 'none'; // Hide if asking a new question
-
-    try {
-      let imageBase64 = null;
-      let imageType = null;
-
-      const file = photoInput.files[0];
-      if (file) {
-        imageType = file.type;
-        imageBase64 = await readImageAsBase64(file);
+      if (!q) {
+        if (answerBox) answerBox.textContent = "Please describe your issue in detail.";
+        return;
       }
 
-      const reply = await askBackend(q, imageBase64, imageType);
-      answerBox.textContent = reply;
-      statusText.textContent = "Done.";
-      addToHistory(q, reply);
+      if (q.length > MAX_QUESTION_LENGTH) {
+        if (answerBox) answerBox.textContent = `Question is too long. Maximum ${MAX_QUESTION_LENGTH} characters.`;
+        return;
+      }
 
-      // --- CRITICAL FIX: SHOW THE POST JOB BUTTON BLOCK HERE ---
-      jobPostArea.style.display = 'block'; 
-      // --------------------------------------------------------
+      // Disable inputs
+      button.disabled = true;
+      if (clarifyButton) clarifyButton.disabled = true;
+      if (textarea) textarea.disabled = true;
+      if (photoInput) photoInput.disabled = true;
 
-      // Save context for clarifications
-      lastQuestion = q;
-      lastImageBase64 = imageBase64;
-      lastImageType = imageType;
-    } catch (err) {
-      console.error(err);
-      answerBox.textContent = "Something went wrong: " + err.message;
-      statusText.textContent = "";
-      jobPostArea.style.display = 'none'; // Hide if there was an error
-    } finally {
-      button.disabled = false;
-      clarifyButton.disabled = false;
-    }
-  });
+      if (statusText) statusText.textContent = "Analyzing your issue...";
+      if (clarifyStatus) clarifyStatus.textContent = "";
+      if (answerBox) answerBox.textContent = "";
+      if (jobPostArea) jobPostArea.style.display = 'none';
 
-  clarifyButton.addEventListener("click", async () => {
-    const extra = clarifyBox.value.trim();
+      try {
+        let imageBase64 = null;
+        let imageType = null;
 
-    if (!lastQuestion) {
-      clarifyStatus.textContent = "Ask a first question before refining.";
-      return;
-    }
+        const file = photoInput && photoInput.files ? photoInput.files[0] : null;
+        if (file) {
+          imageType = file.type;
+          imageBase64 = await readImageAsBase64(file);
+        }
 
-    if (!extra) {
-      clarifyStatus.textContent = "Add some new details or clarifications first.";
-      return;
-    }
+        const reply = await askBackend(q, imageBase64, imageType);
 
-    clarifyButton.disabled = true;
-    button.disabled = true;
-    clarifyStatus.textContent = "Updating with your new details…";
-    statusText.textContent = "";
-    answerBox.textContent = "";
-    jobPostArea.style.display = 'none'; // Hide when refining
+        if (answerBox) answerBox.textContent = reply;
+        if (statusText) statusText.textContent = "Analysis complete.";
 
-    const combinedQuestion =
-      `Original description from homeowner:\n` +
-      lastQuestion +
-      `\n\nNew details / clarifications from homeowner:\n` +
-      extra +
-      `\n\nPlease update and refine your previous guidance based on these new details. ` +
-      `Keep the same structure (summary, severity, urgency, DIY checks, materials, safety, when to call a pro, script). ` +
-      `If earlier advice is no longer correct, clearly correct it.`;
+        addToHistory(q, reply);
 
-    try {
-      const reply = await askBackend(
-        combinedQuestion,
-        lastImageBase64,
-        lastImageType
-      );
-      answerBox.textContent = reply;
-      clarifyStatus.textContent = "Updated.";
-      addToHistory(combinedQuestion, reply);
-      lastQuestion = combinedQuestion;
-      clarifyBox.value = "";
-      jobPostArea.style.display = 'block'; // Show again after successful update
-    } catch (err) {
-      console.error(err);
-      answerBox.textContent = "Something went wrong: " + err.message;
-      clarifyStatus.textContent = "";
-      jobPostArea.style.display = 'none'; 
-    } finally {
-      clarifyButton.disabled = false;
-      button.disabled = false;
-    }
-  });
+        if (jobPostArea) jobPostArea.style.display = 'block';
 
-  postJobBtn.addEventListener('click', () => {
+        // Save context for clarifications
+        lastQuestion = q;
+        lastImageBase64 = imageBase64;
+        lastImageType = imageType;
+
+      } catch (err) {
+        if (answerBox) {
+          answerBox.textContent = err.message || "Unable to process your request. Please try again.";
+        }
+        if (statusText) statusText.textContent = "";
+        if (jobPostArea) jobPostArea.style.display = 'none';
+      } finally {
+        button.disabled = false;
+        if (clarifyButton) clarifyButton.disabled = false;
+        if (textarea) textarea.disabled = false;
+        if (photoInput) photoInput.disabled = false;
+      }
+    });
+  }
+
+  // Clarify handler
+  if (clarifyButton) {
+    clarifyButton.addEventListener("click", async () => {
+      const extra = clarifyBox ? clarifyBox.value.trim() : '';
+
+      if (!lastQuestion) {
+        if (clarifyStatus) clarifyStatus.textContent = "Please ask an initial question first.";
+        return;
+      }
+
+      if (!extra) {
+        if (clarifyStatus) clarifyStatus.textContent = "Please provide additional details.";
+        return;
+      }
+
+      if (extra.length > MAX_QUESTION_LENGTH) {
+        if (clarifyStatus) clarifyStatus.textContent = `Clarification is too long. Maximum ${MAX_QUESTION_LENGTH} characters.`;
+        return;
+      }
+
+      // Disable inputs
+      clarifyButton.disabled = true;
+      if (button) button.disabled = true;
+      if (clarifyBox) clarifyBox.disabled = true;
+
+      if (clarifyStatus) clarifyStatus.textContent = "Updating analysis...";
+      if (statusText) statusText.textContent = "";
+      if (answerBox) answerBox.textContent = "";
+      if (jobPostArea) jobPostArea.style.display = 'none';
+
+      const combinedQuestion =
+        `Original description from homeowner:\n` +
+        lastQuestion +
+        `\n\nNew details / clarifications from homeowner:\n` +
+        extra +
+        `\n\nPlease update and refine your previous guidance based on these new details. ` +
+        `Keep the same structure (summary, severity, urgency, DIY checks, materials, safety, when to call a pro, script). ` +
+        `If earlier advice is no longer correct, clearly correct it.`;
+
+      try {
+        const reply = await askBackend(combinedQuestion, lastImageBase64, lastImageType);
+
+        if (answerBox) answerBox.textContent = reply;
+        if (clarifyStatus) clarifyStatus.textContent = "Analysis updated.";
+
+        addToHistory(combinedQuestion, reply);
+
+        lastQuestion = combinedQuestion;
+        if (clarifyBox) clarifyBox.value = "";
+        if (jobPostArea) jobPostArea.style.display = 'block';
+
+      } catch (err) {
+        if (answerBox) {
+          answerBox.textContent = err.message || "Unable to update analysis. Please try again.";
+        }
+        if (clarifyStatus) clarifyStatus.textContent = "";
+        if (jobPostArea) jobPostArea.style.display = 'none';
+      } finally {
+        clarifyButton.disabled = false;
+        if (button) button.disabled = false;
+        if (clarifyBox) clarifyBox.disabled = false;
+      }
+    });
+  }
+
+  // Post job handler
+  if (postJobBtn) {
+    postJobBtn.addEventListener('click', () => {
       if (lastQuestion) {
-          // Instead of redirecting to the bid board, redirect to the paid contact CTA page
-          alert("Project details saved! Directing you to contact options.");
-          window.location.href = 'urgent-contact-cta.html'; 
+        window.location.href = 'urgent-contact-cta.html';
       } else {
-          alert("Please generate a project plan or diagnosis first.");
+        alert("Please generate a project analysis first.");
       }
-  });
+    });
+  }
 
-
+  // Initialize
   document.addEventListener('DOMContentLoaded', renderHistory);
+  renderHistory();
+
+})();
 </script>
