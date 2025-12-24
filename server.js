@@ -13,10 +13,17 @@ const fetch = (...args) =>
 
 // ====== ENVIRONMENT VALIDATION ======
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 if (!ANTHROPIC_API_KEY) {
   console.error("❌ CRITICAL: ANTHROPIC_API_KEY is not set in environment variables.");
   console.error("   Please add it to your .env file to enable AI features.");
+}
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn("⚠️  WARNING: Supabase credentials not configured. Authentication will not work.");
+  console.warn("   Add SUPABASE_URL and SUPABASE_ANON_KEY to your environment variables.");
 }
 
 const app = express();
@@ -114,6 +121,30 @@ function loadJsonFile(filename) {
 // --- FINAL AUTH API ROUTES (Client-Side Auth) ---
 
 // ====== API ROUTES ======
+
+/**
+ * GET /api/config
+ * Returns client configuration (Supabase credentials)
+ */
+app.get('/api/config', (req, res) => {
+  try {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return res.status(503).json({
+        error: 'Authentication service not configured.',
+        code: 'AUTH_NOT_CONFIGURED'
+      });
+    }
+
+    res.json({
+      supabaseUrl: SUPABASE_URL,
+      supabaseAnonKey: SUPABASE_ANON_KEY
+    });
+
+  } catch (error) {
+    console.error('Error in /api/config:', error);
+    return res.status(500).json({ error: 'Internal server error fetching config.' });
+  }
+});
 
 /**
  * POST /api/set-role
