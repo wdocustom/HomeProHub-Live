@@ -181,17 +181,59 @@ function logout() {
   });
 
   function displayEstimate(est) {
-    let html = '<h3 style="margin-top:0;">Project: ' + (est.project_title || 'Estimate') + '</h3>';
-    html += '<div style="margin: 16px 0;"><strong>Total Range:</strong> $' + (est.total_projected_low || 0).toLocaleString() + ' - $' + (est.total_projected_high || 0).toLocaleString() + '</div>';
-    
+    if (est.error) {
+      estimateContent.innerHTML = '<p style="color: #ef4444;">' + est.error + '</p>';
+      resultSection.style.display = 'block';
+      return;
+    }
+
+    let html = '<div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 20px;">';
+    html += '<h3 style="margin:0 0 8px 0; color: #1f2937; font-size: 22px;">' + (est.project_title || 'Project Estimate') + '</h3>';
+    html += '<div style="font-size: 28px; font-weight: 700; color: #2563eb; margin-top: 12px;">$' + (est.total_projected_low || 0).toLocaleString() + ' - $' + (est.total_projected_high || 0).toLocaleString() + '</div>';
+    html += '<p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">Estimated Total Range</p>';
+    html += '</div>';
+
     if (est.line_items && est.line_items.length > 0) {
-      html += '<h4>Line Items:</h4><ul>';
-      est.line_items.forEach(item => {
-        html += '<li><strong>' + item.item + ':</strong> $' + item.low.toLocaleString() + ' - $' + item.high.toLocaleString();
-        if (item.notes) html += ' <em>(' + item.notes + ')</em>';
-        html += '</li>';
+      html += '<h4 style="margin: 0 0 12px 0; color: #374151;">Detailed Breakdown</h4>';
+      html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">';
+      html += '<thead><tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">';
+      html += '<th style="text-align: left; padding: 10px; font-size: 13px; color: #6b7280;">Item</th>';
+      html += '<th style="text-align: right; padding: 10px; font-size: 13px; color: #6b7280;">Low - High</th>';
+      html += '</tr></thead><tbody>';
+
+      est.line_items.forEach((item, idx) => {
+        const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+        html += '<tr style="background: ' + bg + '; border-bottom: 1px solid #e5e7eb;">';
+        html += '<td style="padding: 12px;"><strong>' + item.item + '</strong>';
+        if (item.notes) html += '<br><span style="font-size: 12px; color: #6b7280;">' + item.notes + '</span>';
+        html += '</td>';
+        html += '<td style="padding: 12px; text-align: right; white-space: nowrap;">$' + (item.low || 0).toLocaleString() + ' - $' + (item.high || 0).toLocaleString() + '</td>';
+        html += '</tr>';
       });
-      html += '</ul>';
+
+      html += '<tr style="background: #f3f4f6; font-weight: 600; border-top: 2px solid #e5e7eb;">';
+      html += '<td style="padding: 12px;">Subtotal (Labor & Materials)</td>';
+      html += '<td style="padding: 12px; text-align: right;">$' + (est.subtotal_low || 0).toLocaleString() + ' - $' + (est.subtotal_high || 0).toLocaleString() + '</td>';
+      html += '</tr>';
+
+      html += '<tr style="background: #ffffff;"><td style="padding: 8px; padding-left: 24px; font-size: 13px; color: #6b7280;">Overhead & Profit (' + (est.overhead_profit_percent || 20) + '%)</td><td></td></tr>';
+      html += '<tr style="background: #ffffff;"><td style="padding: 8px; padding-left: 24px; font-size: 13px; color: #6b7280;">Contingency (' + (est.contingency_percent || 10) + '%)</td><td></td></tr>';
+
+      html += '<tr style="background: #dbeafe; font-weight: 700; font-size: 16px; border-top: 2px solid #2563eb;">';
+      html += '<td style="padding: 14px;">TOTAL PROJECT ESTIMATE</td>';
+      html += '<td style="padding: 14px; text-align: right; color: #2563eb;">$' + (est.total_projected_low || 0).toLocaleString() + ' - $' + (est.total_projected_high || 0).toLocaleString() + '</td>';
+      html += '</tr>';
+      html += '</tbody></table>';
+    }
+
+    if (est.disclaimers && est.disclaimers.length > 0) {
+      html += '<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 20px; border-radius: 4px;">';
+      html += '<p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: #92400e;">Important Notes:</p>';
+      html += '<ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #78350f;">';
+      est.disclaimers.forEach(d => {
+        html += '<li style="margin: 4px 0;">' + d + '</li>';
+      });
+      html += '</ul></div>';
     }
 
     estimateContent.innerHTML = html;
@@ -200,36 +242,122 @@ function logout() {
 
   downloadPdfBtn.addEventListener('click', function() {
     if (!currentEstimate) return;
-    
-    const win = window.open('', '', 'height=800,width=800');
+
+    const win = window.open('', '', 'height=900,width=800');
     if (!win) {
       alert('Please allow pop-ups to download PDF');
       return;
     }
 
     const companyName = profile && profile.companyName ? profile.companyName : 'HomeProHub Contractor';
-    const license = profile && profile.licenseNumber ? profile.licenseNumber : 'N/A';
+    const license = profile && profile.licenseNumber ? profile.licenseNumber : 'License Pending';
+    const address = profile && profile.city && profile.state ? `${profile.city}, ${profile.state} ${profile.zipCode || ''}` : '';
 
     let lineItemsHtml = '';
-    if (currentEstimate.line_items) {
-      lineItemsHtml = currentEstimate.line_items.map(item => 
-        '<tr><td style="padding:8px;border:1px solid #ddd;">' + item.item + '</td>' +
-        '<td style="padding:8px;border:1px solid #ddd;">$' + item.low.toLocaleString() + ' - $' + item.high.toLocaleString() + '</td>' +
-        '<td style="padding:8px;border:1px solid #ddd;">' + (item.notes || '-') + '</td></tr>'
-      ).join('');
+    if (currentEstimate.line_items && currentEstimate.line_items.length > 0) {
+      currentEstimate.line_items.forEach((item, idx) => {
+        const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+        lineItemsHtml += '<tr style="background:' + bg + ';">';
+        lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;">' + item.item;
+        if (item.notes) lineItemsHtml += '<br><span style="font-size:11px;color:#6b7280;">' + item.notes + '</span>';
+        lineItemsHtml += '</td>';
+        lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$' + (item.low || 0).toLocaleString() + '</td>';
+        lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$' + (item.high || 0).toLocaleString() + '</td>';
+        lineItemsHtml += '</tr>';
+      });
     }
 
-    win.document.write('<html><head><title>Estimate</title><style>body{font-family:sans-serif;padding:20px;}</style></head><body>');
-    win.document.write('<h1>' + (currentEstimate.project_title || 'Estimate') + '</h1>');
-    win.document.write('<p><strong>Contractor:</strong> ' + companyName + ' | <strong>License:</strong> ' + license + '</p>');
-    win.document.write('<p><strong>Date:</strong> ' + new Date().toLocaleDateString() + '</p>');
-    win.document.write('<h3>Total: $' + (currentEstimate.total_projected_low || 0).toLocaleString() + ' - $' + (currentEstimate.total_projected_high || 0).toLocaleString() + '</h3>');
-    if (lineItemsHtml) {
-      win.document.write('<table style="width:100%;border-collapse:collapse;margin-top:20px;"><thead><tr style="background:#f3f4f6;"><th style="padding:10px;border:1px solid #ddd;text-align:left;">Item</th><th style="padding:10px;border:1px solid #ddd;text-align:left;">Range</th><th style="padding:10px;border:1px solid #ddd;text-align:left;">Notes</th></tr></thead><tbody>' + lineItemsHtml + '</tbody></table>');
+    let disclaimersHtml = '';
+    if (currentEstimate.disclaimers && currentEstimate.disclaimers.length > 0) {
+      disclaimersHtml = '<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin-top:20px;"><h4 style="margin:0 0 8px 0;color:#92400e;font-size:14px;">Important Notes</h4><ul style="margin:0;padding-left:20px;font-size:12px;color:#78350f;">';
+      currentEstimate.disclaimers.forEach(d => {
+        disclaimersHtml += '<li style="margin:4px 0;">' + d + '</li>';
+      });
+      disclaimersHtml += '</ul></div>';
     }
-    win.document.write('</body></html>');
+
+    const html = `<!DOCTYPE html>
+<html><head>
+  <title>${currentEstimate.project_title || 'Project Estimate'}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; color: #1f2937; }
+    .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+    .header-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .company-name { font-size: 24px; font-weight: 700; color: #2563eb; }
+    .project-title { font-size: 28px; font-weight: 700; margin: 20px 0 10px 0; }
+    .total-box { background: #dbeafe; border: 2px solid #2563eb; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center; }
+    .total-label { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
+    .total-amount { font-size: 32px; font-weight: 700; color: #2563eb; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th { background: #f3f4f6; padding: 12px; text-align: left; font-size: 13px; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
+    .subtotal-row { background: #f3f4f6; font-weight: 600; border-top: 2px solid #e5e7eb; }
+    .total-row { background: #dbeafe; font-weight: 700; font-size: 16px; border-top: 2px solid #2563eb; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head><body>
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <div class="company-name">${companyName}</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px;">License: ${license}</div>
+        ${address ? '<div style="font-size:13px;color:#6b7280;">' + address + '</div>' : ''}
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;color:#6b7280;">Date: ${new Date().toLocaleDateString()}</div>
+        <div style="font-size:13px;color:#6b7280;">Estimate ID: HPH-${Math.floor(Math.random() * 90000) + 10000}</div>
+      </div>
+    </div>
+  </div>
+
+  <h1 class="project-title">${currentEstimate.project_title || 'Project Estimate'}</h1>
+
+  <div class="total-box">
+    <div class="total-label">Estimated Total Range</div>
+    <div class="total-amount">$${(currentEstimate.total_projected_low || 0).toLocaleString()} - $${(currentEstimate.total_projected_high || 0).toLocaleString()}</div>
+  </div>
+
+  <h3 style="margin:30px 0 10px 0;color:#374151;">Detailed Breakdown</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Item / Service</th>
+        <th style="text-align:right;width:120px;">Low Estimate</th>
+        <th style="text-align:right;width:120px;">High Estimate</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${lineItemsHtml}
+      <tr class="subtotal-row">
+        <td style="padding:12px;">Subtotal (Labor & Materials)</td>
+        <td style="padding:12px;text-align:right;">$${(currentEstimate.subtotal_low || 0).toLocaleString()}</td>
+        <td style="padding:12px;text-align:right;">$${(currentEstimate.subtotal_high || 0).toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;padding-left:24px;font-size:13px;color:#6b7280;">Overhead & Profit (${currentEstimate.overhead_profit_percent || 20}%)</td>
+        <td colspan="2"></td>
+      </tr>
+      <tr>
+        <td style="padding:8px;padding-left:24px;font-size:13px;color:#6b7280;">Contingency (${currentEstimate.contingency_percent || 10}%)</td>
+        <td colspan="2"></td>
+      </tr>
+      <tr class="total-row">
+        <td style="padding:14px;">TOTAL PROJECT ESTIMATE</td>
+        <td style="padding:14px;text-align:right;color:#2563eb;">$${(currentEstimate.total_projected_low || 0).toLocaleString()}</td>
+        <td style="padding:14px;text-align:right;color:#2563eb;">$${(currentEstimate.total_projected_high || 0).toLocaleString()}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  ${disclaimersHtml}
+
+  <div style="margin-top:40px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+    This estimate is preliminary and subject to change based on site conditions and final scope. Not a binding contract.
+  </div>
+</body></html>`;
+
+    win.document.write(html);
     win.document.close();
-    win.print();
+    setTimeout(() => win.print(), 250);
   });
 
   emailBtn.addEventListener('click', function() {

@@ -541,32 +541,61 @@ app.post("/contractor-ask", async (req, res) => {
       business: "Business systems, profitability and long-term strategy"
     }[selectedFocus] || "General contractor guidance";
 
-    // Special instructions for pricing estimates
-    const pricingExtra = selectedFocus === "pricing"
-      ? `
+    // Build prompt based on focus
+    let contentText;
+    let maxTokens = 900;
 
-SPECIAL INSTRUCTIONS FOR DOWNLOADABLE ESTIMATE (OVERRIDE):
-- Input Data: Scope Level: ${scopeLevel || 'Not specified'}, Size: ${size || 'Not specified'}.
-- INJECTED RAG DATA: You MUST reference the provided regional Labor Rates and Multiplier (${ragData.regionalMultiplier}).
-- Use the Trades required (Plumber, Electrician, etc.) and multiply their base rate by the Regional Multiplier to calculate labor costs.
-- Your response MUST be a single, raw JSON object. Do not wrap it in any text, markdown, or commentary.
-- The ZIP code must be provided. If not, the JSON output MUST contain only: {"error": "ZIP code missing."}.
-- If ZIP is provided, generate a detailed estimate object (always in USD) containing the following fields:
-  * "status": "ok"
-  * "project_title": [Brief title based on description]
-  * "line_items": [Array of objects: {"item": "Trade/Material Name", "low": 0, "high": 0, "notes": "Scope details"}]
-  * "subtotal_low": [Sum of all 'low' line items]
-  * "subtotal_high": [Sum of all 'high' line items]
-  * "overhead_profit_percent": [15-25, based on scope]
-  * "contingency_percent": [5-10, based on scope complexity]
-  * "total_projected_low": [Calculated total including O&P/Contingency]
-  * "total_projected_high": [Calculated total including O&P/Contingency]
-  * "disclaimers": ["Estimate is non-binding and regional.", "Final quote requires site visit."]
-`
-      : "";
+    if (selectedFocus === "pricing") {
+      // For pricing, return ONLY JSON
+      maxTokens = 1500;
+      contentText = `You are an experienced estimating expert for contractors. Analyze this job and create a detailed estimate.
 
-    // Build prompt
-    const contentText = `You are an experienced, licensed contractor and business mentor.
+--- BEGIN RAG CONTEXT ---
+Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
+Regional Multiplier for ZIP ${zip || 'N/A'}: ${ragData.regionalMultiplier}
+Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
+--- END RAG CONTEXT ---
+
+JOB DESCRIPTION: ${sanitizedQuestion}
+ZIP CODE: ${zip || "Not provided"}
+SCOPE LEVEL: ${scopeLevel || 'mid'}
+PROJECT SIZE: ${size || 'Not specified'}
+
+CRITICAL: Your response MUST be ONLY a valid JSON object. No explanatory text before or after.
+
+If ZIP code is missing, return: {"error": "ZIP code is required for pricing estimates"}
+
+Otherwise, return a JSON object with this EXACT structure:
+{
+  "status": "ok",
+  "project_title": "Brief descriptive title",
+  "line_items": [
+    {"item": "Labor - [Trade Name]", "low": 0, "high": 0, "notes": "Brief description"},
+    {"item": "Materials - [Material Type]", "low": 0, "high": 0, "notes": "Brief description"}
+  ],
+  "subtotal_low": 0,
+  "subtotal_high": 0,
+  "overhead_profit_percent": 20,
+  "contingency_percent": 10,
+  "total_projected_low": 0,
+  "total_projected_high": 0,
+  "disclaimers": [
+    "This is a preliminary budget estimate based on typical costs",
+    "Final pricing requires site visit and detailed scope review",
+    "Costs adjusted for ZIP ${zip} using regional multiplier ${ragData.regionalMultiplier}"
+  ]
+}
+
+IMPORTANT CALCULATION RULES:
+1. Use the provided labor rates and multiply by regional multiplier ${ragData.regionalMultiplier}
+2. Break down labor by trade (e.g., Electrician, Plumber, Carpenter)
+3. Include material costs as separate line items
+4. Subtotal = sum of all line item lows/highs
+5. Total = Subtotal + (Subtotal * overhead_profit_percent/100) + (Subtotal * contingency_percent/100)
+6. All values in whole dollars (no decimals)`;
+    } else {
+      // For non-pricing questions, return formatted text
+      contentText = `You are an experienced, licensed contractor and business mentor.
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
@@ -575,25 +604,36 @@ Regional Multiplier: ${ragData.regionalMultiplier}
 --- END RAG CONTEXT ---
 
 FOCUS AREA: ${focusDescription}
-JOB ZIP (if provided): ${zip || "Not provided"}${pricingExtra}
+JOB ZIP (if provided): ${zip || "Not provided"}
 
 Contractor's situation:
 ${sanitizedQuestion}
 
-Give practical, grounded advice based on real-world experience.
+Give practical, grounded advice based on real-world experience in a conversational, helpful tone.
 Avoid guessing about local code specifics—remind them to check their local code and licensing board if needed.
 
-Respond using EXACTLY this structure:
-1. Quick Summary (2–4 sentences)
-2. Key Considerations (3–7 bullet points)
-3. Suggested Approach / Strategy (Numbered steps)
-4. Pricing & Scope Guidance (if relevant):
-   - **Pricing:** If a ZIP is provided, use the override instructions above to generate a detailed, structured estimate table including O&P and Contingency.
-   - **Scope:** How to structure allowances, exclusions, and define clear contract limits to minimize change orders.
-5. Licensing, Code & Risk
-6. Communication Script
-7. Next Moves (3–5 concrete actions)
-`;
+Respond using this structure:
+
+**Quick Summary**
+[2-3 sentences summarizing the situation and your recommendation]
+
+**Key Considerations**
+• [Point 1]
+• [Point 2]
+• [Point 3]
+
+**Suggested Approach**
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+**Next Moves**
+• [Action 1]
+• [Action 2]
+• [Action 3]
+
+Keep your response practical, specific, and action-oriented.`;
+    }
 
     // Call Anthropic API
     const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
@@ -605,7 +645,7 @@ Respond using EXACTLY this structure:
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
-        max_tokens: 900,
+        max_tokens: maxTokens,
         messages: [
           {
             role: "user",
