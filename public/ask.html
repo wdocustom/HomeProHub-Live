@@ -476,7 +476,7 @@
         const text = entry.question.length > 80
           ? entry.question.slice(0, 80) + "..."
           : entry.question;
-        title.textContent = """ + text + """;
+        title.textContent = text;
 
         const time = document.createElement("div");
         time.className = "history-item-time";
