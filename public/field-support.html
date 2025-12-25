@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Field Support</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .support-container { max-width: 900px; margin: 40px auto; padding: 0 24px; }
+    .header-card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .chat-card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .chat-history { max-height: 500px; overflow-y: auto; margin-bottom: 20px; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .chat-message { margin-bottom: 16px; padding: 12px; border-radius: 8px; }
+    .chat-message.user { background: #dbeafe; border-left: 4px solid #2563eb; }
+    .chat-message.assistant { background: #f3f4f6; border-left: 4px solid #6b7280; }
+    .chat-message strong { display: block; margin-bottom: 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; }
+    .input-area { display: flex; gap: 12px; align-items: flex-end; }
+    .input-area textarea { flex: 1; }
+  </style>
+</head>
+<body>
+<header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="contractor.html">Dashboard</a>
+      <a href="contractor-profile.html">Profile</a>
+      <div class="profile-area">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="support-container">
+  <div class="header-card">
+    <h1 style="margin: 0 0 8px 0; font-size: 28px;">Field Support & Contractor Coach</h1>
+    <p style="margin: 0; color: #6b7280;">Get real-time AI assistance for tough projects, technical questions, and business decisions</p>
+  </div>
+
+  <div class="chat-card">
+    <div class="chat-history" id="chatHistory">
+      <p style="text-align: center; color: #9ca3af; font-size: 14px;">Start a conversation by asking a question below</p>
+    </div>
+
+    <form id="chatForm">
+      <div class="form-group">
+        <label for="category">Question Category</label>
+        <select id="category">
+          <option value="general">General Contractor Advice</option>
+          <option value="materials">Materials & Methods</option>
+          <option value="licensing">Licensing & Compliance</option>
+          <option value="client_comms">Client Communication</option>
+          <option value="business">Business & Operations</option>
+        </select>
+      </div>
+
+      <div class="input-area">
+        <textarea id="questionInput" rows="3" placeholder="Ask your question... (e.g., 'How should I handle a client asking for changes mid-project?')" required></textarea>
+        <button type="submit" class="btn-primary" id="askBtn" style="height: fit-content;">Send</button>
+      </div>
+      <div id="status" style="margin-top: 12px; font-size: 14px;"></div>
+    </form>
+
+    <button class="btn-secondary" id="clearBtn" style="margin-top: 16px;">Clear Conversation</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEYS = {
+  AUTH_TOKEN: 'homeprohub_auth_token',
+  USERNAME: 'homeprohub_username',
+  USER_ROLE: 'homeprohub_user_role',
+  CHAT_HISTORY: 'homeprohub_field_support_history'
+};
+
+function logout() {
+  Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+  window.location.href = 'index.html';
+}
+
+(function() {
+  const chatForm = document.getElementById('chatForm');
+  const askBtn = document.getElementById('askBtn');
+  const questionInput = document.getElementById('questionInput');
+  const categorySelect = document.getElementById('category');
+  const status = document.getElementById('status');
+  const chatHistory = document.getElementById('chatHistory');
+  const clearBtn = document.getElementById('clearBtn');
+
+  let conversationHistory = [];
+
+  function checkAuth() {
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+    if (!token || role !== 'contractor') {
+      window.location.href = 'index.html';
+      return false;
+    }
+    return true;
+  }
+
+  function loadHistory() {
+    const saved = localStorage.getItem(STORAGE_KEYS.CHAT_HISTORY);
+    if (saved) {
+      conversationHistory = JSON.parse(saved);
+      renderHistory();
+    }
+  }
+
+  function saveHistory() {
+    localStorage.setItem(STORAGE_KEYS.CHAT_HISTORY, JSON.stringify(conversationHistory));
+  }
+
+  function renderHistory() {
+    if (conversationHistory.length === 0) {
+      chatHistory.innerHTML = '<p style="text-align: center; color: #9ca3af; font-size: 14px;">Start a conversation by asking a question below</p>';
+      return;
+    }
+
+    let html = '';
+    conversationHistory.forEach(msg => {
+      html += '<div class="chat-message ' + msg.role + '">';
+      html += '<strong>' + (msg.role === 'user' ? 'You' : 'AI Coach') + '</strong>';
+      html += '<div>' + msg.content + '</div>';
+      html += '</div>';
+    });
+    chatHistory.innerHTML = html;
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }
+
+  function addMessage(role, content) {
+    conversationHistory.push({ role, content, timestamp: Date.now() });
+    saveHistory();
+    renderHistory();
+  }
+
+  chatForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const question = questionInput.value.trim();
+    const category = categorySelect.value;
+
+    if (!question) {
+      status.textContent = 'Please enter a question';
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    addMessage('user', question);
+    questionInput.value = '';
+
+    askBtn.disabled = true;
+    askBtn.textContent = 'Thinking...';
+    status.textContent = 'AI is processing your question...';
+    status.style.color = '#6b7280';
+
+    try {
+      const response = await fetch('/contractor-ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+        },
+        body: JSON.stringify({
+          question: question,
+          focus: category,
+          zip: '',
+          scopeLevel: 'mid',
+          size: ''
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to get response');
+
+      const data = await response.json();
+      addMessage('assistant', data.answer || 'No response received');
+
+      status.textContent = 'Response received';
+      status.style.color = '#10b981';
+    } catch (err) {
+      status.textContent = 'Error: ' + (err.message || 'Failed to get response');
+      status.style.color = '#ef4444';
+      addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+    } finally {
+      askBtn.disabled = false;
+      askBtn.textContent = 'Send';
+    }
+  });
+
+  clearBtn.addEventListener('click', function() {
+    if (confirm('Clear conversation history?')) {
+      conversationHistory = [];
+      saveHistory();
+      renderHistory();
+      status.textContent = 'Conversation cleared';
+      status.style.color = '#10b981';
+    }
+  });
+
+  if (!checkAuth()) return;
+  loadHistory();
+})();
+</script>
+</body>
+</html>

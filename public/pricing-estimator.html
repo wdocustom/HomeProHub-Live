@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Job Pricing & Estimator</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .estimator-container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
+    .header-card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .form-card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .estimate-result { margin-top: 24px; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #2563eb; }
+    .action-buttons { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="contractor.html">Dashboard</a>
+      <a href="contractor-profile.html">Profile</a>
+      <div class="profile-area">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="estimator-container">
+  <div class="header-card">
+    <h1 style="margin: 0 0 8px 0; font-size: 28px;">AI Job Pricing & Estimator</h1>
+    <p style="margin: 0; color: #6b7280;">Generate professional estimates powered by AI, tailored to your job location and specifications</p>
+  </div>
+
+  <div class="form-card">
+    <form id="estimatorForm">
+      <div class="form-group">
+        <label for="jobDescription">Job Description</label>
+        <textarea id="jobDescription" rows="4" placeholder="Describe the work to be done (e.g., Full master bath remodel with custom tile, heated floors, glass shower enclosure)" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="jobZip">Job ZIP Code <span style="color: #ef4444;">*</span></label>
+        <input id="jobZip" type="text" pattern="[0-9]{5}" maxlength="5" placeholder="12345" required />
+      </div>
+
+      <div class="form-group">
+        <label for="finishLevel">Material & Finish Level</label>
+        <select id="finishLevel">
+          <option value="budget">Budget / Builder Grade</option>
+          <option value="mid" selected>Mid-Range / Standard</option>
+          <option value="high">High-End / Custom</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="projectSize">Project Size / Units</label>
+        <input id="projectSize" type="text" placeholder="e.g., 150 sq ft, 8x10 bathroom, 300 linear ft of fence" />
+      </div>
+
+      <button type="submit" class="btn-primary" id="generateBtn">Generate Estimate</button>
+      <div id="status" style="margin-top: 12px; font-size: 14px;"></div>
+    </form>
+
+    <div id="resultSection" style="display: none;">
+      <div class="estimate-result">
+        <div id="estimateContent"></div>
+      </div>
+      <div class="action-buttons">
+        <button class="btn-primary" id="downloadPdfBtn">Download PDF</button>
+        <button class="btn-secondary" id="emailBtn">Email Estimate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEYS = {
+  AUTH_TOKEN: 'homeprohub_auth_token',
+  USERNAME: 'homeprohub_username',
+  USER_ROLE: 'homeprohub_user_role',
+  CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
+};
+
+function logout() {
+  Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+  window.location.href = 'index.html';
+}
+
+(function() {
+  const form = document.getElementById('estimatorForm');
+  const generateBtn = document.getElementById('generateBtn');
+  const status = document.getElementById('status');
+  const resultSection = document.getElementById('resultSection');
+  const estimateContent = document.getElementById('estimateContent');
+  const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+  const emailBtn = document.getElementById('emailBtn');
+
+  let currentEstimate = null;
+  let profile = null;
+
+  function checkAuth() {
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+    if (!token || role !== 'contractor') {
+      window.location.href = 'index.html';
+      return false;
+    }
+    const profileData = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+    if (profileData) profile = JSON.parse(profileData);
+    return true;
+  }
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const jobDesc = document.getElementById('jobDescription').value.trim();
+    const jobZip = document.getElementById('jobZip').value.trim();
+    const finishLevel = document.getElementById('finishLevel').value;
+    const projectSize = document.getElementById('projectSize').value.trim();
+
+    if (!jobDesc || !jobZip) {
+      status.textContent = 'Please fill in all required fields';
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    if (!/^\d{5}$/.test(jobZip)) {
+      status.textContent = 'Please enter a valid 5-digit ZIP code';
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+    status.textContent = 'AI is analyzing your job...';
+    status.style.color = '#6b7280';
+    resultSection.style.display = 'none';
+
+    try {
+      const response = await fetch('/contractor-ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+        },
+        body: JSON.stringify({
+          question: jobDesc,
+          focus: 'pricing',
+          zip: jobZip,
+          scopeLevel: finishLevel,
+          size: projectSize
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate estimate');
+
+      const data = await response.json();
+      currentEstimate = data.answer;
+
+      if (data.format === 'json') {
+        displayEstimate(currentEstimate);
+      } else {
+        estimateContent.textContent = data.answer;
+        resultSection.style.display = 'block';
+      }
+
+      status.textContent = 'Estimate generated successfully!';
+      status.style.color = '#10b981';
+    } catch (err) {
+      status.textContent = 'Error: ' + (err.message || 'Failed to generate estimate');
+      status.style.color = '#ef4444';
+    } finally {
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate Estimate';
+    }
+  });
+
+  function displayEstimate(est) {
+    let html = '<h3 style="margin-top:0;">Project: ' + (est.project_title || 'Estimate') + '</h3>';
+    html += '<div style="margin: 16px 0;"><strong>Total Range:</strong> $' + (est.total_projected_low || 0).toLocaleString() + ' - $' + (est.total_projected_high || 0).toLocaleString() + '</div>';
+    
+    if (est.line_items && est.line_items.length > 0) {
+      html += '<h4>Line Items:</h4><ul>';
+      est.line_items.forEach(item => {
+        html += '<li><strong>' + item.item + ':</strong> $' + item.low.toLocaleString() + ' - $' + item.high.toLocaleString();
+        if (item.notes) html += ' <em>(' + item.notes + ')</em>';
+        html += '</li>';
+      });
+      html += '</ul>';
+    }
+
+    estimateContent.innerHTML = html;
+    resultSection.style.display = 'block';
+  }
+
+  downloadPdfBtn.addEventListener('click', function() {
+    if (!currentEstimate) return;
+    
+    const win = window.open('', '', 'height=800,width=800');
+    if (!win) {
+      alert('Please allow pop-ups to download PDF');
+      return;
+    }
+
+    const companyName = profile && profile.companyName ? profile.companyName : 'HomeProHub Contractor';
+    const license = profile && profile.licenseNumber ? profile.licenseNumber : 'N/A';
+
+    let lineItemsHtml = '';
+    if (currentEstimate.line_items) {
+      lineItemsHtml = currentEstimate.line_items.map(item => 
+        '<tr><td style="padding:8px;border:1px solid #ddd;">' + item.item + '</td>' +
+        '<td style="padding:8px;border:1px solid #ddd;">$' + item.low.toLocaleString() + ' - $' + item.high.toLocaleString() + '</td>' +
+        '<td style="padding:8px;border:1px solid #ddd;">' + (item.notes || '-') + '</td></tr>'
+      ).join('');
+    }
+
+    win.document.write('<html><head><title>Estimate</title><style>body{font-family:sans-serif;padding:20px;}</style></head><body>');
+    win.document.write('<h1>' + (currentEstimate.project_title || 'Estimate') + '</h1>');
+    win.document.write('<p><strong>Contractor:</strong> ' + companyName + ' | <strong>License:</strong> ' + license + '</p>');
+    win.document.write('<p><strong>Date:</strong> ' + new Date().toLocaleDateString() + '</p>');
+    win.document.write('<h3>Total: $' + (currentEstimate.total_projected_low || 0).toLocaleString() + ' - $' + (currentEstimate.total_projected_high || 0).toLocaleString() + '</h3>');
+    if (lineItemsHtml) {
+      win.document.write('<table style="width:100%;border-collapse:collapse;margin-top:20px;"><thead><tr style="background:#f3f4f6;"><th style="padding:10px;border:1px solid #ddd;text-align:left;">Item</th><th style="padding:10px;border:1px solid #ddd;text-align:left;">Range</th><th style="padding:10px;border:1px solid #ddd;text-align:left;">Notes</th></tr></thead><tbody>' + lineItemsHtml + '</tbody></table>');
+    }
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  });
+
+  emailBtn.addEventListener('click', function() {
+    if (!currentEstimate) return;
+    
+    const subject = 'Estimate: ' + (currentEstimate.project_title || 'Your Project');
+    const body = 'Please see attached estimate.\n\nTotal Range: $' + (currentEstimate.total_projected_low || 0).toLocaleString() + ' - $' + (currentEstimate.total_projected_high || 0).toLocaleString() + '\n\nThis is a preliminary estimate. A formal quote will require a site visit.';
+    
+    window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  });
+
+  if (!checkAuth()) return;
+})();
+</script>
+</body>
+</html>
