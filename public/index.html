@@ -782,6 +782,9 @@
 
       const userData = await statusResponse.json();
 
+      // Determine user role
+      const userRole = currentUserType || userData.role || '';
+
       // Collect profile data for sign-up
       let profileData = {};
       if (currentAuthMode === 'signup') {
@@ -790,14 +793,37 @@
             firstName: document.getElementById('firstName').value.trim(),
             lastName: document.getElementById('lastName').value.trim(),
             zipCode: document.getElementById('homeownerZip').value.trim(),
-            role: 'homeowner'
+            role: 'homeowner',
+            email: email,
+            name: `${document.getElementById('firstName').value.trim()} ${document.getElementById('lastName').value.trim()}`,
+            profileComplete: true
           };
         } else if (currentUserType === 'contractor') {
           profileData = {
             businessName: document.getElementById('businessName').value.trim(),
+            companyName: document.getElementById('businessName').value.trim(),
             zipCode: document.getElementById('contractorZip').value.trim(),
             trade: document.getElementById('trade').value,
-            role: 'contractor'
+            role: 'contractor',
+            email: email,
+            profileComplete: true
+          };
+        }
+      } else {
+        // For signin, create minimal profile data
+        if (userRole === 'homeowner') {
+          profileData = {
+            email: email,
+            role: 'homeowner',
+            name: email.split('@')[0],
+            profileComplete: true
+          };
+        } else if (userRole === 'contractor') {
+          profileData = {
+            email: email,
+            role: 'contractor',
+            companyName: email.split('@')[0],
+            profileComplete: true
           };
         }
       }
@@ -805,14 +831,14 @@
       // Store user data
       localStorage.setItem(STORAGE_KEYS.USERNAME, email);
       localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, data.session?.access_token || '');
-      localStorage.setItem(STORAGE_KEYS.USER_ROLE, currentUserType || userData.role || '');
+      localStorage.setItem(STORAGE_KEYS.USER_ROLE, userRole);
       localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, 'true');
 
       // Store profile data
       if (Object.keys(profileData).length > 0) {
-        if (currentUserType === 'homeowner') {
+        if (userRole === 'homeowner') {
           localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profileData));
-        } else {
+        } else if (userRole === 'contractor') {
           localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
         }
       }
@@ -821,11 +847,12 @@
 
       // Redirect based on role
       setTimeout(() => {
-        const role = currentUserType || userData.role;
-        if (role === 'contractor') {
+        if (userRole === 'contractor') {
           window.location.href = 'contractor.html';
-        } else {
+        } else if (userRole === 'homeowner') {
           window.location.href = 'home.html';
+        } else {
+          window.location.href = 'index.html';
         }
       }, 1000);
 
