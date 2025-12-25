@@ -269,19 +269,34 @@
       margin-bottom: 8px;
     }
 
-    .form-group input {
+    .form-group input,
+    .form-group select {
       width: 100%;
       padding: 14px 16px;
       border: 2px solid #e5e7eb;
       border-radius: 8px;
       font-size: 15px;
       transition: all 0.3s ease;
+      background: white;
     }
 
-    .form-group input:focus {
+    .form-group input:focus,
+    .form-group select:focus {
       outline: none;
       border-color: #667eea;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 480px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
     }
 
     .submit-button {
@@ -363,7 +378,7 @@
   <!-- Choice Boxes -->
   <div class="choice-boxes">
     <!-- Homeowner Box -->
-    <div class="choice-box homeowner" onclick="showAuthModal('homeowner')">
+    <div class="choice-box homeowner" onclick="showSignupModal('homeowner')">
       <span class="choice-icon">👨‍👩‍👧‍👦</span>
       <h2 class="choice-title">For Homeowners</h2>
       <p class="choice-description">Get instant AI guidance for home issues, plan your projects, and find trusted contractors</p>
@@ -372,15 +387,16 @@
         <li>AI Home Issue Assistant with photo analysis</li>
         <li>Smart Project Planner with budget estimates</li>
         <li>Browse vetted contractors with verified grades</li>
-        <li>Get instant safety & DIY guidance</li>
-        <li>Transparent pricing with regional rates</li>
+        <li>Learn contractor red flags & warning signs</li>
+        <li>Digital owner's representation services</li>
+        <li>Get professional contract review & guidance</li>
       </ul>
 
       <button class="choice-button">Get Started as Homeowner</button>
     </div>
 
     <!-- Contractor Box -->
-    <div class="choice-box contractor" onclick="showAuthModal('contractor')">
+    <div class="choice-box contractor" onclick="showSignupModal('contractor')">
       <span class="choice-icon">🔨</span>
       <h2 class="choice-title">For Contractors</h2>
       <p class="choice-description">AI-powered business coach, instant estimates, and access to qualified homeowner leads</p>
@@ -389,6 +405,7 @@
         <li>AI Contractor Coach for pricing & strategy</li>
         <li>Generate professional estimates instantly</li>
         <li>Access homeowner grading insights</li>
+        <li>Licensure & certification education resources</li>
         <li>Smart lead matching system</li>
         <li>Business growth & profitability tools</li>
       </ul>
@@ -400,8 +417,6 @@
   <!-- Auth Links -->
   <div class="auth-links">
     <a href="#" onclick="showAuthModal('signin'); return false;">Already have an account? Sign In</a>
-    <span style="opacity: 0.6;">|</span>
-    <a href="#" onclick="showAuthModal('signup'); return false;">New user? Sign Up</a>
   </div>
 </div>
 
@@ -413,31 +428,111 @@
     <p class="modal-subtitle" id="modalSubtitle">Enter your credentials to continue</p>
 
     <form id="authForm" novalidate>
-      <div class="form-group">
-        <label for="email">Email Address</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          placeholder="you@example.com"
-          required
-          autocomplete="email"
-          maxlength="255"
-        />
+      <!-- Sign In/Sign Up Fields -->
+      <div id="emailPasswordFields">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+            maxlength="255"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password (min 6 characters)"
+            required
+            autocomplete="current-password"
+            minlength="6"
+            maxlength="128"
+          />
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          placeholder="Enter your password"
-          required
-          autocomplete="current-password"
-          minlength="6"
-          maxlength="128"
-        />
+      <!-- Homeowner Profile Fields -->
+      <div id="homeownerFields" style="display: none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              placeholder="John"
+              maxlength="50"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              placeholder="Doe"
+              maxlength="50"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="homeownerZip">ZIP Code</label>
+          <input
+            type="text"
+            id="homeownerZip"
+            name="homeownerZip"
+            placeholder="12345"
+            pattern="[0-9]{5}"
+            maxlength="5"
+          />
+        </div>
+      </div>
+
+      <!-- Contractor Profile Fields -->
+      <div id="contractorFields" style="display: none;">
+        <div class="form-group">
+          <label for="businessName">Business Name</label>
+          <input
+            type="text"
+            id="businessName"
+            name="businessName"
+            placeholder="ABC Construction Inc."
+            maxlength="100"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="contractorZip">ZIP Code</label>
+          <input
+            type="text"
+            id="contractorZip"
+            name="contractorZip"
+            placeholder="12345"
+            pattern="[0-9]{5}"
+            maxlength="5"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="trade">Primary Trade</label>
+          <select id="trade" name="trade">
+            <option value="">Select your trade...</option>
+            <option value="General Contractor">General Contractor</option>
+            <option value="Mechanical Contractor">Mechanical Contractor</option>
+            <option value="Plumber">Plumber</option>
+            <option value="Electrician">Electrician</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
       </div>
 
       <button type="submit" class="submit-button" id="submitButton">
@@ -483,33 +578,51 @@
     }
   }
 
-  // Show auth modal
+  // Show sign-in modal
   window.showAuthModal = function(type) {
     const modal = document.getElementById('authModal');
     const title = document.getElementById('modalTitle');
     const subtitle = document.getElementById('modalSubtitle');
     const buttonText = document.getElementById('buttonText');
 
-    currentUserType = type === 'homeowner' || type === 'contractor' ? type : null;
-    currentAuthMode = type === 'signin' || type === 'signup' ? type : 'signin';
+    currentUserType = null;
+    currentAuthMode = 'signin';
 
-    if (type === 'homeowner') {
-      title.textContent = 'Homeowner Sign In';
-      subtitle.textContent = 'Access your homeowner dashboard';
-      buttonText.textContent = 'Sign In as Homeowner';
-    } else if (type === 'contractor') {
-      title.textContent = 'Contractor Sign In';
-      subtitle.textContent = 'Access your contractor dashboard';
-      buttonText.textContent = 'Sign In as Contractor';
-    } else if (type === 'signup') {
-      title.textContent = 'Create Account';
-      subtitle.textContent = 'Join HomeProHub today';
-      buttonText.textContent = 'Sign Up';
-      currentAuthMode = 'signup';
-    } else {
-      title.textContent = 'Sign In';
-      subtitle.textContent = 'Enter your credentials to continue';
-      buttonText.textContent = 'Sign In';
+    // Hide profile fields for sign-in
+    document.getElementById('homeownerFields').style.display = 'none';
+    document.getElementById('contractorFields').style.display = 'none';
+
+    title.textContent = 'Sign In';
+    subtitle.textContent = 'Welcome back! Enter your credentials to continue';
+    buttonText.textContent = 'Sign In';
+
+    modal.classList.add('active');
+    document.getElementById('email').focus();
+  };
+
+  // Show sign-up modal
+  window.showSignupModal = function(userType) {
+    const modal = document.getElementById('authModal');
+    const title = document.getElementById('modalTitle');
+    const subtitle = document.getElementById('modalSubtitle');
+    const buttonText = document.getElementById('buttonText');
+
+    currentUserType = userType;
+    currentAuthMode = 'signup';
+
+    // Show appropriate profile fields
+    if (userType === 'homeowner') {
+      title.textContent = 'Create Homeowner Account';
+      subtitle.textContent = 'Join as a homeowner to get AI guidance and find contractors';
+      buttonText.textContent = 'Create Homeowner Account';
+      document.getElementById('homeownerFields').style.display = 'block';
+      document.getElementById('contractorFields').style.display = 'none';
+    } else if (userType === 'contractor') {
+      title.textContent = 'Create Contractor Account';
+      subtitle.textContent = 'Join as a contractor to access AI tools and qualified leads';
+      buttonText.textContent = 'Create Contractor Account';
+      document.getElementById('homeownerFields').style.display = 'none';
+      document.getElementById('contractorFields').style.display = 'block';
     }
 
     modal.classList.add('active');
@@ -576,6 +689,44 @@
       return false;
     }
 
+    // Validate profile fields for sign-up
+    if (currentAuthMode === 'signup') {
+      if (currentUserType === 'homeowner') {
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        const zip = document.getElementById('homeownerZip').value.trim();
+
+        if (!firstName || !lastName) {
+          displayError('Please enter your first and last name.');
+          return false;
+        }
+
+        if (!zip || !/^\d{5}$/.test(zip)) {
+          displayError('Please enter a valid 5-digit ZIP code.');
+          return false;
+        }
+      } else if (currentUserType === 'contractor') {
+        const businessName = document.getElementById('businessName').value.trim();
+        const zip = document.getElementById('contractorZip').value.trim();
+        const trade = document.getElementById('trade').value;
+
+        if (!businessName) {
+          displayError('Please enter your business name.');
+          return false;
+        }
+
+        if (!zip || !/^\d{5}$/.test(zip)) {
+          displayError('Please enter a valid 5-digit ZIP code.');
+          return false;
+        }
+
+        if (!trade) {
+          displayError('Please select your primary trade.');
+          return false;
+        }
+      }
+    }
+
     return true;
   }
 
@@ -631,17 +782,46 @@
 
       const userData = await statusResponse.json();
 
+      // Collect profile data for sign-up
+      let profileData = {};
+      if (currentAuthMode === 'signup') {
+        if (currentUserType === 'homeowner') {
+          profileData = {
+            firstName: document.getElementById('firstName').value.trim(),
+            lastName: document.getElementById('lastName').value.trim(),
+            zipCode: document.getElementById('homeownerZip').value.trim(),
+            role: 'homeowner'
+          };
+        } else if (currentUserType === 'contractor') {
+          profileData = {
+            businessName: document.getElementById('businessName').value.trim(),
+            zipCode: document.getElementById('contractorZip').value.trim(),
+            trade: document.getElementById('trade').value,
+            role: 'contractor'
+          };
+        }
+      }
+
       // Store user data
       localStorage.setItem(STORAGE_KEYS.USERNAME, email);
       localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, data.session?.access_token || '');
-      localStorage.setItem(STORAGE_KEYS.USER_ROLE, userData.role || currentUserType || '');
-      localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, userData.profileComplete ? 'true' : 'false');
+      localStorage.setItem(STORAGE_KEYS.USER_ROLE, currentUserType || userData.role || '');
+      localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, 'true');
+
+      // Store profile data
+      if (Object.keys(profileData).length > 0) {
+        if (currentUserType === 'homeowner') {
+          localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profileData));
+        } else {
+          localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
+        }
+      }
 
       displaySuccess('Success! Redirecting...');
 
       // Redirect based on role
       setTimeout(() => {
-        const role = userData.role || currentUserType;
+        const role = currentUserType || userData.role;
         if (role === 'contractor') {
           window.location.href = 'contractor.html';
         } else {
