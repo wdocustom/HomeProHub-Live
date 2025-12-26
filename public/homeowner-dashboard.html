@@ -327,6 +327,86 @@
       border-radius: 8px;
       margin-bottom: 20px;
     }
+
+    /* Job Posting Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 700px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: #9ca3af;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      color: #1f2937;
+    }
+    .modal-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+    }
+    .modal-subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      margin: 0 0 32px 0;
+    }
+    .btn-post-job {
+      padding: 10px 24px;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-post-job:hover {
+      background: #1d4ed8;
+    }
+    .ai-badge-indicator {
+      display: inline-block;
+      padding: 4px 12px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-left: 8px;
+    }
   </style>
 </head>
 <body>
@@ -369,12 +449,19 @@
       <!-- Jobs Section -->
       <div class="jobs-section">
         <div class="section-header">
-          <h2>Your Posted Jobs</h2>
-          <div class="filter-tabs">
-            <button class="filter-tab active" data-filter="all">All</button>
-            <button class="filter-tab" data-filter="open">Open</button>
-            <button class="filter-tab" data-filter="in_progress">In Progress</button>
-            <button class="filter-tab" data-filter="completed">Completed</button>
+          <div>
+            <h2>Your Posted Jobs</h2>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn-post-job" id="newJobBtn">
+              ➕ Post New Job
+            </button>
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="open">Open</button>
+              <button class="filter-tab" data-filter="in_progress">In Progress</button>
+              <button class="filter-tab" data-filter="completed">Completed</button>
+            </div>
           </div>
         </div>
 
@@ -384,6 +471,92 @@
       </div>
     </div>
   </main>
+
+  <!-- Job Posting Modal -->
+  <div class="modal-overlay" id="jobModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeJobModal()">×</button>
+      <h2 class="modal-title">Post a New Job</h2>
+      <p class="modal-subtitle">Get competitive bids from verified contractors in your area</p>
+
+      <form id="jobPostingForm">
+        <div class="form-group">
+          <label for="jobTitle">Job Title <span style="color: #ef4444;">*</span></label>
+          <input type="text" id="jobTitle" placeholder="e.g., Fix leaking ceiling in bathroom" required maxlength="100" />
+        </div>
+
+        <div class="form-group">
+          <label for="jobDescription">Description <span style="color: #ef4444;">*</span></label>
+          <textarea id="jobDescription" rows="6" placeholder="Describe the issue, what needs to be done, and any relevant details..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="jobCategory">Category <span style="color: #ef4444;">*</span></label>
+          <select id="jobCategory" required>
+            <option value="">Select a category...</option>
+            <option value="plumbing">Plumbing</option>
+            <option value="electrical">Electrical</option>
+            <option value="hvac">HVAC</option>
+            <option value="roofing">Roofing</option>
+            <option value="painting">Painting</option>
+            <option value="flooring">Flooring</option>
+            <option value="carpentry">Carpentry</option>
+            <option value="landscaping">Landscaping</option>
+            <option value="general">General Contracting</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label for="budgetLow">Budget (Low) <span style="color: #ef4444;">*</span></label>
+            <input type="number" id="budgetLow" placeholder="500" required min="0" step="50" />
+          </div>
+
+          <div class="form-group">
+            <label for="budgetHigh">Budget (High) <span style="color: #ef4444;">*</span></label>
+            <input type="number" id="budgetHigh" placeholder="2000" required min="0" step="50" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="zipCode">ZIP Code <span style="color: #ef4444;">*</span></label>
+          <input type="text" id="zipCode" placeholder="62701" pattern="[0-9]{5}" maxlength="5" required />
+        </div>
+
+        <div class="form-group">
+          <label for="urgency">Urgency <span style="color: #ef4444;">*</span></label>
+          <select id="urgency" required>
+            <option value="flexible">Flexible - No rush</option>
+            <option value="soon">Soon - Within 2 weeks</option>
+            <option value="urgent">Urgent - Within days</option>
+            <option value="emergency">Emergency - Immediate</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="aiAssisted" disabled />
+            AI-Assisted Post
+            <span class="ai-badge-indicator" id="aiBadge" style="display: none;">AI GENERATED</span>
+          </label>
+          <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">
+            This job post was created from your AI assistant analysis
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 32px;">
+          <button type="submit" class="btn-primary" id="submitJobBtn">
+            Post Job
+          </button>
+          <button type="button" class="btn-secondary" onclick="closeJobModal()">
+            Cancel
+          </button>
+          <div id="jobFormStatus" style="margin-left: auto; align-self: center; font-size: 14px;"></div>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
     // Constants
@@ -664,8 +837,162 @@
         .replace(/'/g, "&#039;");
     }
 
+    // Job Posting Modal Functions
+    function openJobModal() {
+      document.getElementById('jobModal').classList.add('show');
+
+      // Check for pending AI data
+      const pendingJobData = sessionStorage.getItem('pendingJob');
+      if (pendingJobData) {
+        try {
+          const data = JSON.parse(pendingJobData);
+          autoPopulateFromAI(data);
+          sessionStorage.removeItem('pendingJob'); // Clear after use
+        } catch (e) {
+          console.error('Error parsing pending job data:', e);
+        }
+      }
+    }
+
+    function closeJobModal() {
+      document.getElementById('jobModal').classList.remove('show');
+      document.getElementById('jobPostingForm').reset();
+      document.getElementById('aiAssisted').checked = false;
+      document.getElementById('aiBadge').style.display = 'none';
+      document.getElementById('jobFormStatus').textContent = '';
+    }
+
+    window.closeJobModal = closeJobModal; // Make globally accessible
+
+    function autoPopulateFromAI(data) {
+      if (!data) return;
+
+      // Populate title from question
+      if (data.originalQuestion) {
+        const titleField = document.getElementById('jobTitle');
+        // Create a short title from the question (first 80 chars)
+        const shortTitle = data.originalQuestion.substring(0, 80).trim();
+        titleField.value = shortTitle + (data.originalQuestion.length > 80 ? '...' : '');
+      }
+
+      // Populate description with both question and AI analysis
+      if (data.originalQuestion || data.aiAnalysis) {
+        const descField = document.getElementById('jobDescription');
+        let description = '';
+
+        if (data.originalQuestion) {
+          description += `ISSUE DESCRIPTION:\n${data.originalQuestion}\n\n`;
+        }
+
+        if (data.aiAnalysis) {
+          description += `AI ANALYSIS:\n${data.aiAnalysis}`;
+        }
+
+        descField.value = description.trim();
+      }
+
+      // Populate budget if available
+      if (data.budgetLow) {
+        document.getElementById('budgetLow').value = data.budgetLow;
+      }
+      if (data.budgetHigh) {
+        document.getElementById('budgetHigh').value = data.budgetHigh;
+      }
+
+      // Mark as AI-assisted
+      if (data.fromAI) {
+        document.getElementById('aiAssisted').checked = true;
+        document.getElementById('aiBadge').style.display = 'inline-block';
+      }
+
+      // Try to guess category from the question
+      if (data.originalQuestion) {
+        const question = data.originalQuestion.toLowerCase();
+        const categoryField = document.getElementById('jobCategory');
+
+        if (question.includes('leak') || question.includes('pipe') || question.includes('drain') || question.includes('toilet') || question.includes('faucet')) {
+          categoryField.value = 'plumbing';
+        } else if (question.includes('electric') || question.includes('outlet') || question.includes('wire') || question.includes('breaker')) {
+          categoryField.value = 'electrical';
+        } else if (question.includes('hvac') || question.includes('heat') || question.includes('ac') || question.includes('furnace') || question.includes('air condition')) {
+          categoryField.value = 'hvac';
+        } else if (question.includes('roof') || question.includes('shingle') || question.includes('gutter')) {
+          categoryField.value = 'roofing';
+        } else if (question.includes('paint') || question.includes('wall')) {
+          categoryField.value = 'painting';
+        } else if (question.includes('floor') || question.includes('carpet') || question.includes('tile')) {
+          categoryField.value = 'flooring';
+        }
+      }
+    }
+
+    // Handle job posting form submission
+    document.getElementById('jobPostingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submitJobBtn');
+      const statusEl = document.getElementById('jobFormStatus');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Posting...';
+      statusEl.textContent = 'Creating job post...';
+      statusEl.style.color = '#6b7280';
+
+      try {
+        const formData = {
+          title: document.getElementById('jobTitle').value.trim(),
+          description: document.getElementById('jobDescription').value.trim(),
+          category: document.getElementById('jobCategory').value,
+          budget_low: parseInt(document.getElementById('budgetLow').value),
+          budget_high: parseInt(document.getElementById('budgetHigh').value),
+          zip_code: document.getElementById('zipCode').value.trim(),
+          urgency: document.getElementById('urgency').value,
+          ai_assisted: document.getElementById('aiAssisted').checked,
+          homeowner_email: userEmail
+        };
+
+        const response = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+          },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.message || 'Failed to create job');
+        }
+
+        statusEl.textContent = 'Job posted successfully! ✅';
+        statusEl.style.color = '#10b981';
+
+        // Close modal and reload jobs
+        setTimeout(() => {
+          closeJobModal();
+          loadJobs();
+        }, 1500);
+
+      } catch (error) {
+        console.error('Error posting job:', error);
+        statusEl.textContent = 'Error: ' + error.message;
+        statusEl.style.color = '#ef4444';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Post Job';
+      }
+    });
+
+    // New Job button click handler
+    document.getElementById('newJobBtn').addEventListener('click', openJobModal);
+
     // Initialize
     loadJobs();
+
+    // Auto-open modal if coming from AI assistant
+    if (sessionStorage.getItem('pendingJob')) {
+      setTimeout(() => openJobModal(), 500);
+    }
   </script>
 
   <!-- Unified Navigation Component -->
