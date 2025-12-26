@@ -249,6 +249,12 @@
 
     .input-wrapper {
       display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .input-row {
+      display: flex;
       gap: 12px;
       align-items: flex-end;
     }
@@ -263,6 +269,101 @@
       resize: none;
       min-height: 48px;
       max-height: 120px;
+    }
+
+    .file-upload-btn {
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: white;
+      color: #6b7280;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .file-upload-btn:hover {
+      border-color: #2563eb;
+      color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .file-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 0;
+    }
+
+    .file-preview-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #374151;
+    }
+
+    .file-preview-item img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .file-preview-item .file-name {
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-preview-item button {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      padding: 4px;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .message-attachment {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .message-attachment img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .message-attachment img:hover {
+      transform: scale(1.05);
+    }
+
+    .message-attachment a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      text-decoration: none;
+      color: #374151;
+      font-size: 13px;
+    }
+
+    .message-attachment a:hover {
+      background: #e5e7eb;
     }
 
     .input-wrapper textarea:focus {
@@ -356,8 +457,15 @@
       </div>
       <div class="messages-input" id="messagesInput" style="display: none;">
         <div class="input-wrapper">
-          <textarea id="messageTextarea" placeholder="Type your message..." rows="1"></textarea>
-          <button class="btn-send" id="sendBtn">Send</button>
+          <div id="filePreview" class="file-preview" style="display: none;"></div>
+          <div class="input-row">
+            <input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx" style="display: none;" />
+            <button class="file-upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+              📎 Attach Files
+            </button>
+            <textarea id="messageTextarea" placeholder="Type your message..." rows="1"></textarea>
+            <button class="btn-send" id="sendBtn">Send</button>
+          </div>
         </div>
       </div>
     </div>
@@ -375,6 +483,7 @@
     let currentConversation = null;
     let messages = [];
     let pollInterval = null;
+    let attachedFiles = [];
 
     // Check authentication
     function checkAuth() {
@@ -509,6 +618,57 @@
       }
     }
 
+    // Handle file selection
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+          return;
+        }
+        attachedFiles.push(file);
+      });
+      renderFilePreview();
+      e.target.value = ''; // Reset input
+    });
+
+    // Render file preview
+    function renderFilePreview() {
+      const preview = document.getElementById('filePreview');
+      if (attachedFiles.length === 0) {
+        preview.style.display = 'none';
+        return;
+      }
+
+      preview.style.display = 'flex';
+      preview.innerHTML = attachedFiles.map((file, index) => {
+        const isImage = file.type.startsWith('image/');
+        return `
+          <div class="file-preview-item">
+            ${isImage ? `<img src="${URL.createObjectURL(file)}" alt="${file.name}" />` : '📄'}
+            <span class="file-name">${file.name}</span>
+            <button onclick="removeFile(${index})">×</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Remove file from attachments
+    window.removeFile = function(index) {
+      attachedFiles.splice(index, 1);
+      renderFilePreview();
+    };
+
+    // Convert file to base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+
     // Render messages
     function renderMessages() {
       const body = document.getElementById('messagesBody');
@@ -538,11 +698,28 @@
 
         const senderInitial = (msg.sender_name || msg.sender_email).charAt(0).toUpperCase();
 
+        // Parse attachments if they exist
+        let attachmentsHtml = '';
+        if (msg.attachments && msg.attachments.length > 0) {
+          attachmentsHtml = '<div class="message-attachment">';
+          msg.attachments.forEach(att => {
+            if (att.type && att.type.startsWith('image/')) {
+              attachmentsHtml += `<img src="${att.url}" alt="${att.name}" onclick="window.open('${att.url}', '_blank')" />`;
+            } else {
+              attachmentsHtml += `<a href="${att.url}" target="_blank" download="${att.name}">📄 ${att.name}</a>`;
+            }
+          });
+          attachmentsHtml += '</div>';
+        }
+
         html += `
           <div class="message ${isSent ? 'sent' : 'received'}">
             <div class="message-avatar">${senderInitial}</div>
             <div class="message-content">
-              <div class="message-bubble">${escapeHtml(msg.message)}</div>
+              <div class="message-bubble">
+                ${escapeHtml(msg.message)}
+                ${attachmentsHtml}
+              </div>
               <div class="message-meta">
                 <span>${formatTime(msg.created_at)}</span>
                 ${isSent && msg.read ? '<span>✓ Read</span>' : ''}
@@ -561,12 +738,24 @@
       const sendBtn = document.getElementById('sendBtn');
       const message = textarea.value.trim();
 
-      if (!message || !currentConversation) return;
+      if ((!message && attachedFiles.length === 0) || !currentConversation) return;
 
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending...';
 
       try {
+        // Convert attached files to base64
+        const attachments = [];
+        for (const file of attachedFiles) {
+          const base64 = await fileToBase64(file);
+          attachments.push({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data: base64
+          });
+        }
+
         const response = await fetch('/api/messages/send', {
           method: 'POST',
           headers: {
@@ -578,7 +767,8 @@
             job_id: currentConversation.job_id,
             sender_email: currentUser.username,
             recipient_email: currentUser.role === 'homeowner' ? currentConversation.contractor_email : currentConversation.homeowner_email,
-            message: message
+            message: message || '(File attachment)',
+            attachments: attachments
           })
         });
 
@@ -586,6 +776,8 @@
 
         textarea.value = '';
         textarea.style.height = 'auto';
+        attachedFiles = [];
+        renderFilePreview();
         await fetchMessages(currentConversation.id);
         await fetchConversations();
       } catch (error) {

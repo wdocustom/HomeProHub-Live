@@ -1735,10 +1735,11 @@ app.post("/api/messages/send", async (req, res) => {
         conversation_id,
         sender_email,
         recipient_email,
-        message: sanitizedMessage
+        message: sanitizedMessage,
+        attachments: req.body.attachments || []
       });
 
-      console.log(`✓ Message sent in conversation: ${conversation_id}`);
+      console.log(`✓ Message sent in conversation: ${conversation_id}${req.body.attachments && req.body.attachments.length > 0 ? ' with ' + req.body.attachments.length + ' attachment(s)' : ''}`);
       return res.json({ success: true, message: sentMessage });
     }
 

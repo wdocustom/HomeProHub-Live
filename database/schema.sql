@@ -322,6 +322,9 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   -- Message content
   message TEXT NOT NULL,
 
+  -- Attachments (stored as JSON array)
+  attachments JSONB DEFAULT '[]'::jsonb,
+
   -- Message metadata
   read BOOLEAN DEFAULT false,
   read_at TIMESTAMP WITH TIME ZONE,

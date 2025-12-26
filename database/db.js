@@ -738,6 +738,7 @@ async function sendConversationMessage(messageData) {
       sender_email: messageData.sender_email,
       recipient_email: messageData.recipient_email,
       message: messageData.message,
+      attachments: messageData.attachments || [],
       created_at: new Date().toISOString(),
       read: false
     })
