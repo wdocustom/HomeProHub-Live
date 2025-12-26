@@ -1205,7 +1205,7 @@
 
     // Use Estimator - pass job data to pricing estimator
     function useEstimator(jobId) {
-      const job = allJobs.find(j => j.id === jobId);
+      const job = availableJobs.find(j => j.id === jobId);
       if (!job) {
         alert('Job not found');
         return;

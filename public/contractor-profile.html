@@ -354,27 +354,69 @@ function clearInsuranceUpload() {
   document.getElementById('insurancePreview').style.display = 'none';
 }
 
-function checkLicenseStatus() {
-  const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+async function checkLicenseStatus() {
   const statusBanner = document.getElementById('licenseStatusBanner');
   const getLicensedPrompt = document.getElementById('getLicensedPrompt');
 
-  if (!profile.licenseNumber || !profile.licState) {
+  // Get user email
+  const userEmail = localStorage.getItem(STORAGE_KEYS.USERNAME);
+  if (!userEmail) return;
+
+  try {
+    // Fetch fresh status from API
+    const response = await fetch(`/api/license/status?email=${encodeURIComponent(userEmail)}`);
+    if (response.ok) {
+      const data = await response.json();
+
+      // Update localStorage with fresh data
+      const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+      profile.licenseVerified = data.license_verified;
+      profile.license_verified = data.license_verified; // Both formats for compatibility
+      profile.licState = data.license_state;
+      profile.licNumber = data.license_number;
+      profile.licenseNumber = data.license_number;
+      profile.licType = data.license_type;
+      profile.licExpiration = data.license_expiration;
+      profile.verificationId = data.verification_id;
+      profile.verifiedAt = data.verified_at;
+      localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
+
+      // Display status based on API response
+      displayLicenseStatus(data.license_verified, data.license_number, data.license_state);
+    } else {
+      // Fallback to localStorage if API fails
+      const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+      displayLicenseStatus(profile.licenseVerified || profile.license_verified, profile.licNumber || profile.license_number, profile.licState || profile.license_state);
+    }
+  } catch (err) {
+    console.error('Error fetching license status:', err);
+    // Fallback to localStorage
+    const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+    displayLicenseStatus(profile.licenseVerified || profile.license_verified, profile.licNumber || profile.license_number, profile.licState || profile.license_state);
+  }
+}
+
+function displayLicenseStatus(status, licenseNumber, licenseState) {
+  const statusBanner = document.getElementById('licenseStatusBanner');
+  const getLicensedPrompt = document.getElementById('getLicensedPrompt');
+
+  if (!licenseNumber || !licenseState) {
     // No license info - show Get Licensed prompt
     getLicensedPrompt.style.display = 'block';
     statusBanner.style.display = 'none';
-  } else if (profile.licenseVerified === 'verified') {
-    // Verified license
+  } else if (status === 'verified') {
+    // Verified license - CELEBRATION MODE! 🎉
     statusBanner.style.display = 'block';
     statusBanner.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
     statusBanner.style.border = '2px solid #10b981';
-    document.getElementById('licenseStatusIcon').textContent = '✅';
-    document.getElementById('licenseStatusTitle').textContent = 'License Verified!';
+    statusBanner.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
+    document.getElementById('licenseStatusIcon').textContent = '🎉';
+    document.getElementById('licenseStatusTitle').textContent = 'Congratulations! License Verified!';
     document.getElementById('licenseStatusTitle').style.color = '#065f46';
-    document.getElementById('licenseStatusMessage').textContent = 'Your contractor license has been verified. You now have the ✓ Verified badge on your profile.';
+    document.getElementById('licenseStatusMessage').innerHTML = '<strong>✓ Verified Badge Activated!</strong> You now have priority placement in job matches and increased homeowner trust. Start bidding on premium jobs!';
     document.getElementById('licenseStatusMessage').style.color = '#047857';
     getLicensedPrompt.style.display = 'none';
-  } else if (profile.licenseVerified === 'pending') {
+  } else if (status === 'pending') {
     // Pending verification
     statusBanner.style.display = 'block';
     statusBanner.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
@@ -382,8 +424,19 @@ function checkLicenseStatus() {
     document.getElementById('licenseStatusIcon').textContent = '⏳';
     document.getElementById('licenseStatusTitle').textContent = 'Verification Pending';
     document.getElementById('licenseStatusTitle').style.color = '#92400e';
-    document.getElementById('licenseStatusMessage').textContent = 'We\'re verifying your license information. This typically takes 1-3 business days.';
+    document.getElementById('licenseStatusMessage').textContent = 'We\'re verifying your license information. This typically takes 1-2 business days. We\'ll email you when it\'s complete!';
     document.getElementById('licenseStatusMessage').style.color = '#78350f';
+    getLicensedPrompt.style.display = 'none';
+  } else if (status === 'rejected') {
+    // Rejected verification
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+    statusBanner.style.border = '2px solid #ef4444';
+    document.getElementById('licenseStatusIcon').textContent = '⚠️';
+    document.getElementById('licenseStatusTitle').textContent = 'Verification Update Needed';
+    document.getElementById('licenseStatusTitle').style.color = '#991b1b';
+    document.getElementById('licenseStatusMessage').textContent = 'We couldn\'t verify your license information. Please check your email for details and resubmit with corrected information.';
+    document.getElementById('licenseStatusMessage').style.color = '#7f1d1d';
     getLicensedPrompt.style.display = 'none';
   } else {
     // License info provided but not verified
@@ -393,7 +446,7 @@ function checkLicenseStatus() {
     document.getElementById('licenseStatusIcon').textContent = '📋';
     document.getElementById('licenseStatusTitle').textContent = 'License Info Saved';
     document.getElementById('licenseStatusTitle').style.color = '#1e40af';
-    document.getElementById('licenseStatusMessage').textContent = 'Upload your license document to submit for verification.';
+    document.getElementById('licenseStatusMessage').textContent = 'Upload your license document to submit for verification and get your verified badge!';
     document.getElementById('licenseStatusMessage').style.color = '#1e3a8a';
     getLicensedPrompt.style.display = 'none';
   }

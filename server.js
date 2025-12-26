@@ -1086,6 +1086,51 @@ try {
 }
 
 /**
+ * GET /api/license/status
+ * Get current license verification status for a contractor
+ */
+app.get("/api/license/status", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const profile = await db.getUserProfile(email);
+
+    if (!profile) {
+      return res.status(404).json({
+        error: "Profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      license_verified: profile.license_verified || 'unverified',
+      license_state: profile.license_state,
+      license_number: profile.license_number,
+      license_type: profile.license_type,
+      license_expiration: profile.license_expiration,
+      verified_at: profile.verified_at,
+      verification_id: profile.verification_id
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/license/status:", err);
+    res.status(500).json({
+      error: "Failed to fetch license status",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * POST /api/license/submit
  * Submit contractor license and insurance documents for verification
  */
@@ -1173,10 +1218,19 @@ app.post("/api/license/submit", async (req, res) => {
     const rejectUrl = `${process.env.BASE_URL || 'https://www.homeprohub.today'}/api/license/verify?id=${verificationId}&action=reject`;
 
     try {
+      // Determine contractor name with proper fallback
+      let contractorName = contractorProfile.business_name || contractorProfile.company_name;
+      if (!contractorName && (contractorProfile.first_name || contractorProfile.last_name)) {
+        contractorName = `${contractorProfile.first_name || ''} ${contractorProfile.last_name || ''}`.trim();
+      }
+      if (!contractorName) {
+        contractorName = contractorEmail.split('@')[0]; // Use email username as last resort
+      }
+
       // Load and render admin verification email template
       const template = emailService.loadTemplate('license-verification-request');
       const html = emailService.renderTemplate(template, {
-        contractorName: contractorProfile.business_name || contractorProfile.company_name || 'Unknown Contractor',
+        contractorName: contractorName,
         contractorEmail: contractorEmail,
         verificationId: verificationId,
         licenseState: licState.toUpperCase(),
@@ -1193,7 +1247,7 @@ app.post("/api/license/submit", async (req, res) => {
 
       await emailService.sendEmail({
         to: adminEmail,
-        subject: `🔍 License Verification Request - ${contractorProfile.business_name || contractorEmail}`,
+        subject: `🔍 License Verification Request - ${contractorName}`,
         html: html,
         text: `New License Verification Request from ${contractorEmail}\n\nLicense: ${licState} ${licNumber}\nType: ${licType}\n\nApprove: ${approveUrl}\nReject: ${rejectUrl}`
       });
@@ -1278,6 +1332,34 @@ app.get("/api/license/verify", async (req, res) => {
       verified_at: new Date().toISOString()
     });
 
+    // Determine contractor name with proper fallback
+    let contractorName = contractor.business_name || contractor.company_name;
+    if (!contractorName && (contractor.first_name || contractor.last_name)) {
+      contractorName = `${contractor.first_name || ''} ${contractor.last_name || ''}`.trim();
+    }
+    if (!contractorName) {
+      contractorName = contractor.email.split('@')[0];
+    }
+
+    // Create notification in database
+    try {
+      await db.createNotification({
+        user_email: contractor.email,
+        user_id: contractor.id,
+        notification_type: action === 'approve' ? 'license_approved' : 'license_rejected',
+        title: action === 'approve' ? '✅ License Verified!' : '⚠️ License Verification Update',
+        message: action === 'approve'
+          ? 'Your contractor license has been verified! You now have the verified badge on your profile.'
+          : 'We were unable to verify your license at this time. Please review the information and resubmit if needed.',
+        action_url: '/contractor-profile.html',
+        read: false,
+        created_at: new Date().toISOString()
+      });
+      console.log(`✓ Notification created for ${contractor.email}`);
+    } catch (notifErr) {
+      console.error('⚠️  Failed to create notification:', notifErr.message);
+    }
+
     // Send notification email to contractor
     try {
       const subject = action === 'approve'
@@ -1288,7 +1370,7 @@ app.get("/api/license/verify", async (req, res) => {
       const templateName = action === 'approve' ? 'license-approved' : 'license-rejected';
       const template = emailService.loadTemplate(templateName);
       const html = emailService.renderTemplate(template, {
-        contractorName: contractor.business_name || contractor.company_name || 'Valued Contractor',
+        contractorName: contractorName,
         profileLink: 'https://www.homeprohub.today/contractor-profile.html',
         jobBoardLink: 'https://www.homeprohub.today/contractor-dashboard.html',
         supportLink: 'mailto:support@homeprohub.today'
