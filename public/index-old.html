@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub - AI-Powered Home Improvement Platform</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+  <style>
+    /* Landing Page Specific Styles */
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .landing-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+
+    .hero-section {
+      text-align: center;
+      color: white;
+      margin-bottom: 60px;
+    }
+
+    .hero-logo {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      margin: 0 auto 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .hero-title {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      opacity: 0.95;
+      max-width: 600px;
+      margin: 0 auto 16px;
+      line-height: 1.6;
+    }
+
+    .hero-tagline {
+      font-size: 16px;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+
+    .choice-boxes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    .choice-box {
+      background: white;
+      border-radius: 16px;
+      padding: 40px 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .choice-box:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+    }
+
+    .choice-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .choice-box.homeowner::before {
+      background: linear-gradient(90deg, #56CCF2, #2F80ED);
+    }
+
+    .choice-box.contractor::before {
+      background: linear-gradient(90deg, #F2994A, #F2C94C);
+    }
+
+    .choice-icon {
+      font-size: 56px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .choice-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 12px;
+    }
+
+    .choice-description {
+      font-size: 15px;
+      color: #6b7280;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 32px 0;
+    }
+
+    .feature-list li {
+      font-size: 14px;
+      color: #4b5563;
+      padding: 10px 0;
+      padding-left: 28px;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .feature-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .choice-button {
+      width: 100%;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .homeowner .choice-button {
+      background: linear-gradient(135deg, #56CCF2, #2F80ED);
+      color: white;
+    }
+
+    .homeowner .choice-button:hover {
+      background: linear-gradient(135deg, #2F80ED, #1e5fbf);
+      transform: translateY(-2px);
+    }
+
+    .contractor .choice-button {
+      background: linear-gradient(135deg, #F2994A, #F2C94C);
+      color: white;
+    }
+
+    .contractor .choice-button:hover {
+      background: linear-gradient(135deg, #e8883a, #e8bf3c);
+      transform: translateY(-2px);
+    }
+
+    .auth-links {
+      text-align: center;
+      color: white;
+      font-size: 15px;
+    }
+
+    .auth-links a {
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      border-bottom: 2px solid rgba(255,255,255,0.3);
+      padding-bottom: 2px;
+      transition: all 0.3s ease;
+      margin: 0 12px;
+    }
+
+    .auth-links a:hover {
+      border-bottom-color: white;
+    }
+
+    .auth-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .auth-modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 48px;
+      max-width: 440px;
+      width: 100%;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: #9ca3af;
+      line-height: 1;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+    }
+
+    .modal-close:hover {
+      color: #4b5563;
+    }
+
+    .modal-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+
+    .modal-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 480px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .submit-button {
+      width: 100%;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .submit-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .submit-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status-message {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+
+    .status-message.error {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      display: block;
+    }
+
+    .status-message.success {
+      background: #f0fdf4;
+      color: #16a34a;
+      border: 1px solid #bbf7d0;
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 36px;
+      }
+
+      .hero-subtitle {
+        font-size: 18px;
+      }
+
+      .choice-boxes {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-content {
+        padding: 32px 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="landing-container">
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-logo">🏠</div>
+    <h1 class="hero-title">Welcome to HomeProHub</h1>
+    <p class="hero-subtitle">The AI-powered platform connecting homeowners with trusted contractors for smarter, faster home improvements</p>
+    <p class="hero-tagline">Get expert guidance, accurate estimates, and vetted professionals—all in one place</p>
+  </div>
+
+  <!-- Choice Boxes -->
+  <div class="choice-boxes">
+    <!-- Homeowner Box -->
+    <div class="choice-box homeowner" onclick="showSignupModal('homeowner')">
+      <span class="choice-icon">👨‍👩‍👧‍👦</span>
+      <h2 class="choice-title">For Homeowners</h2>
+      <p class="choice-description">Get instant AI guidance for home issues, plan your projects, and find trusted contractors</p>
+
+      <ul class="feature-list">
+        <li>AI Home Issue Assistant with photo analysis</li>
+        <li>Smart Project Planner with budget estimates</li>
+        <li>Browse vetted contractors with verified grades</li>
+        <li>Learn contractor red flags & warning signs</li>
+        <li>Digital owner's representation services</li>
+        <li>Get professional contract review & guidance</li>
+      </ul>
+
+      <button class="choice-button">Get Started as Homeowner</button>
+    </div>
+
+    <!-- Contractor Box -->
+    <div class="choice-box contractor" onclick="showSignupModal('contractor')">
+      <span class="choice-icon">🔨</span>
+      <h2 class="choice-title">For Contractors</h2>
+      <p class="choice-description">AI-powered business coach, instant estimates, and access to qualified homeowner leads</p>
+
+      <ul class="feature-list">
+        <li>AI Contractor Coach for pricing & strategy</li>
+        <li>Generate professional estimates instantly</li>
+        <li>Access homeowner grading insights</li>
+        <li>Licensure & certification education resources</li>
+        <li>Smart lead matching system</li>
+        <li>Business growth & profitability tools</li>
+      </ul>
+
+      <button class="choice-button">Get Started as Contractor</button>
+    </div>
+  </div>
+
+  <!-- Auth Links -->
+  <div class="auth-links">
+    <a href="#" onclick="showAuthModal('signin'); return false;">Already have an account? Sign In</a>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="auth-modal" id="authModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeAuthModal()">×</button>
+    <h2 class="modal-title" id="modalTitle">Sign In</h2>
+    <p class="modal-subtitle" id="modalSubtitle">Enter your credentials to continue</p>
+
+    <form id="authForm" novalidate>
+      <!-- Sign In/Sign Up Fields -->
+      <div id="emailPasswordFields">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+            maxlength="255"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password (min 6 characters)"
+            required
+            autocomplete="current-password"
+            minlength="6"
+            maxlength="128"
+          />
+        </div>
+      </div>
+
+      <!-- Homeowner Profile Fields -->
+      <div id="homeownerFields" style="display: none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              placeholder="John"
+              maxlength="50"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              placeholder="Doe"
+              maxlength="50"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="homeownerZip">ZIP Code</label>
+          <input
+            type="text"
+            id="homeownerZip"
+            name="homeownerZip"
+            placeholder="12345"
+            pattern="[0-9]{5}"
+            maxlength="5"
+          />
+        </div>
+      </div>
+
+      <!-- Contractor Profile Fields -->
+      <div id="contractorFields" style="display: none;">
+        <div class="form-group">
+          <label for="businessName">Business Name</label>
+          <input
+            type="text"
+            id="businessName"
+            name="businessName"
+            placeholder="ABC Construction Inc."
+            maxlength="100"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="contractorZip">ZIP Code</label>
+          <input
+            type="text"
+            id="contractorZip"
+            name="contractorZip"
+            placeholder="12345"
+            pattern="[0-9]{5}"
+            maxlength="5"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="trade">Primary Trade</label>
+          <select id="trade" name="trade">
+            <option value="">Select your trade...</option>
+            <option value="General Contractor">General Contractor</option>
+            <option value="Mechanical Contractor">Mechanical Contractor</option>
+            <option value="Plumber">Plumber</option>
+            <option value="Electrician">Electrician</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-button" id="submitButton">
+        <span id="buttonText">Sign In</span>
+      </button>
+
+      <div class="status-message" id="statusMessage"></div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function() {
+  'use strict';
+
+  let supabaseClient = null;
+  let currentUserType = null;
+  let currentAuthMode = 'signin';
+
+  // Storage keys
+  const STORAGE_KEYS = {
+    USER_PROFILE: 'homeprohub_user',
+    USER_ROLE: 'homeprohub_user_role',
+    AUTH_TOKEN: 'homeprohub_auth_token',
+    USERNAME: 'homeprohub_username',
+    PROFILE_COMPLETE: 'homeprohub_profile_complete'
+  };
+
+  // Initialize Supabase
+  async function initializeSupabase() {
+    try {
+      const response = await fetch('/api/config');
+      if (!response.ok) {
+        throw new Error('Failed to fetch configuration');
+      }
+      const config = await response.json();
+      supabaseClient = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      return true;
+    } catch (error) {
+      console.error('Supabase initialization error:', error);
+      return false;
+    }
+  }
+
+  // Show sign-in modal
+  window.showAuthModal = function(type) {
+    const modal = document.getElementById('authModal');
+    const title = document.getElementById('modalTitle');
+    const subtitle = document.getElementById('modalSubtitle');
+    const buttonText = document.getElementById('buttonText');
+
+    currentUserType = null;
+    currentAuthMode = 'signin';
+
+    // Hide profile fields for sign-in
+    document.getElementById('homeownerFields').style.display = 'none';
+    document.getElementById('contractorFields').style.display = 'none';
+
+    title.textContent = 'Sign In';
+    subtitle.textContent = 'Welcome back! Enter your credentials to continue';
+    buttonText.textContent = 'Sign In';
+
+    modal.classList.add('active');
+    document.getElementById('email').focus();
+  };
+
+  // Show sign-up modal
+  window.showSignupModal = function(userType) {
+    const modal = document.getElementById('authModal');
+    const title = document.getElementById('modalTitle');
+    const subtitle = document.getElementById('modalSubtitle');
+    const buttonText = document.getElementById('buttonText');
+
+    currentUserType = userType;
+    currentAuthMode = 'signup';
+
+    // Show appropriate profile fields
+    if (userType === 'homeowner') {
+      title.textContent = 'Create Homeowner Account';
+      subtitle.textContent = 'Join as a homeowner to get AI guidance and find contractors';
+      buttonText.textContent = 'Create Homeowner Account';
+      document.getElementById('homeownerFields').style.display = 'block';
+      document.getElementById('contractorFields').style.display = 'none';
+    } else if (userType === 'contractor') {
+      title.textContent = 'Create Contractor Account';
+      subtitle.textContent = 'Join as a contractor to access AI tools and qualified leads';
+      buttonText.textContent = 'Create Contractor Account';
+      document.getElementById('homeownerFields').style.display = 'none';
+      document.getElementById('contractorFields').style.display = 'block';
+    }
+
+    modal.classList.add('active');
+    document.getElementById('email').focus();
+  };
+
+  // Close modal
+  window.closeAuthModal = function() {
+    document.getElementById('authModal').classList.remove('active');
+    document.getElementById('authForm').reset();
+    clearStatus();
+  };
+
+  // Display messages
+  function displayError(message) {
+    const status = document.getElementById('statusMessage');
+    status.textContent = message;
+    status.className = 'status-message error';
+  }
+
+  function displaySuccess(message) {
+    const status = document.getElementById('statusMessage');
+    status.textContent = message;
+    status.className = 'status-message success';
+  }
+
+  function clearStatus() {
+    const status = document.getElementById('statusMessage');
+    status.className = 'status-message';
+    status.textContent = '';
+  }
+
+  // Loading state
+  function setLoading(isLoading) {
+    const button = document.getElementById('submitButton');
+    const buttonText = document.getElementById('buttonText');
+    const inputs = document.querySelectorAll('#authForm input');
+
+    button.disabled = isLoading;
+    inputs.forEach(input => input.disabled = isLoading);
+
+    if (isLoading) {
+      buttonText.textContent = currentAuthMode === 'signup' ? 'Creating Account...' : 'Signing In...';
+    } else {
+      buttonText.textContent = currentAuthMode === 'signup' ? 'Sign Up' : 'Sign In';
+    }
+  }
+
+  // Validate form
+  function validateForm(email, password) {
+    if (!email || !password) {
+      displayError('Please enter both email and password.');
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      displayError('Please enter a valid email address.');
+      return false;
+    }
+
+    if (password.length < 6) {
+      displayError('Password must be at least 6 characters.');
+      return false;
+    }
+
+    // Validate profile fields for sign-up
+    if (currentAuthMode === 'signup') {
+      if (currentUserType === 'homeowner') {
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        const zip = document.getElementById('homeownerZip').value.trim();
+
+        if (!firstName || !lastName) {
+          displayError('Please enter your first and last name.');
+          return false;
+        }
+
+        if (!zip || !/^\d{5}$/.test(zip)) {
+          displayError('Please enter a valid 5-digit ZIP code.');
+          return false;
+        }
+      } else if (currentUserType === 'contractor') {
+        const businessName = document.getElementById('businessName').value.trim();
+        const zip = document.getElementById('contractorZip').value.trim();
+        const trade = document.getElementById('trade').value;
+
+        if (!businessName) {
+          displayError('Please enter your business name.');
+          return false;
+        }
+
+        if (!zip || !/^\d{5}$/.test(zip)) {
+          displayError('Please enter a valid 5-digit ZIP code.');
+          return false;
+        }
+
+        if (!trade) {
+          displayError('Please select your primary trade.');
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  // Handle form submission
+  document.getElementById('authForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearStatus();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!validateForm(email, password)) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Initialize Supabase if needed
+      if (!supabaseClient) {
+        const initialized = await initializeSupabase();
+        if (!initialized) {
+          displayError('Unable to connect to authentication service. Please try again.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Sign in or sign up
+      let result;
+      if (currentAuthMode === 'signup') {
+        result = await supabaseClient.auth.signUp({ email, password });
+      } else {
+        result = await supabaseClient.auth.signInWithPassword({ email, password });
+      }
+
+      const { data, error } = result;
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error('No user data received');
+      }
+
+      // Fetch user profile
+      const statusResponse = await fetch(`/api/get-user-status?username=${encodeURIComponent(email)}`, {
+        headers: {
+          'Authorization': `Bearer ${data.session?.access_token || ''}`
+        }
+      });
+
+      const userData = await statusResponse.json();
+
+      // Determine user role
+      const userRole = currentUserType || userData.role || '';
+
+      // Collect profile data for sign-up
+      let profileData = {};
+      if (currentAuthMode === 'signup') {
+        if (currentUserType === 'homeowner') {
+          profileData = {
+            firstName: document.getElementById('firstName').value.trim(),
+            lastName: document.getElementById('lastName').value.trim(),
+            zipCode: document.getElementById('homeownerZip').value.trim(),
+            role: 'homeowner',
+            email: email,
+            name: `${document.getElementById('firstName').value.trim()} ${document.getElementById('lastName').value.trim()}`,
+            profileComplete: true
+          };
+        } else if (currentUserType === 'contractor') {
+          profileData = {
+            businessName: document.getElementById('businessName').value.trim(),
+            companyName: document.getElementById('businessName').value.trim(),
+            zipCode: document.getElementById('contractorZip').value.trim(),
+            trade: document.getElementById('trade').value,
+            role: 'contractor',
+            email: email,
+            profileComplete: true
+          };
+        }
+      } else {
+        // For signin, create minimal profile data
+        if (userRole === 'homeowner') {
+          profileData = {
+            email: email,
+            role: 'homeowner',
+            name: email.split('@')[0],
+            profileComplete: true
+          };
+        } else if (userRole === 'contractor') {
+          profileData = {
+            email: email,
+            role: 'contractor',
+            companyName: email.split('@')[0],
+            profileComplete: true
+          };
+        }
+      }
+
+      // Store user data
+      localStorage.setItem(STORAGE_KEYS.USERNAME, email);
+      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, data.session?.access_token || '');
+      localStorage.setItem(STORAGE_KEYS.USER_ROLE, userRole);
+      localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, 'true');
+
+      // Store profile data
+      if (Object.keys(profileData).length > 0) {
+        if (userRole === 'homeowner') {
+          localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profileData));
+        } else if (userRole === 'contractor') {
+          localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData));
+        }
+      }
+
+      displaySuccess('Success! Redirecting...');
+
+      // Redirect based on role
+      setTimeout(() => {
+        if (userRole === 'contractor') {
+          window.location.href = 'contractor.html';
+        } else if (userRole === 'homeowner') {
+          window.location.href = 'home.html';
+        } else {
+          window.location.href = 'index.html';
+        }
+      }, 1000);
+
+    } catch (error) {
+      console.error('Auth error:', error);
+
+      if (error.message.includes('Invalid login credentials')) {
+        displayError('Invalid email or password. Please try again.');
+      } else if (error.message.includes('Email not confirmed')) {
+        displayError('Please check your email to confirm your account.');
+      } else {
+        displayError('Authentication failed. Please try again.');
+      }
+
+      setLoading(false);
+    }
+  });
+
+  // Close modal on outside click
+  document.getElementById('authModal').addEventListener('click', (e) => {
+    if (e.target.id === 'authModal') {
+      closeAuthModal();
+    }
+  });
+
+  // Initialize on load
+  initializeSupabase();
+
+})();
+</script>
+
+</body>
+</html>
