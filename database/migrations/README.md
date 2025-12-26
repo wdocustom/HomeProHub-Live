@@ -1,6 +1,54 @@
 # Database Migrations
 
-## 1. Estimate Fields for Bids Migration (Latest)
+## 1. Conversation Messages Tables (Latest - REQUIRED)
+
+### What This Does
+Creates the conversation-based messaging system tables that the app requires for contractor-homeowner communication.
+
+### Tables Created
+- `conversations` - Tracks messaging conversations between homeowners and contractors for specific jobs
+- `conversation_messages` - Individual messages within conversations
+
+### SQL to Run
+
+See `create_conversation_messages_table.sql` or run this:
+
+```sql
+-- Create conversations table
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id UUID REFERENCES job_postings(id) ON DELETE CASCADE,
+  homeowner_email TEXT NOT NULL,
+  contractor_email TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(job_id, homeowner_email, contractor_email)
+);
+
+-- Create conversation_messages table
+CREATE TABLE IF NOT EXISTS conversation_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE NOT NULL,
+  sender_email TEXT NOT NULL,
+  recipient_email TEXT NOT NULL,
+  message TEXT NOT NULL,
+  attachments JSONB DEFAULT '[]'::jsonb,
+  read BOOLEAN DEFAULT FALSE,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_conversations_job_id ON conversations(job_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_homeowner ON conversations(homeowner_email);
+CREATE INDEX IF NOT EXISTS idx_conversations_contractor ON conversations(contractor_email);
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_conversation_id ON conversation_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_unread ON conversation_messages(recipient_email, read) WHERE read = FALSE;
+```
+
+---
+
+## 2. Estimate Fields for Bids Migration
 
 ### What This Does
 Adds fields to the `contractor_bids` table to support attaching professional AI-generated estimates to bids.

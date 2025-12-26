@@ -1164,8 +1164,10 @@
     function submitBidFromDetails() {
       if (!currentDetailsJob) return;
 
+      // Save job ID before closing modal (which sets currentDetailsJob to null)
+      const jobId = currentDetailsJob.id;
       closeJobDetailsModal();
-      openBidModal(currentDetailsJob.id);
+      openBidModal(jobId);
     }
     window.submitBidFromDetails = submitBidFromDetails;
 
