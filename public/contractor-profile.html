@@ -31,6 +31,7 @@
 
   <div class="tabs">
     <button class="tab active" onclick="switchTab('basic')">Basic Info</button>
+    <button class="tab" onclick="switchTab('licensing')">Licensing & Verification</button>
     <button class="tab" onclick="switchTab('social')">Social Media</button>
   </div>
 
@@ -91,6 +92,195 @@
     </form>
   </div>
 
+  <div id="licensingTab" class="tab-content">
+    <h2 style="margin-top: 0;">Professional Licensing & Verification</h2>
+
+    <!-- License Status Banner -->
+    <div id="licenseStatusBanner" style="margin-bottom: 24px; padding: 20px; border-radius: 8px; display: none;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="licenseStatusIcon" style="font-size: 28px;"></span>
+        <div style="flex: 1;">
+          <div id="licenseStatusTitle" style="font-weight: 600; font-size: 16px; margin-bottom: 4px;"></div>
+          <div id="licenseStatusMessage" style="font-size: 14px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Get Licensed Prompt (for unlicensed contractors) -->
+    <div id="getLicensedPrompt" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #fbbf24; display: none;">
+      <div style="display: flex; align-items: start; gap: 16px;">
+        <span style="font-size: 48px;">📜</span>
+        <div style="flex: 1;">
+          <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 20px;">Get Your Contractor License</h3>
+          <p style="margin: 0 0 16px 0; color: #78350f; line-height: 1.6;">
+            Want to bid on more jobs and build trust with homeowners? Getting licensed is easier than you think.
+            We've partnered with <strong>ContractorTrainingCenter.com</strong> to help you get licensed fast.
+          </p>
+          <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #1f2937; font-size: 16px;">✅ Why Get Licensed?</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li><strong>Win More Bids</strong> - Homeowners prefer licensed contractors</li>
+              <li><strong>Higher Pay</strong> - Licensed contractors can charge premium rates</li>
+              <li><strong>Legal Protection</strong> - Work legally in your jurisdiction</li>
+              <li><strong>Verified Badge</strong> - Stand out with our ✓ Verified badge on your profile</li>
+              <li><strong>Priority Placement</strong> - Licensed contractors appear first in job matches</li>
+            </ul>
+          </div>
+          <a href="https://www.contractortrainingcenter.com/?ref=homeprohub" target="_blank" rel="noopener"
+             style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; transition: transform 0.2s;"
+             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            🎓 Start Your Licensing Journey →
+          </a>
+          <p style="margin: 12px 0 0 0; font-size: 13px; color: #9ca3af;">
+            Special HomeProHub discount available through our partner link
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- License Upload Form -->
+    <form id="licenseForm" novalidate>
+      <div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px;">License Information</h3>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="licState">License State *</label>
+            <input id="licState" type="text" placeholder="e.g., CA, TX, FL" maxlength="2" style="text-transform: uppercase;" required />
+          </div>
+          <div class="form-group">
+            <label for="licNumber">License Number *</label>
+            <input id="licNumber" type="text" placeholder="ABC-123456" maxlength="50" required />
+          </div>
+          <div class="form-group">
+            <label for="licType">License Type *</label>
+            <select id="licType" required>
+              <option value="">Select license type...</option>
+              <option value="General Contractor">General Contractor (Class A/B)</option>
+              <option value="Specialty Contractor">Specialty Contractor (Class C)</option>
+              <option value="Electrical">Electrical Contractor</option>
+              <option value="Plumbing">Plumbing Contractor</option>
+              <option value="HVAC">HVAC Contractor</option>
+              <option value="Roofing">Roofing Contractor</option>
+              <option value="Other">Other Specialty</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="licExpiration">Expiration Date</label>
+            <input id="licExpiration" type="date" />
+          </div>
+        </div>
+
+        <div class="form-group form-group-full" style="margin-top: 20px;">
+          <label for="licenseUpload" style="display: block; margin-bottom: 8px; font-weight: 600;">Upload License Document</label>
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280;">
+            Upload a clear photo or PDF of your contractor license. Accepted formats: JPG, PNG, PDF (max 5MB)
+          </p>
+          <div style="position: relative;">
+            <input type="file" id="licenseUpload" accept="image/*,.pdf" style="display: none;" />
+            <button type="button" onclick="document.getElementById('licenseUpload').click()"
+                    style="background: white; border: 2px dashed #d1d5db; padding: 40px 20px; width: 100%; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 8px;"
+                    onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff'"
+                    onmouseout="this.style.borderColor='#d1d5db'; this.style.background='white'">
+              <span style="font-size: 48px;">📄</span>
+              <span style="font-weight: 600; color: #2563eb;">Click to Upload License Document</span>
+              <span style="font-size: 14px; color: #6b7280;">or drag and drop file here</span>
+            </button>
+          </div>
+          <div id="licensePreview" style="margin-top: 16px; display: none;">
+            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 32px;" id="licenseFileIcon">📄</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #1f2937;" id="licenseFileName">filename.pdf</div>
+                <div style="font-size: 14px; color: #6b7280;" id="licenseFileSize">1.2 MB</div>
+              </div>
+              <button type="button" onclick="clearLicenseUpload()"
+                      style="background: #fee2e2; color: #991b1b; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insurance Information -->
+      <div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px;">Insurance Verification</h3>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="insuranceProvider">Insurance Provider</label>
+            <input id="insuranceProvider" type="text" placeholder="e.g., State Farm, Nationwide" maxlength="100" />
+          </div>
+          <div class="form-group">
+            <label for="insurancePolicyNumber">Policy Number</label>
+            <input id="insurancePolicyNumber" type="text" placeholder="POL-123456789" maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label for="insuranceExpiration">Expiration Date</label>
+            <input id="insuranceExpiration" type="date" />
+          </div>
+          <div class="form-group">
+            <label for="insuranceCoverage">Coverage Amount</label>
+            <select id="insuranceCoverage">
+              <option value="">Select coverage...</option>
+              <option value="500000">$500,000</option>
+              <option value="1000000">$1,000,000</option>
+              <option value="2000000">$2,000,000</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group form-group-full" style="margin-top: 20px;">
+          <label for="insuranceUpload" style="display: block; margin-bottom: 8px; font-weight: 600;">Upload Insurance Certificate</label>
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280;">
+            Upload your Certificate of Insurance (COI). Accepted formats: JPG, PNG, PDF (max 5MB)
+          </p>
+          <div style="position: relative;">
+            <input type="file" id="insuranceUpload" accept="image/*,.pdf" style="display: none;" />
+            <button type="button" onclick="document.getElementById('insuranceUpload').click()"
+                    style="background: white; border: 2px dashed #d1d5db; padding: 40px 20px; width: 100%; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 8px;"
+                    onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff'"
+                    onmouseout="this.style.borderColor='#d1d5db'; this.style.background='white'">
+              <span style="font-size: 48px;">🛡️</span>
+              <span style="font-weight: 600; color: #2563eb;">Click to Upload Insurance Certificate</span>
+              <span style="font-size: 14px; color: #6b7280;">or drag and drop file here</span>
+            </button>
+          </div>
+          <div id="insurancePreview" style="margin-top: 16px; display: none;">
+            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 32px;">🛡️</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #1f2937;" id="insuranceFileName">filename.pdf</div>
+                <div style="font-size: 14px; color: #6b7280;" id="insuranceFileSize">1.2 MB</div>
+              </div>
+              <button type="button" onclick="clearInsuranceUpload()"
+                      style="background: #fee2e2; color: #991b1b; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="saveLicenseButton">Save & Submit for Verification</button>
+      <p id="licenseStatusMessage" style="margin-top: 12px; font-size: 14px;"></p>
+    </form>
+
+    <!-- Verification Info -->
+    <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 20px; border-radius: 8px; margin-top: 24px;">
+      <h4 style="margin: 0 0 12px 0; color: #1e40af; font-size: 16px;">📋 Verification Process</h4>
+      <p style="margin: 0 0 12px 0; color: #1e3a8a; font-size: 14px; line-height: 1.6;">
+        Once you submit your license information, our team will verify it against state licensing boards.
+        This typically takes 1-3 business days. You'll receive an email when verification is complete.
+      </p>
+      <p style="margin: 0; color: #1e3a8a; font-size: 14px; line-height: 1.6;">
+        <strong>Verified contractors get:</strong> ✓ Verified badge, priority job placement, and higher homeowner trust.
+      </p>
+    </div>
+  </div>
+
   <div id="socialTab" class="tab-content">
     <h2 style="margin-top: 0;">Social Media Links</h2>
     <form id="socialForm" novalidate>
@@ -139,9 +329,73 @@ function switchTab(tabName) {
   if (tabName === 'basic') {
     document.querySelector('.tab:nth-child(1)').classList.add('active');
     document.getElementById('basicTab').classList.add('active');
-  } else if (tabName === 'social') {
+  } else if (tabName === 'licensing') {
     document.querySelector('.tab:nth-child(2)').classList.add('active');
+    document.getElementById('licensingTab').classList.add('active');
+    checkLicenseStatus();
+  } else if (tabName === 'social') {
+    document.querySelector('.tab:nth-child(3)').classList.add('active');
     document.getElementById('socialTab').classList.add('active');
+  }
+}
+
+let licenseFile = null;
+let insuranceFile = null;
+
+function clearLicenseUpload() {
+  licenseFile = null;
+  document.getElementById('licenseUpload').value = '';
+  document.getElementById('licensePreview').style.display = 'none';
+}
+
+function clearInsuranceUpload() {
+  insuranceFile = null;
+  document.getElementById('insuranceUpload').value = '';
+  document.getElementById('insurancePreview').style.display = 'none';
+}
+
+function checkLicenseStatus() {
+  const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+  const statusBanner = document.getElementById('licenseStatusBanner');
+  const getLicensedPrompt = document.getElementById('getLicensedPrompt');
+
+  if (!profile.licenseNumber || !profile.licState) {
+    // No license info - show Get Licensed prompt
+    getLicensedPrompt.style.display = 'block';
+    statusBanner.style.display = 'none';
+  } else if (profile.licenseVerified === 'verified') {
+    // Verified license
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
+    statusBanner.style.border = '2px solid #10b981';
+    document.getElementById('licenseStatusIcon').textContent = '✅';
+    document.getElementById('licenseStatusTitle').textContent = 'License Verified!';
+    document.getElementById('licenseStatusTitle').style.color = '#065f46';
+    document.getElementById('licenseStatusMessage').textContent = 'Your contractor license has been verified. You now have the ✓ Verified badge on your profile.';
+    document.getElementById('licenseStatusMessage').style.color = '#047857';
+    getLicensedPrompt.style.display = 'none';
+  } else if (profile.licenseVerified === 'pending') {
+    // Pending verification
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+    statusBanner.style.border = '2px solid #f59e0b';
+    document.getElementById('licenseStatusIcon').textContent = '⏳';
+    document.getElementById('licenseStatusTitle').textContent = 'Verification Pending';
+    document.getElementById('licenseStatusTitle').style.color = '#92400e';
+    document.getElementById('licenseStatusMessage').textContent = 'We\'re verifying your license information. This typically takes 1-3 business days.';
+    document.getElementById('licenseStatusMessage').style.color = '#78350f';
+    getLicensedPrompt.style.display = 'none';
+  } else {
+    // License info provided but not verified
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)';
+    statusBanner.style.border = '2px solid #3b82f6';
+    document.getElementById('licenseStatusIcon').textContent = '📋';
+    document.getElementById('licenseStatusTitle').textContent = 'License Info Saved';
+    document.getElementById('licenseStatusTitle').style.color = '#1e40af';
+    document.getElementById('licenseStatusMessage').textContent = 'Upload your license document to submit for verification.';
+    document.getElementById('licenseStatusMessage').style.color = '#1e3a8a';
+    getLicensedPrompt.style.display = 'none';
   }
 }
 
@@ -258,8 +512,113 @@ function switchTab(tabName) {
         }
     });
 
+    // License file upload handler
+    document.getElementById('licenseUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+
+        licenseFile = file;
+        document.getElementById('licenseFileName').textContent = file.name;
+        document.getElementById('licenseFileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        document.getElementById('licenseFileIcon').textContent = file.type.includes('pdf') ? '📄' : '🖼️';
+        document.getElementById('licensePreview').style.display = 'block';
+    });
+
+    // Insurance file upload handler
+    document.getElementById('insuranceUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+
+        insuranceFile = file;
+        document.getElementById('insuranceFileName').textContent = file.name;
+        document.getElementById('insuranceFileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        document.getElementById('insurancePreview').style.display = 'block';
+    });
+
+    // License form submission
+    const licenseForm = document.getElementById('licenseForm');
+    const saveLicenseButton = document.getElementById('saveLicenseButton');
+    const licenseStatusMsg = document.getElementById('licenseStatusMessage');
+
+    licenseForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        saveLicenseButton.disabled = true;
+        saveLicenseButton.textContent = 'Saving...';
+
+        try {
+            const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+            const profile = existing ? JSON.parse(existing) : {};
+
+            profile.licState = document.getElementById('licState').value.trim().toUpperCase();
+            profile.licNumber = document.getElementById('licNumber').value.trim();
+            profile.licenseNumber = profile.licNumber; // For backward compatibility
+            profile.license = profile.licNumber; // For backward compatibility
+            profile.licType = document.getElementById('licType').value;
+            profile.licExpiration = document.getElementById('licExpiration').value;
+
+            profile.insuranceProvider = document.getElementById('insuranceProvider').value.trim();
+            profile.insurancePolicyNumber = document.getElementById('insurancePolicyNumber').value.trim();
+            profile.insuranceExpiration = document.getElementById('insuranceExpiration').value;
+            profile.insuranceCoverage = document.getElementById('insuranceCoverage').value;
+
+            // If files are uploaded, set status to pending verification
+            if (licenseFile || insuranceFile) {
+                profile.licenseVerified = 'pending';
+                profile.licenseSubmittedDate = new Date().toISOString();
+            }
+
+            localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
+
+            licenseStatusMsg.textContent = licenseFile || insuranceFile
+                ? 'License information saved! Documents submitted for verification. We\'ll email you within 1-3 business days.'
+                : 'License information saved successfully!';
+            licenseStatusMsg.style.color = '#10b981';
+
+            // Update status banner
+            checkLicenseStatus();
+
+        } catch (err) {
+            licenseStatusMsg.textContent = 'Error saving license information';
+            licenseStatusMsg.style.color = '#ef4444';
+        } finally {
+            saveLicenseButton.disabled = false;
+            saveLicenseButton.textContent = 'Save & Submit for Verification';
+        }
+    });
+
+    // Load license info into form
+    function loadLicenseInfo() {
+        try {
+            const profileData = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+            if (profileData) {
+                const profile = JSON.parse(profileData);
+                if (profile.licState) document.getElementById('licState').value = profile.licState;
+                if (profile.licNumber) document.getElementById('licNumber').value = profile.licNumber;
+                if (profile.licType) document.getElementById('licType').value = profile.licType;
+                if (profile.licExpiration) document.getElementById('licExpiration').value = profile.licExpiration;
+                if (profile.insuranceProvider) document.getElementById('insuranceProvider').value = profile.insuranceProvider;
+                if (profile.insurancePolicyNumber) document.getElementById('insurancePolicyNumber').value = profile.insurancePolicyNumber;
+                if (profile.insuranceExpiration) document.getElementById('insuranceExpiration').value = profile.insuranceExpiration;
+                if (profile.insuranceCoverage) document.getElementById('insuranceCoverage').value = profile.insuranceCoverage;
+            }
+        } catch (err) {
+            console.error('Error loading license info:', err);
+        }
+    }
+
     if (!checkAuth()) return;
     loadProfile();
+    loadLicenseInfo();
 })();
 </script>
 
