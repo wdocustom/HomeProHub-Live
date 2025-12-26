@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>HomeProHub – Contractor Tools</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
   <style>
     /* Darker, more "pro" hero just for contractors */
     .hero-contractor {
@@ -99,20 +100,7 @@
   </style>
 </head>
 <body>
-
-<header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="contractor-profile.html">Profile</a>
-      <div class="profile-area">
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-</header>
+  <!-- Navigation component will be injected here by navigation.js -->
 
 <!-- Dark, pro-focused hero band -->
 <section class="hero-contractor">
@@ -226,6 +214,18 @@
 
     </div>
   </section>
+
+  <!-- Job Board Section (Secondary Feature) -->
+  <section style="max-width: 900px; margin: 20px auto 60px; padding: 0 24px;">
+    <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+      <h2 style="margin-top:0; margin-bottom:12px; color: white;">Browse Available Jobs</h2>
+      <p style="margin:0 0 16px; font-size:14px; opacity: 0.95;">
+        View job postings from homeowners in your area. Review AI-generated diagnostic reports, submit competitive bids, and grow your business with qualified leads.
+      </p>
+      <a href="contractor-dashboard.html" class="btn-primary" style="background: white; color: #10b981; font-size:14px; padding: 10px 20px; display: inline-block; text-decoration: none;">View Job Board</a>
+    </div>
+  </section>
+
 </main>
 
 <script>
@@ -615,5 +615,8 @@ ${profile && profile.license ? 'License: ' + profile.license : ''}
 
 })();
 </script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
 </body>
 </html>

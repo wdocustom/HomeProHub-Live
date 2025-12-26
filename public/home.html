@@ -2,6 +2,7 @@
   <meta charset="UTF-8" />
   <title>HomeScope AI – Homeowner Tools</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
   <style>
     /* Match landing-page hero look, but homeowner-focused */
     .hero {
@@ -71,21 +72,10 @@
         grid-template-columns: 1fr;
       }
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeScope AI</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Dashboard</a>
-      <a href="ask.html">Assistant</a>
-      <div class="profile-area">
-        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div></header><main>
+  </style></head><body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <main>
   <section class="hero">
     <div class="hero-kicker">For homeowners</div>
     <h1 class="hero-title">Understand your home and choose the right pros.</h1>
@@ -168,7 +158,20 @@
         </div>
       </div>
     </div>
-  </section></main><script>
+  </section>
+
+  <!-- Job Posting Section (Secondary Feature) -->
+  <section style="max-width: 900px; margin: 0 auto 60px; padding: 0 24px;">
+    <div class="card" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; border: none;">
+      <h2 style="margin-top:0; margin-bottom:12px; color: white;">Ready to Post a Job?</h2>
+      <p style="margin:0 0 16px; font-size:14px; opacity: 0.95;">
+        Once you've used the AI Assistant to understand your issue, you can post it as a job and receive competitive bids from verified contractors in your area.
+      </p>
+      <a href="homeowner-dashboard.html" class="btn-primary" style="background: white; color: #2563eb; font-size:14px; padding: 10px 20px; display: inline-block; text-decoration: none;">Post a Job & Get Bids</a>
+    </div>
+  </section>
+
+</main><script>
 (function() {
   'use strict';
 
@@ -233,51 +236,16 @@
   }
 
   /**
-   * Logout function
-   */
-  window.logout = function() {
-    // Clear all stored data
-    clearAllData();
-
-    // Optionally call backend logout endpoint
-    try {
-      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      if (authToken) {
-        fetch('/api/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authToken}`
-          }
-        }).catch(() => {
-          // Silent fail - we're logging out anyway
-        });
-      }
-    } catch (e) {
-      // Silent fail
-    }
-
-    // Redirect to login
-    window.location.href = 'index.html';
-  };
-
-  /**
    * Initialize the page
    */
   function initialize() {
     const user = getUserData();
-    const profileLinkEl = document.getElementById('profileLink');
 
     if (!user || user.role !== 'homeowner') {
       // Not logged in or wrong role - redirect to login
       clearAllData();
       window.location.href = 'index.html';
       return;
-    }
-
-    // Set profile link text (sanitized)
-    if (profileLinkEl && user.name) {
-      const firstName = sanitizeText(user.name.split(' ')[0]);
-      profileLinkEl.textContent = firstName;
     }
   }
 
@@ -288,4 +256,8 @@
     initialize();
   }
 })();
-</script></body></html>
+</script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
+</body></html>

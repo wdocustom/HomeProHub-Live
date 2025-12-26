@@ -15,14 +15,15 @@
   // Navigation configuration by role
   const NAV_CONFIG = {
     homeowner: [
-      { label: 'Dashboard', href: 'homeowner-dashboard.html', icon: '📊' },
-      { label: 'Post a Job', href: 'ask.html', icon: '➕' },
+      { label: 'Home', href: 'home.html', icon: '🏠' },
+      { label: 'AI Assistant', href: 'ask.html', icon: '🤖' },
+      { label: 'Post a Job', href: 'homeowner-dashboard.html', icon: '➕' },
       { label: 'Messages', href: 'messages.html', icon: '💬', badge: 'messages' }
     ],
     contractor: [
-      { label: 'Dashboard', href: 'contractor-dashboard.html', icon: '📊' },
-      { label: 'Browse Jobs', href: 'contractor-dashboard.html?tab=jobs', icon: '🔍' },
-      { label: 'My Bids', href: 'contractor-dashboard.html?tab=bids', icon: '📝' },
+      { label: 'Home', href: 'contractor.html', icon: '🏠' },
+      { label: 'Tools', href: 'pricing-estimator.html', icon: '🔧' },
+      { label: 'Job Board', href: 'contractor-dashboard.html', icon: '📋' },
       { label: 'Messages', href: 'messages.html', icon: '💬', badge: 'messages' }
     ]
   };
@@ -111,11 +112,13 @@
         </a>
       `).join('');
 
+      const brandHref = this.user.role === 'contractor' ? 'contractor.html' : 'home.html';
+
       return `
         <nav class="unified-nav">
           <div class="nav-container">
             <div class="nav-brand">
-              <a href="index.html" class="brand-link">
+              <a href="${brandHref}" class="brand-link">
                 <span class="brand-icon">🏠</span>
                 <span class="brand-name">HomeProHub</span>
               </a>
