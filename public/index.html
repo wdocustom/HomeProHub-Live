@@ -894,6 +894,165 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* ========================================
+       AUTH MODAL
+       ======================================== */
+
+    .auth-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s;
+    }
+
+    .auth-modal-overlay.active {
+      display: flex;
+    }
+
+    .auth-modal {
+      background: white;
+      border-radius: 24px;
+      padding: var(--space-2xl);
+      max-width: 480px;
+      width: 90%;
+      box-shadow: var(--shadow-2xl);
+      animation: slideUp 0.3s;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: var(--space-lg);
+      right: var(--space-lg);
+      background: var(--gray-100);
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: var(--gray-600);
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: var(--gray-200);
+      transform: rotate(90deg);
+    }
+
+    .modal-header {
+      text-align: center;
+      margin-bottom: var(--space-xl);
+    }
+
+    .modal-header h2 {
+      font-size: 1.75rem;
+      margin-bottom: var(--space-sm);
+      color: var(--gray-900);
+    }
+
+    .modal-header p {
+      color: var(--gray-600);
+      font-size: 0.95rem;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: var(--space-sm);
+      background: var(--gray-100);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: var(--space-xl);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--gray-600);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-tab.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .auth-form {
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: var(--space-lg);
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: var(--space-xs);
+      font-weight: 500;
+      color: var(--gray-700);
+      font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-auth {
+      width: 100%;
+      padding: 1rem;
+      background: var(--gradient-cta);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-auth:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+    }
+
+    .auth-divider {
+      text-align: center;
+      margin: var(--space-lg) 0;
+      color: var(--gray-500);
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -909,8 +1068,8 @@
         <div class="nav-links">
           <a href="#features" class="nav-link">Features</a>
           <a href="#how-it-works" class="nav-link">How It Works</a>
-          <a href="#pricing" class="nav-link">Pricing</a>
-          <button class="btn-nav primary" onclick="showAuthModal()">Get Started</button>
+          <a href="pricing-estimator.html" class="nav-link">Pricing</a>
+          <button class="btn-nav primary" onclick="showAuthModal('signup')">Get Started</button>
         </div>
       </div>
     </nav>
@@ -932,14 +1091,14 @@
       </p>
 
       <div class="hero-cta">
-        <a href="#get-started" class="btn-hero primary">
+        <button class="btn-hero primary" onclick="showAuthModal('signup')">
           Get Started Free
           <span>→</span>
-        </a>
-        <a href="#demo" class="btn-hero secondary">
-          Watch Demo
-          <span>▶</span>
-        </a>
+        </button>
+        <button class="btn-hero secondary" onclick="showAuthModal('login')">
+          Sign In
+          <span>→</span>
+        </button>
       </div>
 
       <div class="hero-stats">
@@ -998,14 +1157,14 @@
           <div class="bento-icon">🧠</div>
           <h3>AI-Powered Diagnosis</h3>
           <p>Snap a photo, describe the issue, and get instant professional analysis. Our AI understands home problems like a seasoned contractor—identifying severity, urgency, and estimated costs in seconds.</p>
-          <a href="#" class="bento-link">Try AI Assistant →</a>
+          <a href="ask.html" class="bento-link">Try AI Assistant →</a>
         </div>
 
         <div class="bento-item medium">
           <div class="bento-icon">🏆</div>
           <h3>Contractor Marketplace</h3>
           <p>Browse verified contractors, compare bids side-by-side, and read real reviews from homeowners in your area.</p>
-          <a href="#" class="bento-link">Find Contractors →</a>
+          <a href="contractor-dashboard.html" class="bento-link">Find Contractors →</a>
         </div>
 
         <div class="bento-item small">
@@ -1086,8 +1245,8 @@
       <h2>Ready to Find Your Perfect Contractor?</h2>
       <p>Join thousands of homeowners who've simplified their home improvement projects with AI-powered assistance</p>
       <div class="cta-buttons">
-        <a href="#" class="btn-cta white">Start Your First Project</a>
-        <a href="#" class="btn-cta outline">I'm a Contractor</a>
+        <button class="btn-cta white" onclick="showAuthModal('signup', 'homeowner')">Start Your First Project</button>
+        <button class="btn-cta outline" onclick="showAuthModal('signup', 'contractor')">I'm a Contractor</button>
       </div>
     </div>
   </section>
@@ -1105,30 +1264,30 @@
       <div class="footer-section">
         <h4>Platform</h4>
         <ul class="footer-links">
-          <li><a href="#">For Homeowners</a></li>
-          <li><a href="#">For Contractors</a></li>
-          <li><a href="#">AI Assistant</a></li>
-          <li><a href="#">Pricing</a></li>
+          <li><a href="for-homeowners.html">For Homeowners</a></li>
+          <li><a href="for-contractors.html">For Contractors</a></li>
+          <li><a href="ask.html">AI Assistant</a></li>
+          <li><a href="pricing-estimator.html">Pricing</a></li>
         </ul>
       </div>
 
       <div class="footer-section">
         <h4>Company</h4>
         <ul class="footer-links">
-          <li><a href="#">About Us</a></li>
-          <li><a href="#">Careers</a></li>
-          <li><a href="#">Blog</a></li>
-          <li><a href="#">Press</a></li>
+          <li><a href="about.html">About Us</a></li>
+          <li><a href="debug-api.html">API Status</a></li>
+          <li><a href="homeowner-grading-directory.html">Homeowner Directory</a></li>
+          <li><a href="contractor-directory.html">Contractor Directory</a></li>
         </ul>
       </div>
 
       <div class="footer-section">
         <h4>Support</h4>
         <ul class="footer-links">
-          <li><a href="#">Help Center</a></li>
-          <li><a href="#">Safety</a></li>
-          <li><a href="#">Privacy</a></li>
-          <li><a href="#">Terms</a></li>
+          <li><a href="help.html">Help Center</a></li>
+          <li><a href="contact-pro.html">Contact Support</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="terms.html">Terms</a></li>
         </ul>
       </div>
     </div>
@@ -1139,10 +1298,220 @@
     </div>
   </footer>
 
+  <!-- Auth Modal -->
+  <div class="auth-modal-overlay" id="authModal">
+    <div class="auth-modal">
+      <button class="modal-close" onclick="closeAuthModal()">×</button>
+
+      <div class="modal-header">
+        <h2>Welcome to HomeProHub</h2>
+        <p>Join thousands using AI to find trusted contractors</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" required placeholder="your@email.com">
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" required placeholder="Enter your password">
+        </div>
+
+        <button type="submit" class="btn-auth">Sign In</button>
+
+        <div class="auth-divider">
+          New to HomeProHub? <a href="#" onclick="switchAuthTab('signup'); return false;" style="color: var(--primary); font-weight: 600;">Create an account</a>
+        </div>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signupForm" class="auth-form" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label for="signupRole">I am a...</label>
+          <select id="signupRole" required>
+            <option value="">Choose your role</option>
+            <option value="homeowner">Homeowner - I need services</option>
+            <option value="contractor">Contractor - I provide services</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" required placeholder="your@email.com">
+        </div>
+
+        <div class="form-group">
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" required placeholder="Create a password" minlength="6">
+        </div>
+
+        <div class="form-group">
+          <label for="signupName">Full Name</label>
+          <input type="text" id="signupName" required placeholder="John Doe">
+        </div>
+
+        <button type="submit" class="btn-auth">Create Account</button>
+
+        <div class="auth-divider">
+          Already have an account? <a href="#" onclick="switchAuthTab('login'); return false;" style="color: var(--primary); font-weight: 600;">Sign in</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
-    function showAuthModal() {
-      window.location.href = 'index.html';
+    // Auth Modal Functions
+    function showAuthModal(tab = 'signup', role = null) {
+      const modal = document.getElementById('authModal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+
+      switchAuthTab(tab);
+
+      if (role) {
+        document.getElementById('signupRole').value = role;
+      }
     }
+
+    function closeAuthModal() {
+      const modal = document.getElementById('authModal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function switchAuthTab(tab) {
+      // Update tabs
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-tab').forEach(t => {
+        if ((t.textContent.toLowerCase().includes('sign in') && tab === 'login') ||
+            (t.textContent.toLowerCase().includes('sign up') && tab === 'signup')) {
+          t.classList.add('active');
+        }
+      });
+
+      // Update forms
+      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+      if (tab === 'login') {
+        document.getElementById('loginForm').classList.add('active');
+      } else {
+        document.getElementById('signupForm').classList.add('active');
+      }
+    }
+
+    // Handle Login
+    async function handleLogin(event) {
+      event.preventDefault();
+
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        // Simple mock auth - check if user exists in localStorage
+        const users = JSON.parse(localStorage.getItem('homeprohub_users') || '{}');
+        const user = users[email];
+
+        if (user && user.password === password) {
+          // Set auth tokens
+          localStorage.setItem('homeprohub_username', email);
+          localStorage.setItem('homeprohub_auth_token', 'token_' + Date.now());
+          localStorage.setItem('homeprohub_user_role', user.role);
+          localStorage.setItem('homeprohub_user', JSON.stringify({
+            email: email,
+            name: user.name,
+            role: user.role
+          }));
+
+          // Redirect based on role
+          if (user.role === 'contractor') {
+            window.location.href = 'contractor-dashboard.html';
+          } else {
+            window.location.href = 'homeowner-dashboard.html';
+          }
+        } else {
+          alert('Invalid email or password. Please try signing up if you don\'t have an account.');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed. Please try again.');
+      }
+    }
+
+    // Handle Signup
+    async function handleSignup(event) {
+      event.preventDefault();
+
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const name = document.getElementById('signupName').value;
+      const role = document.getElementById('signupRole').value;
+
+      if (!role) {
+        alert('Please select whether you are a homeowner or contractor');
+        return;
+      }
+
+      try {
+        // Store user in localStorage (mock database)
+        const users = JSON.parse(localStorage.getItem('homeprohub_users') || '{}');
+
+        if (users[email]) {
+          alert('An account with this email already exists. Please sign in instead.');
+          return;
+        }
+
+        users[email] = {
+          email,
+          password,
+          name,
+          role,
+          createdAt: new Date().toISOString()
+        };
+
+        localStorage.setItem('homeprohub_users', JSON.stringify(users));
+
+        // Set auth tokens
+        localStorage.setItem('homeprohub_username', email);
+        localStorage.setItem('homeprohub_auth_token', 'token_' + Date.now());
+        localStorage.setItem('homeprohub_user_role', role);
+        localStorage.setItem('homeprohub_user', JSON.stringify({
+          email: email,
+          name: name,
+          role: role
+        }));
+
+        // Redirect based on role
+        if (role === 'contractor') {
+          window.location.href = 'contractor-dashboard.html';
+        } else {
+          window.location.href = 'homeowner-dashboard.html';
+        }
+      } catch (error) {
+        console.error('Signup error:', error);
+        alert('Signup failed. Please try again.');
+      }
+    }
+
+    // Close modal on outside click
+    document.getElementById('authModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeAuthModal();
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeAuthModal();
+      }
+    });
   </script>
 </body>
 </html>
