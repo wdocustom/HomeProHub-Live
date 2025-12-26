@@ -2,6 +2,7 @@
   <meta charset="UTF-8" />
   <title>HomeProHub – Home Issue Assistant</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
   <style>
     .hero {
       max-width: 900px;
@@ -96,21 +97,10 @@
       font-size: 13px;
       resize: vertical;
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">HH</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Dashboard</a>
-      <a href="ask.html">Assistant</a>
-      <div class="profile-area">
-        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div></header><main>
+  </style></head><body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <main>
   <section class="hero">
     <div class="hero-kicker">Home issue assistant</div>
     <h1 class="hero-title">Describe what’s going on at home.</h1>
@@ -327,21 +317,6 @@
       return null;
     }
   }
-
-  // Auth: Logout
-  function logout() {
-    try {
-      localStorage.removeItem("homeprohub_username");
-      localStorage.removeItem("homeprohub_auth_token");
-      localStorage.removeItem("homeprohub_user_role");
-      localStorage.removeItem("homeprohub_profile_complete");
-      localStorage.removeItem("homeprohub_history_v1");
-    } catch (e) {
-      // Silent error
-    }
-    window.location.href = "index.html";
-  }
-  window.logout = logout;
 
   // Auth check
   const user = getUserData();
@@ -750,3 +725,8 @@
 
 })();
 </script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
+</body>
+</html>
