@@ -972,6 +972,35 @@
 
       document.getElementById('bidModalJobTitle').textContent = currentJob.title;
 
+      // Check for attached estimate from pricing estimator
+      const attachedEstimateKey = 'attachedEstimate_' + jobId;
+      const attachedEstimate = sessionStorage.getItem(attachedEstimateKey);
+
+      if (attachedEstimate) {
+        try {
+          const estimate = JSON.parse(attachedEstimate);
+          // Pre-populate bid amounts from estimate
+          document.getElementById('bidLow').value = Math.round(estimate.total_low || estimate.subtotal_low || 0);
+          document.getElementById('bidHigh').value = Math.round(estimate.total_high || estimate.subtotal_high || 0);
+
+          // Add visual indicator that estimate is attached
+          const bidMessage = document.getElementById('bidMessage');
+          if (bidMessage && estimate.project_title) {
+            bidMessage.value = `Professional estimate attached: ${estimate.project_title}\n\nDetailed breakdown included with this bid.`;
+          }
+
+          // Store estimate data for submission
+          window.currentEstimateData = estimate;
+
+          console.log('✓ Estimate pre-loaded into bid form', estimate);
+        } catch (err) {
+          console.error('Error loading attached estimate:', err);
+        }
+      } else {
+        // Clear any previous estimate data
+        window.currentEstimateData = null;
+      }
+
       // Show homeowner grade if available
       const homeownerGrade = getHomeownerGrade(currentJob.homeowner);
       const gradeInfo = document.getElementById('homeownerGradeInfo');
@@ -1029,7 +1058,7 @@
     let currentDetailsJob = null;
 
     function viewJobDetails(jobId) {
-      const job = allJobs.find(j => j.id === jobId);
+      const job = availableJobs.find(j => j.id === jobId);
       if (!job) {
         alert('Job not found');
         return;
@@ -1244,6 +1273,12 @@
         message: document.getElementById('bidMessage').value.trim()
       };
 
+      // Include estimate data if available
+      if (window.currentEstimateData) {
+        bidData.estimate = window.currentEstimateData;
+        console.log('✓ Including estimate with bid submission');
+      }
+
       const submitBtn = document.getElementById('submitBidBtn');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting...';
@@ -1258,6 +1293,12 @@
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.error || 'Failed to submit bid');
+        }
+
+        // Clear attached estimate from sessionStorage after successful submission
+        if (window.currentEstimateData) {
+          sessionStorage.removeItem('attachedEstimate_' + currentJob.id);
+          window.currentEstimateData = null;
         }
 
         alert('Bid submitted successfully! The homeowner has been notified.');

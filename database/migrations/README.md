@@ -1,6 +1,29 @@
 # Database Migrations
 
-## License Verification Fields Migration
+## 1. Estimate Fields for Bids Migration (Latest)
+
+### What This Does
+Adds fields to the `contractor_bids` table to support attaching professional AI-generated estimates to bids.
+
+### Fields Added
+- `has_estimate` - Boolean flag indicating if bid includes an estimate
+- `estimate` - JSONB field storing full estimate data (line items, costs, breakdown)
+
+### SQL to Run
+
+```sql
+-- Add estimate fields to contractor_bids table
+ALTER TABLE contractor_bids
+ADD COLUMN IF NOT EXISTS has_estimate BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS estimate JSONB;
+
+-- Create index for performance
+CREATE INDEX IF NOT EXISTS idx_contractor_bids_has_estimate ON contractor_bids(has_estimate) WHERE has_estimate = TRUE;
+```
+
+---
+
+## 2. License Verification Fields Migration
 
 ### What This Does
 Adds the necessary columns to the `user_profiles` table to support the email-based license verification workflow.

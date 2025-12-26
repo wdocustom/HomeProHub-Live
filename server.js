@@ -1740,7 +1740,8 @@ app.post("/api/submit-bid", async (req, res) => {
       bidAmountHigh,
       estimatedDuration,
       startAvailability,
-      message
+      message,
+      estimate
     } = req.body;
 
     // Validation
@@ -1762,12 +1763,21 @@ app.post("/api/submit-bid", async (req, res) => {
       });
     }
 
+    // Determine contractor display name with proper fallback
+    let contractorName = contractorProfile.business_name || contractorProfile.company_name;
+    if (!contractorName && (contractorProfile.first_name || contractorProfile.last_name)) {
+      contractorName = `${contractorProfile.first_name || ''} ${contractorProfile.last_name || ''}`.trim();
+    }
+    if (!contractorName) {
+      contractorName = contractorEmail.split('@')[0];
+    }
+
     // Create bid
     const bidData = {
       job_id: jobId,
       contractor_email: contractorEmail,
       contractor_id: contractorProfile.id,
-      contractor_business_name: contractorProfile.business_name || contractorProfile.company_name,
+      contractor_business_name: contractorName,
       bid_amount_low: bidAmountLow,
       bid_amount_high: bidAmountHigh,
       estimated_duration: estimatedDuration,
@@ -1775,6 +1785,13 @@ app.post("/api/submit-bid", async (req, res) => {
       message: message,
       status: 'pending'
     };
+
+    // Include estimate data if provided
+    if (estimate) {
+      bidData.estimate = estimate;
+      bidData.has_estimate = true;
+      console.log('✓ Estimate data included with bid submission');
+    }
 
     const bid = await db.submitBid(bidData);
 
