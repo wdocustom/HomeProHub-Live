@@ -6,6 +6,7 @@
   <title>Homeowner Dashboard – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
+  <link rel="stylesheet" href="components/license-badge.css" />
   <style>
     .dashboard-container {
       max-width: 1400px;
@@ -788,18 +789,21 @@
       const isPending = bid.status === 'pending';
       const contractorGrade = getContractorGrade(bid.contractor);
 
+      // Generate license badge for contractor
+      const licenseBadge = bid.contractor ? generateLicenseBadge(bid.contractor, { size: 'compact', showGetLicensed: false }) : '';
+
       return `
         <div class="bid-card ${isAccepted ? 'accepted' : ''}">
           <div class="bid-header">
-            <div style="display: flex; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
               <div class="contractor-name">${escapeHtml(bid.contractor?.business_name || bid.contractor_business_name || 'Contractor')}</div>
               <span class="grade-badge grade-${contractorGrade}" title="Contractor Grade: ${contractorGrade}">${contractorGrade}</span>
+              ${licenseBadge}
             </div>
             <div class="bid-amount">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</div>
           </div>
 
           <div class="bid-details">
-            ${bid.contractor?.license_number ? `📜 License: ${escapeHtml(bid.contractor.license_number)} • ` : ''}
             ${bid.contractor?.years_in_business ? `⏱️ ${bid.contractor.years_in_business} years in business • ` : ''}
             ${bid.estimated_duration ? `📅 Duration: ${escapeHtml(bid.estimated_duration)}` : ''}
           </div>
@@ -1099,6 +1103,9 @@
       setTimeout(() => openJobModal(), 500);
     }
   </script>
+
+  <!-- License Badge Component -->
+  <script src="components/license-badge.js"></script>
 
   <!-- Unified Navigation Component -->
   <script src="components/navigation.js"></script>
