@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HomeProHub – Job Pricing & Estimator</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components/navigation.css">
   <style>
     .estimator-container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
     .header-card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -14,21 +15,7 @@
   </style>
 </head>
 <body>
-<header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="contractor.html">Dashboard</a>
-      <a href="contractor-profile.html">Profile</a>
-      <div class="profile-area">
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div>
-</header>
+  <!-- Navigation component will be injected here by navigation.js -->
 
 <div class="estimator-container">
   <div class="header-card">
@@ -85,11 +72,6 @@ const STORAGE_KEYS = {
   USER_ROLE: 'homeprohub_user_role',
   CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
 };
-
-function logout() {
-  Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
-  window.location.href = 'index.html';
-}
 
 (function() {
   const form = document.getElementById('estimatorForm');
@@ -372,5 +354,8 @@ function logout() {
   if (!checkAuth()) return;
 })();
 </script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
 </body>
 </html>

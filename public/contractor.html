@@ -2,621 +2,572 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>HomeProHub – Contractor Tools</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Contractor Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
   <style>
-    /* Darker, more "pro" hero just for contractors */
-    .hero-contractor {
-      background: linear-gradient(to right, #020617, #0b1120, #111827);
+    /* Dark professional hero */
+    .contractor-hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
       color: #e5e7eb;
-      padding: 40px 24px;
-      margin-bottom: 32px;
+      padding: 48px 24px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .contractor-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
     }
     .hero-inner {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
-    }
-    .hero-kicker {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: #9ca3af;
-      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+      text-align: center;
     }
     .hero-title {
-      font-size: 30px;
+      font-size: 36px;
       font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       color: #f9fafb;
+      line-height: 1.2;
     }
     .hero-subtitle {
-      font-size: 14px;
+      font-size: 16px;
       line-height: 1.7;
-      color: #9ca3af;
-      max-width: 620px;
+      color: #cbd5e1;
+      max-width: 700px;
+      margin: 0 auto;
     }
 
-    /* Plan badges for contractors */
-    .tier-pill {
-      display: inline-block;
-      margin-left: 6px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      border: 1px solid #e5e7eb;
-      background: #f3f4f6;
-      color: #4b5563;
-      white-space: nowrap;
-    }
-    .tier-pill--starter {
-      border-color: #4ade80;
-      background: #ecfdf5;
-      color: #166534;
-    }
-    .tier-pill--pro {
-      border-color: #60a5fa;
-      background: #eff6ff;
-      color: #1d4ed8;
-    }
-    .tier-pill--elite {
-      border-color: #c4b5fd;
-      background: #f5f3ff;
-      color: #5b21b6;
-    }
-
-    .contractor-grid {
-      max-width: 900px;
-      margin: 0 auto 60px;
+    /* STAR FEATURE: Free AI Tools Section */
+    .free-tools-section {
+      max-width: 1100px;
+      margin: 0 auto 48px;
       padding: 0 24px;
-      display: grid;
-      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
-      gap: 20px;
     }
-
-    @media (max-width: 860px) {
-      .contractor-grid {
-        grid-template-columns: minmax(0, 1fr);
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) {
+      .tools-grid {
+        grid-template-columns: 1fr;
       }
     }
 
-    .clarify-label {
-      font-size: 12px;
-      color: #4b5563;
-      margin-top: 16px;
+    /* Pricing Estimator Card */
+    .estimator-card {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+      border-radius: 20px;
+      padding: 40px 36px;
+      color: white;
+      box-shadow: 0 20px 40px rgba(37, 99, 235, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .estimator-card::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: -15%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .tool-content {
+      position: relative;
+      z-index: 1;
+    }
+    .tool-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+      backdrop-filter: blur(10px);
+    }
+    .tool-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+      color: white;
+    }
+    .tool-description {
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+      opacity: 0.95;
+    }
+    .btn-tool {
+      display: inline-block;
+      padding: 12px 28px;
+      background: white;
+      color: #2563eb;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-tool:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    /* Takeoffs Card (NEW) */
+    .takeoffs-card {
+      background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+      border-radius: 20px;
+      padding: 40px 36px;
+      color: white;
+      box-shadow: 0 20px 40px rgba(16, 185, 129, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .takeoffs-card::before {
+      content: '';
+      position: absolute;
+      bottom: -40%;
+      right: -15%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .new-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+      backdrop-filter: blur(10px);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .btn-tool-white {
+      display: inline-block;
+      padding: 12px 28px;
+      background: white;
+      color: #10b981;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-tool-white:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    /* Job Board Section */
+    .job-board-section {
+      max-width: 1100px;
+      margin: 0 auto 48px;
+      padding: 0 24px;
+    }
+    .job-board-card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 2px solid #e5e7eb;
+      text-align: center;
+    }
+    .job-board-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .job-board-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+      color: #111827;
+    }
+    .job-board-description {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #6b7280;
+      max-width: 700px;
+      margin: 0 auto 28px;
+    }
+    .job-board-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .job-feature {
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+    }
+    .job-feature-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .job-feature-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
       margin-bottom: 4px;
     }
-    .clarify-box {
-      width: 100%;
-      min-height: 80px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      background: #f9fafb;
+    .job-feature-desc {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .btn-job-board {
+      display: inline-block;
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn-job-board:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Secondary Features */
+    .secondary-features {
+      max-width: 1100px;
+      margin: 0 auto 48px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .secondary-features {
+        grid-template-columns: 1fr;
+      }
+    }
+    .feature-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #e5e7eb;
+      transition: all 0.3s;
+    }
+    .feature-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+    }
+    .feature-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .feature-icon {
+      font-size: 32px;
+    }
+    .feature-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+      color: #111827;
+    }
+    .feature-description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      margin-bottom: 20px;
+    }
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px 0;
+    }
+    .feature-list li {
+      padding: 6px 0;
       font-size: 13px;
-      resize: vertical;
+      color: #4b5563;
+      display: flex;
+      align-items: start;
+      gap: 8px;
+    }
+    .feature-list li::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .btn-feature {
+      display: inline-block;
+      padding: 10px 24px;
+      background: #f3f4f6;
+      color: #374151;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid #d1d5db;
+    }
+    .btn-feature:hover {
+      background: #e5e7eb;
+      transform: translateY(-1px);
+    }
+
+    /* Pro tier badge */
+    .tier-pro {
+      display: inline-block;
+      padding: 3px 10px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid #60a5fa;
+      margin-left: 8px;
     }
   </style>
 </head>
 <body>
   <!-- Navigation component will be injected here by navigation.js -->
 
-<!-- Dark, pro-focused hero band -->
-<section class="hero-contractor">
-  <div class="hero-inner">
-    <div class="hero-kicker">For contractors & trades</div>
-    <h1 class="hero-title">Estimate better. Run tighter. Handle tougher jobs.</h1>
-    <p class="hero-subtitle">
-      Use HomeProHub as a second brain for bids, scope, field decisions, and building a real operation.
-      It’s built for GCs, remodelers, and trades who want fewer surprises and stronger numbers.
-    </p>
-  </div>
-</section>
-
-<main>
-  <!-- Two-column layout: features + contractor coach -->
-  <section class="contractor-grid">
-    <!-- Left card: features + tiers -->
-    <div class="card">
-      <h2 style="margin-top:0; margin-bottom:8px;">What you can do here</h2>
-      <p style="margin:0 0 10px; font-size:14px; color:#4b5563;">
-        Plans: <strong>Starter (Free)</strong>, <strong>Pro</strong>, <strong>Elite</strong>
+  <!-- Professional Hero Section -->
+  <section class="contractor-hero">
+    <div class="hero-inner">
+      <h1 class="hero-title">Your Professional Command Center</h1>
+      <p class="hero-subtitle">
+        Free AI-powered estimating, plan takeoffs, field support, and access to qualified leads.
+        Everything you need to estimate smarter, run tighter, and grow your business.
       </p>
-
-      <ul style="margin: 8px 0 6px 20px; padding: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
-        <li>
-          <a href="pricing-estimator.html" style="color: #2563eb; text-decoration: none;">
-            <strong>Price jobs with confidence:</strong>
-            Break work into clear scope, allowances, and exclusions so your numbers hold up.
-          </a>
-          <span class="tier-pill tier-pill--starter">Starter / Pro / Elite</span>
-        </li>
-        <li>
-          <a href="field-support.html" style="color: #2563eb; text-decoration: none;">
-            <strong>Field support on tough projects:</strong>
-            Ask trade-specific questions or diagnose issues with photos and a few details.
-          </a>
-          <span class="tier-pill tier-pill--starter">Starter / Pro / Elite</span>
-        </li>
-        <li>
-          <strong>Licensing & setup done right:</strong>
-          Help getting licensed in your jurisdiction, plus what you need after—insurance, bond, registrations.
-          <span class="tier-pill tier-pill--pro">Pro & Elite</span>
-        </li>
-        <li>
-          <strong>Build a real operation:</strong>
-          Guidance on branding, uniforms, logo, website, project management tools, and customer financing options.
-          <span class="tier-pill tier-pill--pro">Pro & Elite</span>
-        </li>
-        <li>
-          <a href="access-experts.html" style="color: #2563eb; text-decoration: none;">
-            <strong>Access to experts:</strong>
-            Tap into designers, architects, engineers, and 1-on-1 business coaching when jobs get complex.
-          </a>
-          <span class="tier-pill tier-pill--elite">Elite</span>
-        <li style="margin-top: 10px; border-top: 1px solid #e5e7eb; padding-top: 8px;">
-  <a href="homeowner-grading-directory.html"" style="color: #2563eb; text-decoration: none;">
-    <strong>Homeowner Grading Directory:</strong>
-    Filter job leads by homeowner communication, decision speed, and payment reliability grade.
-  </a>
-  <span class="tier-pill tier-pill--pro">Pro & Elite</span>
-</li>
-      </ul>
     </div>
+  </section>
 
-    <!-- Right card: Contractor Coach tool -->
-    <div class="card">
-      <h2 style="margin-top:0; margin-bottom:8px;">Contractor Coach</h2>
-      <p style="margin:0 0 12px; font-size:14px; color:#4b5563;">
-        Describe the job, client situation, or business problem you’re dealing with.
-        The coach responds like a seasoned GC or trade business mentor.
-      </p>
-      <p class="small-text" style="margin-top:0; margin-bottom:14px;">
-        Contractor Coach (AI) is available on all plans: <strong>Starter</strong>, <strong>Pro</strong>, and <strong>Elite</strong>.
-      </p>
+  <main>
+    <!-- ⭐ STAR FEATURES: Free AI Tools -->
+    <section class="free-tools-section">
+      <div class="tools-grid">
+        <!-- Pricing Estimator -->
+        <div class="estimator-card">
+          <div class="tool-content">
+            <div class="tool-badge">🎯 100% FREE</div>
+            <h2 class="tool-title">AI Pricing & Estimator</h2>
+            <p class="tool-description">
+              Generate professional estimates with AI. Break down labor, materials, and scope. Get region-specific pricing instantly. No guesswork, no surprises.
+            </p>
+            <a href="pricing-estimator.html" class="btn-tool">
+              💰 Price a Job Now
+            </a>
+          </div>
+        </div>
 
-      <label for="focus" style="font-size:12px; color:#4b5563;">What do you need help with?</label>
-      <select id="focus">
-        <option value="general">General contractor / project advice</option>
-        <option value="pricing">Pricing & estimating</option>
-        <option value="materials">Materials & methods</option>
-        <option value="licensing">Licensing, insurance & compliance</option>
-        <option value="client_comms">Client communication & expectations</option>
-        <option value="business">Business systems & profitability</option>
-      </select>
+        <!-- NEW: Takeoffs -->
+        <div class="takeoffs-card">
+          <div class="tool-content">
+            <div class="new-badge">✨ NEW FEATURE</div>
+            <h2 class="tool-title">Plan Takeoffs (AI-Powered)</h2>
+            <p class="tool-description">
+              Upload architectural plans and get instant AI-generated takeoffs. Material quantities, labor hours, and cost estimates—all automated.
+            </p>
+            <button class="btn-tool-white" onclick="handleTakeoffs()">
+              📐 Upload Plans
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-      <label for="zip" style="font-size:12px; color:#4b5563;">Job ZIP code (Required for estimate):</label>
-      <input id="zip" type="text" placeholder="e.g. 33602" required />
-      
-      <label for="scopeLevel" style="font-size:12px; color:#4b5563;">Material & Finish Level</label>
-      <select id="scopeLevel">
-        <option value="budget">Budget / Builder Grade</option>
-        <option value="mid">Mid-Range / Standard</option>
-        <option value="high">High-End / Custom</option>
-      </select>
+    <!-- Job Board Section (Prominent but not overwhelming) -->
+    <section class="job-board-section">
+      <div class="job-board-card">
+        <div class="job-board-icon">📋</div>
+        <h2 class="job-board-title">Browse Available Jobs</h2>
+        <p class="job-board-description">
+          Access qualified leads from homeowners ready to hire. Each job includes AI-generated diagnostic reports, photos, and project details to help you bid accurately.
+        </p>
 
-      <label for="size" style="font-size:12px; color:#4b5563; margin-top:8px;">Project Size/Units (e.g., 200 sq ft, 5x8 bath)</label>
-      <input id="size" type="text" placeholder="e.g. 150 sq ft of tiling, or 6x10 kitchen" />
+        <div class="job-board-features">
+          <div class="job-feature">
+            <div class="job-feature-icon">🎯</div>
+            <div class="job-feature-title">Pre-Qualified Leads</div>
+            <div class="job-feature-desc">Real homeowners with real budgets</div>
+          </div>
+          <div class="job-feature">
+            <div class="job-feature-icon">📸</div>
+            <div class="job-feature-title">AI Diagnostics Included</div>
+            <div class="job-feature-desc">Understand the scope before bidding</div>
+          </div>
+          <div class="job-feature">
+            <div class="job-feature-icon">💬</div>
+            <div class="job-feature-title">Direct Communication</div>
+            <div class="job-feature-desc">Message homeowners instantly</div>
+          </div>
+        </div>
 
-      <label for="question" style="font-size:12px; color:#4b5563;">Describe the situation (What exactly needs to be done?):</label>
-      <textarea
-        id="question"
-        placeholder="Example: Full master bath remodel. Client wants custom glass shower enclosure, heated floors, and mid-range tile."
-      ></textarea>
+        <a href="contractor-dashboard.html" class="btn-job-board">
+          View Job Board →
+        </a>
+      </div>
+    </section>
 
-      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <button id="askBtn" class="btn-primary">🧰 Ask Coach</button>
-        <div id="status" class="status"></div>
+    <!-- Secondary Features -->
+    <section class="secondary-features">
+      <!-- Field Support -->
+      <div class="feature-card">
+        <div class="feature-header">
+          <span class="feature-icon">🔧</span>
+          <h3 class="feature-title">Field Support</h3>
+        </div>
+        <p class="feature-description">
+          Stuck on a job site? Get instant AI-powered answers for trade-specific questions, diagnose issues with photos, and access expert guidance when you need it most.
+        </p>
+        <ul class="feature-list">
+          <li>Photo-based diagnostics</li>
+          <li>Code & compliance help</li>
+          <li>Material recommendations</li>
+          <li>Troubleshooting support</li>
+        </ul>
+        <a href="field-support.html" class="btn-feature">
+          Get Field Help
+        </a>
+        <span class="tier-pro">FREE</span>
       </div>
 
-      <div id="answer" class="answer-box"></div>
+      <!-- Homeowner Grading Directory -->
+      <div class="feature-card">
+        <div class="feature-header">
+          <span class="feature-icon">📊</span>
+          <h3 class="feature-title">Homeowner Directory</h3>
+        </div>
+        <p class="feature-description">
+          Research clients before bidding. Filter leads by homeowner grade—communication quality, decision speed, and payment reliability. Work with better clients.
+        </p>
+        <ul class="feature-list">
+          <li>A-F homeowner ratings</li>
+          <li>Communication & payment history</li>
+          <li>Project completion rates</li>
+          <li>Search beyond job postings</li>
+        </ul>
+        <a href="homeowner-grading-directory.html" class="btn-feature">
+          Search Homeowners
+        </a>
+        <span class="tier-pro">PRO</span>
+      </div>
+    </section>
 
-    </div>
-  </section>
+  </main>
 
-  <!-- Job Board Section (Secondary Feature) -->
-  <section style="max-width: 900px; margin: 20px auto 60px; padding: 0 24px;">
-    <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
-      <h2 style="margin-top:0; margin-bottom:12px; color: white;">Browse Available Jobs</h2>
-      <p style="margin:0 0 16px; font-size:14px; opacity: 0.95;">
-        View job postings from homeowners in your area. Review AI-generated diagnostic reports, submit competitive bids, and grow your business with qualified leads.
-      </p>
-      <a href="contractor-dashboard.html" class="btn-primary" style="background: white; color: #10b981; font-size:14px; padding: 10px 20px; display: inline-block; text-decoration: none;">View Job Board</a>
-    </div>
-  </section>
+  <script>
+  (function() {
+    'use strict';
 
-</main>
+    // Standardized localStorage keys
+    const STORAGE_KEYS = {
+      USERNAME: 'homeprohub_username',
+      AUTH_TOKEN: 'homeprohub_auth_token',
+      USER_ROLE: 'homeprohub_user_role',
+      CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
+    };
 
-<script>
-(function() {
-  'use strict';
-
-  // DOM elements
-  const askButton = document.getElementById("askBtn");
-  const textarea = document.getElementById("question");
-  const statusText = document.getElementById("status");
-  const answerBox = document.getElementById("answer");
-  const focusSelect = document.getElementById("focus");
-  const zipInput = document.getElementById("zip");
-  const scopeLevelSelect = document.getElementById("scopeLevel");
-  const sizeInput = document.getElementById("size");
-
-  // Constants
-  const MAX_QUESTION_LENGTH = 5000;
-  const ZIP_CODE_REGEX = /^\d{5}$/;
-
-  // State
-  let lastQuestion = null;
-  let lastFocus = null;
-  let lastZip = null;
-  let lastEstimateData = null;
-  let profile = null;
-
-  // Utility: Sanitize user input
-  function sanitizeInput(input) {
-    if (!input || typeof input !== 'string') return '';
-    return input.trim().slice(0, MAX_QUESTION_LENGTH);
-  }
-
-  // Utility: Validate ZIP code
-  function validateZipCode(zip) {
-    return ZIP_CODE_REGEX.test(zip);
-  }
-
-  // Auth: Get profile data
-  function getProfileData(runRedirect = true) {
-    try {
-      const username = localStorage.getItem('homeprohub_username');
-      const token = localStorage.getItem('homeprohub_auth_token');
-      const rawRole = localStorage.getItem("homeprohub_user_role");
-      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
-
-      if (!username || !token || rawRole !== 'contractor') {
-        if (runRedirect) window.location.href = "index.html";
-        return null;
-      }
-
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
-
-      if (!profile.profileComplete) {
-        if (runRedirect) window.location.href = "contractor-profile.html";
-        return null;
-      }
-
-      return {
-        ...profile,
-        username: username,
-        token: token,
-        role: rawRole,
-        name: profile.companyName || username.split('@')[0]
-      };
-
-    } catch (e) {
-      if (runRedirect) window.location.href = "index.html";
-      return null;
-    }
-  }
-
-  // Auth: Logout
-  function logout() {
-    try {
-      localStorage.removeItem("homeprohub_username");
-      localStorage.removeItem("homeprohub_auth_token");
-      localStorage.removeItem("homeprohub_user_role");
-      localStorage.removeItem("homeprohub_contractor_profile");
-      localStorage.removeItem("homeprohub_profile_complete");
-      localStorage.removeItem("homeprohub_history_v1");
-    } catch (e) {
-      // Silent error
-    }
-    window.location.href = "index.html";
-  }
-  window.logout = logout;
-
-  // Initialize profile
-  profile = getProfileData();
-
-  // PDF: Generate estimate
-  function generatePdfEstimate(data) {
-    try {
-      if (!data || !data.line_items) {
-        throw new Error('Invalid estimate data');
-      }
-
-      const printWindow = window.open('', '', 'height=800,width=800');
-      if (!printWindow) {
-        throw new Error('Could not open print window. Please allow pop-ups.');
-      }
-
-      const contractorName = profile && profile.companyName ? profile.companyName : 'HomeProHub Contractor';
-      const contractorLicense = profile && profile.license ? profile.license : 'N/A';
-      const contractorZip = profile && profile.zipCode ? profile.zipCode : 'N/A';
-
-      const lineItemsHtml = data.line_items.map(item => {
-        const itemName = sanitizeInput(item.item || 'Unknown Item');
-        const lowPrice = typeof item.low === 'number' ? item.low : 0;
-        const highPrice = typeof item.high === 'number' ? item.high : 0;
-        const notes = sanitizeInput(item.notes || '-');
-
-        return `
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">${itemName}</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">$${lowPrice.toLocaleString()} - $${highPrice.toLocaleString()}</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${notes}</td>
-          </tr>
-        `;
-      }).join('');
-
-      const disclaimersHtml = (data.disclaimers || []).map(d => `<li>${sanitizeInput(d)}</li>`).join('');
-
-      const templateHtml = `
-        <html>
-          <head>
-            <title>${sanitizeInput(data.project_title || 'Project Estimate')}</title>
-            <style>
-              body { font-family: sans-serif; padding: 20px; color: #1f2937; }
-              h1 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-              .header-info { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 20px; }
-              .table-container { width: 100%; border-collapse: collapse; margin-top: 15px; }
-              .table-container th { background-color: #f3f4f6; text-align: left; padding: 10px; border: 1px solid #ddd; }
-              .total-row { font-weight: bold; background-color: #e5e7eb; }
-            </style>
-          </head>
-          <body>
-            <div class="header-info">
-              <div>
-                <strong>Contractor:</strong> ${contractorName}<br>
-                <strong>License:</strong> ${contractorLicense}<br>
-                <strong>Service Area:</strong> ${contractorZip}
-              </div>
-              <div>
-                <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
-                <strong>Estimate ID:</strong> HPH-${Math.floor(Math.random() * 90000) + 10000}
-              </div>
-            </div>
-            <h1>Estimate: ${sanitizeInput(data.project_title || 'Project Estimate')}</h1>
-
-            <h3>Line Item Breakdown (Rough Estimate)</h3>
-            <table class="table-container">
-              <thead>
-                <tr>
-                  <th style="width: 40%;">Item / Service</th>
-                  <th style="width: 30%;">Low - High Range</th>
-                  <th style="width: 30%;">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${lineItemsHtml}
-                <tr><td colspan="3" style="height: 10px;"></td></tr>
-                <tr class="total-row"><td colspan="2" style="text-align: right; padding: 8px;">Subtotal (Labor & Materials)</td><td style="padding: 8px;">$${(data.subtotal_low || 0).toLocaleString()} - $${(data.subtotal_high || 0).toLocaleString()}</td></tr>
-                <tr><td colspan="2" style="text-align: right; padding: 5px;">Overhead & Profit (${data.overhead_profit_percent || 0}%)</td><td style="padding: 5px;"></td></tr>
-                <tr><td colspan="2" style="text-align: right; padding: 5px;">Contingency (${data.contingency_percent || 0}%)</td><td style="padding: 5px;"></td></tr>
-                <tr><td colspan="3" style="height: 10px;"></td></tr>
-                <tr class="total-row" style="background-color: #bfdbfe;"><td colspan="2" style="text-align: right; padding: 8px;">TOTAL ESTIMATE RANGE</td><td style="padding: 8px;">$${(data.total_projected_low || 0).toLocaleString()} - $${(data.total_projected_high || 0).toLocaleString()}</td></tr>
-              </tbody>
-            </table>
-
-            <h3 style="margin-top: 30px;">Disclaimers</h3>
-            <ul style="font-size: 12px; color: #4b5563;">
-              ${disclaimersHtml}
-              <li>This document is a computer-generated budget estimate, not a binding quote.</li>
-            </ul>
-          </body>
-        </html>
-      `;
-
-      printWindow.document.write(templateHtml);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-    } catch (e) {
-      alert(e.message || 'Failed to generate PDF estimate');
-    }
-  }
-
-  // Email: Send estimate
-  function emailEstimate(data) {
-    try {
-      if (!data || !data.project_title) {
-        throw new Error('Invalid estimate data');
-      }
-
-      const contractorName = profile && profile.companyName ? profile.companyName : 'HomeProHub Contractor';
-      const subject = `Rough Estimate: ${sanitizeInput(data.project_title || 'Your Project')}`;
-      const body = `
-Dear Customer,
-
-Project: ${sanitizeInput(data.project_title)}
-Total Estimated Range: $${(data.total_projected_low || 0).toLocaleString()} - $${(data.total_projected_high || 0).toLocaleString()}
----
-
-Please note that this is a non-binding ballpark figure created for initial budgeting. A formal, binding quote will require a site visit to assess all existing conditions and final material selections.
-
-We look forward to speaking with you!
-
-Best regards,
-${contractorName}
-${profile && profile.license ? 'License: ' + profile.license : ''}
-`;
-
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    } catch (e) {
-      alert(e.message || 'Failed to create email');
-    }
-  }
-
-  // UI: Render estimate controls
-  function renderEstimateControls(data, isUpdate = false) {
-    try {
-      if (!data) return;
-
-      let controlsContainer = document.getElementById('pdfEmailControlsContainer');
-      if (!controlsContainer) {
-        controlsContainer = document.createElement('div');
-        controlsContainer.id = 'pdfEmailControlsContainer';
-        controlsContainer.style.cssText = 'margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
-
-        const mainAnswerBox = document.getElementById("answer");
-        if (mainAnswerBox && mainAnswerBox.parentNode) {
-          mainAnswerBox.parentNode.insertBefore(controlsContainer, mainAnswerBox.nextSibling);
-        } else {
-          return;
-        }
-      }
-
-      controlsContainer.innerHTML = '';
-
-      const pdfBtn = document.createElement('button');
-      pdfBtn.className = 'btn-primary';
-      pdfBtn.textContent = '📄 Download PDF Estimate';
-      pdfBtn.addEventListener('click', () => generatePdfEstimate(data));
-      controlsContainer.appendChild(pdfBtn);
-
-      const emailBtn = document.createElement('button');
-      emailBtn.className = 'btn-secondary';
-      emailBtn.textContent = '✉️ Email to Customer';
-      emailBtn.addEventListener('click', () => emailEstimate(data));
-      controlsContainer.appendChild(emailBtn);
-
-      lastEstimateData = data;
-
-      if (statusText) statusText.textContent = isUpdate ? 'Updated' : 'Done.';
-      if (askButton) askButton.textContent = 'Update';
-    } catch (e) {
-      // Silent error
-    }
-  }
-
-  // API: Ask contractor backend
-  async function askContractorBackend(question, focus, zip, scopeLevel, size) {
-    const sanitizedQuestion = sanitizeInput(question);
-
-    if (!sanitizedQuestion) {
-      throw new Error('Question cannot be empty');
-    }
-
-    if (!profile || !profile.token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch("/contractor-ask", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${profile.token}`
-      },
-      body: JSON.stringify({
-        question: sanitizedQuestion,
-        focus: focus || 'general',
-        zip: zip || '',
-        scopeLevel: scopeLevel || 'mid',
-        size: size || ''
-      })
-    });
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || `Request failed (${response.status})`);
-    }
-
-    const data = await response.json();
-    return data;
-  }
-
-  // Main ask handler
-  if (askButton) {
-    askButton.addEventListener("click", async () => {
-      if (!profile) {
-        window.location.href = "contractor-profile.html";
-        return;
-      }
-
-      const scopeLevel = scopeLevelSelect ? scopeLevelSelect.value : 'mid';
-      const size = sizeInput ? sizeInput.value.trim() : '';
-      const q = textarea ? textarea.value.trim() : '';
-      const focus = focusSelect ? focusSelect.value : 'general';
-      const zip = zipInput ? zipInput.value.trim() : '';
-
-      if (!q) {
-        if (answerBox) answerBox.textContent = "Please describe your situation first.";
-        return;
-      }
-
-      if (q.length > MAX_QUESTION_LENGTH) {
-        if (answerBox) answerBox.textContent = `Question is too long. Maximum ${MAX_QUESTION_LENGTH} characters.`;
-        return;
-      }
-
-      if (focus === 'pricing' && !validateZipCode(zip)) {
-        if (answerBox) answerBox.textContent = "Valid 5-digit ZIP code is required for pricing estimates.";
-        return;
-      }
-
-      // Disable inputs
-      askButton.disabled = true;
-      if (textarea) textarea.disabled = true;
-      if (focusSelect) focusSelect.disabled = true;
-      if (zipInput) zipInput.disabled = true;
-      if (scopeLevelSelect) scopeLevelSelect.disabled = true;
-      if (sizeInput) sizeInput.disabled = true;
-
-      if (statusText) statusText.textContent = "Processing your request...";
-      if (answerBox) answerBox.textContent = "";
-
+    // Get profile data
+    function getProfileData() {
       try {
-        const response = await askContractorBackend(q, focus, zip, scopeLevel, size);
+        const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
+        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+        const rawRole = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+        const rawProfile = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
 
-        if (response.format === 'json' && focus === 'pricing') {
-          if (answerBox) {
-            answerBox.textContent = "✅ Estimate Generated! (See Controls Below)";
-            answerBox.style.whiteSpace = 'normal';
-          }
-          renderEstimateControls(response.answer, false);
-
-          lastQuestion = q;
-          lastFocus = focus;
-          lastZip = zip;
-
-        } else {
-          if (answerBox) answerBox.textContent = response.answer || 'No response received.';
-
-          const controlsContainer = document.getElementById('pdfEmailControlsContainer');
-          if (controlsContainer) controlsContainer.innerHTML = '';
-
-          lastQuestion = q;
-          lastFocus = focus;
-          lastZip = zip;
+        if (!username || !token || rawRole !== 'contractor') {
+          return null;
         }
 
-        if (statusText) statusText.textContent = 'Done.';
-        if (askButton) askButton.textContent = 'Ask Again';
+        const profile = rawProfile ? JSON.parse(rawProfile) : {};
 
-      } catch (err) {
-        if (answerBox) {
-          answerBox.textContent = err.message || "Unable to process your request. Please try again.";
-        }
-        if (statusText) statusText.textContent = "";
-
-        const controlsContainer = document.getElementById('pdfEmailControlsContainer');
-        if (controlsContainer) controlsContainer.innerHTML = '';
-
-        if (askButton) askButton.textContent = 'Ask Coach';
-      } finally {
-        askButton.disabled = false;
-        if (textarea) textarea.disabled = false;
-        if (focusSelect) focusSelect.disabled = false;
-        if (zipInput) zipInput.disabled = false;
-        if (scopeLevelSelect) scopeLevelSelect.disabled = false;
-        if (sizeInput) sizeInput.disabled = false;
+        return {
+          ...profile,
+          username: username,
+          token: token,
+          role: rawRole,
+          name: profile.companyName || username.split('@')[0]
+        };
+      } catch (e) {
+        return null;
       }
-    });
-  }
+    }
 
-})();
-</script>
+    // Clear all data
+    function clearAllData() {
+      Object.values(STORAGE_KEYS).forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          // Silent fail
+        }
+      });
+    }
 
-<!-- Unified Navigation Component -->
-<script src="components/navigation.js"></script>
+    // Initialize the page
+    function initialize() {
+      const profile = getProfileData();
+
+      if (!profile) {
+        clearAllData();
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Check if profile is complete
+      if (!profile.profileComplete) {
+        window.location.href = 'contractor-profile.html';
+        return;
+      }
+    }
+
+    // Handle Takeoffs feature (NEW)
+    window.handleTakeoffs = function() {
+      // For now, redirect to pricing estimator with a note
+      // In future, this could be a dedicated takeoffs page
+      alert('🎉 Plan Takeoffs Feature Coming Soon!\n\nUpload your architectural plans and our AI will automatically:\n\n✓ Calculate material quantities\n✓ Estimate labor hours\n✓ Generate detailed cost breakdowns\n\nFor now, use the Pricing Estimator for manual job estimates.');
+      window.location.href = 'pricing-estimator.html';
+    };
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+      initialize();
+    }
+  })();
+  </script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
 </body>
 </html>

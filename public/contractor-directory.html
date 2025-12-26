@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>HomeProHub – Contractor Directory</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
   <style>
     /* Styling for the Contractor List */
     .hero {
@@ -108,23 +109,7 @@
   </style>
 </head>
 <body>
-
-<header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">HH</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Dashboard</a>
-      <a href="ask.html">Assistant</a>
-      <div class="profile-area">
-        <a href="user-profile.html" class="profile-link">Profile</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div>
-</header>
+  <!-- Navigation component will be injected here by navigation.js -->
 
 <main>
   <section class="hero">
@@ -215,22 +200,6 @@
 (function() {
   'use strict';
 
-  // Auth: Logout
-  function logout() {
-    try {
-      localStorage.removeItem("homeprohub_username");
-      localStorage.removeItem("homeprohub_auth_token");
-      localStorage.removeItem("homeprohub_user_role");
-      localStorage.removeItem("homeprohub_contractor_profile");
-      localStorage.removeItem("homeprohub_profile_complete");
-      localStorage.removeItem("homeprohub_history_v1");
-    } catch (e) {
-      // Silent error
-    }
-    window.location.href = "index.html";
-  }
-  window.logout = logout;
-
   // Auth check
   function getUserData() {
     try {
@@ -255,14 +224,12 @@
   const user = getUserData();
   if (!user) {
     window.location.href = "index.html";
-  } else {
-    const profileLink = document.querySelector('.profile-link');
-    if (profileLink) {
-      profileLink.textContent = user.name;
-    }
   }
 
 })();
 </script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
 </body>
 </html>
