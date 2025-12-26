@@ -16,7 +16,7 @@
   const NAV_CONFIG = {
     homeowner: [
       { label: 'Home', href: 'home.html', icon: '🏠' },
-      { label: 'AI Assistant', href: 'ask.html', icon: '🤖' },
+      { label: 'AI Assistant', href: 'home.html', icon: '🤖' },
       { label: 'Post a Job', href: 'homeowner-dashboard.html', icon: '➕' },
       { label: 'Messages', href: 'messages.html', icon: '💬', badge: 'messages' }
     ],

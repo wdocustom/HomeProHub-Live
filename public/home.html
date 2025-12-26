@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
   <style>
-    /* Modern hero section */
+    /* Welcome section */
     .welcome-hero {
       max-width: 1100px;
       margin: 48px auto 40px;
@@ -133,9 +133,13 @@
       transition: all 0.2s;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    .btn-ai-primary:hover {
+    .btn-ai-primary:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .btn-ai-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
     .btn-ai-secondary {
       padding: 14px 28px;
@@ -153,11 +157,120 @@
       background: rgba(255,255,255,0.3);
       border-color: rgba(255,255,255,0.6);
     }
+    .photo-input {
+      display: none;
+    }
     .ai-free-tag {
       text-align: center;
       margin-top: 16px;
       font-size: 13px;
       opacity: 0.9;
+    }
+    .status-message {
+      margin-top: 12px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    /* AI Response Area */
+    .ai-response-section {
+      max-width: 1100px;
+      margin: 0 auto 48px;
+      padding: 0 24px;
+      display: none;
+    }
+    .ai-response-section.show {
+      display: block;
+    }
+    .ai-response-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      border-left: 4px solid #10b981;
+    }
+    .response-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .response-icon {
+      font-size: 32px;
+    }
+    .response-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 0;
+    }
+    .response-content {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #374151;
+      white-space: pre-wrap;
+    }
+
+    /* Clarify Section */
+    .clarify-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 2px solid #e5e7eb;
+    }
+    .clarify-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .clarify-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 2px solid #d1d5db;
+      background: #f9fafb;
+      font-size: 14px;
+      resize: vertical;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .clarify-textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: white;
+    }
+    .clarify-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    /* Job Post CTA */
+    .job-post-cta {
+      margin-top: 24px;
+      padding: 24px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-radius: 12px;
+      border: 2px solid #bae6fd;
+      text-align: center;
+      display: none;
+    }
+    .job-post-cta.show {
+      display: block;
+    }
+    .job-post-cta h3 {
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      color: #1e40af;
+    }
+    .job-post-cta p {
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      color: #1e3a8a;
     }
 
     /* Two-column grid for secondary features */
@@ -410,17 +523,58 @@
           ></textarea>
 
           <div class="ai-actions">
-            <button class="btn-ai-primary" onclick="handleAIAssistant()">
+            <button class="btn-ai-primary" id="askAiBtn">
               🤖 Get AI Help Now
             </button>
-            <button class="btn-ai-secondary" onclick="handleUploadPhoto()">
+            <label for="photoInput" class="btn-ai-secondary" style="cursor: pointer; display: inline-block; line-height: 1;">
               📸 Upload a Photo
-            </button>
+            </label>
+            <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" />
           </div>
+
+          <div class="status-message" id="aiStatus"></div>
 
           <div class="ai-free-tag">
             <strong>100% Free</strong> — Available on all plans. No credit card needed.
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Response Section (Hidden until response) -->
+    <section class="ai-response-section" id="aiResponseSection">
+      <div class="ai-response-card">
+        <div class="response-header">
+          <span class="response-icon">✅</span>
+          <h3 class="response-title">AI Analysis</h3>
+        </div>
+        <div class="response-content" id="aiResponseContent"></div>
+
+        <!-- Clarify Section -->
+        <div class="clarify-section">
+          <label class="clarify-label">
+            Need to clarify or add something? Provide more details for an updated analysis:
+          </label>
+          <textarea
+            class="clarify-textarea"
+            id="clarifyInput"
+            placeholder="Example: The house was built in 2005, this only happens after long showers..."
+          ></textarea>
+          <div class="clarify-actions">
+            <button class="btn-card btn-card-primary" id="clarifyBtn">
+              🔁 Update Analysis
+            </button>
+            <div class="status-message" id="clarifyStatus"></div>
+          </div>
+        </div>
+
+        <!-- Job Post CTA -->
+        <div class="job-post-cta" id="jobPostCta">
+          <h3>✅ Ready to Hire a Pro?</h3>
+          <p>Convert this AI diagnosis into a job posting. Get competitive bids from verified contractors in your area.</p>
+          <button class="btn-card btn-card-primary" id="postJobBtn">
+            Post This Project & Get Bids
+          </button>
         </div>
       </div>
     </section>
@@ -507,86 +661,8 @@
 
   </main>
 
-  <script>
-  (function() {
-    'use strict';
-
-    // Standardized localStorage keys
-    const STORAGE_KEYS = {
-      USER_PROFILE: 'homeprohub_user',
-      USER_ROLE: 'homeprohub_user_role',
-      AUTH_TOKEN: 'homeprohub_auth_token',
-      USERNAME: 'homeprohub_username'
-    };
-
-    // Get user data from localStorage
-    function getUserData() {
-      try {
-        const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
-        const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-        const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
-
-        if (!role || !authToken) {
-          return null;
-        }
-
-        const profile = rawProfile ? JSON.parse(rawProfile) : {};
-
-        return {
-          role: role,
-          name: profile.name || 'User',
-          email: profile.email || ''
-        };
-      } catch (e) {
-        return null;
-      }
-    }
-
-    // Clear all user data from localStorage
-    function clearAllData() {
-      Object.values(STORAGE_KEYS).forEach(key => {
-        try {
-          localStorage.removeItem(key);
-        } catch (e) {
-          // Silent fail
-        }
-      });
-    }
-
-    // Initialize the page
-    function initialize() {
-      const user = getUserData();
-
-      if (!user || user.role !== 'homeowner') {
-        clearAllData();
-        window.location.href = 'index.html';
-        return;
-      }
-    }
-
-    // Handle AI Assistant button click
-    window.handleAIAssistant = function() {
-      const input = document.getElementById('homeIssueInput');
-      if (input && input.value.trim()) {
-        // Store the question for the ask.html page
-        sessionStorage.setItem('pendingQuestion', input.value.trim());
-      }
-      window.location.href = 'ask.html';
-    };
-
-    // Handle photo upload
-    window.handleUploadPhoto = function() {
-      window.location.href = 'ask.html?action=upload';
-    };
-
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initialize);
-    } else {
-      initialize();
-    }
-  })();
-  </script>
+  <!-- AI Assistant Component -->
+  <script src="components/ai-assistant.js"></script>
 
   <!-- Unified Navigation Component -->
   <script src="components/navigation.js"></script>
