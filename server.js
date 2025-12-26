@@ -852,6 +852,193 @@ Respond using EXACTLY this structure:
 });
 
 /**
+ * POST /api/project-checkin/analyze
+ * Analyze construction progress photos for red flags using AI
+ */
+app.post("/api/project-checkin/analyze", async (req, res) => {
+  try {
+    const { photos, description, userEmail } = req.body;
+
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI analysis service is not configured",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    if ((!photos || photos.length === 0) && !description) {
+      return res.status(400).json({
+        error: "Please provide at least one photo or description",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    console.log(`📸 Analyzing project check-in for: ${userEmail} (${photos?.length || 0} photos)`);
+
+    // Build content for Claude API
+    const contentBlocks = [];
+
+    // Add expert system prompt
+    contentBlocks.push({
+      type: "text",
+      text: `You are an expert construction inspector and project manager with 20+ years of experience.
+You're helping a homeowner review their ongoing construction project to identify any red flags or issues that could indicate poor workmanship, incorrect sequencing, or potential problems.
+
+CRITICAL RED FLAGS TO WATCH FOR:
+- Work done out of sequence (e.g., drywall before electrical rough-in, tiling before waterproofing)
+- Missing critical steps (waterproofing, vapor barriers, proper flashing)
+- Poor workmanship (uneven cuts, gaps, misaligned work)
+- Code violations or safety hazards
+- Inadequate prep work
+- Use of wrong materials for the application
+- Signs of rushing or cutting corners
+
+Homeowner's description:
+${description || 'No description provided - analyze the photos'}
+
+Analyze the photos carefully and provide:
+
+1. SUMMARY: Brief overview of what you see (1-2 sentences)
+
+2. RED FLAGS: List any serious issues or concerns you detect. Be specific about what's wrong and why it matters.
+   - If you see work done out of sequence, explain the correct order
+   - If you see missing steps, explain what should have been done
+   - If you see poor workmanship, describe what's wrong
+
+3. RECOMMENDATIONS: Specific actions the homeowner should take
+   - Should they stop work immediately?
+   - What questions should they ask their contractor?
+   - What should be fixed or redone?
+   - If everything looks good, reassure them!
+
+Be direct and clear. If you see red flags, call them out. If everything looks fine, say so. The homeowner needs your honest expert opinion.`
+    });
+
+    // Add photos as image blocks
+    if (photos && photos.length > 0) {
+      photos.forEach((photo, index) => {
+        // Extract base64 data and media type
+        const matches = photo.data.match(/^data:(.+);base64,(.+)$/);
+        if (matches) {
+          const mediaType = matches[1];
+          const base64Data = matches[2];
+
+          contentBlocks.push({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType,
+              data: base64Data
+            }
+          });
+        }
+      });
+    }
+
+    // Call Claude API with vision
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2000,
+        messages: [{ role: "user", content: contentBlocks }]
+      })
+    });
+
+    if (!apiResponse.ok) {
+      const errorData = await apiResponse.json().catch(() => ({}));
+      console.error("❌ Anthropic API error:", errorData);
+      throw new Error('AI analysis service error');
+    }
+
+    const data = await apiResponse.json();
+    const analysisText = data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "Unable to analyze at this time.";
+
+    // Parse the analysis into structured format
+    const result = parseAnalysis(analysisText);
+
+    console.log(`✓ Project check-in analyzed for: ${userEmail}`);
+
+    // Log activity
+    await db.logActivity({
+      user_email: userEmail,
+      activity_type: 'project_checkin_analysis',
+      description: 'Analyzed project progress photos',
+      metadata: {
+        photo_count: photos?.length || 0,
+        has_description: !!description,
+        red_flags_found: result.redFlags.length
+      }
+    });
+
+    res.json(result);
+
+  } catch (err) {
+    console.error("❌ Error in /api/project-checkin/analyze:", err);
+    res.status(500).json({
+      error: "Failed to analyze project",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// Helper function to parse AI analysis into structured format
+function parseAnalysis(text) {
+  const lines = text.split('\n');
+  let summary = '';
+  const redFlags = [];
+  const recommendations = [];
+  let currentSection = '';
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+
+    if (trimmed.match(/^(SUMMARY|1\.|Summary:)/i)) {
+      currentSection = 'summary';
+      // Extract summary text
+      const summaryMatch = trimmed.match(/^(?:SUMMARY|1\.|Summary:)\s*(.+)/i);
+      if (summaryMatch) {
+        summary = summaryMatch[1];
+      }
+    } else if (trimmed.match(/^(RED FLAGS|2\.|Red Flags:)/i)) {
+      currentSection = 'redFlags';
+    } else if (trimmed.match(/^(RECOMMENDATIONS|3\.|Recommendations:)/i)) {
+      currentSection = 'recommendations';
+    } else if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.match(/^\d+\./)) {
+      // Extract bullet point or numbered item
+      const itemText = trimmed.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, '');
+      if (itemText && currentSection === 'redFlags') {
+        redFlags.push(itemText);
+      } else if (itemText && currentSection === 'recommendations') {
+        recommendations.push(itemText);
+      } else if (currentSection === 'summary' && !summary) {
+        summary += ' ' + itemText;
+      }
+    } else if (trimmed && currentSection === 'summary' && !summary.includes(trimmed)) {
+      summary += ' ' + trimmed;
+    }
+  });
+
+  return {
+    summary: summary.trim() || 'Analysis complete',
+    redFlags: redFlags,
+    recommendations: recommendations.length > 0 ? recommendations : [
+      'Continue monitoring your project progress',
+      'Document everything with photos',
+      'Ask your contractor if you have any questions'
+    ]
+  };
+}
+
+/**
  * GET /grading-data
  * Returns contractor/homeowner grading logic and criteria
  */
