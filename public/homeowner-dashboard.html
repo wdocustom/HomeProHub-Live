@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Homeowner Dashboard – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
   <style>
     .dashboard-container {
       max-width: 1400px;
@@ -329,23 +330,7 @@
   </style>
 </head>
 <body>
-  <header class="navbar">
-    <div class="nav-inner">
-      <div class="brand-area">
-        <div class="brand-logo">HH</div>
-        <div class="brand-name">HomeProHub</div>
-      </div>
-      <div class="nav-links">
-        <a href="home.html">Home</a>
-        <a href="ask.html">Ask AI</a>
-        <a href="homeowner-dashboard.html" class="active">Dashboard</a>
-        <div class="profile-area">
-          <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
-          <button class="logout-btn" onclick="logout()">Logout</button>
-        </div>
-      </div>
-    </div>
-  </header>
+  <!-- Navigation component will be injected here by navigation.js -->
 
   <main>
     <div class="dashboard-container">
@@ -424,19 +409,6 @@
 
       return { username, token, role };
     }
-
-    function logout() {
-      try {
-        localStorage.removeItem(STORAGE_KEYS.USERNAME);
-        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-        localStorage.removeItem(STORAGE_KEYS.USER_ROLE);
-        localStorage.removeItem('homeprohub_profile_complete');
-      } catch (e) {
-        console.error('Error during logout:', e);
-      }
-      window.location.href = "index.html";
-    }
-    window.logout = logout;
 
     const user = getUserData();
     if (!user) {
@@ -695,5 +667,8 @@
     // Initialize
     loadJobs();
   </script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
 </body>
 </html>

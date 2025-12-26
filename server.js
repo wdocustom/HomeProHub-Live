@@ -1566,6 +1566,143 @@ app.get("/api/unread-count", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/notifications/unread
+ * Get unread notification count only (for navigation)
+ */
+app.get("/api/notifications/unread", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const count = await db.getUnreadNotificationCount(email);
+
+    res.json({ count });
+
+  } catch (err) {
+    console.error("❌ Error in /api/notifications/unread:", err);
+    res.status(500).json({
+      error: "Failed to retrieve unread notification count",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/messages/unread
+ * Get unread message count only (for navigation)
+ */
+app.get("/api/messages/unread", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const count = await db.getUnreadCount(email);
+
+    res.json({ count });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/unread:", err);
+    res.status(500).json({
+      error: "Failed to retrieve unread message count",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/notifications/:id/read
+ * Mark a specific notification as read (REST-style)
+ */
+app.post("/api/notifications/:id/read", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        error: "Notification ID required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    await db.markNotificationAsRead(id);
+
+    console.log(`✓ Notification marked as read: ${id}`);
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ Error in /api/notifications/:id/read:", err);
+    res.status(500).json({
+      error: "Failed to mark notification as read",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/notifications/mark-all-read
+ * Mark all notifications as read for a user
+ */
+app.post("/api/notifications/mark-all-read", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get all unread notifications for this user
+    const { data: notifications, error } = await db.supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_email', email)
+      .eq('read', false);
+
+    if (error) throw error;
+
+    // Mark them all as read
+    if (notifications && notifications.length > 0) {
+      const { error: updateError } = await db.supabase
+        .from('notifications')
+        .update({ read: true, read_at: new Date().toISOString() })
+        .eq('user_email', email)
+        .eq('read', false);
+
+      if (updateError) throw updateError;
+
+      console.log(`✓ Marked ${notifications.length} notifications as read for: ${email}`);
+    }
+
+    res.json({ success: true, count: notifications?.length || 0 });
+
+  } catch (err) {
+    console.error("❌ Error in /api/notifications/mark-all-read:", err);
+    res.status(500).json({
+      error: "Failed to mark all notifications as read",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
 // ====== 404 HANDLER ======
 app.use((req, res) => {
   res.status(404).json({
