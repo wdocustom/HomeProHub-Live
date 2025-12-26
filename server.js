@@ -1415,7 +1415,7 @@ app.post("/api/messages/send", async (req, res) => {
       attachments: attachments || []
     };
 
-    const message = await db.sendMessage(messageData);
+    const sentMessage = await db.sendMessage(messageData);
 
     // Create notification for recipient
     await db.createNotification({
@@ -1424,13 +1424,13 @@ app.post("/api/messages/send", async (req, res) => {
       notification_type: 'new_message',
       title: 'New Message',
       message: `${sender.business_name || sender.first_name || senderEmail} sent you a message`,
-      message_id: message.id,
+      message_id: sentMessage.id,
       job_id: jobId,
       action_url: `/messages.html?thread=${threadId || jobId}`
     });
 
-    console.log(`✓ Message sent: ${message.id}`);
-    res.json({ success: true, message });
+    console.log(`✓ Message sent: ${sentMessage.id}`);
+    res.json({ success: true, message: sentMessage });
 
   } catch (err) {
     console.error("❌ Error in /api/messages/send:", err);
