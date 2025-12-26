@@ -244,6 +244,22 @@
       background: #eff6ff;
     }
 
+    .btn-estimator {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: #10b981;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-estimator:hover {
+      background: #059669;
+    }
+
     .bid-status {
       padding: 6px 12px;
       border-radius: 999px;
@@ -661,6 +677,7 @@
 
           <div class="job-actions">
             <button class="btn-bid" onclick="openBidModal('${job.id}')">Submit Bid</button>
+            <button class="btn-estimator" onclick="useEstimator('${job.id}')">💰 Use Estimator</button>
             <button class="btn-view" onclick="viewJobDetails('${job.id}')">View Details</button>
           </div>
         </div>
@@ -756,12 +773,55 @@
     }
     window.closeBidModal = closeBidModal;
 
+    // Handle estimate attachment from pricing estimator
+    window.attachEstimateToBid = function(estimateData) {
+      if (!currentJob) {
+        alert('No job selected. Please select a job first.');
+        return;
+      }
+
+      // Store estimate data to be included with bid
+      sessionStorage.setItem('attachedEstimate_' + currentJob, JSON.stringify(estimateData));
+
+      // Show confirmation
+      alert(`Estimate attached!\n\nEstimate Range: $${estimateData.total_low.toLocaleString()} - $${estimateData.total_high.toLocaleString()}\n\nThis estimate will be included when you submit your bid.`);
+
+      // Optionally pre-fill bid amounts from estimate
+      document.getElementById('bidAmountLow').value = estimateData.total_low;
+      document.getElementById('bidAmountHigh').value = estimateData.total_high;
+    };
+
     // View job details
     function viewJobDetails(jobId) {
       // TODO: Implement job details view
       alert('Job details view coming soon!');
     }
     window.viewJobDetails = viewJobDetails;
+
+    // Use Estimator - pass job data to pricing estimator
+    function useEstimator(jobId) {
+      const job = allJobs.find(j => j.id === jobId);
+      if (!job) {
+        alert('Job not found');
+        return;
+      }
+
+      // Store job data for estimator to use
+      sessionStorage.setItem('estimatorJob', JSON.stringify({
+        jobId: job.id,
+        jobTitle: job.title,
+        jobDescription: job.description,
+        jobCategory: job.category,
+        budgetLow: job.budget_low,
+        budgetHigh: job.budget_high,
+        zipCode: job.zip_code,
+        returnToBid: true
+      }));
+
+      // Redirect to estimator
+      window.location.href = 'pricing-estimator.html';
+    }
+    window.useEstimator = useEstimator;
 
     // Submit bid
     document.getElementById('bidForm').addEventListener('submit', async (e) => {
