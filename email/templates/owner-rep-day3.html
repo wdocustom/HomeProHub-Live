@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contractor Selection Guide - HomeProHub</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      padding: 40px 30px;
+      line-height: 1.6;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .intro {
+      font-size: 16px;
+      color: #4b5563;
+      margin-bottom: 24px;
+    }
+    .decision-box {
+      background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #c4b5fd;
+    }
+    .decision-box h3 {
+      color: #6b21a8;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .decision-box p {
+      color: #7c3aed;
+      margin: 0;
+    }
+    .comparison-grid {
+      margin: 24px 0;
+    }
+    .comparison-card {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 16px 0;
+      border: 1px solid #e5e7eb;
+    }
+    .comparison-card h4 {
+      color: #1f2937;
+      margin: 0 0 12px 0;
+      font-size: 17px;
+    }
+    .comparison-card p {
+      color: #6b7280;
+      margin: 0;
+      font-size: 14px;
+    }
+    .comparison-card ul {
+      margin: 12px 0 0 0;
+      padding-left: 20px;
+      color: #4b5563;
+    }
+    .comparison-card li {
+      margin: 6px 0;
+      font-size: 14px;
+    }
+    .message-section {
+      background-color: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .message-section h3 {
+      color: #1e40af;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .message-section p {
+      color: #1e3a8a;
+      margin: 0;
+    }
+    .questions-box {
+      background-color: #fff7ed;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #fed7aa;
+    }
+    .questions-box h3 {
+      color: #9a3412;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+    }
+    .question-item {
+      margin: 12px 0;
+      padding: 12px;
+      background-color: white;
+      border-radius: 6px;
+      border-left: 3px solid #f97316;
+    }
+    .question-item strong {
+      color: #9a3412;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .question-item span {
+      color: #7c2d12;
+      font-size: 14px;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white !important;
+      padding: 16px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #8b5cf6;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon">📋</div>
+      <h1>Making the Right Choice</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <p class="greeting">Hi {{homeownerName}},</p>
+
+      <p class="intro">
+        By now you've likely received several bids for <strong>{{jobTitle}}</strong>. The numbers are in, but how do you choose? As your owner's representative, let us walk you through the decision-making process.
+      </p>
+
+      <!-- Decision Framework -->
+      <div class="decision-box">
+        <h3>🎯 The Decision Framework</h3>
+        <p>The best contractor isn't just about price—it's about value, communication, and trust. Here's how to think about your choice:</p>
+      </div>
+
+      <!-- Comparison Grid -->
+      <div class="comparison-grid">
+        <div class="comparison-card">
+          <h4>💵 Price Analysis</h4>
+          <p>Compare the bids you received:</p>
+          <ul>
+            <li><strong>Significantly lower?</strong> They may be cutting corners or planning to upsell later</li>
+            <li><strong>Middle range?</strong> Often the sweet spot of fair pricing and quality work</li>
+            <li><strong>Significantly higher?</strong> May include premium materials or more thorough work—ask why</li>
+          </ul>
+        </div>
+
+        <div class="comparison-card">
+          <h4>💬 Communication Style</h4>
+          <p>How responsive and clear has each contractor been?</p>
+          <ul>
+            <li>Do they answer questions thoroughly or brush you off?</li>
+            <li>Do they explain technical details in a way you understand?</li>
+            <li>How quickly do they respond to your messages?</li>
+          </ul>
+        </div>
+
+        <div class="comparison-card">
+          <h4>📸 Portfolio & Experience</h4>
+          <p>Review their previous work:</p>
+          <ul>
+            <li>Do their completed projects look similar to what you want?</li>
+            <li>How long have they been doing this specific type of work?</li>
+            <li>Can they provide references from similar projects?</li>
+          </ul>
+        </div>
+
+        <div class="comparison-card">
+          <h4>📋 Scope Detail</h4>
+          <p>Compare how detailed each bid is:</p>
+          <ul>
+            <li>Specific materials and brands listed?</li>
+            <li>Clear timeline with milestones?</li>
+            <li>Payment schedule outlined?</li>
+            <li>Warranty or guarantee information?</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Message Them -->
+      <div class="message-section">
+        <h3>💡 Still Deciding? Message Them</h3>
+        <p>The best way to differentiate contractors is to ask follow-up questions. Use HomeProHub's messaging to ask about timeline flexibility, material substitutions, or anything else on your mind. Their responses will tell you a lot.</p>
+      </div>
+
+      <!-- Questions to Ask -->
+      <div class="questions-box">
+        <h3>❓ Smart Questions to Ask Before Deciding</h3>
+
+        <div class="question-item">
+          <strong>"What's your typical workday schedule?"</strong>
+          <span>You'll learn when workers arrive/leave and if it fits your lifestyle</span>
+        </div>
+
+        <div class="question-item">
+          <strong>"How do you handle unexpected issues or changes?"</strong>
+          <span>Reveals their problem-solving approach and flexibility</span>
+        </div>
+
+        <div class="question-item">
+          <strong>"Who will be my main point of contact?"</strong>
+          <span>Important for communication throughout the project</span>
+        </div>
+
+        <div class="question-item">
+          <strong>"What's included in your warranty?"</strong>
+          <span>Shows they stand behind their work</span>
+        </div>
+
+        <div class="question-item">
+          <strong>"Can I see photos of a similar project you've completed?"</strong>
+          <span>Verifies relevant experience</span>
+        </div>
+      </div>
+
+      <p style="color: #4b5563; margin-top: 24px;">
+        <strong>Trust your instincts.</strong> If something feels off about a contractor—even if their bid looks good—listen to that feeling. The right contractor should make you feel confident and informed, not confused or pressured.
+      </p>
+
+      <!-- CTA Button -->
+      <div class="cta-container">
+        <a href="{{messagesLink}}" class="cta-button">
+          Message Contractors →
+        </a>
+      </div>
+
+      <p style="color: #6b7280; line-height: 1.6; margin-top: 30px;">
+        <strong>Need a second opinion?</strong> We're your owner's representative—we're here to help you think through this decision. Reply to this email or contact us via text, phone, or video call anytime.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>HomeProHub</strong> - Your Owner's Representative</p>
+      <p>Guiding you to the right contractor choice</p>
+      <p style="margin-top: 20px;">
+        <a href="https://www.homeprohub.today">www.homeprohub.today</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
