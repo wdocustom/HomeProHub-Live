@@ -503,6 +503,7 @@
         const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
         const rawRole = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
         const rawProfile = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+        const profileCompleteFlag = localStorage.getItem('homeprohub_profile_complete');
 
         if (!username || !token || rawRole !== 'contractor') {
           return null;
@@ -515,7 +516,8 @@
           username: username,
           token: token,
           role: rawRole,
-          name: profile.companyName || username.split('@')[0]
+          name: profile.companyName || username.split('@')[0],
+          profileComplete: profile.profileComplete === true || profileCompleteFlag === 'true'
         };
       } catch (e) {
         return null;

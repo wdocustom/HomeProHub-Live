@@ -5,67 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HomeProHub – Field Support</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components/navigation.css">
   <style>
-    .support-container { max-width: 900px; margin: 40px auto; padding: 0 24px; }
-    .header-card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .chat-card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .chat-history { max-height: 500px; overflow-y: auto; margin-bottom: 20px; padding: 16px; background: #f9fafb; border-radius: 8px; }
-    .chat-message { margin-bottom: 16px; padding: 12px; border-radius: 8px; }
-    .chat-message.user { background: #dbeafe; border-left: 4px solid #2563eb; }
-    .chat-message.assistant { background: #f3f4f6; border-left: 4px solid #6b7280; }
-    .chat-message strong { display: block; margin-bottom: 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; }
-    .input-area { display: flex; gap: 12px; align-items: flex-end; }
-    .input-area textarea { flex: 1; }
+    .support-container { max-width: 1000px; margin: 40px auto; padding: 0 24px; }
+    .header-card { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 32px; border-radius: 16px; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+    .header-card h1 { margin: 0 0 8px 0; font-size: 32px; color: white; }
+    .header-card p { margin: 0; color: #cbd5e1; font-size: 15px; }
+
+    .chat-card { background: white; padding: 32px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .chat-history { max-height: 500px; overflow-y: auto; margin-bottom: 24px; padding: 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; }
+    .chat-message { margin-bottom: 20px; padding: 16px; border-radius: 12px; }
+    .chat-message.user { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-left: 4px solid #2563eb; }
+    .chat-message.assistant { background: #ffffff; border-left: 4px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .chat-message strong { display: block; margin-bottom: 8px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    .chat-message-content { color: #1f2937; line-height: 1.6; }
+
+    .input-section { margin-bottom: 20px; }
+    .photo-upload-area { margin-bottom: 16px; padding: 20px; border: 2px dashed #d1d5db; border-radius: 12px; background: #f9fafb; text-align: center; transition: all 0.2s; }
+    .photo-upload-area.dragover { border-color: #2563eb; background: #eff6ff; }
+    .photo-upload-area input[type="file"] { display: none; }
+    .upload-btn { display: inline-block; padding: 10px 20px; background: #f3f4f6; color: #374151; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid #d1d5db; }
+    .upload-btn:hover { background: #e5e7eb; }
+    .upload-hint { font-size: 12px; color: #9ca3af; margin-top: 8px; }
+
+    .photo-preview { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .photo-preview-item { position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 2px solid #e5e7eb; }
+    .photo-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-preview-item button { position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 1; }
+
+    .input-controls { display: flex; gap: 12px; align-items: flex-end; }
+    .input-controls textarea { flex: 1; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #9ca3af; }
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state-text { font-size: 15px; }
   </style>
 </head>
 <body>
-<header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="contractor.html">Dashboard</a>
-      <a href="contractor-profile.html">Profile</a>
-      <div class="profile-area">
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div>
-</header>
+  <!-- Navigation component will be injected here by navigation.js -->
 
 <div class="support-container">
   <div class="header-card">
-    <h1 style="margin: 0 0 8px 0; font-size: 28px;">Field Support & Contractor Coach</h1>
-    <p style="margin: 0; color: #6b7280;">Get real-time AI assistance for tough projects, technical questions, and business decisions</p>
+    <h1>Field Support & AI Coach</h1>
+    <p>Get instant AI assistance for tough projects, technical questions, and business decisions. Upload photos for visual diagnostics.</p>
   </div>
 
   <div class="chat-card">
     <div class="chat-history" id="chatHistory">
-      <p style="text-align: center; color: #9ca3af; font-size: 14px;">Start a conversation by asking a question below</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">🔧</div>
+        <div class="empty-state-text">Start a conversation by asking a question or uploading project photos below</div>
+      </div>
     </div>
 
     <form id="chatForm">
-      <div class="form-group">
-        <label for="category">Question Category</label>
-        <select id="category">
-          <option value="general">General Contractor Advice</option>
-          <option value="materials">Materials & Methods</option>
-          <option value="licensing">Licensing & Compliance</option>
-          <option value="client_comms">Client Communication</option>
-          <option value="business">Business & Operations</option>
-        </select>
-      </div>
+      <div class="input-section">
+        <div class="form-group">
+          <label for="category">Question Category</label>
+          <select id="category">
+            <option value="general">General Contractor Advice</option>
+            <option value="pricing">Pricing & Estimating</option>
+            <option value="materials">Materials & Methods</option>
+            <option value="licensing">Licensing & Compliance</option>
+            <option value="client_comms">Client Communication</option>
+            <option value="business">Business & Operations</option>
+          </select>
+        </div>
 
-      <div class="input-area">
-        <textarea id="questionInput" rows="3" placeholder="Ask your question... (e.g., 'How should I handle a client asking for changes mid-project?')" required></textarea>
-        <button type="submit" class="btn-primary" id="askBtn" style="height: fit-content;">Send</button>
+        <div class="photo-upload-area" id="photoUploadArea">
+          <input type="file" id="photoInput" accept="image/*" multiple />
+          <label for="photoInput" class="upload-btn">
+            📸 Upload Photos (Optional)
+          </label>
+          <div class="upload-hint">Upload photos of the issue, plans, or project site for visual analysis</div>
+          <div class="photo-preview" id="photoPreview"></div>
+        </div>
+
+        <div class="input-controls">
+          <textarea id="questionInput" rows="3" placeholder="Describe your question or issue... (e.g., 'How should I handle a client asking for changes mid-project?' or 'What's causing this crack pattern?')" required></textarea>
+          <button type="submit" class="btn-primary" id="askBtn" style="height: fit-content; min-width: 100px;">Send</button>
+        </div>
+        <div id="status" style="margin-top: 12px; font-size: 14px;"></div>
       </div>
-      <div id="status" style="margin-top: 12px; font-size: 14px;"></div>
     </form>
 
-    <button class="btn-secondary" id="clearBtn" style="margin-top: 16px;">Clear Conversation</button>
+    <div style="display: flex; gap: 12px; margin-top: 16px;">
+      <button class="btn-secondary" id="clearBtn">Clear Conversation</button>
+    </div>
   </div>
 </div>
 
@@ -77,10 +103,8 @@ const STORAGE_KEYS = {
   CHAT_HISTORY: 'homeprohub_field_support_history'
 };
 
-function logout() {
-  Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
-  window.location.href = 'index.html';
-}
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILES = 5;
 
 (function() {
   const chatForm = document.getElementById('chatForm');
@@ -90,8 +114,12 @@ function logout() {
   const status = document.getElementById('status');
   const chatHistory = document.getElementById('chatHistory');
   const clearBtn = document.getElementById('clearBtn');
+  const photoInput = document.getElementById('photoInput');
+  const photoPreview = document.getElementById('photoPreview');
+  const photoUploadArea = document.getElementById('photoUploadArea');
 
   let conversationHistory = [];
+  let uploadedPhotos = [];
 
   function checkAuth() {
     const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
@@ -117,19 +145,25 @@ function logout() {
 
   function renderHistory() {
     if (conversationHistory.length === 0) {
-      chatHistory.innerHTML = '<p style="text-align: center; color: #9ca3af; font-size: 14px;">Start a conversation by asking a question below</p>';
+      chatHistory.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><div class="empty-state-text">Start a conversation by asking a question or uploading project photos below</div></div>';
       return;
     }
 
     let html = '';
     conversationHistory.forEach(msg => {
       html += '<div class="chat-message ' + msg.role + '">';
-      html += '<strong>' + (msg.role === 'user' ? 'You' : 'AI Coach') + '</strong>';
-      html += '<div>' + msg.content + '</div>';
+      html += '<strong>' + (msg.role === 'user' ? 'You' : 'AI Field Coach') + '</strong>';
+      html += '<div class="chat-message-content">' + escapeHtml(msg.content) + '</div>';
       html += '</div>';
     });
     chatHistory.innerHTML = html;
     chatHistory.scrollTop = chatHistory.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   function addMessage(role, content) {
@@ -137,6 +171,88 @@ function logout() {
     saveHistory();
     renderHistory();
   }
+
+  // Photo upload handling
+  photoInput.addEventListener('change', handleFileSelect);
+
+  function handleFileSelect(e) {
+    const files = Array.from(e.target.files);
+    processFiles(files);
+  }
+
+  function processFiles(files) {
+    if (uploadedPhotos.length + files.length > MAX_FILES) {
+      status.textContent = `Maximum ${MAX_FILES} photos allowed`;
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    files.forEach(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        status.textContent = `File ${file.name} is too large (max 5MB)`;
+        status.style.color = '#ef4444';
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        status.textContent = `File ${file.name} is not an image`;
+        status.style.color = '#ef4444';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const photo = {
+          name: file.name,
+          data: e.target.result,
+          type: file.type
+        };
+        uploadedPhotos.push(photo);
+        renderPhotoPreview();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderPhotoPreview() {
+    if (uploadedPhotos.length === 0) {
+      photoPreview.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    uploadedPhotos.forEach((photo, index) => {
+      html += `
+        <div class="photo-preview-item">
+          <img src="${photo.data}" alt="${photo.name}" />
+          <button type="button" onclick="removePhoto(${index})">×</button>
+        </div>
+      `;
+    });
+    photoPreview.innerHTML = html;
+  }
+
+  window.removePhoto = function(index) {
+    uploadedPhotos.splice(index, 1);
+    renderPhotoPreview();
+  };
+
+  // Drag and drop
+  photoUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    photoUploadArea.classList.add('dragover');
+  });
+
+  photoUploadArea.addEventListener('dragleave', () => {
+    photoUploadArea.classList.remove('dragover');
+  });
+
+  photoUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    photoUploadArea.classList.remove('dragover');
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
+  });
 
   chatForm.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -150,28 +266,42 @@ function logout() {
       return;
     }
 
-    addMessage('user', question);
+    let userMessage = question;
+    if (uploadedPhotos.length > 0) {
+      userMessage += ` [${uploadedPhotos.length} photo(s) attached]`;
+    }
+
+    addMessage('user', userMessage);
     questionInput.value = '';
 
     askBtn.disabled = true;
     askBtn.textContent = 'Thinking...';
-    status.textContent = 'AI is processing your question...';
+    status.textContent = 'AI is analyzing your question' + (uploadedPhotos.length > 0 ? ' and photos' : '') + '...';
     status.style.color = '#6b7280';
 
     try {
+      // Prepare request body
+      const requestBody = {
+        question: question,
+        focus: category,
+        zip: '',
+        scopeLevel: 'mid',
+        size: ''
+      };
+
+      // Add photo data if available
+      if (uploadedPhotos.length > 0) {
+        requestBody.imageBase64 = uploadedPhotos[0].data.split(',')[1]; // First photo
+        requestBody.imageType = uploadedPhotos[0].type;
+      }
+
       const response = await fetch('/contractor-ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
         },
-        body: JSON.stringify({
-          question: question,
-          focus: category,
-          zip: '',
-          scopeLevel: 'mid',
-          size: ''
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) throw new Error('Failed to get response');
@@ -181,6 +311,11 @@ function logout() {
 
       status.textContent = 'Response received';
       status.style.color = '#10b981';
+
+      // Clear photos after successful submission
+      uploadedPhotos = [];
+      renderPhotoPreview();
+      photoInput.value = '';
     } catch (err) {
       status.textContent = 'Error: ' + (err.message || 'Failed to get response');
       status.style.color = '#ef4444';
@@ -205,5 +340,8 @@ function logout() {
   loadHistory();
 })();
 </script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
 </body>
 </html>
