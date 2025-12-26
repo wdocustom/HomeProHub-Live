@@ -603,6 +603,19 @@
     </div>
   </div>
 
+  <!-- Estimate Viewer Modal -->
+  <div class="modal-overlay" id="estimateModal">
+    <div class="modal-content" style="max-width: 900px;">
+      <button class="modal-close" onclick="closeEstimateModal()">×</button>
+      <h2 class="modal-title" id="estimateModalTitle">Professional Estimate</h2>
+      <p class="modal-subtitle" id="estimateModalSubtitle">AI-Generated Detailed Breakdown</p>
+
+      <div id="estimateContent" style="margin-top: 24px;">
+        <!-- Estimate content will be dynamically inserted here -->
+      </div>
+    </div>
+  </div>
+
   <script>
     // Constants
     const STORAGE_KEYS = {
@@ -792,6 +805,9 @@
       // Generate license badge for contractor
       const licenseBadge = bid.contractor ? generateLicenseBadge(bid.contractor, { size: 'compact', showGetLicensed: false }) : '';
 
+      // Check if bid has professional estimate attached
+      const hasEstimate = bid.has_estimate && bid.estimate;
+
       return `
         <div class="bid-card ${isAccepted ? 'accepted' : ''}">
           <div class="bid-header">
@@ -799,6 +815,11 @@
               <div class="contractor-name">${escapeHtml(bid.contractor?.business_name || bid.contractor_business_name || 'Contractor')}</div>
               <span class="grade-badge grade-${contractorGrade}" title="Contractor Grade: ${contractorGrade}">${contractorGrade}</span>
               ${licenseBadge}
+              ${hasEstimate ? `
+                <span style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>💰</span> Professional Estimate
+                </span>
+              ` : ''}
             </div>
             <div class="bid-amount">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</div>
           </div>
@@ -815,8 +836,10 @@
           <div class="bid-actions">
             ${isAccepted ? `
               <span style="color: #10b981; font-weight: 600;">✓ Accepted</span>
+              ${hasEstimate ? `<button class="btn-view-estimate" data-bid-id="${bid.id}" style="background: #059669; margin-left: 8px;">📊 View Detailed Estimate</button>` : ''}
             ` : isPending ? `
               <button class="btn-accept" data-bid-id="${bid.id}" data-job-id="${job.id}">Accept Bid</button>
+              ${hasEstimate ? `<button class="btn-view-estimate" data-bid-id="${bid.id}" style="background: #059669;">📊 View Detailed Estimate</button>` : ''}
               <button class="btn-message" data-contractor-email="${bid.contractor_email}" data-job-id="${job.id}">Message Contractor</button>
               <button class="btn-decline" data-bid-id="${bid.id}">Decline</button>
             ` : `
@@ -912,6 +935,137 @@
           alert('Decline bid functionality coming soon!');
         });
       });
+
+      // View Estimate buttons
+      document.querySelectorAll('.btn-view-estimate').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const bidId = this.dataset.bidId;
+          openEstimateModal(bidId);
+        });
+      });
+    }
+
+    // Open estimate modal
+    function openEstimateModal(bidId) {
+      // Find the bid with this ID from all jobs
+      let targetBid = null;
+      for (const job of allJobs) {
+        if (job.bids) {
+          targetBid = job.bids.find(bid => bid.id === bidId);
+          if (targetBid) break;
+        }
+      }
+
+      if (!targetBid || !targetBid.estimate) {
+        alert('Estimate data not found');
+        return;
+      }
+
+      const estimate = targetBid.estimate;
+      const contractorName = targetBid.contractor?.business_name || targetBid.contractor_business_name || 'Contractor';
+
+      // Update modal title
+      document.getElementById('estimateModalTitle').textContent = `Professional Estimate from ${contractorName}`;
+      document.getElementById('estimateModalSubtitle').textContent = estimate.project_title || 'AI-Generated Detailed Breakdown';
+
+      // Render estimate content
+      renderEstimateContent(estimate);
+
+      // Show modal
+      document.getElementById('estimateModal').classList.add('show');
+    }
+
+    // Close estimate modal
+    function closeEstimateModal() {
+      document.getElementById('estimateModal').classList.remove('show');
+    }
+
+    // Render estimate content
+    function renderEstimateContent(estimate) {
+      const container = document.getElementById('estimateContent');
+
+      const lineItems = estimate.line_items || [];
+      const subtotalLow = estimate.subtotal_low || 0;
+      const subtotalHigh = estimate.subtotal_high || 0;
+      const overheadPercent = estimate.overhead_profit_percent || 20;
+      const contingencyPercent = estimate.contingency_percent || 10;
+      const totalLow = estimate.total_projected_low || estimate.total_low || 0;
+      const totalHigh = estimate.total_projected_high || estimate.total_high || 0;
+
+      const overheadLow = (subtotalLow * overheadPercent / 100);
+      const overheadHigh = (subtotalHigh * overheadPercent / 100);
+      const contingencyLow = (subtotalLow * contingencyPercent / 100);
+      const contingencyHigh = (subtotalHigh * contingencyPercent / 100);
+
+      container.innerHTML = `
+        <div style="background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
+          <!-- Total Summary -->
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); padding: 24px; color: white; text-align: center;">
+            <div style="font-size: 16px; opacity: 0.9; margin-bottom: 8px;">Estimated Total Cost</div>
+            <div style="font-size: 36px; font-weight: 700;">
+              ${formatCurrency(totalLow)} - ${formatCurrency(totalHigh)}
+            </div>
+            <div style="font-size: 14px; opacity: 0.8; margin-top: 8px;">Professional AI-Generated Estimate</div>
+          </div>
+
+          <!-- Line Items -->
+          <div style="padding: 24px;">
+            <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 18px;">Detailed Breakdown</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="border-bottom: 2px solid #e5e7eb;">
+                  <th style="text-align: left; padding: 12px 8px; color: #6b7280; font-weight: 600; font-size: 14px;">Item</th>
+                  <th style="text-align: right; padding: 12px 8px; color: #6b7280; font-weight: 600; font-size: 14px;">Low</th>
+                  <th style="text-align: right; padding: 12px 8px; color: #6b7280; font-weight: 600; font-size: 14px;">High</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lineItems.map((item, index) => `
+                  <tr style="border-bottom: 1px solid #f3f4f6; ${index % 2 === 0 ? 'background: #f9fafb;' : ''}">
+                    <td style="padding: 12px 8px; font-size: 14px; color: #1f2937;">${escapeHtml(item.item)}</td>
+                    <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(item.low_estimate)}</td>
+                    <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(item.high_estimate)}</td>
+                  </tr>
+                `).join('')}
+                <tr style="border-top: 2px solid #e5e7eb; font-weight: 600; background: #f9fafb;">
+                  <td style="padding: 12px 8px; font-size: 14px; color: #1f2937;">Subtotal (Materials & Labor)</td>
+                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(subtotalLow)}</td>
+                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(subtotalHigh)}</td>
+                </tr>
+                <tr style="background: #fffbeb;">
+                  <td style="padding: 12px 8px; font-size: 14px; color: #78350f;">Overhead & Profit (${overheadPercent}%)</td>
+                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(overheadLow)}</td>
+                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(overheadHigh)}</td>
+                </tr>
+                <tr style="background: #fffbeb;">
+                  <td style="padding: 12px 8px; font-size: 14px; color: #78350f;">Contingency (${contingencyPercent}%)</td>
+                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(contingencyLow)}</td>
+                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(contingencyHigh)}</td>
+                </tr>
+                <tr style="border-top: 3px solid #2563eb; background: #eff6ff; font-weight: 700;">
+                  <td style="padding: 16px 8px; font-size: 16px; color: #1e40af;">Total Project Cost</td>
+                  <td style="padding: 16px 8px; text-align: right; font-size: 16px; color: #1e40af;">${formatCurrency(totalLow)}</td>
+                  <td style="padding: 16px 8px; text-align: right; font-size: 16px; color: #1e40af;">${formatCurrency(totalHigh)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="margin-top: 24px; padding: 16px; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 4px;">
+              <div style="font-weight: 600; color: #065f46; margin-bottom: 8px;">✓ Professional Estimate Included</div>
+              <p style="margin: 0; font-size: 14px; color: #047857; line-height: 1.6;">
+                This detailed estimate was generated using AI and includes materials, labor, overhead, and contingency.
+                Actual costs may vary based on final specifications and unforeseen conditions.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; text-align: right;">
+          <button onclick="closeEstimateModal()" style="padding: 12px 32px; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+            Close
+          </button>
+        </div>
+      `;
     }
 
     // Filter tabs
