@@ -371,6 +371,160 @@ async function getTopRatedHomeowners(limit = 50) {
 }
 
 // ========================================
+// Contractor License Operations
+// ========================================
+
+/**
+ * Add or update contractor license
+ */
+async function addContractorLicense(licenseData) {
+  const { data, error } = await supabase
+    .from('contractor_licenses')
+    .upsert(licenseData, {
+      onConflict: 'contractor_email,trade_type,state'
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get all licenses for a contractor
+ */
+async function getContractorLicenses(contractorEmail) {
+  const { data, error } = await supabase
+    .from('contractor_licenses')
+    .select('*')
+    .eq('contractor_email', contractorEmail)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get specific license for contractor by trade and state
+ */
+async function getContractorLicenseByTrade(contractorEmail, tradeType, state) {
+  const { data, error } = await supabase
+    .from('contractor_licenses')
+    .select('*')
+    .eq('contractor_email', contractorEmail)
+    .eq('trade_type', tradeType)
+    .eq('state', state)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+/**
+ * Update license verification status (admin function)
+ */
+async function updateLicenseVerificationStatus(licenseId, status, verifiedBy, rejectionReason = null) {
+  const updates = {
+    verification_status: status,
+    verified_by: verifiedBy,
+    verified_at: new Date().toISOString()
+  };
+
+  if (rejectionReason) {
+    updates.rejection_reason = rejectionReason;
+  }
+
+  const { data, error } = await supabase
+    .from('contractor_licenses')
+    .update(updates)
+    .eq('id', licenseId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get verified licenses for a contractor in a specific state
+ */
+async function getVerifiedLicenses(contractorEmail, state) {
+  const { data, error } = await supabase
+    .from('contractor_licenses')
+    .select('*')
+    .eq('contractor_email', contractorEmail)
+    .eq('state', state)
+    .eq('verification_status', 'verified')
+    .gte('expiration_date', new Date().toISOString().split('T')[0]); // Not expired
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Check if contractor has required license for a job category and location
+ */
+async function checkContractorLicenseForJob(contractorEmail, category, state) {
+  // Map job categories to trade types
+  const categoryToTrade = {
+    'general': 'general_contractor',
+    'plumbing': 'plumbing',
+    'electrical': 'electrical',
+    'hvac': 'hvac',
+    'roofing': 'roofing',
+    'painting': 'painting',
+    'landscaping': 'landscaping',
+    'flooring': 'flooring',
+    'carpentry': 'carpentry',
+    'masonry': 'masonry',
+    'concrete': 'concrete',
+    'drywall': 'drywall',
+    'insulation': 'insulation',
+    'siding': 'siding'
+  };
+
+  const tradeType = categoryToTrade[category] || 'general_contractor';
+
+  // Check if contractor has this license
+  const license = await getContractorLicenseByTrade(contractorEmail, tradeType, state);
+
+  if (!license) {
+    return {
+      hasLicense: false,
+      status: 'unlicensed',
+      tradeType: tradeType
+    };
+  }
+
+  // Check if verified
+  if (license.verification_status !== 'verified') {
+    return {
+      hasLicense: true,
+      status: license.verification_status,
+      license: license,
+      tradeType: tradeType
+    };
+  }
+
+  // Check if expired
+  if (license.expiration_date && new Date(license.expiration_date) < new Date()) {
+    return {
+      hasLicense: true,
+      status: 'expired',
+      license: license,
+      tradeType: tradeType
+    };
+  }
+
+  return {
+    hasLicense: true,
+    status: 'verified',
+    license: license,
+    tradeType: tradeType
+  };
+}
+
+// ========================================
 // Messaging Operations
 // ========================================
 
@@ -733,6 +887,14 @@ module.exports = {
   getHomeownerRating,
   getHomeownerRatings,
   getTopRatedHomeowners,
+
+  // Contractor licenses
+  addContractorLicense,
+  getContractorLicenses,
+  getContractorLicenseByTrade,
+  updateLicenseVerificationStatus,
+  getVerifiedLicenses,
+  checkContractorLicenseForJob,
 
   // Messaging (legacy thread-based)
   sendMessage,

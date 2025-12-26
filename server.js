@@ -883,6 +883,20 @@ app.get("/grading-data", (req, res) => {
 // ========================================
 const db = require('./database/db');
 
+// Load license requirements data
+let licenseRequirements = null;
+try {
+  const licenseDataPath = path.resolve(__dirname, 'database', 'license-requirements.json');
+  if (fs.existsSync(licenseDataPath)) {
+    licenseRequirements = JSON.parse(fs.readFileSync(licenseDataPath, 'utf8'));
+    console.log('✓ License requirements data loaded');
+  } else {
+    console.warn('⚠️  License requirements file not found');
+  }
+} catch (error) {
+  console.error('❌ Error loading license requirements:', error.message);
+}
+
 /**
  * POST /api/submit-job
  * Submit a new job posting from homeowner
@@ -1323,6 +1337,231 @@ app.post("/api/bid/accept", async (req, res) => {
     console.error("❌ Error in /api/bid/accept:", err);
     res.status(500).json({
       error: "Failed to accept bid",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// LICENSE MANAGEMENT API ENDPOINTS
+// ========================================
+
+/**
+ * POST /api/contractor/licenses
+ * Add or update contractor license
+ */
+app.post("/api/contractor/licenses", async (req, res) => {
+  try {
+    const {
+      contractorEmail,
+      tradeType,
+      licenseNumber,
+      state,
+      issueDate,
+      expirationDate,
+      documentUrl
+    } = req.body;
+
+    // Validation
+    if (!contractorEmail || !tradeType || !licenseNumber || !state) {
+      return res.status(400).json({
+        error: "Missing required fields: contractorEmail, tradeType, licenseNumber, state",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get contractor profile to link contractor_id
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({
+        error: "Contractor profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const licenseData = {
+      contractor_email: contractorEmail,
+      contractor_id: contractor.id,
+      trade_type: tradeType,
+      license_number: licenseNumber.trim(),
+      state: state.toUpperCase(),
+      issue_date: issueDate || null,
+      expiration_date: expirationDate || null,
+      license_document_url: documentUrl || null,
+      verification_status: 'pending'
+    };
+
+    const license = await db.addContractorLicense(licenseData);
+
+    console.log(`✓ License added/updated: ${tradeType} for ${contractorEmail}`);
+    res.json({ success: true, license });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/licenses:", err);
+    res.status(500).json({
+      error: "Failed to add license",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractor/licenses
+ * Get all licenses for a contractor
+ */
+app.get("/api/contractor/licenses", async (req, res) => {
+  try {
+    const { contractorEmail } = req.query;
+
+    if (!contractorEmail) {
+      return res.status(400).json({
+        error: "Missing required parameter: contractorEmail",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const licenses = await db.getContractorLicenses(contractorEmail);
+
+    res.json({ success: true, licenses });
+
+  } catch (err) {
+    console.error("❌ Error in GET /api/contractor/licenses:", err);
+    res.status(500).json({
+      error: "Failed to fetch licenses",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractor/licenses/check
+ * Check if contractor has required license for a job
+ */
+app.get("/api/contractor/licenses/check", async (req, res) => {
+  try {
+    const { contractorEmail, category, state } = req.query;
+
+    if (!contractorEmail || !category || !state) {
+      return res.status(400).json({
+        error: "Missing required parameters: contractorEmail, category, state",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const licenseCheck = await db.checkContractorLicenseForJob(
+      contractorEmail,
+      category,
+      state.toUpperCase()
+    );
+
+    // Get license requirements from JSON
+    let requirementInfo = null;
+    if (licenseRequirements && licenseRequirements.states[state.toUpperCase()]) {
+      const stateData = licenseRequirements.states[state.toUpperCase()];
+      requirementInfo = stateData[licenseCheck.tradeType] || null;
+    }
+
+    res.json({
+      success: true,
+      ...licenseCheck,
+      requirementInfo
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/licenses/check:", err);
+    res.status(500).json({
+      error: "Failed to check license",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/contractor/licenses/:id/verify
+ * Update license verification status (admin only)
+ */
+app.put("/api/contractor/licenses/:id/verify", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, verifiedBy, rejectionReason } = req.body;
+
+    // Validation
+    if (!id || !status || !verifiedBy) {
+      return res.status(400).json({
+        error: "Missing required fields: status, verifiedBy",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (!['verified', 'rejected', 'expired'].includes(status)) {
+      return res.status(400).json({
+        error: "Invalid status. Must be: verified, rejected, or expired",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const license = await db.updateLicenseVerificationStatus(
+      id,
+      status,
+      verifiedBy,
+      rejectionReason
+    );
+
+    console.log(`✓ License ${status}: ${id} by ${verifiedBy}`);
+    res.json({ success: true, license });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/licenses/:id/verify:", err);
+    res.status(500).json({
+      error: "Failed to update license status",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/license-requirements/:state
+ * Get license requirements for a specific state
+ */
+app.get("/api/license-requirements/:state", (req, res) => {
+  try {
+    const { state } = req.params;
+
+    if (!licenseRequirements) {
+      return res.status(503).json({
+        error: "License requirements data not available",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    const stateCode = state.toUpperCase();
+    const stateData = licenseRequirements.states[stateCode];
+
+    if (!stateData) {
+      return res.status(404).json({
+        error: `License requirements not found for state: ${stateCode}`,
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      state: stateCode,
+      stateName: stateData.name,
+      requirements: stateData,
+      educationPartners: licenseRequirements.education_partners,
+      verificationStatuses: licenseRequirements.verification_statuses
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/license-requirements/:state:", err);
+    res.status(500).json({
+      error: "Failed to fetch license requirements",
       code: 'INTERNAL_ERROR',
       message: err.message
     });

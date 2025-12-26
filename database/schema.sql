@@ -53,7 +53,61 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_zip_code ON user_profiles(zip_code);
 
 -- ========================================
--- 2. Job Postings Table
+-- 2. Contractor Licenses Table
+-- ========================================
+CREATE TABLE IF NOT EXISTS contractor_licenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Contractor identification
+  contractor_email TEXT NOT NULL,
+  contractor_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+
+  -- License details
+  trade_type TEXT NOT NULL CHECK (trade_type IN (
+    'general_contractor', 'plumbing', 'electrical', 'hvac',
+    'roofing', 'painting', 'landscaping', 'flooring', 'carpentry',
+    'masonry', 'concrete', 'drywall', 'insulation', 'siding'
+  )),
+  license_number TEXT NOT NULL,
+  state TEXT NOT NULL CHECK (length(state) = 2),
+
+  -- Verification status
+  verification_status TEXT NOT NULL CHECK (verification_status IN (
+    'pending', 'verified', 'rejected', 'expired'
+  )) DEFAULT 'pending',
+  verified_at TIMESTAMP WITH TIME ZONE,
+  verified_by TEXT,
+
+  -- License dates
+  issue_date DATE,
+  expiration_date DATE,
+
+  -- Document upload
+  license_document_url TEXT,
+
+  -- Admin notes
+  rejection_reason TEXT,
+  admin_notes TEXT,
+
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for contractor licenses
+CREATE INDEX IF NOT EXISTS idx_contractor_licenses_email ON contractor_licenses(contractor_email);
+CREATE INDEX IF NOT EXISTS idx_contractor_licenses_contractor_id ON contractor_licenses(contractor_id);
+CREATE INDEX IF NOT EXISTS idx_contractor_licenses_status ON contractor_licenses(verification_status);
+CREATE INDEX IF NOT EXISTS idx_contractor_licenses_trade ON contractor_licenses(trade_type);
+CREATE INDEX IF NOT EXISTS idx_contractor_licenses_state ON contractor_licenses(state);
+CREATE INDEX IF NOT EXISTS idx_contractor_licenses_expiration ON contractor_licenses(expiration_date);
+
+-- Unique constraint: one license per contractor per trade per state
+CREATE UNIQUE INDEX IF NOT EXISTS idx_contractor_licenses_unique
+ON contractor_licenses(contractor_email, trade_type, state);
+
+-- ========================================
+-- 3. Job Postings Table
 -- ========================================
 CREATE TABLE IF NOT EXISTS job_postings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,7 +156,7 @@ CREATE INDEX IF NOT EXISTS idx_job_postings_homeowner_email ON job_postings(home
 CREATE INDEX IF NOT EXISTS idx_job_postings_posted_at ON job_postings(posted_at DESC);
 
 -- ========================================
--- 3. Contractor Bids Table
+-- 4. Contractor Bids Table
 -- ========================================
 CREATE TABLE IF NOT EXISTS contractor_bids (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -143,7 +197,7 @@ CREATE INDEX IF NOT EXISTS idx_contractor_bids_submitted_at ON contractor_bids(s
 CREATE UNIQUE INDEX IF NOT EXISTS idx_contractor_bids_unique ON contractor_bids(job_id, contractor_email);
 
 -- ========================================
--- 4. Homeowner Ratings Table
+-- 5. Homeowner Ratings Table
 -- ========================================
 CREATE TABLE IF NOT EXISTS homeowner_ratings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -185,7 +239,7 @@ CREATE INDEX IF NOT EXISTS idx_homeowner_ratings_job_id ON homeowner_ratings(job
 CREATE UNIQUE INDEX IF NOT EXISTS idx_homeowner_ratings_unique ON homeowner_ratings(job_id, contractor_email) WHERE job_id IS NOT NULL;
 
 -- ========================================
--- 5. Messages Table (In-App Messaging)
+-- 6. Messages Table (In-App Messaging)
 -- ========================================
 CREATE TABLE IF NOT EXISTS messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -226,7 +280,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_sent_at ON messages(sent_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read) WHERE read = false;
 
 -- ========================================
--- 5b. Conversations Table (New Conversation-Based Messaging)
+-- 6b. Conversations Table (New Conversation-Based Messaging)
 -- ========================================
 CREATE TABLE IF NOT EXISTS conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -253,7 +307,7 @@ CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated
 CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_unique ON conversations(job_id, homeowner_email, contractor_email);
 
 -- ========================================
--- 5c. Conversation Messages Table
+-- 6c. Conversation Messages Table
 -- ========================================
 CREATE TABLE IF NOT EXISTS conversation_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -284,7 +338,7 @@ CREATE INDEX IF NOT EXISTS idx_conversation_messages_created_at ON conversation_
 CREATE INDEX IF NOT EXISTS idx_conversation_messages_read ON conversation_messages(read, recipient_email) WHERE read = false;
 
 -- ========================================
--- 6. Notifications Table
+-- 7. Notifications Table
 -- ========================================
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -326,7 +380,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created
 CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(notification_type);
 
 -- ========================================
--- 7. Activity Log Table (for analytics)
+-- 8. Activity Log Table (for analytics)
 -- ========================================
 CREATE TABLE IF NOT EXISTS activity_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -354,7 +408,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(activity_type);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at DESC);
 
 -- ========================================
--- 8. Create View: Homeowner Aggregate Ratings
+-- 9. Create View: Homeowner Aggregate Ratings
 -- ========================================
 CREATE OR REPLACE VIEW homeowner_rating_summary AS
 SELECT
@@ -370,7 +424,7 @@ FROM homeowner_ratings
 GROUP BY homeowner_contact, homeowner_id;
 
 -- ========================================
--- 9. Create View: Job Board with Bid Count
+-- 10. Create View: Job Board with Bid Count
 -- ========================================
 CREATE OR REPLACE VIEW job_board_view AS
 SELECT
@@ -384,7 +438,7 @@ LEFT JOIN contractor_bids cb ON j.id = cb.job_id
 GROUP BY j.id, up.first_name, up.last_name, up.phone;
 
 -- ========================================
--- 10. Triggers for updated_at timestamps
+-- 11. Triggers for updated_at timestamps
 -- ========================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -410,8 +464,13 @@ CREATE TRIGGER update_contractor_bids_updated_at
   BEFORE UPDATE ON contractor_bids
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_contractor_licenses_updated_at ON contractor_licenses;
+CREATE TRIGGER update_contractor_licenses_updated_at
+  BEFORE UPDATE ON contractor_licenses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- ========================================
--- 11. Row Level Security (RLS) Policies
+-- 12. Row Level Security (RLS) Policies
 -- ========================================
 -- Enable RLS on all tables (uncomment when using Supabase auth)
 -- ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
