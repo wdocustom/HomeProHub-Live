@@ -267,6 +267,36 @@
     });
   }
 
+  // Extract budget from AI response
+  function extractBudgetFromAI(aiResponse) {
+    // Look for dollar amounts in the response
+    const dollarMatches = aiResponse.match(/\$[\d,]+/g);
+
+    if (dollarMatches && dollarMatches.length >= 1) {
+      const amounts = dollarMatches.map(m => parseInt(m.replace(/[$,]/g, ''))).filter(n => !isNaN(n) && n > 0);
+
+      if (amounts.length >= 2) {
+        return {
+          low: Math.min(...amounts),
+          high: Math.max(...amounts)
+        };
+      } else if (amounts.length === 1) {
+        // If only one amount, use it as base and add reasonable range
+        const base = amounts[0];
+        return {
+          low: Math.floor(base * 0.8),
+          high: Math.ceil(base * 1.2)
+        };
+      }
+    }
+
+    // Default rough estimates if no amounts found
+    return {
+      low: 500,
+      high: 2000
+    };
+  }
+
   // Post job handler
   if (postJobBtn) {
     postJobBtn.addEventListener('click', () => {
@@ -275,10 +305,15 @@
         return;
       }
 
+      // Extract budget from AI response
+      const estimatedBudget = extractBudgetFromAI(lastAIAnswer);
+
       // Store data for job posting page
       sessionStorage.setItem('pendingJob', JSON.stringify({
         originalQuestion: lastQuestion,
         aiAnalysis: lastAIAnswer,
+        budgetLow: estimatedBudget.low,
+        budgetHigh: estimatedBudget.high,
         fromAI: true
       }));
 
