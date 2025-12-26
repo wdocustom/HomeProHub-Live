@@ -1,47 +1,70 @@
 /**
  * HomeProHub Email Service
- * Handles all email notifications and sequences
+ * Handles all email notifications and sequences using Brevo (formerly Sendinblue)
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Email configuration (replace with your actual email service)
-// For production, use SendGrid, AWS SES, Mailgun, or similar
-const EMAIL_SERVICE_CONFIGURED = false; // Set to true when configured
+// node-fetch for API calls
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
+// Email configuration from environment variables
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || 'noreply@homeprohub.today';
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || 'HomeProHub';
+const EMAIL_SERVICE_CONFIGURED = process.env.EMAIL_SERVICE_CONFIGURED === 'true';
 
 /**
- * Send email using configured service
+ * Send email using Brevo API
  */
 async function sendEmail({ to, subject, html, text }) {
-  if (!EMAIL_SERVICE_CONFIGURED) {
-    // Log email instead of sending (development mode)
-    console.log('📧 [Email Service] Would send email:');
+  // Development mode - log instead of sending
+  if (!EMAIL_SERVICE_CONFIGURED || !BREVO_API_KEY) {
+    console.log('📧 [Email Service - Development Mode] Would send email:');
     console.log(`   To: ${to}`);
+    console.log(`   From: ${EMAIL_FROM_NAME} <${EMAIL_FROM_ADDRESS}>`);
     console.log(`   Subject: ${subject}`);
     console.log(`   Preview: ${text?.substring(0, 100)}...`);
     return { success: true, mode: 'development' };
   }
 
-  // TODO: Implement actual email service (SendGrid, SES, etc.)
-  // Example with SendGrid:
-  /*
-  const sgMail = require('@sendgrid/mail');
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  // Production mode - send via Brevo API
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: {
+          email: EMAIL_FROM_ADDRESS,
+          name: EMAIL_FROM_NAME
+        },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html,
+        textContent: text
+      })
+    });
 
-  const msg = {
-    to: to,
-    from: 'support@homeprohub.today',
-    subject: subject,
-    text: text,
-    html: html
-  };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Brevo API error:', errorData);
+      throw new Error(`Brevo API error: ${response.status} ${response.statusText}`);
+    }
 
-  const result = await sgMail.send(msg);
-  return { success: true, result };
-  */
+    const data = await response.json();
+    console.log(`✅ Email sent successfully to ${to}: ${subject}`);
+    return { success: true, mode: 'production', messageId: data.messageId };
 
-  return { success: true, mode: 'mock' };
+  } catch (error) {
+    console.error('❌ Failed to send email:', error.message);
+    throw error;
+  }
 }
 
 /**
