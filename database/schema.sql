@@ -224,6 +224,64 @@ CREATE INDEX IF NOT EXISTS idx_messages_sent_at ON messages(sent_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read) WHERE read = false;
 
 -- ========================================
+-- 5b. Conversations Table (New Conversation-Based Messaging)
+-- ========================================
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Associated job
+  job_id UUID NOT NULL REFERENCES job_postings(id) ON DELETE CASCADE,
+
+  -- Participants
+  homeowner_email TEXT NOT NULL,
+  contractor_email TEXT NOT NULL,
+
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for conversations
+CREATE INDEX IF NOT EXISTS idx_conversations_job_id ON conversations(job_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_homeowner_email ON conversations(homeowner_email);
+CREATE INDEX IF NOT EXISTS idx_conversations_contractor_email ON conversations(contractor_email);
+CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
+
+-- Unique constraint to prevent duplicate conversations for same job/participants
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_unique ON conversations(job_id, homeowner_email, contractor_email);
+
+-- ========================================
+-- 5c. Conversation Messages Table
+-- ========================================
+CREATE TABLE IF NOT EXISTS conversation_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Conversation reference
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+
+  -- Message participants
+  sender_email TEXT NOT NULL,
+  recipient_email TEXT NOT NULL,
+
+  -- Message content
+  message TEXT NOT NULL,
+
+  -- Message metadata
+  read BOOLEAN DEFAULT false,
+  read_at TIMESTAMP WITH TIME ZONE,
+
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for conversation messages
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_conversation_id ON conversation_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_sender_email ON conversation_messages(sender_email);
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_recipient_email ON conversation_messages(recipient_email);
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_created_at ON conversation_messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_read ON conversation_messages(read, recipient_email) WHERE read = false;
+
+-- ========================================
 -- 6. Notifications Table
 -- ========================================
 CREATE TABLE IF NOT EXISTS notifications (

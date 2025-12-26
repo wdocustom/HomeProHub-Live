@@ -1341,11 +1341,18 @@ app.get("/api/top-rated-homeowners", async (req, res) => {
 
 /**
  * POST /api/messages/send
- * Send a message in a conversation thread
+ * Send a message - supports both conversation-based and legacy thread-based messaging
  */
 app.post("/api/messages/send", async (req, res) => {
   try {
     const {
+      // New conversation-based format
+      conversation_id,
+      sender_email,
+      recipient_email,
+      message,
+
+      // Legacy thread-based format
       jobId,
       threadId,
       senderEmail,
@@ -1354,7 +1361,30 @@ app.post("/api/messages/send", async (req, res) => {
       attachments
     } = req.body;
 
-    // Validation
+    // Check if this is new conversation-based format
+    if (conversation_id) {
+      // New conversation-based messaging
+      if (!sender_email || !recipient_email || !message) {
+        return res.status(400).json({
+          error: "Missing required fields: sender_email, recipient_email, message",
+          code: 'VALIDATION_ERROR'
+        });
+      }
+
+      const sanitizedMessage = sanitizeInput(message, 5000);
+
+      const sentMessage = await db.sendConversationMessage({
+        conversation_id,
+        sender_email,
+        recipient_email,
+        message: sanitizedMessage
+      });
+
+      console.log(`✓ Message sent in conversation: ${conversation_id}`);
+      return res.json({ success: true, message: sentMessage });
+    }
+
+    // Legacy thread-based messaging
     if (!senderEmail || !recipientEmail || !messageText) {
       return res.status(400).json({
         error: "Missing required fields",
@@ -1465,6 +1495,179 @@ app.get("/api/messages/conversations", async (req, res) => {
     console.error("❌ Error in /api/messages/conversations:", err);
     res.status(500).json({
       error: "Failed to retrieve conversations",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// CONVERSATION-BASED MESSAGING API
+// ========================================
+
+/**
+ * POST /api/conversations/create
+ * Create or find an existing conversation between homeowner and contractor for a job
+ */
+app.post("/api/conversations/create", async (req, res) => {
+  try {
+    const { job_id, homeowner_email, contractor_email } = req.body;
+
+    // Validation
+    if (!job_id || !homeowner_email || !contractor_email) {
+      return res.status(400).json({
+        error: "Missing required fields: job_id, homeowner_email, contractor_email",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const conversation = await db.createOrFindConversation(
+      job_id,
+      homeowner_email,
+      contractor_email
+    );
+
+    console.log(`✓ Conversation created/found: ${conversation.id}`);
+    res.json({ success: true, conversation });
+
+  } catch (err) {
+    console.error("❌ Error in /api/conversations/create:", err);
+    res.status(500).json({
+      error: "Failed to create conversation",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/conversations
+ * Get all conversations for a user with details
+ */
+app.get("/api/conversations", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const conversations = await db.getConversationsForUser(email);
+
+    console.log(`✓ Retrieved ${conversations.length} conversations for: ${email}`);
+    res.json({ conversations });
+
+  } catch (err) {
+    console.error("❌ Error in /api/conversations:", err);
+    res.status(500).json({
+      error: "Failed to retrieve conversations",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/messages/:conversationId
+ * Get all messages for a specific conversation
+ */
+app.get("/api/messages/:conversationId", async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { email } = req.query;
+
+    const messages = await db.getConversationMessages(conversationId);
+
+    // Mark messages as read if user email provided
+    if (email) {
+      await db.markConversationAsRead(conversationId, email);
+    }
+
+    console.log(`✓ Retrieved ${messages.length} messages for conversation: ${conversationId}`);
+    res.json({ messages });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/:conversationId:", err);
+    res.status(500).json({
+      error: "Failed to retrieve messages",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/messages/send
+ * Send a message in a conversation
+ */
+app.post("/api/messages/send-conversation", async (req, res) => {
+  try {
+    const {
+      conversation_id,
+      sender_email,
+      recipient_email,
+      message
+    } = req.body;
+
+    // Validation
+    if (!conversation_id || !sender_email || !recipient_email || !message) {
+      return res.status(400).json({
+        error: "Missing required fields: conversation_id, sender_email, recipient_email, message",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Sanitize message
+    const sanitizedMessage = sanitizeInput(message, 5000);
+
+    const sentMessage = await db.sendConversationMessage({
+      conversation_id,
+      sender_email,
+      recipient_email,
+      message: sanitizedMessage
+    });
+
+    console.log(`✓ Message sent in conversation: ${conversation_id}`);
+    res.json({ success: true, message: sentMessage });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/send-conversation:", err);
+    res.status(500).json({
+      error: "Failed to send message",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/conversations/:conversationId/read
+ * Mark all messages in a conversation as read for a user
+ */
+app.post("/api/conversations/:conversationId/read", async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email required in request body",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    await db.markConversationAsRead(conversationId, email);
+
+    console.log(`✓ Marked conversation ${conversationId} as read for: ${email}`);
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ Error in /api/conversations/:conversationId/read:", err);
+    res.status(500).json({
+      error: "Failed to mark conversation as read",
       code: 'INTERNAL_ERROR',
       message: err.message
     });

@@ -463,6 +463,159 @@ async function getUnreadCount(email) {
 }
 
 // ========================================
+// Conversation-Based Messaging Operations
+// ========================================
+
+/**
+ * Create or find an existing conversation
+ */
+async function createOrFindConversation(jobId, homeownerEmail, contractorEmail) {
+  // Try to find existing conversation
+  const { data: existing, error: findError } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('job_id', jobId)
+    .eq('homeowner_email', homeownerEmail)
+    .eq('contractor_email', contractorEmail)
+    .single();
+
+  if (existing) return existing;
+
+  // Create new conversation if not found
+  const { data: newConv, error: createError } = await supabase
+    .from('conversations')
+    .insert({
+      job_id: jobId,
+      homeowner_email: homeownerEmail,
+      contractor_email: contractorEmail,
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (createError) throw createError;
+  return newConv;
+}
+
+/**
+ * Get all conversations for a user with details
+ */
+async function getConversationsForUser(userEmail) {
+  // Get conversations where user is either homeowner or contractor
+  const { data: conversations, error } = await supabase
+    .from('conversations')
+    .select(`
+      id,
+      job_id,
+      homeowner_email,
+      contractor_email,
+      created_at,
+      job_postings!inner(
+        title,
+        description,
+        status
+      )
+    `)
+    .or(`homeowner_email.eq.${userEmail},contractor_email.eq.${userEmail}`)
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+
+  // For each conversation, get the last message and unread count
+  const conversationsWithDetails = await Promise.all(
+    conversations.map(async (conv) => {
+      // Get last message
+      const { data: lastMessage } = await supabase
+        .from('conversation_messages')
+        .select('message, created_at, sender_email')
+        .eq('conversation_id', conv.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // Get unread count
+      const { count: unreadCount } = await supabase
+        .from('conversation_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('conversation_id', conv.id)
+        .eq('recipient_email', userEmail)
+        .eq('read', false);
+
+      return {
+        id: conv.id,
+        job_id: conv.job_id,
+        job_title: conv.job_postings?.title || 'Unknown Job',
+        homeowner_email: conv.homeowner_email,
+        contractor_email: conv.contractor_email,
+        homeowner_name: conv.homeowner_email.split('@')[0], // Placeholder
+        contractor_name: conv.contractor_email.split('@')[0], // Placeholder
+        last_message: lastMessage?.message || null,
+        last_message_time: lastMessage?.created_at || conv.created_at,
+        unread_count: unreadCount || 0
+      };
+    })
+  );
+
+  return conversationsWithDetails;
+}
+
+/**
+ * Get messages for a conversation
+ */
+async function getConversationMessages(conversationId) {
+  const { data, error } = await supabase
+    .from('conversation_messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Send a message in a conversation
+ */
+async function sendConversationMessage(messageData) {
+  const { data, error } = await supabase
+    .from('conversation_messages')
+    .insert({
+      conversation_id: messageData.conversation_id,
+      sender_email: messageData.sender_email,
+      recipient_email: messageData.recipient_email,
+      message: messageData.message,
+      created_at: new Date().toISOString(),
+      read: false
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Update conversation's updated_at timestamp
+  await supabase
+    .from('conversations')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', messageData.conversation_id);
+
+  return data;
+}
+
+/**
+ * Mark conversation messages as read
+ */
+async function markConversationAsRead(conversationId, userEmail) {
+  const { error } = await supabase
+    .from('conversation_messages')
+    .update({ read: true, read_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .eq('recipient_email', userEmail)
+    .eq('read', false);
+
+  if (error) throw error;
+}
+
+// ========================================
 // Notification Operations
 // ========================================
 
@@ -581,12 +734,19 @@ module.exports = {
   getHomeownerRatings,
   getTopRatedHomeowners,
 
-  // Messaging
+  // Messaging (legacy thread-based)
   sendMessage,
   getMessagesByThread,
   getUserConversations,
   markMessagesAsRead,
   getUnreadCount,
+
+  // Conversation-based messaging
+  createOrFindConversation,
+  getConversationsForUser,
+  getConversationMessages,
+  sendConversationMessage,
+  markConversationAsRead,
 
   // Notifications
   createNotification,
