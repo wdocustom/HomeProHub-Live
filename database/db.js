@@ -63,6 +63,37 @@ async function updateUserProfile(email, updates) {
   return data;
 }
 
+/**
+ * Update contractor license information in user profile
+ */
+async function updateContractorLicense(licenseData) {
+  const { email, ...updates } = licenseData;
+
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update(updates)
+    .eq('email', email)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get contractor by verification ID
+ */
+async function getContractorByVerificationId(verificationId) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('verification_id', verificationId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+  return data;
+}
+
 // ========================================
 // Job Posting Operations
 // ========================================
@@ -867,6 +898,8 @@ module.exports = {
   upsertUserProfile,
   getUserProfile,
   updateUserProfile,
+  updateContractorLicense,
+  getContractorByVerificationId,
 
   // Job postings
   createJobPosting,

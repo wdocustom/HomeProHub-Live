@@ -1086,6 +1086,297 @@ try {
 }
 
 /**
+ * POST /api/license/submit
+ * Submit contractor license and insurance documents for verification
+ */
+app.post("/api/license/submit", async (req, res) => {
+  try {
+    const {
+      contractorEmail,
+      licState,
+      licNumber,
+      licType,
+      licExpiration,
+      licenseDocument,
+      insuranceProvider,
+      insurancePolicyNumber,
+      insuranceExpiration,
+      insuranceCoverage,
+      insuranceDocument
+    } = req.body;
+
+    // Validation
+    if (!contractorEmail || !licState || !licNumber || !licType) {
+      return res.status(400).json({
+        error: "Missing required fields: contractorEmail, licState, licNumber, licType",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get contractor profile
+    const contractorProfile = await db.getUserProfile(contractorEmail);
+    if (!contractorProfile) {
+      return res.status(404).json({
+        error: "Contractor profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Generate unique verification ID
+    const verificationId = `lic_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+    // Prepare license data
+    const licenseData = {
+      contractor_email: contractorEmail,
+      contractor_id: contractorProfile.id,
+      verification_id: verificationId,
+      license_state: licState.toUpperCase(),
+      license_number: licNumber,
+      license_type: licType,
+      license_expiration: licExpiration || null,
+      insurance_provider: insuranceProvider || null,
+      insurance_policy_number: insurancePolicyNumber || null,
+      insurance_expiration: insuranceExpiration || null,
+      insurance_coverage: insuranceCoverage || null,
+      verification_status: 'pending',
+      submitted_at: new Date().toISOString()
+    };
+
+    // For now, store documents as base64 in metadata (in production, use Supabase Storage)
+    // This is a simplified version - you'd want to upload to storage and store URLs
+    const metadata = {};
+    if (licenseDocument) {
+      metadata.license_document_preview = licenseDocument.substring(0, 100) + '...';
+      metadata.license_document_size = licenseDocument.length;
+    }
+    if (insuranceDocument) {
+      metadata.insurance_document_preview = insuranceDocument.substring(0, 100) + '...';
+      metadata.insurance_document_size = insuranceDocument.length;
+    }
+    licenseData.metadata = metadata;
+
+    // Save to database (we'll need to create this table/function)
+    // For now, update contractor profile with license info
+    await db.updateContractorLicense({
+      email: contractorEmail,
+      license_state: licState.toUpperCase(),
+      license_number: licNumber,
+      license_type: licType,
+      license_expiration: licExpiration,
+      license_verified: 'pending',
+      verification_id: verificationId
+    });
+
+    // Send verification email to admin
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@homeprohub.today';
+    const approveUrl = `${process.env.BASE_URL || 'https://www.homeprohub.today'}/api/license/verify?id=${verificationId}&action=approve`;
+    const rejectUrl = `${process.env.BASE_URL || 'https://www.homeprohub.today'}/api/license/verify?id=${verificationId}&action=reject`;
+
+    try {
+      // Load and render admin verification email template
+      const template = emailService.loadTemplate('license-verification-request');
+      const html = emailService.renderTemplate(template, {
+        contractorName: contractorProfile.business_name || contractorProfile.company_name || 'Unknown Contractor',
+        contractorEmail: contractorEmail,
+        verificationId: verificationId,
+        licenseState: licState.toUpperCase(),
+        licenseNumber: licNumber,
+        licenseType: licType,
+        licenseExpiration: licExpiration || 'Not provided',
+        insuranceProvider: insuranceProvider || 'Not provided',
+        insurancePolicyNumber: insurancePolicyNumber || 'Not provided',
+        insuranceCoverage: insuranceCoverage ? `$${parseInt(insuranceCoverage).toLocaleString()}` : 'Not provided',
+        insuranceExpiration: insuranceExpiration || 'Not provided',
+        approveUrl: approveUrl,
+        rejectUrl: rejectUrl
+      });
+
+      await emailService.sendEmail({
+        to: adminEmail,
+        subject: `🔍 License Verification Request - ${contractorProfile.business_name || contractorEmail}`,
+        html: html,
+        text: `New License Verification Request from ${contractorEmail}\n\nLicense: ${licState} ${licNumber}\nType: ${licType}\n\nApprove: ${approveUrl}\nReject: ${rejectUrl}`
+      });
+      console.log(`✓ Verification request email sent to admin for ${contractorEmail}`);
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send admin verification email:', emailErr.message);
+      // Don't fail the request if email fails
+    }
+
+    // Log activity
+    await db.logActivity({
+      user_email: contractorEmail,
+      user_id: contractorProfile.id,
+      activity_type: 'license_submitted',
+      description: `Submitted license for verification: ${licState} ${licNumber}`,
+      metadata: { verification_id: verificationId }
+    });
+
+    console.log(`✓ License submission received: ${contractorEmail} - ${licState} ${licNumber}`);
+    res.json({
+      success: true,
+      message: 'License submitted for verification',
+      verificationId: verificationId,
+      status: 'pending'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/license/submit:", err);
+    res.status(500).json({
+      error: "Failed to submit license",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/license/verify
+ * Approve or reject a license verification (called from admin email link)
+ */
+app.get("/api/license/verify", async (req, res) => {
+  try {
+    const { id, action } = req.query;
+
+    if (!id || !action) {
+      return res.status(400).send(`
+        <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>❌ Invalid Request</h1>
+          <p>Missing verification ID or action</p>
+        </body></html>
+      `);
+    }
+
+    if (action !== 'approve' && action !== 'reject') {
+      return res.status(400).send(`
+        <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>❌ Invalid Action</h1>
+          <p>Action must be 'approve' or 'reject'</p>
+        </body></html>
+      `);
+    }
+
+    // Find contractor by verification ID
+    // For now, we'll search all contractors for this verification_id
+    // In production, you'd have a license_verifications table
+    const contractor = await db.getContractorByVerificationId(id);
+
+    if (!contractor) {
+      return res.status(404).send(`
+        <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>❌ Not Found</h1>
+          <p>Verification request not found or already processed</p>
+        </body></html>
+      `);
+    }
+
+    // Update license status
+    const newStatus = action === 'approve' ? 'verified' : 'rejected';
+    await db.updateContractorLicense({
+      email: contractor.email,
+      license_verified: newStatus,
+      verified_at: new Date().toISOString()
+    });
+
+    // Send notification email to contractor
+    try {
+      const subject = action === 'approve'
+        ? '✅ Your License Has Been Verified!'
+        : '⚠️ License Verification Update';
+
+      // Load appropriate email template
+      const templateName = action === 'approve' ? 'license-approved' : 'license-rejected';
+      const template = emailService.loadTemplate(templateName);
+      const html = emailService.renderTemplate(template, {
+        contractorName: contractor.business_name || contractor.company_name || 'Valued Contractor',
+        profileLink: 'https://www.homeprohub.today/contractor-profile.html',
+        jobBoardLink: 'https://www.homeprohub.today/contractor-dashboard.html',
+        supportLink: 'mailto:support@homeprohub.today'
+      });
+
+      await emailService.sendEmail({
+        to: contractor.email,
+        subject: subject,
+        html: html,
+        text: action === 'approve'
+          ? 'Your license has been verified! You now have the verified badge on your profile.'
+          : 'We were unable to verify your license. Please review and resubmit if needed.'
+      });
+
+      console.log(`✓ Verification notification sent to ${contractor.email}`);
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send contractor notification:', emailErr.message);
+    }
+
+    // Log activity
+    await db.logActivity({
+      user_email: contractor.email,
+      user_id: contractor.id,
+      activity_type: `license_${action}d`,
+      description: `License verification ${action}d`,
+      metadata: { verification_id: id }
+    });
+
+    console.log(`✓ License ${action}d for ${contractor.email}`);
+
+    // Return success page
+    res.send(`
+      <html>
+        <head>
+          <title>Verification ${action === 'approve' ? 'Approved' : 'Rejected'}</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              padding: 60px 20px;
+              text-align: center;
+              background: ${action === 'approve' ? '#ecfdf5' : '#fef2f2'};
+            }
+            .container {
+              max-width: 500px;
+              margin: 0 auto;
+              background: white;
+              padding: 40px;
+              border-radius: 12px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .icon {
+              font-size: 64px;
+              margin-bottom: 20px;
+            }
+            h1 {
+              color: ${action === 'approve' ? '#065f46' : '#991b1b'};
+              margin: 0 0 16px 0;
+            }
+            p {
+              color: #6b7280;
+              line-height: 1.6;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">${action === 'approve' ? '✅' : '❌'}</div>
+            <h1>License ${action === 'approve' ? 'Approved' : 'Rejected'}</h1>
+            <p><strong>${contractor.business_name || contractor.email}</strong></p>
+            <p>License verification has been ${action}d.</p>
+            <p>The contractor has been notified via email.</p>
+          </div>
+        </body>
+      </html>
+    `);
+
+  } catch (err) {
+    console.error("❌ Error in /api/license/verify:", err);
+    res.status(500).send(`
+      <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+        <h1>❌ Error</h1>
+        <p>Failed to process verification: ${err.message}</p>
+      </body></html>
+    `);
+  }
+});
+
+/**
  * POST /api/submit-job
  * Submit a new job posting from homeowner
  */

@@ -553,48 +553,109 @@ function checkLicenseStatus() {
     licenseForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         saveLicenseButton.disabled = true;
-        saveLicenseButton.textContent = 'Saving...';
+        saveLicenseButton.textContent = 'Submitting...';
 
         try {
-            const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
-            const profile = existing ? JSON.parse(existing) : {};
-
-            profile.licState = document.getElementById('licState').value.trim().toUpperCase();
-            profile.licNumber = document.getElementById('licNumber').value.trim();
-            profile.licenseNumber = profile.licNumber; // For backward compatibility
-            profile.license = profile.licNumber; // For backward compatibility
-            profile.licType = document.getElementById('licType').value;
-            profile.licExpiration = document.getElementById('licExpiration').value;
-
-            profile.insuranceProvider = document.getElementById('insuranceProvider').value.trim();
-            profile.insurancePolicyNumber = document.getElementById('insurancePolicyNumber').value.trim();
-            profile.insuranceExpiration = document.getElementById('insuranceExpiration').value;
-            profile.insuranceCoverage = document.getElementById('insuranceCoverage').value;
-
-            // If files are uploaded, set status to pending verification
-            if (licenseFile || insuranceFile) {
-                profile.licenseVerified = 'pending';
-                profile.licenseSubmittedDate = new Date().toISOString();
+            const contractorEmail = localStorage.getItem(STORAGE_KEYS.USERNAME);
+            if (!contractorEmail) {
+                throw new Error('Not logged in');
             }
 
+            // Gather form data
+            const licState = document.getElementById('licState').value.trim().toUpperCase();
+            const licNumber = document.getElementById('licNumber').value.trim();
+            const licType = document.getElementById('licType').value;
+            const licExpiration = document.getElementById('licExpiration').value;
+            const insuranceProvider = document.getElementById('insuranceProvider').value.trim();
+            const insurancePolicyNumber = document.getElementById('insurancePolicyNumber').value.trim();
+            const insuranceExpiration = document.getElementById('insuranceExpiration').value;
+            const insuranceCoverage = document.getElementById('insuranceCoverage').value;
+
+            // Convert files to base64 if present
+            let licenseDocument = null;
+            let insuranceDocument = null;
+
+            if (licenseFile) {
+                licenseDocument = await fileToBase64(licenseFile);
+            }
+            if (insuranceFile) {
+                insuranceDocument = await fileToBase64(insuranceFile);
+            }
+
+            // Submit to API
+            const response = await fetch('/api/license/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contractorEmail,
+                    licState,
+                    licNumber,
+                    licType,
+                    licExpiration,
+                    licenseDocument,
+                    insuranceProvider,
+                    insurancePolicyNumber,
+                    insuranceExpiration,
+                    insuranceCoverage,
+                    insuranceDocument
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to submit license');
+            }
+
+            // Also save to localStorage for quick access
+            const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+            const profile = existing ? JSON.parse(existing) : {};
+            profile.licState = licState;
+            profile.licNumber = licNumber;
+            profile.licenseNumber = licNumber;
+            profile.license = licNumber;
+            profile.licType = licType;
+            profile.licExpiration = licExpiration;
+            profile.insuranceProvider = insuranceProvider;
+            profile.insurancePolicyNumber = insurancePolicyNumber;
+            profile.insuranceExpiration = insuranceExpiration;
+            profile.insuranceCoverage = insuranceCoverage;
+            profile.licenseVerified = 'pending';
+            profile.verificationId = data.verificationId;
+            profile.licenseSubmittedDate = new Date().toISOString();
             localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
 
-            licenseStatusMsg.textContent = licenseFile || insuranceFile
-                ? 'License information saved! Documents submitted for verification. We\'ll email you within 1-3 business days.'
-                : 'License information saved successfully!';
+            licenseStatusMsg.textContent = '✅ License submitted for verification! We\'ll email you within 1-2 business days with the results.';
             licenseStatusMsg.style.color = '#10b981';
 
             // Update status banner
             checkLicenseStatus();
 
+            // Clear file uploads after successful submission
+            clearLicenseUpload();
+            clearInsuranceUpload();
+
         } catch (err) {
-            licenseStatusMsg.textContent = 'Error saving license information';
+            console.error('License submission error:', err);
+            licenseStatusMsg.textContent = `❌ Error: ${err.message}`;
             licenseStatusMsg.style.color = '#ef4444';
         } finally {
             saveLicenseButton.disabled = false;
             saveLicenseButton.textContent = 'Save & Submit for Verification';
         }
     });
+
+    // Helper function to convert file to base64
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
 
     // Load license info into form
     function loadLicenseInfo() {
