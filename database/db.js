@@ -87,10 +87,7 @@ async function createJobPosting(jobData) {
 async function getJobs(filters = {}) {
   let query = supabase
     .from('job_postings')
-    .select(`
-      *,
-      homeowner:user_profiles!job_postings_homeowner_email_fkey(first_name, last_name, phone)
-    `)
+    .select('*')
     .order('posted_at', { ascending: false });
 
   if (filters.status) {
@@ -112,38 +109,60 @@ async function getJobs(filters = {}) {
  * Get job by ID with related data
  */
 async function getJobById(jobId) {
-  const { data, error } = await supabase
+  // Get the job
+  const { data: job, error: jobError } = await supabase
     .from('job_postings')
-    .select(`
-      *,
-      homeowner:user_profiles!job_postings_homeowner_email_fkey(first_name, last_name, phone),
-      bids:contractor_bids(*)
-    `)
+    .select('*')
     .eq('id', jobId)
     .single();
 
-  if (error) throw error;
-  return data;
+  if (jobError) throw jobError;
+
+  // Get bids for this job
+  const { data: bids, error: bidsError } = await supabase
+    .from('contractor_bids')
+    .select('*')
+    .eq('job_id', jobId);
+
+  if (bidsError) throw bidsError;
+
+  // Combine and return
+  return { ...job, bids: bids || [] };
 }
 
 /**
  * Get jobs posted by a specific homeowner
  */
 async function getJobsByHomeowner(email) {
-  const { data, error } = await supabase
+  // Get jobs for this homeowner
+  const { data: jobs, error: jobsError } = await supabase
     .from('job_postings')
-    .select(`
-      *,
-      bids:contractor_bids(
-        *,
-        contractor:user_profiles!contractor_bids_contractor_email_fkey(business_name, phone)
-      )
-    `)
+    .select('*')
     .eq('homeowner_email', email)
     .order('posted_at', { ascending: false });
 
-  if (error) throw error;
-  return data;
+  if (jobsError) throw jobsError;
+
+  // Get bids for each job
+  const jobIds = jobs.map(job => job.id);
+  if (jobIds.length > 0) {
+    const { data: bids, error: bidsError } = await supabase
+      .from('contractor_bids')
+      .select('*')
+      .in('job_id', jobIds);
+
+    if (bidsError) throw bidsError;
+
+    // Attach bids to their respective jobs
+    const jobsWithBids = jobs.map(job => ({
+      ...job,
+      bids: bids.filter(bid => bid.job_id === job.id)
+    }));
+
+    return jobsWithBids;
+  }
+
+  return jobs.map(job => ({ ...job, bids: [] }));
 }
 
 /**
@@ -200,17 +219,7 @@ async function submitBid(bidData) {
 async function getBidsByJob(jobId) {
   const { data, error } = await supabase
     .from('contractor_bids')
-    .select(`
-      *,
-      contractor:user_profiles!contractor_bids_contractor_email_fkey(
-        business_name,
-        first_name,
-        last_name,
-        phone,
-        license_number,
-        years_in_business
-      )
-    `)
+    .select('*')
     .eq('job_id', jobId)
     .order('submitted_at', { ascending: false });
 
@@ -222,20 +231,35 @@ async function getBidsByJob(jobId) {
  * Get all bids submitted by a contractor
  */
 async function getBidsByContractor(email) {
-  const { data, error } = await supabase
+  // Get bids for this contractor
+  const { data: bids, error: bidsError } = await supabase
     .from('contractor_bids')
-    .select(`
-      *,
-      job:job_postings(
-        *,
-        homeowner:user_profiles!job_postings_homeowner_email_fkey(first_name, last_name, phone)
-      )
-    `)
+    .select('*')
     .eq('contractor_email', email)
-    .order('submitted_at', { ascending: false });
+    .order('submitted_at', { ascending: false});
 
-  if (error) throw error;
-  return data;
+  if (bidsError) throw bidsError;
+
+  // Get job details for each bid
+  const jobIds = bids.map(bid => bid.job_id);
+  if (jobIds.length > 0) {
+    const { data: jobs, error: jobsError } = await supabase
+      .from('job_postings')
+      .select('*')
+      .in('id', jobIds);
+
+    if (jobsError) throw jobsError;
+
+    // Attach job details to each bid
+    const bidsWithJobs = bids.map(bid => ({
+      ...bid,
+      job: jobs.find(job => job.id === bid.job_id)
+    }));
+
+    return bidsWithJobs;
+  }
+
+  return bids;
 }
 
 /**
@@ -323,12 +347,9 @@ async function getHomeownerRating(contact) {
 async function getHomeownerRatings(contact) {
   const { data, error } = await supabase
     .from('homeowner_ratings')
-    .select(`
-      *,
-      contractor:user_profiles!homeowner_ratings_contractor_email_fkey(business_name, first_name, last_name)
-    `)
+    .select('*')
     .eq('homeowner_contact', contact)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false});
 
   if (error) throw error;
   return data;
@@ -373,10 +394,7 @@ async function sendMessage(messageData) {
 async function getMessagesByThread(threadId) {
   const { data, error } = await supabase
     .from('messages')
-    .select(`
-      *,
-      sender:user_profiles!messages_sender_email_fkey(first_name, last_name, business_name)
-    `)
+    .select('*')
     .eq('thread_id', threadId)
     .order('sent_at', { ascending: true });
 
