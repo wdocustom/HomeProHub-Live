@@ -796,7 +796,7 @@
 
             ${bid.status === 'accepted' ? `
               <div class="job-actions">
-                <button class="btn-bid">Contact Homeowner</button>
+                <button class="btn-bid" onclick="contactHomeowner('${bid.job_id}', '${bid.homeowner_email}')">💬 Contact Homeowner</button>
               </div>
             ` : ''}
           </div>
@@ -937,6 +937,30 @@
       alert('Job details view coming soon!');
     }
     window.viewJobDetails = viewJobDetails;
+
+    // Contact homeowner - create conversation and go to messages
+    async function contactHomeowner(jobId, homeownerEmail) {
+      try {
+        const response = await fetch('/api/conversations/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+          },
+          body: JSON.stringify({
+            job_id: jobId,
+            homeowner_email: homeownerEmail,
+            contractor_email: localStorage.getItem(STORAGE_KEYS.USERNAME)
+          })
+        });
+
+        window.location.href = 'messages.html';
+      } catch (error) {
+        console.error('Error creating conversation:', error);
+        window.location.href = 'messages.html';
+      }
+    }
+    window.contactHomeowner = contactHomeowner;
 
     // Use Estimator - pass job data to pricing estimator
     function useEstimator(jobId) {

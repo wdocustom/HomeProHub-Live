@@ -867,11 +867,36 @@
 
       // Message contractor buttons
       document.querySelectorAll('.btn-message').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', async function() {
           const contractorEmail = this.dataset.contractorEmail;
           const jobId = this.dataset.jobId;
-          // TODO: Open messaging interface
-          alert(`Messaging feature coming soon! Contact: ${contractorEmail}`);
+
+          // Create or find conversation and redirect to messages
+          try {
+            const response = await fetch('/api/conversations/create', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('homeprohub_auth_token')}`
+              },
+              body: JSON.stringify({
+                job_id: jobId,
+                homeowner_email: localStorage.getItem('homeprohub_username'),
+                contractor_email: contractorEmail
+              })
+            });
+
+            if (response.ok) {
+              window.location.href = 'messages.html';
+            } else {
+              // Fallback: just go to messages page
+              window.location.href = 'messages.html';
+            }
+          } catch (error) {
+            console.error('Error creating conversation:', error);
+            // Fallback: just go to messages page
+            window.location.href = 'messages.html';
+          }
         });
       });
 
