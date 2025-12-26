@@ -1,286 +1,351 @@
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="UTF-8" />
-  <title>HomeProHub – Upgrade Options</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeProHub – Pricing & Plans</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
   <style>
     .pricing-hero {
       max-width: 900px;
-      margin: 40px auto 30px;
+      margin: 80px auto 40px;
       padding: 0 24px;
       text-align: center;
     }
+
     .pricing-title {
-      font-size: 36px;
+      font-size: 3rem;
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 16px;
     }
+
     .pricing-subtitle {
-      font-size: 16px;
+      font-size: 1.125rem;
       color: #6b7280;
-      margin-bottom: 30px;
+      margin-bottom: 40px;
     }
+
     .tier-grid {
       max-width: 1200px;
       margin: 0 auto 60px;
       padding: 0 24px;
-      display: grid;
+      display: none;
       grid-template-columns: repeat(3, 1fr);
-      gap: 25px;
+      gap: 24px;
     }
+
+    .tier-grid.active {
+      display: grid;
+    }
+
     @media (max-width: 992px) {
       .tier-grid {
         grid-template-columns: 1fr;
       }
     }
+
     .tier-card {
-      background: #ffffff;
+      background: white;
       border: 2px solid #e5e7eb;
-      padding: 30px 25px;
+      padding: 32px 24px;
       border-radius: 16px;
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
       text-align: center;
       display: flex;
       flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
+
+    .tier-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    }
+
     .tier-card--highlight {
-      border-color: #2563eb; /* Primary Blue Highlight */
-      box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+      border-color: #2563eb;
+      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.2);
     }
+
     .tier-name {
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
+
     .tier-price {
-      font-size: 48px;
+      font-size: 3rem;
       font-weight: 800;
-      margin-bottom: 5px;
-      color: #1f2937;
+      margin-bottom: 8px;
+      color: #111827;
     }
+
     .tier-price small {
-      font-size: 18px;
+      font-size: 1.125rem;
       font-weight: 500;
       color: #6b7280;
     }
-    .tier-cta {
-      margin-top: auto; /* Push CTA to bottom */
-      padding: 10px 20px;
-      font-size: 16px;
-      width: 100%;
+
+    .tier-description {
+      font-size: 0.95rem;
+      color: #6b7280;
+      margin-bottom: 24px;
+      min-height: 40px;
     }
+
     .tier-features {
       list-style: none;
       padding: 0;
-      margin: 20px 0 30px;
+      margin: 0 0 32px 0;
       text-align: left;
+      flex: 1;
     }
+
     .tier-features li {
-      font-size: 14px;
+      font-size: 0.9rem;
       color: #4b5563;
       margin-bottom: 10px;
-      padding-left: 20px;
+      padding-left: 24px;
       position: relative;
     }
+
     .tier-features li::before {
       content: "✓";
-      color: #10b981; /* Green checkmark */
+      color: #10b981;
       font-weight: 700;
       position: absolute;
       left: 0;
     }
-    .tier-features .excluded {
+
+    .tier-features li.excluded {
       color: #9ca3af;
       text-decoration: line-through;
     }
-    .tier-features .excluded::before {
+
+    .tier-features li.excluded::before {
       content: "✕";
-      color: #ef4444; /* Red cross */
+      color: #ef4444;
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">HH</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Dashboard</a>
-      <div class="profile-area">
-        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+
+    .tier-cta {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tier-cta.primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .tier-cta.primary:hover {
+      background: #1d4ed8;
+    }
+
+    .tier-cta.secondary {
+      background: #f3f4f6;
+      color: #2563eb;
+      border: 2px solid #e5e7eb;
+    }
+
+    .tier-cta.secondary:hover {
+      background: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <main>
+    <section class="pricing-hero">
+      <h1 class="pricing-title" id="pricingTitle">Choose Your Plan</h1>
+      <p class="pricing-subtitle" id="pricingSubtitle">Loading...</p>
+    </section>
+
+    <!-- Homeowner Plans -->
+    <section class="tier-grid" id="homeownerPlans">
+      <div class="tier-card">
+        <div class="tier-name">Basic</div>
+        <div class="tier-price">Free</div>
+        <p class="tier-description">Perfect for getting started with AI-powered home assistance</p>
+
+        <ul class="tier-features">
+          <li>AI Home Issue Assistant</li>
+          <li>AI Project Planner</li>
+          <li>Contractor Directory with Grades</li>
+          <li>Browse contractor profiles & reviews</li>
+          <li class="excluded">Direct messaging to pros</li>
+          <li class="excluded">Request callbacks</li>
+          <li class="excluded">Live video walkthroughs</li>
+        </ul>
+        <button class="tier-cta secondary">Current Plan</button>
       </div>
-    </div>
-  </div></header><main>
-  <section class="pricing-hero">
-    <h1 class="pricing-title">Unlock Full Contractor Access & Support.</h1>
-    <p class="pricing-subtitle">
-      Upgrade from the Free Basic tier to get human expert access, live calls, and dedicated project advocacy.
-    </p>
-  </section>
 
-  <section class="tier-grid">
-    <div class="tier-card">
-      <div class="tier-name">Guided</div>
-      <div class="tier-price">$29<small>/mo</small></div>
-      <p class="small-text" style="color: #6b7280;">Best for initial projects and ongoing advice.</p>
-      
-      <ul class="tier-features">
-        <li>AI Assistant & Project Planner (Free)</li>
-        <li>Contractor Directory & Grading (Free)</li>
-        <li>**Direct Messaging/Email to Pro**</li>
-        <li>**Request a Call Back from Pro**</li>
-        <li>**Dedicated Project Advocate (via message)**</li>
-        <li class="excluded">Live Video Walkthroughs</li>
-        <li class="excluded">1-on-1 VIP Support</li>
-      </ul>
-      <a href="#" class="tier-cta btn-primary btn-secondary" style="background:#f3f4f6; color:#2563eb; border:1px solid #d1d5db; box-shadow:none;">Select Guided</a>
-    </div>
+      <div class="tier-card tier-card--highlight">
+        <div class="tier-name" style="color: #2563eb;">Guided</div>
+        <div class="tier-price">$29<small>/mo</small></div>
+        <p class="tier-description">Best for initial projects and ongoing contractor support</p>
 
-    <div class="tier-card tier-card--highlight">
-      <div class="tier-name" style="color: #2563eb;">Concierge</div>
-      <div class="tier-price">$99<small>/mo</small></div>
-      <p class="small-text" style="color: #6b7280; font-weight: 600;">Ideal for large remodels and complex projects.</p>
-      
-      <ul class="tier-features">
-        <li>AI Assistant & Project Planner (Free)</li>
-        <li>Contractor Directory & Grading (Free)</li>
-        <li>Direct Messaging/Email to Pro</li>
-        <li>Request a Call Back from Pro</li>
-        <li>Dedicated Project Advocate (via message)</li>
-        <li>**Includes 2 Live Video Walkthroughs/mo**</li>
-        <li class="excluded">All-Access VIP Priority (See Elite)</li>
-      </ul>
-      <a href="#" class="tier-cta btn-primary" style="background:#2563eb;">Select Concierge</a>
-    </div>
+        <ul class="tier-features">
+          <li>Everything in Basic</li>
+          <li>Direct messaging/email to verified pros</li>
+          <li>Request callbacks from contractors</li>
+          <li>Dedicated project advocate (via message)</li>
+          <li>Priority contractor matching</li>
+          <li class="excluded">Live video walkthroughs</li>
+          <li class="excluded">1-on-1 VIP support</li>
+        </ul>
+        <button class="tier-cta primary">Upgrade to Guided</button>
+      </div>
 
-    <div class="tier-card">
-      <div class="tier-name">Elite</div>
-      <div class="tier-price">$199<small>/mo</small></div>
-      <p class="small-text" style="color: #6b7280;">For full project management support, nationally.</p>
-      
-      <ul class="tier-features">
-        <li>AI Assistant & Project Planner (Free)</li>
-        <li>Contractor Directory & Grading (Free)</li>
-        <li>Direct Messaging/Email to Pro</li>
-        <li>Request a Call Back from Pro</li>
-        <li>Dedicated Project Advocate (via message)</li>
-        <li>Includes Unlimited Live Video Walkthroughs</li>
-        <li>**All-Access VIP Priority Scheduling**</li>
-        <li>**1-on-1 Strategy & Quarterly Reviews**</li>
-      </ul>
-      <a href="#" class="tier-cta btn-primary btn-secondary" style="background:#f3f4f6; color:#2563eb; border:1px solid #d1d5db; box-shadow:none;">Select Elite</a>
-    </div>
-  </section></main><script>
-(function() {
-  'use strict';
+      <div class="tier-card">
+        <div class="tier-name">Concierge</div>
+        <div class="tier-price">$99<small>/mo</small></div>
+        <p class="tier-description">Ideal for large remodels and complex projects</p>
 
-  // Standardized localStorage keys
-  const STORAGE_KEYS = {
-    USER_PROFILE: 'homeprohub_user',
-    USER_ROLE: 'homeprohub_user_role',
-    AUTH_TOKEN: 'homeprohub_auth_token',
-    USERNAME: 'homeprohub_username',
-    PROFILE_COMPLETE: 'homeprohub_profile_complete',
-    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
-    HISTORY: 'homeprohub_history_v1'
-  };
+        <ul class="tier-features">
+          <li>Everything in Guided</li>
+          <li>2 Live video walkthroughs per month</li>
+          <li>Direct access to construction experts</li>
+          <li>Bid review and negotiation support</li>
+          <li>Project milestone tracking</li>
+          <li>Contract review assistance</li>
+          <li>Priority 24/7 support</li>
+        </ul>
+        <button class="tier-cta secondary">Upgrade to Concierge</button>
+      </div>
+    </section>
 
-  /**
-   * Sanitize text for display (prevent XSS)
-   */
-  function sanitizeText(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-  }
+    <!-- Contractor Plans -->
+    <section class="tier-grid" id="contractorPlans">
+      <div class="tier-card">
+        <div class="tier-name">Starter</div>
+        <div class="tier-price">Free</div>
+        <p class="tier-description">Essential tools to price jobs and handle field issues</p>
 
-  /**
-   * Get user data from localStorage
-   */
-  function getUserData() {
-    try {
-      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
-      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+        <ul class="tier-features">
+          <li>AI Job Pricing & Estimator</li>
+          <li>Field support on tough projects</li>
+          <li>Contractor Coach AI assistant</li>
+          <li>Basic job board access</li>
+          <li class="excluded">Homeowner grading directory</li>
+          <li class="excluded">Priority lead placement</li>
+          <li class="excluded">Expert consultation access</li>
+        </ul>
+        <button class="tier-cta secondary">Current Plan</button>
+      </div>
 
-      if (!role || !authToken) {
+      <div class="tier-card tier-card--highlight">
+        <div class="tier-name" style="color: #10b981;">Pro</div>
+        <div class="tier-price">$49<small>/mo</small></div>
+        <p class="tier-description">Grow your business with premium tools and leads</p>
+
+        <ul class="tier-features">
+          <li>Everything in Starter</li>
+          <li>Homeowner grading directory access</li>
+          <li>Licensing & setup guidance</li>
+          <li>Business operations consulting</li>
+          <li>Priority job board placement</li>
+          <li>Unlimited AI estimates</li>
+          <li class="excluded">1-on-1 expert access</li>
+        </ul>
+        <button class="tier-cta primary" style="background: #10b981;">Upgrade to Pro</button>
+      </div>
+
+      <div class="tier-card">
+        <div class="tier-name">Elite</div>
+        <div class="tier-price">$149<small>/mo</small></div>
+        <p class="tier-description">Complete business support for serious contractors</p>
+
+        <ul class="tier-features">
+          <li>Everything in Pro</li>
+          <li>Direct access to designers, architects, engineers</li>
+          <li>1-on-1 business coaching</li>
+          <li>Marketing & branding support</li>
+          <li>Advanced analytics dashboard</li>
+          <li>VIP lead priority</li>
+          <li>Quarterly strategy reviews</li>
+        </ul>
+        <button class="tier-cta secondary">Upgrade to Elite</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const STORAGE_KEYS = {
+      USER_PROFILE: 'homeprohub_user',
+      USER_ROLE: 'homeprohub_user_role',
+      AUTH_TOKEN: 'homeprohub_auth_token',
+      USERNAME: 'homeprohub_username'
+    };
+
+    function getUserData() {
+      try {
+        const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+        const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+        const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+
+        if (!role || !authToken) {
+          return null;
+        }
+
+        const profile = rawProfile ? JSON.parse(rawProfile) : {};
+        return {
+          role: role,
+          name: profile.name || 'User',
+          email: profile.email || ''
+        };
+      } catch (e) {
         return null;
       }
-
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
-      return {
-        role: role,
-        name: profile.name || 'User',
-        email: profile.email || ''
-      };
-    } catch (e) {
-      return null;
     }
-  }
 
-  /**
-   * Clear all user data from localStorage
-   */
-  function clearAllData() {
-    Object.values(STORAGE_KEYS).forEach(key => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {
-        // Silent fail
+    function initialize() {
+      const user = getUserData();
+
+      // Require authentication
+      if (!user || !user.role) {
+        // Redirect to landing page to sign up/login
+        alert('Please sign in to view pricing options');
+        window.location.href = 'index.html';
+        return;
       }
-    });
-  }
 
-  /**
-   * Logout function
-   */
-  window.logout = function() {
-    clearAllData();
+      // Show role-specific pricing
+      const pricingTitle = document.getElementById('pricingTitle');
+      const pricingSubtitle = document.getElementById('pricingSubtitle');
+      const homeownerPlans = document.getElementById('homeownerPlans');
+      const contractorPlans = document.getElementById('contractorPlans');
 
-    try {
-      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      if (authToken) {
-        fetch('/api/logout', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        }).catch(() => {});
+      if (user.role === 'homeowner') {
+        pricingTitle.textContent = 'Homeowner Plans';
+        pricingSubtitle.textContent = 'Upgrade to get expert support, live calls, and dedicated project advocacy';
+        homeownerPlans.classList.add('active');
+      } else {
+        pricingTitle.textContent = 'Contractor Plans';
+        pricingSubtitle.textContent = 'Grow your business with premium leads, tools, and expert consultation';
+        contractorPlans.classList.add('active');
       }
-    } catch (e) {}
-
-    window.location.href = 'index.html';
-  };
-
-  /**
-   * Initialize the page
-   */
-  function initialize() {
-    const profileLinkEl = document.getElementById('profileLink');
-    const dashboardLinkEl = document.querySelector('.nav-links a[href="home.html"]');
-    const user = getUserData();
-
-    if (!user || !user.role) {
-      clearAllData();
-      window.location.href = 'index.html';
-      return;
     }
 
-    // Set profile link text (sanitized)
-    if (profileLinkEl && user.name) {
-      const firstName = sanitizeText(user.name.split(' ')[0]);
-      profileLinkEl.textContent = firstName;
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+      initialize();
     }
+  })();
+  </script>
 
-    // Update dashboard link text based on role
-    if (dashboardLinkEl) {
-      dashboardLinkEl.textContent = user.role === 'homeowner' ? 'Dashboard' : 'Contractor Dash';
-    }
-  }
-
-  // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-  } else {
-    initialize();
-  }
-})();
-</script></body></html>
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
+</body>
+</html>
