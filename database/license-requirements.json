@@ -1,0 +1,106 @@
+{
+  "description": "License requirements by state and trade type",
+  "last_updated": "2025-12-26",
+
+  "states": {
+    "NE": {
+      "name": "Nebraska",
+      "general_contractor": {
+        "required": true,
+        "threshold": 2000,
+        "threshold_description": "Projects over $2,000 require licensed contractor",
+        "license_name": "Nebraska Contractor Registration",
+        "verification_url": "https://www.nebraska.gov/for-business/licenses-and-permits/contractor-registration/",
+        "education_partner": "contractor_university",
+        "exam_required": false
+      },
+      "plumbing": {
+        "required": true,
+        "threshold": 0,
+        "license_name": "Nebraska Plumbing License",
+        "verification_url": "https://dhhs.ne.gov/licensure/Pages/Plumbing-Contractor.aspx",
+        "education_partner": "contractor_university",
+        "exam_required": true
+      },
+      "electrical": {
+        "required": true,
+        "threshold": 0,
+        "license_name": "Nebraska Electrical License",
+        "verification_url": "https://fsco.nebraska.gov/",
+        "education_partner": "contractor_university",
+        "exam_required": true
+      },
+      "hvac": {
+        "required": true,
+        "threshold": 0,
+        "license_name": "Nebraska HVAC License",
+        "verification_url": "https://dhhs.ne.gov/licensure/",
+        "education_partner": "contractor_university",
+        "exam_required": true
+      },
+      "roofing": {
+        "required": false,
+        "threshold": null,
+        "note": "No state license required, but registration recommended"
+      },
+      "painting": {
+        "required": false,
+        "threshold": null,
+        "note": "No license required"
+      },
+      "landscaping": {
+        "required": false,
+        "threshold": null,
+        "note": "No license required, but pesticide license required for chemical application"
+      },
+      "flooring": {
+        "required": false,
+        "threshold": null,
+        "note": "No license required"
+      }
+    }
+  },
+
+  "education_partners": {
+    "contractor_university": {
+      "name": "Contractor University",
+      "affiliate_link": "https://contractoruniversity.com/?ref=homeprohub",
+      "commission_rate": "20%",
+      "courses": [
+        "General Contractor Exam Prep",
+        "Plumbing License Prep",
+        "Electrical License Prep",
+        "HVAC License Prep",
+        "Business Management for Contractors"
+      ]
+    }
+  },
+
+  "verification_statuses": {
+    "verified": {
+      "label": "✓ License Verified",
+      "color": "green",
+      "description": "We've verified this contractor's license is active and valid"
+    },
+    "pending": {
+      "label": "⏳ Verification Pending",
+      "color": "yellow",
+      "description": "License submitted, awaiting verification"
+    },
+    "not_required": {
+      "label": "License Not Required",
+      "color": "gray",
+      "description": "This type of work doesn't require a state license"
+    },
+    "unlicensed": {
+      "label": "⚠️ Not Licensed",
+      "color": "red",
+      "description": "This contractor is not licensed for this type of work"
+    },
+    "get_licensed": {
+      "label": "📚 Get Licensed",
+      "color": "blue",
+      "description": "Learn how to get licensed for this trade"
+    }
+  }
+}

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>License Verification Update - HomeProHub</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .header .icon {
+      font-size: 56px;
+      margin-bottom: 10px;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .notice-box {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border-left: 4px solid #ef4444;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .notice-box h3 {
+      color: #991b1b;
+      margin: 0 0 12px 0;
+      font-size: 20px;
+    }
+    .notice-box p {
+      color: #7f1d1d;
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    .reason-section {
+      background-color: #fffbeb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #fde68a;
+    }
+    .reason-section h3 {
+      color: #92400e;
+      margin: 0 0 16px 0;
+      font-size: 20px;
+    }
+    .reason-list {
+      margin: 0;
+      padding-left: 24px;
+      color: #78350f;
+    }
+    .reason-list li {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+    .help-section {
+      background-color: #eff6ff;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #bfdbfe;
+    }
+    .help-section h3 {
+      color: #1e40af;
+      margin: 0 0 16px 0;
+      font-size: 20px;
+    }
+    .help-section p {
+      color: #1e3a8a;
+      margin: 12px 0;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .help-section strong {
+      color: #1e40af;
+    }
+    .action-steps {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 2px solid #e5e7eb;
+    }
+    .action-steps h3 {
+      color: #1f2937;
+      margin: 0 0 16px 0;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step {
+      display: flex;
+      gap: 16px;
+      margin: 16px 0;
+      padding: 16px;
+      background-color: white;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    .step-number {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-content h4 {
+      color: #1f2937;
+      margin: 0 0 6px 0;
+      font-size: 16px;
+    }
+    .step-content p {
+      color: #6b7280;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: white !important;
+      padding: 16px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 12px 8px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .cta-button.secondary {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .tip-box {
+      background-color: #ecfdf5;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border-left: 4px solid #10b981;
+    }
+    .tip-box h4 {
+      color: #065f46;
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tip-box p {
+      color: #047857;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    @media only screen and (max-width: 600px) {
+      .content {
+        padding: 20px 15px;
+      }
+      .step {
+        flex-direction: column;
+      }
+      .cta-button {
+        display: block;
+        margin: 12px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon">⚠️</div>
+      <h1>License Verification Update</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <p class="greeting">Hi {{contractorName}},</p>
+
+      <!-- Notice -->
+      <div class="notice-box">
+        <h3>License Verification Status</h3>
+        <p>We were unable to verify your contractor license information at this time. Don't worry—this is a common situation and we're here to help you resolve it!</p>
+      </div>
+
+      <!-- Common Reasons -->
+      <div class="reason-section">
+        <h3>📋 Common Reasons for Verification Issues</h3>
+        <ul class="reason-list">
+          <li><strong>License number format:</strong> The license number may have been entered incorrectly or in the wrong format</li>
+          <li><strong>Name mismatch:</strong> The business name on file may not match the licensing board records exactly</li>
+          <li><strong>License status:</strong> The license may be expired, inactive, or pending renewal</li>
+          <li><strong>State database delay:</strong> Sometimes state databases take time to update after renewals</li>
+          <li><strong>Document quality:</strong> Uploaded documents may be unclear or incomplete</li>
+          <li><strong>Wrong license type:</strong> A different license type or category may be required</li>
+        </ul>
+      </div>
+
+      <!-- Next Steps -->
+      <div class="action-steps">
+        <h3>🔧 How to Fix This</h3>
+
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Double-Check Your License Info</h4>
+            <p>Log into your state's licensing board website and confirm your exact license number, business name, and status.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Ensure License is Active</h4>
+            <p>Verify that your license is current and not expired. If it needs renewal, complete that process first.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Re-Submit with Correct Information</h4>
+            <p>Go to your HomeProHub profile and submit your license information again with the verified details.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h4>Upload Clear Documents</h4>
+            <p>If uploading photos, ensure they're well-lit, in focus, and show all information clearly.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Section -->
+      <div class="help-section">
+        <h3>💬 Need Help?</h3>
+        <p><strong>We're here to support you!</strong> If you're having trouble with the verification process or believe this was flagged in error, please reach out to us.</p>
+        <p><strong>Contact us:</strong></p>
+        <p style="margin-left: 20px;">
+          📧 Reply to this email<br>
+          💬 Message us through your dashboard<br>
+          📞 Call support (if available)
+        </p>
+        <p style="margin-top: 16px;">Our team will personally review your case and help you get verified as quickly as possible.</p>
+      </div>
+
+      <!-- Tip Box -->
+      <div class="tip-box">
+        <h4>
+          <span>💡</span>
+          <span>Pro Tip</span>
+        </h4>
+        <p>Have your physical license or renewal certificate ready when re-submitting. Take a photo in good lighting against a dark background for best results. Most verifications are approved within 24-48 hours once we receive correct information!</p>
+      </div>
+
+      <!-- CTA Buttons -->
+      <div class="cta-container">
+        <a href="{{profileLink}}" class="cta-button">
+          Update My License Info →
+        </a>
+        <br>
+        <a href="{{supportLink}}" class="cta-button secondary">
+          Contact Support
+        </a>
+      </div>
+
+      <p style="color: #6b7280; line-height: 1.6; margin-top: 30px; padding-top: 30px; border-top: 1px solid #e5e7eb;">
+        <strong>Important:</strong> You can still use HomeProHub and submit bids while your license verification is pending. However, verified contractors receive priority placement and higher homeowner trust, so we encourage you to complete this process as soon as possible.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>HomeProHub</strong> - Your Professional Contracting Network</p>
+      <p>We're committed to maintaining a network of verified, trusted professionals</p>
+      <p style="margin-top: 20px;">
+        <a href="https://www.homeprohub.today">www.homeprohub.today</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

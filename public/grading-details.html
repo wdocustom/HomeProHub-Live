@@ -99,51 +99,135 @@
   <section class="content-grid" id="gradingContent">
     <p style="grid-column: 1 / -1; text-align: center;">Loading grading criteria...</p>
   </section></main><script>
-  // --- USER AUTH/NAV SCRIPT START ---
+(function() {
+  'use strict';
+
+  // Standardized localStorage keys
+  const STORAGE_KEYS = {
+    USER_PROFILE: 'homeprohub_user',
+    USER_ROLE: 'homeprohub_user_role',
+    AUTH_TOKEN: 'homeprohub_auth_token',
+    USERNAME: 'homeprohub_username',
+    PROFILE_COMPLETE: 'homeprohub_profile_complete',
+    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
+    HISTORY: 'homeprohub_history_v1'
+  };
+
+  /**
+   * Sanitize text for display (prevent XSS)
+   */
+  function sanitizeText(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  /**
+   * Get user data from localStorage
+   */
   function getUserData() {
     try {
-      const raw = localStorage.getItem("homeprohub_user");
-      return raw ? JSON.parse(raw) : null;
+      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+
+      if (!role || !authToken) {
+        return null;
+      }
+
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      return {
+        role: role,
+        name: profile.name || 'User',
+        email: profile.email || ''
+      };
     } catch (e) {
       return null;
     }
   }
 
-  const user = getUserData();
-  const profileArea = document.querySelector('.profile-area'); 
-
-  // Check if user is logged in and add the Profile/Name Link
-  if (user && user.name) {
-    const nameLink = document.createElement('a');
-    nameLink.href = 'user-profile.html';
-    nameLink.className = 'profile-link';
-    // Use the stored first name for the link text
-    nameLink.textContent = user.name.split(' ')[0]; 
-    // This now works because profileArea exists in the HTML!
-    profileArea.prepend(nameLink); 
-  } else {
-    // If not logged in, redirect them back to choose role
-    window.location.href = "index.html";
+  /**
+   * Clear all user data from localStorage
+   */
+  function clearAllData() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Silent fail
+      }
+    });
   }
 
-  function logout() {
-    localStorage.removeItem("homeprohub_user");
-    localStorage.removeItem("homeprohub_history_v1");
-    window.location.href = "index.html";
-  }
-  // --- USER AUTH/NAV SCRIPT END ---
-
-
-  async function loadGradingData() {
-    const contentGrid = document.getElementById('gradingContent');
-    contentGrid.innerHTML = ''; 
+  /**
+   * Logout function
+   */
+  window.logout = function() {
+    clearAllData();
 
     try {
-      // Fetch data from the secure server route
-      const response = await fetch('http://localhost:3000/grading-data');
-      if (!response.ok) {
-          throw new Error(`Server status: ${response.status}`);
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      if (authToken) {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        }).catch(() => {});
       }
+    } catch (e) {}
+
+    window.location.href = 'index.html';
+  };
+
+  /**
+   * Initialize user profile link
+   */
+  function initializeAuth() {
+    const user = getUserData();
+    const profileArea = document.querySelector('.profile-area');
+
+    // Check if user is logged in
+    if (!user || !user.name) {
+      clearAllData();
+      window.location.href = 'index.html';
+      return false;
+    }
+
+    // Add profile link if it doesn't exist
+    if (profileArea && !profileArea.querySelector('.profile-link')) {
+      const nameLink = document.createElement('a');
+      nameLink.href = 'user-profile.html';
+      nameLink.className = 'profile-link';
+      nameLink.textContent = sanitizeText(user.name.split(' ')[0]);
+      profileArea.prepend(nameLink);
+    }
+
+    return true;
+  }
+
+  /**
+   * Load grading data from server
+   */
+  async function loadGradingData() {
+    const contentGrid = document.getElementById('gradingContent');
+    if (!contentGrid) return;
+
+    contentGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center;">Loading grading criteria...</p>';
+
+    try {
+      // Fetch data from the server (use relative path)
+      const response = await fetch('/grading-data', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned status: ${response.status}`);
+      }
+
       const data = await response.json();
 
       // --- CONTRACTOR CRITERIA CARD ---
@@ -194,12 +278,36 @@
       contentGrid.appendChild(homeownerCard);
 
     } catch (error) {
-      console.error("Could not load grading logic:", error);
-      contentGrid.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center; color: #ef4444;">
-        Error loading grading logic: Could not connect to data source or data is invalid. (Check your server.js console for errors or confirm the JSON file is present).
-      </div>`;
+      contentGrid.innerHTML = `
+        <div class="card" style="grid-column: 1 / -1; text-align: center; color: #ef4444;">
+          <h3>Error Loading Grading Data</h3>
+          <p>Could not connect to the server or data is unavailable. Please try again later.</p>
+          <p style="font-size: 12px; color: #9ca3af; margin-top: 10px;">
+            If the problem persists, please contact support.
+          </p>
+        </div>
+      `;
     }
   }
 
-  document.addEventListener('DOMContentLoaded', loadGradingData);
+  /**
+   * Initialize the page
+   */
+  function initialize() {
+    // Check authentication first
+    if (!initializeAuth()) {
+      return;
+    }
+
+    // Load grading data
+    loadGradingData();
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
+  }
+})();
 </script></body></html>

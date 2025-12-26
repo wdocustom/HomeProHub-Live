@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Access Experts</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components/navigation.css">
+  <style>
+    /* TODO: REWORK THIS PAGE TO BE MORE COMPELLING FOR SUBSCRIPTION CONVERSION
+     * - Add testimonials from contractors who got expert help
+     * - Show success stories and ROI
+     * - Add urgency/scarcity elements
+     * - Highlight the value proposition better
+     * - Make subscription tiers more visually distinct
+     * - Add clear CTAs for booking calls / upgrading
+     */
+
+    .experts-container { max-width: 1000px; margin: 40px auto; padding: 0 24px; }
+
+    .header-card {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      padding: 40px;
+      border-radius: 20px;
+      margin-bottom: 40px;
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .header-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .header-content { position: relative; z-index: 1; }
+    .header-card h1 { margin: 0 0 12px 0; font-size: 36px; color: white; }
+    .header-card p { margin: 0; color: #e9d5ff; font-size: 16px; line-height: 1.6; }
+
+    .expert-options { display: grid; gap: 24px; margin-bottom: 32px; }
+
+    .expert-card {
+      background: white;
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-top: 4px solid #e5e7eb;
+      transition: all 0.3s;
+    }
+    .expert-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+    }
+
+    .expert-card.tier-starter { border-top-color: #4ade80; }
+    .expert-card.tier-pro { border-top-color: #60a5fa; }
+    .expert-card.tier-elite { border-top-color: #c4b5fd; }
+
+    .tier-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .tier-badge.starter { background: #ecfdf5; color: #166534; }
+    .tier-badge.pro { background: #eff6ff; color: #1d4ed8; }
+    .tier-badge.elite { background: #f5f3ff; color: #5b21b6; }
+
+    .expert-card h3 { margin-top: 0; margin-bottom: 12px; font-size: 24px; color: #1f2937; }
+    .expert-card p { color: #6b7280; margin-bottom: 20px; font-size: 15px; line-height: 1.6; }
+
+    .expert-card .features { list-style: none; padding: 0; margin: 20px 0; }
+    .expert-card .features li {
+      padding: 10px 0;
+      padding-left: 28px;
+      position: relative;
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .expert-card .features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .form-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .form-modal.show { display: flex; }
+
+    .form-modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: #9ca3af;
+      line-height: 1;
+    }
+    .close-modal:hover { color: #1f2937; }
+  </style>
+</head>
+<body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+<div class="experts-container">
+  <div class="header-card">
+    <div class="header-content">
+      <h1>Access to Industry Experts</h1>
+      <p>Get specialized help from architects, engineers, designers, and business coaches when projects get complex. Available on Pro & Elite tiers.</p>
+    </div>
+  </div>
+
+  <div class="expert-options">
+    <div class="expert-card tier-starter">
+      <span class="tier-badge starter">Starter Tier</span>
+      <h3>📧 Email an Expert</h3>
+      <p>Submit your question via form and get a detailed response within 24-48 hours from industry professionals</p>
+      <ul class="features">
+        <li>Detailed project questions answered</li>
+        <li>Technical guidance and code compliance</li>
+        <li>Business strategy advice</li>
+        <li>Response within 48 hours guaranteed</li>
+      </ul>
+      <button class="btn-primary" onclick="showEmailForm()">Contact via Email</button>
+    </div>
+
+    <div class="expert-card tier-pro">
+      <span class="tier-badge pro">Pro Tier</span>
+      <h3>💬 Text an Expert</h3>
+      <p>Get quick answers via text message - perfect for urgent questions when you're on the job site and need immediate guidance</p>
+      <ul class="features">
+        <li>Urgent technical questions</li>
+        <li>Quick decision support in real-time</li>
+        <li>Response within minutes during business hours</li>
+        <li>Available 8 AM - 6 PM local time</li>
+      </ul>
+      <button class="btn-primary" onclick="showTextForm()">Text an Expert</button>
+    </div>
+
+    <div class="expert-card tier-elite">
+      <span class="tier-badge elite">Elite Tier</span>
+      <h3>📞 Voice/Video Call Expert</h3>
+      <p>Schedule a live call with a specialist to walk through complex projects together with screen sharing and visual walkthroughs</p>
+      <ul class="features">
+        <li>30-minute consultation sessions</li>
+        <li>Screen share & visual walkthroughs</li>
+        <li>Complex problem solving with specialists</li>
+        <li>Personalized business coaching sessions</li>
+        <li>Access to architects, engineers, and senior GCs</li>
+      </ul>
+      <button class="btn-primary" onclick="showCallScheduler()">Schedule a Call</button>
+    </div>
+  </div>
+</div>
+
+<!-- Form Modal -->
+<div id="formModal" class="form-modal">
+  <div class="form-modal-content">
+    <button class="close-modal" onclick="closeForm()">×</button>
+    <h2 style="margin-top: 0; margin-bottom: 24px;" id="formTitle"></h2>
+    <form id="expertForm">
+      <div id="formFields"></div>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="submit" class="btn-primary" id="submitBtn">Submit Request</button>
+        <button type="button" class="btn-secondary" onclick="closeForm()">Cancel</button>
+      </div>
+      <div id="status" style="margin-top: 16px; font-size: 14px;"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEYS = {
+  AUTH_TOKEN: 'homeprohub_auth_token',
+  USERNAME: 'homeprohub_username',
+  USER_ROLE: 'homeprohub_user_role',
+  CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
+};
+
+function checkAuth() {
+  const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+  const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+  if (!token || role !== 'contractor') {
+    window.location.href = 'index.html';
+    return false;
+  }
+  return true;
+}
+
+function showEmailForm() {
+  document.getElementById('formTitle').textContent = '📧 Email an Expert';
+  document.getElementById('formFields').innerHTML = `
+    <div class="form-group">
+      <label for="expertType">Expert Type <span style="color: #ef4444;">*</span></label>
+      <select id="expertType" required>
+        <option value="">Select expert...</option>
+        <option value="architect">Architect</option>
+        <option value="engineer">Structural Engineer</option>
+        <option value="mechanical">Mechanical Engineer</option>
+        <option value="designer">Interior Designer</option>
+        <option value="gc">General Contractor / Project Manager</option>
+        <option value="business">Business Coach</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="subject">Subject <span style="color: #ef4444;">*</span></label>
+      <input id="subject" type="text" placeholder="Brief description of your question" required />
+    </div>
+    <div class="form-group">
+      <label for="details">Details <span style="color: #ef4444;">*</span></label>
+      <textarea id="details" rows="6" placeholder="Provide detailed information about your project and question..." required></textarea>
+    </div>
+  `;
+  document.getElementById('formModal').classList.add('show');
+}
+
+function showTextForm() {
+  document.getElementById('formTitle').textContent = '💬 Text an Expert (Pro Tier)';
+  document.getElementById('formFields').innerHTML = `
+    <div class="form-group">
+      <label for="phoneNumber">Your Phone Number <span style="color: #ef4444;">*</span></label>
+      <input id="phoneNumber" type="tel" placeholder="(555) 123-4567" required />
+    </div>
+    <div class="form-group">
+      <label for="urgency">Urgency Level <span style="color: #ef4444;">*</span></label>
+      <select id="urgency" required>
+        <option value="immediate">Immediate (on job site now)</option>
+        <option value="today">Needed today</option>
+        <option value="soon">Within 24 hours</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="question">Question <span style="color: #ef4444;">*</span></label>
+      <textarea id="question" rows="4" placeholder="What do you need help with?" required></textarea>
+    </div>
+  `;
+  document.getElementById('formModal').classList.add('show');
+}
+
+function showCallScheduler() {
+  document.getElementById('formTitle').textContent = '📞 Schedule Expert Call (Elite Tier)';
+  document.getElementById('formFields').innerHTML = `
+    <div class="form-group">
+      <label for="callType">Call Type <span style="color: #ef4444;">*</span></label>
+      <select id="callType" required>
+        <option value="">Select...</option>
+        <option value="voice">Voice Call</option>
+        <option value="video">Video Call (recommended)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="expertSpecialty">Expert Specialty <span style="color: #ef4444;">*</span></label>
+      <select id="expertSpecialty" required>
+        <option value="">Select expert...</option>
+        <option value="architect">Architect</option>
+        <option value="structural">Structural Engineer</option>
+        <option value="mechanical">Mechanical Engineer</option>
+        <option value="designer">Interior Designer</option>
+        <option value="business">Business Coach</option>
+        <option value="gc">Senior General Contractor</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="preferredDate">Preferred Date <span style="color: #ef4444;">*</span></label>
+      <input id="preferredDate" type="date" required min="${new Date().toISOString().split('T')[0]}" />
+    </div>
+    <div class="form-group">
+      <label for="preferredTime">Preferred Time <span style="color: #ef4444;">*</span></label>
+      <select id="preferredTime" required>
+        <option value="">Select time...</option>
+        <option value="morning">Morning (8AM - 12PM)</option>
+        <option value="afternoon">Afternoon (12PM - 5PM)</option>
+        <option value="evening">Evening (5PM - 8PM)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="callReason">What will we discuss? <span style="color: #ef4444;">*</span></label>
+      <textarea id="callReason" rows="4" placeholder="Describe the project or issue you need help with..." required></textarea>
+    </div>
+  `;
+  document.getElementById('formModal').classList.add('show');
+}
+
+function closeForm() {
+  document.getElementById('formModal').classList.remove('show');
+  document.getElementById('expertForm').reset();
+  document.getElementById('status').textContent = '';
+}
+
+document.getElementById('expertForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const submitBtn = document.getElementById('submitBtn');
+  const status = document.getElementById('status');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting...';
+  status.textContent = 'Processing your request...';
+  status.style.color = '#6b7280';
+
+  // Simulate API call
+  setTimeout(() => {
+    status.textContent = '✅ Request submitted successfully! An expert will contact you soon.';
+    status.style.color = '#10b981';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Request';
+
+    setTimeout(() => {
+      closeForm();
+    }, 2000);
+  }, 1500);
+});
+
+if (!checkAuth()) return;
+</script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
+</body>
+</html>

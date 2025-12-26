@@ -96,84 +96,221 @@
     <div id="answer" class="answer-box" style="display:none;"></div>
   </section></main>
 <script>
-  const planBtn = document.getElementById("planBtn");
-  const projectInput = document.getElementById("project");
-  const locationInput = document.getElementById("location");
-  const statusText = document.getElementById("status");
-  const answerBox = document.getElementById("answer");
-  const profileLinkEl = document.getElementById("profileLink");
+(function() {
+  'use strict';
 
-  // --- USER AUTH/NAV SCRIPT START ---
+  // Standardized localStorage keys
+  const STORAGE_KEYS = {
+    USER_PROFILE: 'homeprohub_user',
+    USER_ROLE: 'homeprohub_user_role',
+    AUTH_TOKEN: 'homeprohub_auth_token',
+    USERNAME: 'homeprohub_username',
+    PROFILE_COMPLETE: 'homeprohub_profile_complete',
+    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
+    HISTORY: 'homeprohub_history_v1'
+  };
+
+  // DOM Elements
+  const planBtn = document.getElementById('planBtn');
+  const projectInput = document.getElementById('project');
+  const locationInput = document.getElementById('location');
+  const statusText = document.getElementById('status');
+  const answerBox = document.getElementById('answer');
+  const profileLinkEl = document.getElementById('profileLink');
+
+  /**
+   * Sanitize text for display (prevent XSS)
+   */
+  function sanitizeText(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  /**
+   * Sanitize input to prevent injection
+   */
+  function sanitizeInput(input) {
+    if (typeof input !== 'string') return '';
+    return input.trim().replace(/[<>]/g, '');
+  }
+
+  /**
+   * Get user data from localStorage
+   */
   function getUserData() {
     try {
-      const raw = localStorage.getItem("homescope_user");
-      return raw ? JSON.parse(raw) : null;
+      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+
+      if (!role || !authToken) {
+        return null;
+      }
+
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      return {
+        role: role,
+        name: profile.name || 'User',
+        email: profile.email || ''
+      };
     } catch (e) {
       return null;
     }
   }
 
-  const user = getUserData();
-  if (user && user.name) {
-    profileLinkEl.textContent = user.name.split(' ')[0]; // Show first name
-  } else {
-    window.location.href = "index.html"; // Redirect if not signed in
+  /**
+   * Clear all user data from localStorage
+   */
+  function clearAllData() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Silent fail
+      }
+    });
   }
 
-  function logout() {
-    localStorage.removeItem("homescope_user");
-    localStorage.removeItem("homescope_history_v1");
-    window.location.href = "index.html";
-  }
-  // --- USER AUTH/NAV SCRIPT END ---
+  /**
+   * Logout function
+   */
+  window.logout = function() {
+    clearAllData();
 
+    try {
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      if (authToken) {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    window.location.href = 'index.html';
+  };
+
+  /**
+   * Call backend to plan project
+   */
   async function planProject(projectDescription, location) {
-    const response = await fetch("http://localhost:3000/plan-project", {
-      method: "POST",
+    const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+
+    const response = await fetch('/plan-project', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
       },
-      body: JSON.stringify({ projectDescription, location })
+      body: JSON.stringify({
+        projectDescription: sanitizeInput(projectDescription),
+        location: sanitizeInput(location)
+      })
     });
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(
-        data.error || "Request failed with status " + response.status
-      );
+      let errorMessage = 'Request failed';
+      try {
+        const data = await response.json();
+        errorMessage = data.error || errorMessage;
+      } catch (e) {
+        // Failed to parse error response
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    return data.answer;
+    return data.answer || 'No plan generated';
   }
 
-  planBtn.addEventListener("click", async () => {
+  /**
+   * Handle plan button click
+   */
+  async function handlePlanClick() {
     const projectDescription = projectInput.value.trim();
     const location = locationInput.value.trim();
 
+    // Validation
     if (!projectDescription) {
-      statusText.textContent = "Please describe your project first.";
+      statusText.textContent = 'Please describe your project first.';
+      statusText.style.color = '#ef4444';
       return;
     }
 
+    if (projectDescription.length < 10) {
+      statusText.textContent = 'Please provide a more detailed project description (at least 10 characters).';
+      statusText.style.color = '#ef4444';
+      return;
+    }
+
+    // Set loading state
     planBtn.disabled = true;
-    statusText.textContent = "Generating plan...";
-    answerBox.textContent = "";
+    projectInput.disabled = true;
+    locationInput.disabled = true;
+    statusText.textContent = 'Generating plan...';
+    statusText.style.color = '#6b7280';
+    answerBox.textContent = '';
     answerBox.style.display = 'none';
 
     try {
-      // **THIS IS THE FIX:** Calling the correct function name: planProject
-      const plan = await planProject(projectDescription, location); 
+      const plan = await planProject(projectDescription, location);
       answerBox.textContent = plan;
-      statusText.textContent = "Plan ready.";
+      statusText.textContent = 'Plan ready.';
+      statusText.style.color = '#10b981';
       answerBox.style.display = 'block';
     } catch (err) {
-      console.error(err);
-      statusText.textContent = "Error generating plan: " + err.message;
+      statusText.textContent = 'Error: ' + (err.message || 'Failed to generate plan. Please try again.');
+      statusText.style.color = '#ef4444';
     } finally {
       planBtn.disabled = false;
+      projectInput.disabled = false;
+      locationInput.disabled = false;
     }
-  });
+  }
+
+  /**
+   * Initialize the page
+   */
+  function initialize() {
+    const user = getUserData();
+
+    // Check authentication and role
+    if (!user || user.role !== 'homeowner') {
+      clearAllData();
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Set profile link (sanitized)
+    if (profileLinkEl && user.name) {
+      const firstName = sanitizeText(user.name.split(' ')[0]);
+      profileLinkEl.textContent = firstName;
+    }
+
+    // Add event listener
+    if (planBtn) {
+      planBtn.addEventListener('click', handlePlanClick);
+    }
+
+    // Add Enter key support for textarea
+    if (projectInput) {
+      projectInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          handlePlanClick();
+        }
+      });
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
+  }
+})();
 </script>
 </body>
 </html>

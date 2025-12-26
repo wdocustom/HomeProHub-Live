@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Project is Posted - HomeProHub</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .success-message {
+      background-color: #ecfdf5;
+      border-left: 4px solid #10b981;
+      padding: 16px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .success-message p {
+      margin: 0;
+      color: #065f46;
+      font-weight: 500;
+    }
+    .job-summary {
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .job-summary h3 {
+      margin: 0 0 16px 0;
+      color: #1f2937;
+      font-size: 20px;
+    }
+    .job-detail {
+      display: flex;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .job-detail:last-child {
+      border-bottom: none;
+    }
+    .job-detail-label {
+      font-weight: 600;
+      color: #6b7280;
+      min-width: 120px;
+    }
+    .job-detail-value {
+      color: #1f2937;
+    }
+    .trust-section {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #93c5fd;
+    }
+    .trust-section h3 {
+      color: #1e40af;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .trust-section p {
+      margin: 0 0 12px 0;
+      color: #1e40af;
+      line-height: 1.6;
+    }
+    .trust-section ul {
+      margin: 12px 0;
+      padding-left: 20px;
+      color: #1e40af;
+    }
+    .trust-section li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+    .representative-section {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .representative-section h3 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .representative-section p {
+      color: #78350f;
+      margin: 0;
+      line-height: 1.6;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: white !important;
+      padding: 16px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .next-steps {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .next-steps h3 {
+      color: #1f2937;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+    }
+    .next-steps ol {
+      margin: 0;
+      padding-left: 20px;
+      color: #4b5563;
+    }
+    .next-steps li {
+      margin: 12px 0;
+      line-height: 1.6;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    @media only screen and (max-width: 600px) {
+      .content {
+        padding: 20px 15px;
+      }
+      .job-detail {
+        flex-direction: column;
+      }
+      .job-detail-label {
+        margin-bottom: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon">✅</div>
+      <h1>Your Project is Posted!</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <p class="greeting">Hi {{homeownerName}},</p>
+
+      <div class="success-message">
+        <p>🎉 Great news! Your project is now live and being reviewed by vetted contractors in your area.</p>
+      </div>
+
+      <!-- Job Summary -->
+      <div class="job-summary">
+        <h3>📋 Your Project Summary</h3>
+        <div class="job-detail">
+          <div class="job-detail-label">Project:</div>
+          <div class="job-detail-value"><strong>{{jobTitle}}</strong></div>
+        </div>
+        <div class="job-detail">
+          <div class="job-detail-label">Budget Range:</div>
+          <div class="job-detail-value">{{budgetRange}}</div>
+        </div>
+        <div class="job-detail">
+          <div class="job-detail-label">Location:</div>
+          <div class="job-detail-value">{{zipCode}}</div>
+        </div>
+        <div class="job-detail">
+          <div class="job-detail-label">Timeline:</div>
+          <div class="job-detail-value">{{urgency}}</div>
+        </div>
+        <div class="job-detail">
+          <div class="job-detail-label">Description:</div>
+          <div class="job-detail-value">{{jobDescription}}</div>
+        </div>
+      </div>
+
+      <!-- Trust Section -->
+      <div class="trust-section">
+        <h3>🛡️ Only Vetted, Qualified Contractors</h3>
+        <p>Your project is only visible to contractors who meet our strict verification standards:</p>
+        <ul>
+          <li><strong>Licensed</strong> in your local jurisdiction</li>
+          <li><strong>Insured</strong> with current general liability coverage</li>
+          <li><strong>Bonded</strong> to protect your investment</li>
+          <li><strong>Background verified</strong> for your peace of mind</li>
+        </ul>
+        <p>We've done the hard work of vetting contractors so you don't have to.</p>
+      </div>
+
+      <!-- Owner's Representative Section -->
+      <div class="representative-section">
+        <h3>👨‍💼 We're Your Personal Representative</h3>
+        <p>Think of HomeProHub as your personal owner's representative throughout this entire process. We're here to guide you through contractor selection, help you spot red flags, and ensure you make the best decision for your project. You're not alone in this!</p>
+      </div>
+
+      <!-- Next Steps -->
+      <div class="next-steps">
+        <h3>📝 What Happens Next</h3>
+        <ol>
+          <li><strong>Contractors Review:</strong> Qualified contractors in your area are reviewing your project right now</li>
+          <li><strong>Receive Bids:</strong> You'll get email notifications as contractors submit bids (typically within 24-48 hours)</li>
+          <li><strong>Compare & Message:</strong> Review bids, check contractor profiles, and message them directly with questions</li>
+          <li><strong>Make Your Choice:</strong> Select the contractor that best fits your needs and budget</li>
+        </ol>
+      </div>
+
+      <!-- CTA Button -->
+      <div class="cta-container">
+        <a href="{{dashboardLink}}" class="cta-button">
+          View Your Dashboard →
+        </a>
+      </div>
+
+      <p style="color: #6b7280; line-height: 1.6; margin-top: 30px;">
+        <strong>Need help?</strong> We're here for you every step of the way. Reply to this email or contact our team via text, phone, or video call. As your owner's representative, we want to make sure you have all the information you need to make the best decision.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>HomeProHub</strong></p>
+      <p>Your trusted partner for home improvement projects</p>
+      <p style="margin-top: 20px;">
+        <a href="https://www.homeprohub.today">www.homeprohub.today</a>
+      </p>
+      <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">
+        This email was sent to you because you posted a project on HomeProHub.<br>
+        Project ID: {{jobId}}
+      </p>
+    </div>
+  </div>
+</body>
+</html>

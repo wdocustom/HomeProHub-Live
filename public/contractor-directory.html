@@ -1,7 +1,10 @@
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="UTF-8" />
-  <title>HomeScope AI – Contractor Directory</title>
+  <title>HomeProHub – Contractor Directory</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
   <style>
     /* Styling for the Contractor List */
     .hero {
@@ -103,19 +106,15 @@
       color: #4b5563;
       margin-top: 8px;
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeScope AI</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Homeowner dashboard</a>
-    </div>
-  </div></header><main>
+  </style>
+</head>
+<body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+<main>
   <section class="hero">
     <div class="hero-kicker">Find your pro</div>
-    <h1 class="hero-title">Verified Contractor Directory.</h1>
+    <h1 class="hero-title">Verified Contractor Directory</h1>
     <p class="hero-subtitle">
       Search local general contractors and trades. Every pro listed is vetted and scored based on transparent criteria, not just reviews.
     </p>
@@ -194,4 +193,43 @@
             </p>
         </div>
     </div>
-  </section></main></body></html>
+  </section>
+</main>
+
+<script>
+(function() {
+  'use strict';
+
+  // Auth check
+  function getUserData() {
+    try {
+      const username = localStorage.getItem("homeprohub_username");
+      const token = localStorage.getItem("homeprohub_auth_token");
+      const role = localStorage.getItem("homeprohub_user_role");
+
+      if (username && token && role === "homeowner") {
+        return {
+          username: username,
+          token: token,
+          role: role,
+          name: username.split('@')[0] || "User"
+        };
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const user = getUserData();
+  if (!user) {
+    window.location.href = "index.html";
+  }
+
+})();
+</script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
+</body>
+</html>
