@@ -1044,12 +1044,14 @@ app.post("/api/submit-bid", async (req, res) => {
       });
     }
 
-    // Get contractor profile
+    // Get contractor profile (or create if doesn't exist)
     let contractorProfile = await db.getUserProfile(contractorEmail);
     if (!contractorProfile) {
-      return res.status(400).json({
-        error: "Contractor profile not found. Please complete your profile first.",
-        code: 'PROFILE_NOT_FOUND'
+      // Auto-create basic profile
+      contractorProfile = await db.upsertUserProfile({
+        email: contractorEmail,
+        role: 'contractor',
+        profile_complete: false
       });
     }
 
