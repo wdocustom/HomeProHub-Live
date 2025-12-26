@@ -18,6 +18,7 @@
       { label: 'Home', href: 'home.html', icon: '🏠' },
       { label: 'AI Assistant', href: 'home.html', icon: '🤖' },
       { label: 'Post a Job', href: 'homeowner-dashboard.html', icon: '➕' },
+      { label: 'Project Check-in', href: 'project-check-in.html', icon: '📸' },
       { label: 'Messages', href: 'messages.html', icon: '💬', badge: 'messages' }
     ],
     contractor: [
