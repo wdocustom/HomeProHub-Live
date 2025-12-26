@@ -60,6 +60,7 @@
       <div class="action-buttons">
         <button class="btn-primary" id="downloadPdfBtn">Download PDF</button>
         <button class="btn-secondary" id="emailBtn">Email Estimate</button>
+        <button class="btn-primary" id="attachToBidBtn" style="display: none; background: #10b981;">✅ Attach to Bid & Return</button>
       </div>
     </div>
   </div>
@@ -81,9 +82,11 @@ const STORAGE_KEYS = {
   const estimateContent = document.getElementById('estimateContent');
   const downloadPdfBtn = document.getElementById('downloadPdfBtn');
   const emailBtn = document.getElementById('emailBtn');
+  const attachToBidBtn = document.getElementById('attachToBidBtn');
 
   let currentEstimate = null;
   let profile = null;
+  let estimatorJobData = null; // Data from job board
 
   function checkAuth() {
     const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
@@ -95,6 +98,45 @@ const STORAGE_KEYS = {
     const profileData = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
     if (profileData) profile = JSON.parse(profileData);
     return true;
+  }
+
+  // Check for job data from contractor dashboard
+  function checkForEstimatorJob() {
+    const jobDataStr = sessionStorage.getItem('estimatorJob');
+    if (jobDataStr) {
+      try {
+        estimatorJobData = JSON.parse(jobDataStr);
+        autoPopulateFromJob(estimatorJobData);
+      } catch (e) {
+        console.error('Error parsing estimator job data:', e);
+      }
+    }
+  }
+
+  // Auto-populate form from job data
+  function autoPopulateFromJob(jobData) {
+    if (jobData.jobDescription) {
+      document.getElementById('jobDescription').value = jobData.jobDescription;
+    }
+    if (jobData.zipCode) {
+      document.getElementById('jobZip').value = jobData.zipCode;
+    }
+    // Try to extract project size from description or use budget as hint
+    if (jobData.budgetLow && jobData.budgetHigh) {
+      const avgBudget = (jobData.budgetLow + jobData.budgetHigh) / 2;
+      // Add a helpful hint in the project size field
+      document.getElementById('projectSize').placeholder = `Budget range: $${jobData.budgetLow.toLocaleString()} - $${jobData.budgetHigh.toLocaleString()}`;
+    }
+
+    // Show info banner if we auto-populated
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background: #dbeafe; border-left: 4px solid #2563eb; padding: 12px; margin-bottom: 16px; border-radius: 4px;';
+    banner.innerHTML = `
+      <p style="margin: 0; font-size: 14px; color: #1e40af;">
+        <strong>📋 Job Info Loaded:</strong> ${jobData.jobTitle || 'Job from dashboard'}
+      </p>
+    `;
+    document.querySelector('.form-card').insertBefore(banner, document.getElementById('estimatorForm'));
   }
 
   form.addEventListener('submit', async function(e) {
@@ -220,6 +262,11 @@ const STORAGE_KEYS = {
 
     estimateContent.innerHTML = html;
     resultSection.style.display = 'block';
+
+    // Show "Attach to Bid" button if we came from job board
+    if (estimatorJobData && estimatorJobData.returnToBid) {
+      attachToBidBtn.style.display = 'inline-block';
+    }
   }
 
   downloadPdfBtn.addEventListener('click', function() {
@@ -344,14 +391,45 @@ const STORAGE_KEYS = {
 
   emailBtn.addEventListener('click', function() {
     if (!currentEstimate) return;
-    
+
     const subject = 'Estimate: ' + (currentEstimate.project_title || 'Your Project');
     const body = 'Please see attached estimate.\n\nTotal Range: $' + (currentEstimate.total_projected_low || 0).toLocaleString() + ' - $' + (currentEstimate.total_projected_high || 0).toLocaleString() + '\n\nThis is a preliminary estimate. A formal quote will require a site visit.';
-    
+
     window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   });
 
+  // Attach estimate to bid and return to dashboard
+  attachToBidBtn.addEventListener('click', function() {
+    if (!currentEstimate || !estimatorJobData) return;
+
+    // Prepare estimate data to attach to bid
+    const estimateData = {
+      jobId: estimatorJobData.jobId,
+      total_low: currentEstimate.total_projected_low || 0,
+      total_high: currentEstimate.total_projected_high || 0,
+      project_title: currentEstimate.project_title || 'Estimate',
+      line_items: currentEstimate.line_items || [],
+      subtotal_low: currentEstimate.subtotal_low || 0,
+      subtotal_high: currentEstimate.subtotal_high || 0,
+      overhead_profit_percent: currentEstimate.overhead_profit_percent || 20,
+      contingency_percent: currentEstimate.contingency_percent || 10,
+      timestamp: new Date().toISOString()
+    };
+
+    // Store estimate data for the specific job
+    sessionStorage.setItem('attachedEstimate_' + estimatorJobData.jobId, JSON.stringify(estimateData));
+
+    // Clear the estimator job data
+    sessionStorage.removeItem('estimatorJob');
+
+    // Redirect back to contractor dashboard
+    window.location.href = 'contractor-dashboard.html';
+  });
+
   if (!checkAuth()) return;
+
+  // Check for job data from contractor dashboard and auto-populate
+  checkForEstimatorJob();
 })();
 </script>
 
