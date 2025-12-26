@@ -313,6 +313,50 @@
       margin-bottom: 8px;
     }
 
+    /* Contractor Grade Badges */
+    .grade-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 700;
+      margin-left: 8px;
+      border: 2px solid;
+    }
+
+    .grade-A {
+      background: #d1fae5;
+      color: #065f46;
+      border-color: #10b981;
+    }
+
+    .grade-B {
+      background: #dbeafe;
+      color: #1e40af;
+      border-color: #3b82f6;
+    }
+
+    .grade-C {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+
+    .grade-D {
+      background: #fed7aa;
+      color: #9a3412;
+      border-color: #ea580c;
+    }
+
+    .grade-F {
+      background: #fecaca;
+      color: #991b1b;
+      border-color: #ef4444;
+    }
+
     .loading {
       text-align: center;
       padding: 60px 20px;
@@ -706,15 +750,51 @@
       attachBidActionListeners();
     }
 
+    // Calculate contractor grade (A-F) based on profile data
+    // TODO: Replace with actual backend grading when available
+    function getContractorGrade(contractor) {
+      if (!contractor) return 'C';
+
+      let score = 0;
+
+      // Years in business (0-40 points)
+      const years = contractor.years_in_business || 0;
+      score += Math.min(years * 4, 40);
+
+      // Has license (20 points)
+      if (contractor.license_number) score += 20;
+
+      // Has insurance (20 points)
+      if (contractor.insurance_info) score += 20;
+
+      // Rating if available (0-20 points)
+      if (contractor.rating) {
+        score += (contractor.rating / 5) * 20;
+      } else {
+        score += 10; // Default middle score if no ratings yet
+      }
+
+      // Convert score to grade
+      if (score >= 90) return 'A';
+      if (score >= 80) return 'B';
+      if (score >= 70) return 'C';
+      if (score >= 60) return 'D';
+      return 'F';
+    }
+
     // Render single bid
     function renderBid(bid, job) {
       const isAccepted = bid.status === 'accepted';
       const isPending = bid.status === 'pending';
+      const contractorGrade = getContractorGrade(bid.contractor);
 
       return `
         <div class="bid-card ${isAccepted ? 'accepted' : ''}">
           <div class="bid-header">
-            <div class="contractor-name">${escapeHtml(bid.contractor?.business_name || bid.contractor_business_name || 'Contractor')}</div>
+            <div style="display: flex; align-items: center;">
+              <div class="contractor-name">${escapeHtml(bid.contractor?.business_name || bid.contractor_business_name || 'Contractor')}</div>
+              <span class="grade-badge grade-${contractorGrade}" title="Contractor Grade: ${contractorGrade}">${contractorGrade}</span>
+            </div>
             <div class="bid-amount">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</div>
           </div>
 

@@ -260,6 +260,77 @@
       background: #059669;
     }
 
+    /* Homeowner Grade Badges */
+    .grade-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
+      padding: 0 8px;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: 700;
+      border: 2px solid;
+    }
+
+    .grade-A {
+      background: #d1fae5;
+      color: #065f46;
+      border-color: #10b981;
+    }
+
+    .grade-B {
+      background: #dbeafe;
+      color: #1e40af;
+      border-color: #3b82f6;
+    }
+
+    .grade-C {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+
+    .grade-D {
+      background: #fed7aa;
+      color: #9a3412;
+      border-color: #ea580c;
+    }
+
+    .grade-F {
+      background: #fecaca;
+      color: #991b1b;
+      border-color: #ef4444;
+    }
+
+    .homeowner-grade-info {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .homeowner-grade-info .info-text {
+      flex: 1;
+    }
+
+    .homeowner-grade-info .info-label {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .homeowner-grade-info .info-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+    }
+
     .bid-status {
       padding: 6px 12px;
       border-radius: 999px;
@@ -496,6 +567,15 @@
       <div class="modal-header">
         <h2>Submit Your Bid</h2>
         <p id="bidModalJobTitle" style="color: #6b7280; font-size: 14px;"></p>
+      </div>
+
+      <!-- Homeowner Grade Info -->
+      <div class="homeowner-grade-info" id="homeownerGradeInfo" style="display: none;">
+        <div class="info-text">
+          <div class="info-label">Homeowner Reliability Grade</div>
+          <div class="info-value" id="homeownerGradeText">Grade reflects payment history and project clarity</div>
+        </div>
+        <span class="grade-badge" id="homeownerGradeBadge">B</span>
       </div>
 
       <form id="bidForm">
@@ -755,12 +835,72 @@
     }
     window.applyFilters = applyFilters;
 
+    // Calculate homeowner grade (A-F) based on homeowner data
+    // TODO: Replace with actual backend grading when available
+    function getHomeownerGrade(homeowner) {
+      if (!homeowner) return 'C';
+
+      let score = 0;
+
+      // Payment history (0-40 points)
+      const paymentScore = homeowner.payment_score || 50; // 0-100
+      score += (paymentScore / 100) * 40;
+
+      // Jobs completed (0-20 points)
+      const jobsCompleted = homeowner.jobs_completed || 0;
+      score += Math.min(jobsCompleted * 5, 20);
+
+      // Response time (0-20 points)
+      if (homeowner.avg_response_hours <= 24) {
+        score += 20;
+      } else if (homeowner.avg_response_hours <= 48) {
+        score += 15;
+      } else if (homeowner.avg_response_hours <= 72) {
+        score += 10;
+      }
+
+      // Project clarity score (0-20 points)
+      const clarityScore = homeowner.clarity_score || 50; // 0-100
+      score += (clarityScore / 100) * 20;
+
+      // Convert score to grade
+      if (score >= 90) return 'A';
+      if (score >= 80) return 'B';
+      if (score >= 70) return 'C';
+      if (score >= 60) return 'D';
+      return 'F';
+    }
+
     // Open bid modal
     function openBidModal(jobId) {
       currentJob = availableJobs.find(j => j.id === jobId);
       if (!currentJob) return;
 
       document.getElementById('bidModalJobTitle').textContent = currentJob.title;
+
+      // Show homeowner grade if available
+      const homeownerGrade = getHomeownerGrade(currentJob.homeowner);
+      const gradeInfo = document.getElementById('homeownerGradeInfo');
+      const gradeBadge = document.getElementById('homeownerGradeBadge');
+      const gradeText = document.getElementById('homeownerGradeText');
+
+      if (gradeInfo && gradeBadge && gradeText) {
+        gradeBadge.textContent = homeownerGrade;
+        gradeBadge.className = 'grade-badge grade-' + homeownerGrade;
+
+        // Update grade description
+        const gradeDescriptions = {
+          'A': 'Excellent payment history and clear communication',
+          'B': 'Good payment history and responsive communication',
+          'C': 'Average reliability - standard risk',
+          'D': 'Below average reliability - proceed with caution',
+          'F': 'Poor history - high risk project'
+        };
+        gradeText.textContent = gradeDescriptions[homeownerGrade] || 'Grade reflects payment history and project clarity';
+
+        gradeInfo.style.display = 'flex';
+      }
+
       document.getElementById('bidModal').classList.add('active');
     }
     window.openBidModal = openBidModal;
