@@ -613,6 +613,73 @@
     </div>
   </div>
 
+  <!-- Job Details Modal -->
+  <div class="modal" id="jobDetailsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="jobDetailsTitle">Job Details</h2>
+        <button class="modal-close" onclick="closeJobDetailsModal()">×</button>
+      </div>
+
+      <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+        <!-- Job Category & Urgency -->
+        <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+          <span id="jobDetailsCategoryBadge" class="status-badge" style="background: #dbeafe; color: #1e40af;">Category</span>
+          <span id="jobDetailsUrgencyBadge" class="status-badge">Urgency</span>
+        </div>
+
+        <!-- Budget (Prominent) -->
+        <div style="background: #eff6ff; border: 2px solid #2563eb; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <div style="font-size: 13px; color: #2563eb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Budget Range</div>
+          <div id="jobDetailsBudget" style="font-size: 32px; font-weight: 700; color: #2563eb;">$5,000 - $10,000</div>
+        </div>
+
+        <!-- Summary -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 12px;">📋 Issue Summary</h3>
+          <div id="jobDetailsSummary" style="font-size: 14px; color: #4b5563; line-height: 1.6; background: #f9fafb; padding: 16px; border-radius: 8px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- Location & Timeline -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">📍 Location</div>
+            <div id="jobDetailsLocation" style="font-size: 15px; font-weight: 600; color: #111827;">ZIP Code</div>
+          </div>
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">📅 Posted</div>
+            <div id="jobDetailsPosted" style="font-size: 15px; font-weight: 600; color: #111827;">Date</div>
+          </div>
+        </div>
+
+        <!-- AI Analysis (if available) -->
+        <div id="jobDetailsAISection" style="display: none; margin-bottom: 24px;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 12px;">🤖 AI Analysis</h3>
+          <div id="jobDetailsAIAnalysis" style="font-size: 14px; color: #4b5563; line-height: 1.6; background: linear-gradient(135deg, #f0f9ff 0%, #f9fafb 100%); padding: 16px; border-radius: 8px; border-left: 3px solid #2563eb; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- Homeowner Grade -->
+        <div id="jobDetailsHomeownerGrade" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Homeowner Reliability Grade</div>
+            <div id="jobDetailsGradeText" style="font-size: 15px; font-weight: 600; color: #111827;">Grade reflects payment history and project clarity</div>
+          </div>
+          <span class="grade-badge grade-B" id="jobDetailsGradeBadge">B</span>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <button type="button" class="btn-cancel" onclick="closeJobDetailsModal()">Close</button>
+        <button type="button" class="btn-secondary" onclick="messageFromDetails()" id="jobDetailsMessageBtn" style="background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+          💬 Message Homeowner
+        </button>
+        <button type="button" class="btn-submit" onclick="submitBidFromDetails()" id="jobDetailsBidBtn" style="padding: 12px 32px;">
+          Submit Bid
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Constants
     const STORAGE_KEYS = {
@@ -932,11 +999,158 @@
     };
 
     // View job details
+    let currentDetailsJob = null;
+
     function viewJobDetails(jobId) {
-      // TODO: Implement job details view
-      alert('Job details view coming soon!');
+      const job = allJobs.find(j => j.id === jobId);
+      if (!job) {
+        alert('Job not found');
+        return;
+      }
+
+      currentDetailsJob = job;
+
+      // Format job title to be concise (max 60 chars)
+      const conciseTitle = job.title.length > 60
+        ? job.title.substring(0, 57) + '...'
+        : job.title;
+      document.getElementById('jobDetailsTitle').textContent = conciseTitle;
+
+      // Category badge
+      const categoryBadge = document.getElementById('jobDetailsCategoryBadge');
+      categoryBadge.textContent = (job.category || 'general').replace('_', ' ').toUpperCase();
+
+      // Urgency badge
+      const urgencyBadge = document.getElementById('jobDetailsUrgencyBadge');
+      const urgencyText = job.urgency || 'flexible';
+      urgencyBadge.textContent = urgencyText.replace('_', ' ').toUpperCase();
+
+      // Style urgency badge based on urgency level
+      if (urgencyText === 'urgent' || urgencyText === 'emergency') {
+        urgencyBadge.style.background = '#fecaca';
+        urgencyBadge.style.color = '#991b1b';
+      } else if (urgencyText === 'soon') {
+        urgencyBadge.style.background = '#fef3c7';
+        urgencyBadge.style.color = '#92400e';
+      } else {
+        urgencyBadge.style.background = '#d1fae5';
+        urgencyBadge.style.color = '#065f46';
+      }
+
+      // Budget
+      const budget = job.budget_low && job.budget_high
+        ? `${formatCurrency(job.budget_low)} - ${formatCurrency(job.budget_high)}`
+        : 'Budget not specified';
+      document.getElementById('jobDetailsBudget').textContent = budget;
+
+      // Summary - keep it concise (first 300 chars)
+      let summary = job.description;
+      if (summary.length > 300) {
+        summary = summary.substring(0, 297) + '...';
+      }
+      document.getElementById('jobDetailsSummary').textContent = summary;
+
+      // Location
+      document.getElementById('jobDetailsLocation').textContent = `ZIP ${job.zip_code}`;
+
+      // Posted date
+      document.getElementById('jobDetailsPosted').textContent = formatDate(job.posted_at);
+
+      // AI Analysis (if available)
+      if (job.ai_analysis) {
+        document.getElementById('jobDetailsAISection').style.display = 'block';
+        let aiAnalysis = job.ai_analysis;
+        if (aiAnalysis.length > 400) {
+          aiAnalysis = aiAnalysis.substring(0, 397) + '...';
+        }
+        document.getElementById('jobDetailsAIAnalysis').textContent = aiAnalysis;
+      } else {
+        document.getElementById('jobDetailsAISection').style.display = 'none';
+      }
+
+      // Homeowner Grade (calculate based on homeowner data if available)
+      const homeownerGrade = getHomeownerGrade(job.homeowner);
+      const gradeBadge = document.getElementById('jobDetailsGradeBadge');
+      gradeBadge.textContent = homeownerGrade;
+      gradeBadge.className = `grade-badge grade-${homeownerGrade}`;
+
+      const gradeDescriptions = {
+        'A': 'Excellent history - reliable payment and clear communication',
+        'B': 'Good history - dependable with minor delays',
+        'C': 'Average reliability - standard risk',
+        'D': 'Below average reliability - proceed with caution',
+        'F': 'Poor history - high risk project'
+      };
+      document.getElementById('jobDetailsGradeText').textContent = gradeDescriptions[homeownerGrade] || 'New homeowner - no history available';
+
+      // Show modal
+      document.getElementById('jobDetailsModal').classList.add('active');
     }
     window.viewJobDetails = viewJobDetails;
+
+    // Close job details modal
+    function closeJobDetailsModal() {
+      document.getElementById('jobDetailsModal').classList.remove('active');
+      currentDetailsJob = null;
+    }
+    window.closeJobDetailsModal = closeJobDetailsModal;
+
+    // Message homeowner from details modal
+    async function messageFromDetails() {
+      if (!currentDetailsJob) return;
+
+      closeJobDetailsModal();
+      await contactHomeowner(currentDetailsJob.id, currentDetailsJob.homeowner_email);
+    }
+    window.messageFromDetails = messageFromDetails;
+
+    // Submit bid from details modal
+    function submitBidFromDetails() {
+      if (!currentDetailsJob) return;
+
+      closeJobDetailsModal();
+      openBidModal(currentDetailsJob.id);
+    }
+    window.submitBidFromDetails = submitBidFromDetails;
+
+    // Calculate homeowner grade (A-F)
+    function getHomeownerGrade(homeowner) {
+      if (!homeowner) return 'C'; // Default grade if no data
+
+      let score = 0;
+
+      // Payment history (0-40 points)
+      if (homeowner.payment_rating) {
+        score += (homeowner.payment_rating / 5) * 40;
+      } else {
+        score += 20; // Neutral if no data
+      }
+
+      // Communication (0-30 points)
+      if (homeowner.communication_rating) {
+        score += (homeowner.communication_rating / 5) * 30;
+      } else {
+        score += 15; // Neutral if no data
+      }
+
+      // Project count (0-20 points)
+      const projectCount = homeowner.total_projects || 0;
+      score += Math.min(projectCount * 4, 20);
+
+      // Responsiveness (0-10 points)
+      if (homeowner.decision_speed_rating) {
+        score += (homeowner.decision_speed_rating / 5) * 10;
+      } else {
+        score += 5;
+      }
+
+      // Convert score to grade
+      if (score >= 90) return 'A';
+      if (score >= 80) return 'B';
+      if (score >= 70) return 'C';
+      if (score >= 60) return 'D';
+      return 'F';
+    }
 
     // Contact homeowner - create conversation and go to messages
     async function contactHomeowner(jobId, homeownerEmail) {
