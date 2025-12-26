@@ -147,13 +147,9 @@
                     <div class="profile-menu-role">${this.user.role}</div>
                   </div>
                   <div class="profile-menu-divider"></div>
-                  <a href="${this.user.role === 'contractor' ? 'contractor-profile.html' : 'user-profile.html'}" class="profile-menu-item">
+                  <a href="${this.user.role === 'contractor' ? 'contractor-profile.html' : 'user.profile.html'}" class="profile-menu-item">
                     <span class="menu-icon">👤</span>
                     <span>My Profile</span>
-                  </a>
-                  <a href="settings.html" class="profile-menu-item">
-                    <span class="menu-icon">⚙️</span>
-                    <span>Settings</span>
                   </a>
                   <div class="profile-menu-divider"></div>
                   <button onclick="homeprohubNav.logout()" class="profile-menu-item logout-item">
