@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
   -- Job details
   title TEXT NOT NULL,
   description TEXT NOT NULL,
+  category TEXT DEFAULT 'general',
   address TEXT NOT NULL,
   zip_code TEXT NOT NULL,
 
@@ -95,6 +96,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
 
 -- Indexes for job listings
 CREATE INDEX IF NOT EXISTS idx_job_postings_status ON job_postings(status);
+CREATE INDEX IF NOT EXISTS idx_job_postings_category ON job_postings(category);
 CREATE INDEX IF NOT EXISTS idx_job_postings_zip_code ON job_postings(zip_code);
 CREATE INDEX IF NOT EXISTS idx_job_postings_homeowner_email ON job_postings(homeowner_email);
 CREATE INDEX IF NOT EXISTS idx_job_postings_posted_at ON job_postings(posted_at DESC);

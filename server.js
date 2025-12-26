@@ -959,6 +959,94 @@ app.get("/api/jobs", async (req, res) => {
 });
 
 /**
+ * POST /api/jobs
+ * Create a new job posting (modern endpoint matching frontend)
+ */
+app.post("/api/jobs", async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      category,
+      budget_low,
+      budget_high,
+      zip_code,
+      urgency,
+      ai_assisted,
+      homeowner_email,
+      original_question,
+      ai_analysis
+    } = req.body;
+
+    // Validation
+    if (!title || !description || !zip_code || !homeowner_email) {
+      return res.status(400).json({
+        error: "Missing required fields: title, description, zip_code, homeowner_email",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (!isValidZip(zip_code)) {
+      return res.status(400).json({
+        error: "Invalid ZIP code format",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get or create user profile
+    let homeownerProfile = await db.getUserProfile(homeowner_email);
+    if (!homeownerProfile) {
+      homeownerProfile = await db.upsertUserProfile({
+        email: homeowner_email,
+        role: 'homeowner',
+        zip_code: zip_code
+      });
+    }
+
+    // Create job posting
+    const jobData = {
+      title: sanitizeInput(title, 200),
+      description: sanitizeInput(description, 5000),
+      category: category || 'general',
+      address: `ZIP: ${zip_code}`, // Use ZIP as placeholder for address
+      zip_code: zip_code,
+      budget_low: budget_low || null,
+      budget_high: budget_high || null,
+      urgency: urgency || 'flexible',
+      status: 'open',
+      homeowner_email: homeowner_email,
+      homeowner_id: homeownerProfile.id,
+      original_question: original_question || null,
+      ai_analysis: ai_analysis || null
+    };
+
+    const job = await db.createJobPosting(jobData);
+
+    // Create notification (optional - could notify nearby contractors)
+    await db.createNotification({
+      user_email: homeowner_email,
+      user_id: homeownerProfile.id,
+      notification_type: 'new_job',
+      title: 'Job Posted Successfully',
+      message: `Your job "${title}" has been posted and is now visible to contractors.`,
+      job_id: job.id,
+      action_url: `/homeowner-dashboard.html`
+    });
+
+    console.log(`✓ Job posted: ${job.id} by ${homeowner_email}${ai_assisted ? ' (AI-assisted)' : ''}`);
+    res.json({ success: true, job });
+
+  } catch (err) {
+    console.error("❌ Error in POST /api/jobs:", err);
+    res.status(500).json({
+      error: "Failed to create job",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * GET /api/jobs/:jobId
  * Get a specific job with all bids
  */
