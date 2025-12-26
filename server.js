@@ -322,7 +322,8 @@ app.get('/api/get-role', (req, res) => {
 
 /**
  * POST /ask
- * Homeowner AI assistant - analyzes home issues with optional image
+ * Homeowner AI assistant - analyzes home issues OR job posting requests
+ * Intelligently detects intent and provides appropriate response
  */
 app.post("/ask", async (req, res) => {
   try {
@@ -374,25 +375,43 @@ app.post("/ask", async (req, res) => {
     // Build content blocks for Claude
     const contentBlocks = [];
 
-    // Text prompt
+    // Smart prompt that detects intent and responds appropriately
     contentBlocks.push({
       type: "text",
-      text: `You are an experienced home contractor and home inspector.
-Explain things simply and focus on safety.
+      text: `You are an experienced home contractor and home inspector helping homeowners.
 
-The homeowner described this issue with their home:
+The homeowner said:
 ${sanitizedQuestion}
 
-If an image is provided, use it as additional context.
+FIRST, determine the intent:
+- Is this about an EXISTING PROBLEM/ISSUE that needs fixing? (leak, crack, noise, smell, malfunction, damage, etc.)
+- OR is this about a NEW PROJECT/REMODEL they want to do? (addition, remodel, renovation, upgrade, installation of something new, etc.)
 
-Respond using EXACTLY this structure:
+INTENT TYPE: [Write either "ISSUE" or "PROJECT"]
+
+If ISSUE (something broken/wrong that needs repair):
+Respond using this structure:
 1. Summary, Severity & Urgency: [1-2 sentence summary, Severity: High/Medium/Low, Urgency: Fix now/soon/monitor]
-2. Likely Causes: [2-5 bullet points]
-3. Step-by-Step Checks (DIY-friendly): [Numbered steps]
-4. Materials & Tools You May Need: [Short bullet list]
-5. Safety Warnings: [Clear bullet points]
-6. When to Call a Pro: [Explain when and what type of contractor]
-7. What to Tell a Contractor: [Short script]`
+2. Estimated Budget Range: $[LOW] - $[HIGH] (provide realistic cost estimate for professional repair)
+3. Likely Causes: [2-5 bullet points]
+4. Step-by-Step Checks (DIY-friendly): [Numbered steps they can do to diagnose]
+5. Materials & Tools You May Need: [Short bullet list if DIY-able]
+6. Safety Warnings: [Clear bullet points, be specific about dangers]
+7. When to Call a Pro: [Explain when and what type of contractor - plumber, electrician, etc.]
+8. What to Tell a Contractor: [Short script they can use]
+
+If PROJECT (new work they want done):
+Respond using this structure:
+1. Project Summary: [2-3 sentence overview of what they're asking for]
+2. Estimated Budget Range: $[LOW] - $[HIGH] (realistic range for this type of project in their area)
+3. Scope Considerations: [Bullet points of what this typically includes]
+4. Permits & Requirements: [What permits or approvals they'll likely need]
+5. Timeline Estimate: [Typical duration for this project]
+6. Contractor Type Needed: [What type of contractor - general contractor, specialist, etc.]
+7. Key Questions for Contractors: [5-7 questions they should ask when getting bids]
+8. Next Steps: [Clear action items - "Post this project to get bids from contractors"]
+
+Be specific with budget estimates based on typical market rates. Consider the project scope described.`
     });
 
     // Optional image
@@ -407,7 +426,7 @@ Respond using EXACTLY this structure:
       });
     }
 
-    // Call Anthropic API
+    // Call Anthropic API with increased token limit for detailed responses
     const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -417,7 +436,7 @@ Respond using EXACTLY this structure:
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
-        max_tokens: 800,
+        max_tokens: 1200,
         messages: [
           {
             role: "user",
@@ -444,9 +463,21 @@ Respond using EXACTLY this structure:
       ? data.content[0].text
       : "No response generated.";
 
-    console.log(`✓ Homeowner question answered (${answer.length} chars)`);
+    // Detect intent from response
+    const isProject = answer.includes('INTENT TYPE: PROJECT') ||
+                      answer.includes('Project Summary:') ||
+                      answer.includes('Next Steps:');
+    const isIssue = answer.includes('INTENT TYPE: ISSUE') ||
+                    answer.includes('Likely Causes:') ||
+                    !isProject;
 
-    res.json({ answer });
+    console.log(`✓ Homeowner question answered (${answer.length} chars, type: ${isProject ? 'PROJECT' : 'ISSUE'})`);
+
+    res.json({
+      answer,
+      intent: isProject ? 'project' : 'issue',
+      autoRedirect: isProject // Signal frontend to auto-redirect to job posting
+    });
 
   } catch (err) {
     console.error("❌ Error in /ask:", err);

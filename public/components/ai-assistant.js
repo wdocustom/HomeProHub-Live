@@ -115,7 +115,11 @@
     }
 
     const data = await response.json();
-    return data.answer || '';
+    return {
+      answer: data.answer || '',
+      intent: data.intent || 'issue',
+      autoRedirect: data.autoRedirect || false
+    };
   }
 
   // Photo input handler
@@ -169,18 +173,57 @@
       if (jobPostCta) jobPostCta.classList.remove('show');
 
       try {
-        const reply = await askBackend(question, lastImageBase64, lastImageType);
-
-        if (aiResponseContent) aiResponseContent.textContent = reply;
-        if (aiResponseSection) aiResponseSection.classList.add('show');
-        if (jobPostCta) jobPostCta.classList.add('show');
-
-        aiStatus.textContent = "Analysis complete! ✅";
-        aiStatus.style.color = '#10b981';
+        const result = await askBackend(question, lastImageBase64, lastImageType);
+        const { answer, intent, autoRedirect } = result;
 
         // Save context
         lastQuestion = question;
-        lastAIAnswer = reply;
+        lastAIAnswer = answer;
+
+        // Check if this is a project request that should auto-redirect to job posting
+        if (intent === 'project' && autoRedirect) {
+          aiStatus.textContent = "Perfect! Let's get this project posted to find the right contractor...";
+          aiStatus.style.color = '#10b981';
+
+          // Extract budget from AI response
+          const estimatedBudget = extractBudgetFromAI(answer);
+
+          // Store data for job posting page
+          sessionStorage.setItem('pendingJob', JSON.stringify({
+            originalQuestion: question,
+            aiAnalysis: answer,
+            budgetLow: estimatedBudget.low,
+            budgetHigh: estimatedBudget.high,
+            fromAI: true,
+            isProject: true
+          }));
+
+          // Auto-redirect after short delay to show message
+          setTimeout(() => {
+            window.location.href = 'homeowner-dashboard.html';
+          }, 1500);
+
+          return; // Exit early, don't show response section
+        }
+
+        // For issues, show the response with clarify option
+        if (aiResponseContent) aiResponseContent.textContent = answer;
+        if (aiResponseSection) aiResponseSection.classList.add('show');
+        if (jobPostCta) jobPostCta.classList.add('show');
+
+        // Update button text based on intent
+        if (postJobBtn) {
+          if (intent === 'project') {
+            postJobBtn.textContent = '📋 Post This Project & Get Bids';
+          } else {
+            postJobBtn.textContent = '📋 Post This Issue & Get Help';
+          }
+        }
+
+        aiStatus.textContent = intent === 'project'
+          ? "Project analysis complete! ✅"
+          : "Analysis complete! ✅";
+        aiStatus.style.color = '#10b981';
 
         // Scroll to response
         setTimeout(() => {
@@ -240,15 +283,25 @@
         `If earlier advice is no longer correct, clearly correct it.`;
 
       try {
-        const reply = await askBackend(combinedQuestion, lastImageBase64, lastImageType);
+        const result = await askBackend(combinedQuestion, lastImageBase64, lastImageType);
+        const { answer, intent } = result;
 
-        if (aiResponseContent) aiResponseContent.textContent = reply;
+        if (aiResponseContent) aiResponseContent.textContent = answer;
+
+        // Update button text based on intent
+        if (postJobBtn) {
+          if (intent === 'project') {
+            postJobBtn.textContent = '📋 Post This Project & Get Bids';
+          } else {
+            postJobBtn.textContent = '📋 Post This Issue & Get Help';
+          }
+        }
 
         clarifyStatus.textContent = "Analysis updated! ✅";
         clarifyStatus.style.color = '#10b981';
 
         lastQuestion = combinedQuestion;
-        lastAIAnswer = reply;
+        lastAIAnswer = answer;
         if (clarifyInput) clarifyInput.value = "";
 
         // Scroll to top of response
