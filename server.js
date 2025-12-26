@@ -1069,6 +1069,7 @@ app.get("/grading-data", (req, res) => {
 // DATABASE API ENDPOINTS
 // ========================================
 const db = require('./database/db');
+const emailService = require('./email/email-service');
 
 // Load license requirements data
 let licenseRequirements = null;
@@ -1265,6 +1266,19 @@ app.post("/api/jobs", async (req, res) => {
       action_url: `/homeowner-dashboard.html`
     });
 
+    // Send job posting confirmation email
+    try {
+      await emailService.sendJobPostingConfirmation({
+        homeownerEmail: homeowner_email,
+        homeownerName: homeownerProfile.full_name || homeownerProfile.email.split('@')[0],
+        job: job
+      });
+      console.log(`✓ Job posting confirmation email sent to ${homeowner_email}`);
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send job posting confirmation email:', emailErr.message);
+      // Don't fail the request if email fails
+    }
+
     console.log(`✓ Job posted: ${job.id} by ${homeowner_email}${ai_assisted ? ' (AI-assisted)' : ''}`);
     res.json({ success: true, job });
 
@@ -1405,6 +1419,22 @@ app.post("/api/submit-bid", async (req, res) => {
       bid_id: bid.id,
       action_url: `/homeowner-dashboard.html?job=${jobId}`
     });
+
+    // Send bid notification email to homeowner
+    try {
+      const homeownerProfile = await db.getUserProfile(job.homeowner_email);
+      await emailService.sendBidNotification({
+        homeownerEmail: job.homeowner_email,
+        homeownerName: homeownerProfile?.full_name || job.homeowner_email.split('@')[0],
+        contractor: contractorProfile,
+        job: job,
+        bid: bid
+      });
+      console.log(`✓ Bid notification email sent to ${job.homeowner_email}`);
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send bid notification email:', emailErr.message);
+      // Don't fail the request if email fails
+    }
 
     // Log activity
     await db.logActivity({
