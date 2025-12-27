@@ -6,6 +6,9 @@
   <title>HomeProHub – Job Pricing & Estimator</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="components/navigation.css">
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
   <style>
     .estimator-container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
     .header-card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -88,16 +91,39 @@ const STORAGE_KEYS = {
   let profile = null;
   let estimatorJobData = null; // Data from job board
 
-  function checkAuth() {
-    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-    const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
-    if (!token || role !== 'contractor') {
-      window.location.href = 'index.html';
+  async function checkAuth() {
+    try {
+      // Wait for authService to be ready
+      if (!window.authService || !window.authService.initialized) {
+        await new Promise(resolve => {
+          const checkInterval = setInterval(() => {
+            if (window.authService && window.authService.initialized) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100);
+        });
+      }
+
+      const user = await window.authService.getCurrentUser();
+      if (!user) {
+        window.location.href = "index.html";
+        return false;
+      }
+
+      const userProfile = await window.authService.getUserProfile();
+      if (!userProfile || userProfile.role !== 'contractor') {
+        window.location.href = "index.html";
+        return false;
+      }
+
+      profile = userProfile;
+      return true;
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      window.location.href = "index.html";
       return false;
     }
-    const profileData = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
-    if (profileData) profile = JSON.parse(profileData);
-    return true;
   }
 
   // Check for job data from contractor dashboard
@@ -166,12 +192,8 @@ const STORAGE_KEYS = {
     resultSection.style.display = 'none';
 
     try {
-      const response = await fetch('/contractor-ask', {
+      const response = await window.authService.authenticatedFetch('/contractor-ask', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
-        },
         body: JSON.stringify({
           question: jobDesc,
           focus: 'pricing',
@@ -426,10 +448,13 @@ const STORAGE_KEYS = {
     window.location.href = 'contractor-dashboard.html';
   });
 
-  if (!checkAuth()) return;
-
-  // Check for job data from contractor dashboard and auto-populate
-  checkForEstimatorJob();
+  // Initialize with async auth check
+  checkAuth().then(isAuthenticated => {
+    if (isAuthenticated) {
+      // Check for job data from contractor dashboard and auto-populate
+      checkForEstimatorJob();
+    }
+  });
 })();
 </script>
 

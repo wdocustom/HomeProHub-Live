@@ -6,6 +6,9 @@
   <title>HomeProHub – Contractor Profile</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="components/navigation.css">
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
   <style>
     .profile-container { max-width: 900px; margin: 40px auto; padding: 0 24px; }
     .profile-header { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -462,23 +465,44 @@ function displayLicenseStatus(status, licenseNumber, licenseState) {
     const statusMessage = document.getElementById('statusMessage');
     const socialStatusMessage = document.getElementById('socialStatusMessage');
 
-    function checkAuth() {
-        const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-        const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-        const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+    async function checkAuth() {
+        try {
+            // Wait for authService to be ready
+            if (!window.authService || !window.authService.initialized) {
+                await new Promise(resolve => {
+                    const checkInterval = setInterval(() => {
+                        if (window.authService && window.authService.initialized) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                });
+            }
 
-        if (!username || !authToken || role !== 'contractor') {
-            window.location.href = 'index.html';
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
+                window.location.href = "index.html";
+                return false;
+            }
+
+            const userProfile = await window.authService.getUserProfile();
+            if (!userProfile || userProfile.role !== 'contractor') {
+                window.location.href = "index.html";
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            window.location.href = "index.html";
             return false;
         }
-        return true;
     }
 
-    function loadProfile() {
+    async function loadProfile() {
         try {
-            const profileData = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
-            if (profileData) {
-                const profile = JSON.parse(profileData);
+            const profile = await window.authService.getUserProfile();
+            if (profile) {
                 if (profile.firstName) document.getElementById('firstName').value = profile.firstName;
                 if (profile.lastName) document.getElementById('lastName').value = profile.lastName;
                 if (profile.businessName) document.getElementById('businessName').value = profile.businessName;
@@ -730,9 +754,13 @@ function displayLicenseStatus(status, licenseNumber, licenseState) {
         }
     }
 
-    if (!checkAuth()) return;
-    loadProfile();
-    loadLicenseInfo();
+    // Initialize with async auth check
+    checkAuth().then(isAuthenticated => {
+        if (isAuthenticated) {
+            loadProfile();
+            loadLicenseInfo();
+        }
+    });
 })();
 </script>
 

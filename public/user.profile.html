@@ -1,7 +1,10 @@
 <!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8" />
   <title>HomeProHub – Profile</title>
-  <link rel="stylesheet" href="styles.css" /></head><body><header class="navbar">
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script></head><body><header class="navbar">
   <div class="nav-inner">
     <div class="brand-area">
       <div class="brand-logo">H</div>
@@ -74,38 +77,44 @@
     /**
      * Load and display user profile data
      */
-    function loadUserProfile() {
+    async function loadUserProfile() {
         try {
-            // Get user profile from localStorage
-            const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
-            const rawContractorProfile = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
-            const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+            // Wait for authService to be ready
+            if (!window.authService || !window.authService.initialized) {
+                await new Promise(resolve => {
+                    const checkInterval = setInterval(() => {
+                        if (window.authService && window.authService.initialized) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                });
+            }
 
-            // Check if user is authenticated
-            if (!authToken || !rawProfile) {
+            // Get current user
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
                 redirectToLogin();
                 return;
             }
 
-            const user = JSON.parse(rawProfile);
-            const contractorProfile = rawContractorProfile ? JSON.parse(rawContractorProfile) : null;
-
-            // Validate that we have minimal required data
-            if (!user || !user.role) {
+            // Get profile
+            const profile = await window.authService.getUserProfile();
+            if (!profile || !profile.role) {
                 redirectToLogin();
                 return;
             }
 
             // Display user information (sanitized)
-            userRoleEl.textContent = sanitizeText(user.role);
-            userNameEl.textContent = sanitizeText(user.name || contractorProfile?.companyName || 'N/A');
-            userEmailEl.textContent = sanitizeText(user.email || localStorage.getItem(STORAGE_KEYS.USERNAME) || 'N/A');
-            userLocationEl.textContent = sanitizeText(user.location || 'Not specified');
+            userRoleEl.textContent = sanitizeText(profile.role);
+            userNameEl.textContent = sanitizeText(profile.full_name || profile.company_name || profile.business_name || 'N/A');
+            userEmailEl.textContent = sanitizeText(user.email || 'N/A');
+            userLocationEl.textContent = sanitizeText(profile.city && profile.state ? `${profile.city}, ${profile.state}` : 'Not specified');
 
             // Set dashboard link and handle role-specific fields
-            if (user.role === 'contractor') {
+            if (profile.role === 'contractor') {
                 // Show trade information for contractors
-                const trade = user.trade || contractorProfile?.trade || 'General Contractor';
+                const trade = profile.trade || 'General Contractor';
                 userTradeEl.textContent = sanitizeText(trade);
                 userTradeRowEl.style.display = '';
                 dashboardLinkEl.href = 'contractor.html';
@@ -116,6 +125,7 @@
             }
 
         } catch (error) {
+            console.error('Error loading profile:', error);
             // Error loading profile
             redirectToLogin();
         }
@@ -146,21 +156,26 @@
     /**
      * Handle logout
      */
-    window.logout = function() {
-        // Clear all stored data
-        clearAllData();
-
-        // Optionally call backend logout endpoint
+    window.logout = async function() {
         try {
-            const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-            if (authToken) {
-                fetch('/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                }).catch(() => {
-                    // Silent fail - we're logging out anyway
+            // Use authService to sign out
+            await window.authService.signOut();
+            // authService.signOut() will handle the redirect
+        } catch (e) {
+            console.error('Error during logout:', e);
+            // Fallback: redirect to home
+            try {
+                // Try legacy logout
+                clearAllData();
+                const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+                if (authToken) {
+                    fetch('/api/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    }).catch(() => {
+                        // Silent fail - we're logging out anyway
                 });
             }
         } catch (e) {
