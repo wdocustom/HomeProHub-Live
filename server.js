@@ -2264,14 +2264,50 @@ app.post("/api/submit-bid", requireAuth, requireRole('contractor'), async (req, 
       console.log('✓ Estimate data included with bid submission');
     }
 
-    console.log('📝 Submitting bid to database...');
+    console.log('📝 Checking for existing bid...');
     let bid;
     try {
-      bid = await db.submitBid(bidData);
-      console.log('✓ Bid inserted into database:', bid.id);
+      // Check if bid already exists for this contractor on this job
+      const existingBids = await db.getBidsByContractor(contractorEmail);
+      const duplicateBid = existingBids.find(b => b.job_id === jobId);
+
+      if (duplicateBid) {
+        // Update existing bid instead of creating new one
+        console.log(`⚠️  Bid already exists for this job, updating instead: ${duplicateBid.id}`);
+
+        const updateData = {
+          bid_amount_low: bidAmountLow,
+          bid_amount_high: bidAmountHigh,
+          estimated_duration: estimatedDuration,
+          start_availability: startAvailability,
+          message: message,
+          updated_at: new Date().toISOString()
+        };
+
+        if (estimate) {
+          updateData.estimate = estimate;
+          updateData.has_estimate = true;
+        }
+
+        const { data, error } = await db.supabase
+          .from('contractor_bids')
+          .update(updateData)
+          .eq('id', duplicateBid.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        bid = data;
+        console.log('✓ Bid updated successfully:', bid.id);
+      } else {
+        // Create new bid
+        console.log('📝 Creating new bid...');
+        bid = await db.submitBid(bidData);
+        console.log('✓ Bid inserted into database:', bid.id);
+      }
     } catch (bidErr) {
-      console.error('❌ Error inserting bid:', bidErr);
-      throw new Error(`Bid insertion failed: ${bidErr.message}`);
+      console.error('❌ Error inserting/updating bid:', bidErr);
+      throw new Error(`Bid operation failed: ${bidErr.message}`);
     }
 
     // Get job details for notification
