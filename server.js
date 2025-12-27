@@ -3071,6 +3071,36 @@ app.get("/api/conversations", requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/messages/unread
+ * Get unread message count only (for navigation)
+ * IMPORTANT: Must be defined BEFORE /api/messages/:conversationId
+ */
+app.get("/api/messages/unread", requireAuth, async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const count = await db.getUnreadCount(email);
+
+    res.json({ count });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/unread:", err);
+    res.status(500).json({
+      error: "Failed to retrieve unread message count",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * GET /api/messages/:conversationId
  * Get all messages for a specific conversation
  */
@@ -3292,35 +3322,6 @@ app.get("/api/notifications/unread", async (req, res) => {
     console.error("❌ Error in /api/notifications/unread:", err);
     res.status(500).json({
       error: "Failed to retrieve unread notification count",
-      code: 'INTERNAL_ERROR',
-      message: err.message
-    });
-  }
-});
-
-/**
- * GET /api/messages/unread
- * Get unread message count only (for navigation)
- */
-app.get("/api/messages/unread", requireAuth, async (req, res) => {
-  try {
-    const { email } = req.query;
-
-    if (!email) {
-      return res.status(400).json({
-        error: "Email parameter required",
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    const count = await db.getUnreadCount(email);
-
-    res.json({ count });
-
-  } catch (err) {
-    console.error("❌ Error in /api/messages/unread:", err);
-    res.status(500).json({
-      error: "Failed to retrieve unread message count",
       code: 'INTERNAL_ERROR',
       message: err.message
     });
