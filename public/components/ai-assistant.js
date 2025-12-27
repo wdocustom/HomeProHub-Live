@@ -38,25 +38,37 @@
   const postJobBtn = document.getElementById('postJobBtn');
 
   // Utility: Get user data
-  function getUserData() {
+  async function getUserData() {
     try {
-      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
-      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+      // Wait for authService to be ready
+      if (!window.authService || !window.authService.initialized) {
+        await new Promise(resolve => {
+          const checkAuth = setInterval(() => {
+            if (window.authService && window.authService.initialized) {
+              clearInterval(checkAuth);
+              resolve();
+            }
+          }, 100);
+        });
+      }
 
-      if (!role || !authToken) {
+      const user = await window.authService.getCurrentUser();
+      if (!user) {
         return null;
       }
 
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      const profile = await window.authService.getUserProfile();
+      if (!profile) {
+        return null;
+      }
 
       return {
-        role: role,
-        name: profile.name || 'User',
-        email: profile.email || '',
-        token: authToken
+        role: profile.role,
+        name: profile.name || user.email,
+        email: user.email
       };
     } catch (e) {
+      console.error('Error getting user data:', e);
       return null;
     }
   }
@@ -91,17 +103,13 @@
 
   // API: Ask backend
   async function askBackend(question, imageBase64, imageType) {
-    const user = getUserData();
+    const user = await getUserData();
     if (!user) {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch("/ask", {
+    const response = await window.authService.authenticatedFetch("/ask", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${user.token}`
-      },
       body: JSON.stringify({
         question: question.trim(),
         imageBase64,
@@ -376,25 +384,21 @@
   }
 
   // Check auth on page load
-  function initialize() {
-    const user = getUserData();
-
-    if (!user || user.role !== 'homeowner') {
-      console.log('AI Assistant: User not authenticated or not a homeowner');
-      // Note: Navigation component handles redirects - don't redirect here
-      return;
-    }
-
+  async function initialize() {
     // Check for pending question from navigation
     const pendingQuestion = sessionStorage.getItem('pendingQuestion');
     if (pendingQuestion && homeIssueInput) {
       homeIssueInput.value = pendingQuestion;
       sessionStorage.removeItem('pendingQuestion');
 
-      // Auto-trigger AI if there's a pending question
-      setTimeout(() => {
-        if (askAiBtn) askAiBtn.click();
-      }, 500);
+      // Verify user is authenticated before auto-triggering
+      const user = await getUserData();
+      if (user && user.role === 'homeowner') {
+        // Auto-trigger AI if there's a pending question
+        setTimeout(() => {
+          if (askAiBtn) askAiBtn.click();
+        }, 500);
+      }
     }
   }
 
