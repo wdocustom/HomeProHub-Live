@@ -840,6 +840,10 @@
       // Check if bid has professional estimate attached
       const hasEstimate = bid.has_estimate && bid.estimate;
 
+      // Check if bid was updated (submitted_at and updated_at are different)
+      const isUpdated = bid.updated_at && bid.submitted_at &&
+                        new Date(bid.updated_at).getTime() > new Date(bid.submitted_at).getTime();
+
       return `
         <div class="bid-card ${isAccepted ? 'accepted' : ''}">
           <div class="bid-header">
@@ -852,6 +856,11 @@
                   <span>💰</span> Professional Estimate
                 </span>
               ` : ''}
+              ${isUpdated ? `
+                <span style="background: #f59e0b; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>🔄</span> Updated
+                </span>
+              ` : ''}
             </div>
             <div class="bid-amount">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</div>
           </div>
@@ -859,6 +868,7 @@
           <div class="bid-details">
             ${bid.contractor?.years_in_business ? `⏱️ ${bid.contractor.years_in_business} years in business • ` : ''}
             ${bid.estimated_duration ? `📅 Duration: ${escapeHtml(bid.estimated_duration)}` : ''}
+            ${isUpdated ? `<br>🔄 Bid updated ${formatDate(bid.updated_at)}` : `<br>📅 Bid submitted ${formatDate(bid.submitted_at)}`}
           </div>
 
           ${bid.message ? `
@@ -869,6 +879,7 @@
             ${isAccepted ? `
               <span style="color: #10b981; font-weight: 600;">✓ Accepted</span>
               ${hasEstimate ? `<button class="btn-view-estimate" data-bid-id="${bid.id}" style="background: #059669; margin-left: 8px;">📊 View Detailed Estimate</button>` : ''}
+              <button class="btn-message" data-contractor-email="${bid.contractor_email}" data-job-id="${job.id}">💬 Message Contractor</button>
             ` : isPending ? `
               <button class="btn-accept" data-bid-id="${bid.id}" data-job-id="${job.id}">Accept Bid</button>
               ${hasEstimate ? `<button class="btn-view-estimate" data-bid-id="${bid.id}" style="background: #059669;">📊 View Detailed Estimate</button>` : ''}

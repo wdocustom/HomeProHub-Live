@@ -1017,34 +1017,40 @@
     }
 
     // Open bid modal
-    function openBidModal(jobId) {
+    async function openBidModal(jobId) {
       currentJob = availableJobs.find(j => j.id === jobId);
       if (!currentJob) return;
 
-      // Check contractor license status before opening modal
-      const contractorProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
-      const verificationStatus = getContractorVerificationStatus(contractorProfile);
+      // Check contractor license status from Supabase before opening modal
+      try {
+        const contractorProfile = await window.authService.getUserProfile();
+        const verificationStatus = getContractorVerificationStatus(contractorProfile);
 
-      // If not licensed at all, show Get Licensed prompt
-      if (verificationStatus === 'none') {
-        const proceed = confirm(
-          '📜 Get Licensed to Win More Bids!\n\n' +
-          'Homeowners strongly prefer licensed contractors. Getting licensed will:\n' +
-          '✓ Increase your chances of winning bids\n' +
-          '✓ Allow you to charge premium rates\n' +
-          '✓ Give you the Verified badge\n' +
-          '✓ Prioritize your bids in the system\n\n' +
-          'You can still submit bids without a license, but we recommend getting licensed through our partner ContractorTrainingCenter.com.\n\n' +
-          'Do you want to submit a bid anyway?'
-        );
+        // Only show Get Licensed prompt if not licensed AND not verified
+        // Skip modal if contractor is verified
+        if (verificationStatus === 'none' && contractorProfile.license_verified !== 'verified') {
+          const proceed = confirm(
+            '📜 Get Licensed to Win More Bids!\n\n' +
+            'Homeowners strongly prefer licensed contractors. Getting licensed will:\n' +
+            '✓ Increase your chances of winning bids\n' +
+            '✓ Allow you to charge premium rates\n' +
+            '✓ Give you the Verified badge\n' +
+            '✓ Prioritize your bids in the system\n\n' +
+            'You can still submit bids without a license, but we recommend getting licensed through our partner ContractorTrainingCenter.com.\n\n' +
+            'Do you want to submit a bid anyway?'
+          );
 
-        if (!proceed) {
-          // Open profile page to licensing tab
-          if (confirm('Would you like to learn more about getting licensed?')) {
-            window.location.href = 'contractor-profile.html';
+          if (!proceed) {
+            // Open profile page to licensing tab
+            if (confirm('Would you like to learn more about getting licensed?')) {
+              window.location.href = 'contractor-profile.html';
+            }
+            return;
           }
-          return;
         }
+      } catch (err) {
+        console.error('Error checking license status:', err);
+        // Continue anyway if check fails
       }
 
       document.getElementById('bidModalJobTitle').textContent = currentJob.title;
@@ -1056,9 +1062,9 @@
       if (attachedEstimate) {
         try {
           const estimate = JSON.parse(attachedEstimate);
-          // Pre-populate bid amounts from estimate
-          document.getElementById('bidLow').value = Math.round(estimate.total_low || estimate.subtotal_low || 0);
-          document.getElementById('bidHigh').value = Math.round(estimate.total_high || estimate.subtotal_high || 0);
+          // Pre-populate bid amounts from estimate - preserve exact values, no rounding
+          document.getElementById('bidLow').value = estimate.total_low || estimate.subtotal_low || 0;
+          document.getElementById('bidHigh').value = estimate.total_high || estimate.subtotal_high || 0;
 
           // Add visual indicator that estimate is attached
           const bidMessage = document.getElementById('bidMessage');
