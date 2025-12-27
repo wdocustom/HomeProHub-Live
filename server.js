@@ -3309,6 +3309,236 @@ app.post("/api/notifications/mark-all-read", async (req, res) => {
   }
 });
 
+// ========================================
+// CONTRACTOR DIRECTORY & GRADING
+// ========================================
+
+/**
+ * GET /api/contractors/directory
+ * Get contractor directory with search and filters
+ * Query params: trade, minGrade, maxDistance, searchTerm, zip, limit, offset
+ */
+app.get("/api/contractors/directory", optionalAuth, async (req, res) => {
+  try {
+    const {
+      trade,
+      minGrade,
+      maxDistance,
+      searchTerm,
+      zip,
+      limit = 50,
+      offset = 0
+    } = req.query;
+
+    // Build query
+    let query = supabase
+      .from('user_profiles')
+      .select(`
+        id,
+        email,
+        company_name,
+        business_name,
+        full_name,
+        trade,
+        years_in_business,
+        city,
+        state,
+        zip_code,
+        phone,
+        profile_complete,
+        instagram_url,
+        facebook_url,
+        youtube_url
+      `)
+      .eq('role', 'contractor')
+      .eq('profile_complete', true)
+      .order('created_at', { ascending: false });
+
+    // Filter by trade
+    if (trade && trade !== 'all') {
+      query = query.eq('trade', trade);
+    }
+
+    // Search by name or trade
+    if (searchTerm) {
+      query = query.or(`company_name.ilike.%${searchTerm}%,business_name.ilike.%${searchTerm}%,trade.ilike.%${searchTerm}%`);
+    }
+
+    // Filter by zip code (location)
+    if (zip) {
+      query = query.eq('zip_code', zip);
+    }
+
+    // Apply pagination
+    query = query.range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    const { data: contractors, error } = await query;
+
+    if (error) throw error;
+
+    // Enrich contractors with grade, license status, and reviews
+    const enrichedContractors = await Promise.all(
+      contractors.map(async (contractor) => {
+        // Get grade
+        const gradeResult = await supabase.rpc('calculate_contractor_grade', {
+          p_contractor_email: contractor.email
+        });
+
+        const grade = gradeResult.data || {
+          grade: 'N/A',
+          score: 0,
+          color: '#6b7280'
+        };
+
+        // Get license status
+        const { data: licenses } = await supabase
+          .from('contractor_licenses')
+          .select('verification_status, trade_type, state')
+          .eq('contractor_email', contractor.email)
+          .eq('verification_status', 'verified')
+          .order('verified_at', { ascending: false })
+          .limit(1);
+
+        // Get review count and average
+        const { data: ratings } = await supabase
+          .from('contractor_ratings')
+          .select('quality_rating, communication_rating, timeliness_rating, professionalism_rating, value_rating')
+          .eq('contractor_email', contractor.email);
+
+        const reviewCount = ratings?.length || 0;
+        let averageRating = 0;
+
+        if (reviewCount > 0) {
+          const totalRating = ratings.reduce((sum, r) => {
+            return sum + ((r.quality_rating + r.communication_rating + r.timeliness_rating + r.professionalism_rating + r.value_rating) / 5.0);
+          }, 0);
+          averageRating = totalRating / reviewCount;
+        }
+
+        // Calculate distance if user ZIP provided
+        let distance = null;
+        if (zip && contractor.zip_code) {
+          // Simplified distance (mock for now)
+          distance = zip === contractor.zip_code ? 0 : Math.floor(Math.random() * 50 + 1);
+        }
+
+        return {
+          ...contractor,
+          contractor_name: contractor.company_name || contractor.business_name || contractor.full_name,
+          grade: grade.grade,
+          grade_score: grade.score,
+          grade_color: grade.color,
+          grade_breakdown: grade.breakdown,
+          has_verified_license: licenses && licenses.length > 0,
+          licensed_trade: licenses?.[0]?.trade_type,
+          license_state: licenses?.[0]?.state,
+          review_count: reviewCount,
+          average_rating: Math.round(averageRating * 10) / 10,
+          distance_miles: distance
+        };
+      })
+    );
+
+    // Apply grade filter if specified
+    let filteredContractors = enrichedContractors;
+    if (minGrade) {
+      const gradeValues = { 'F': 0, 'D': 40, 'C-': 50, 'C': 55, 'C+': 60, 'B-': 65, 'B': 70, 'B+': 75, 'A-': 80, 'A': 85, 'A+': 90 };
+      const minScore = gradeValues[minGrade] || 0;
+      filteredContractors = enrichedContractors.filter(c => c.grade_score >= minScore);
+    }
+
+    // Apply distance filter if specified
+    if (maxDistance && zip) {
+      filteredContractors = filteredContractors.filter(c => c.distance_miles !== null && c.distance_miles <= parseInt(maxDistance));
+    }
+
+    // Sort by grade score (highest first)
+    filteredContractors.sort((a, b) => b.grade_score - a.grade_score);
+
+    res.json({
+      contractors: filteredContractors,
+      total: filteredContractors.length,
+      filters: {
+        trade,
+        minGrade,
+        maxDistance,
+        searchTerm,
+        zip
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractors/directory:", err);
+    res.status(500).json({
+      error: "Failed to load contractor directory",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractors/:email/grade
+ * Get detailed grade breakdown for a specific contractor
+ */
+app.get("/api/contractors/:email/grade", async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const { data: grade, error } = await supabase.rpc('calculate_contractor_grade', {
+      p_contractor_email: email
+    });
+
+    if (error) throw error;
+
+    res.json(grade || { grade: 'N/A', score: 0 });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractors/:email/grade:", err);
+    res.status(500).json({
+      error: "Failed to calculate contractor grade",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractors/:email/reviews
+ * Get reviews for a specific contractor
+ */
+app.get("/api/contractors/:email/reviews", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { limit = 10, offset = 0 } = req.query;
+
+    const { data: reviews, error } = await supabase
+      .from('contractor_ratings')
+      .select(`
+        *,
+        homeowner:user_profiles!contractor_ratings_homeowner_email_fkey(full_name, city, state)
+      `)
+      .eq('contractor_email', email)
+      .order('created_at', { ascending: false })
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    if (error) throw error;
+
+    res.json({
+      reviews: reviews || [],
+      total: reviews?.length || 0
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractors/:email/reviews:", err);
+    res.status(500).json({
+      error: "Failed to load contractor reviews",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
 // ====== 404 HANDLER ======
 app.use((req, res) => {
   res.status(404).json({
