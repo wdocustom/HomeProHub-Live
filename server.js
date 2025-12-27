@@ -6,6 +6,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require('path');
 const fs = require('fs');
+const db = require('./database/db');
 
 // node-fetch v3 for CommonJS
 const fetch = (...args) =>
@@ -118,6 +119,117 @@ function loadJsonFile(filename) {
   }
 }
 
+// ====== AUTHENTICATION MIDDLEWARE ======
+
+const { createClient } = require('@supabase/supabase-js');
+
+// Create Supabase client for auth verification
+const supabaseAuth = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_ANON_KEY || ''
+);
+
+/**
+ * Middleware to verify Supabase JWT token
+ * Extracts token from Authorization header and validates it
+ */
+async function requireAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        code: 'NO_AUTH_TOKEN'
+      });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify token with Supabase
+    const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({
+        error: 'Invalid or expired token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    // Attach user to request object
+    req.user = user;
+    next();
+
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({
+      error: 'Authentication verification failed',
+      code: 'AUTH_ERROR'
+    });
+  }
+}
+
+/**
+ * Middleware to require specific role
+ */
+function requireRole(role) {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          code: 'NO_AUTH'
+        });
+      }
+
+      // Get user profile from database to check role
+      const profile = await db.getUserProfile(req.user.email);
+
+      if (!profile || profile.role !== role) {
+        return res.status(403).json({
+          error: `Access denied. ${role} role required.`,
+          code: 'INSUFFICIENT_PERMISSIONS'
+        });
+      }
+
+      // Attach profile to request
+      req.userProfile = profile;
+      next();
+
+    } catch (error) {
+      console.error('Role check error:', error);
+      return res.status(500).json({
+        error: 'Role verification failed',
+        code: 'ROLE_CHECK_ERROR'
+      });
+    }
+  };
+}
+
+/**
+ * Optional auth middleware - doesn't fail if no token
+ * Useful for endpoints that work for both authenticated and guest users
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+
+      if (!error && user) {
+        req.user = user;
+      }
+    }
+
+    next();
+  } catch (error) {
+    // Don't fail - just continue without user
+    next();
+  }
+}
+
 // --- FINAL AUTH API ROUTES (Client-Side Auth) ---
 
 // ====== API ROUTES ======
@@ -143,6 +255,332 @@ app.get('/api/config', (req, res) => {
   } catch (error) {
     console.error('Error in /api/config:', error);
     return res.status(500).json({ error: 'Internal server error fetching config.' });
+  }
+});
+
+// ====== AUTHENTICATION ENDPOINTS ======
+
+/**
+ * POST /api/auth/signup
+ * Create a new user account with Supabase Auth
+ */
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { email, password, role, ...userData } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !role) {
+      return res.status(400).json({
+        error: 'Email, password, and role are required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Validate role
+    if (!['homeowner', 'contractor'].includes(role)) {
+      return res.status(400).json({
+        error: 'Role must be either "homeowner" or "contractor"',
+        code: 'INVALID_ROLE'
+      });
+    }
+
+    // Create user in Supabase Auth
+    const { data, error } = await supabaseAuth.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          role: role,
+          ...userData
+        }
+      }
+    });
+
+    if (error) {
+      console.error('Signup error:', error);
+      return res.status(400).json({
+        error: error.message,
+        code: 'SIGNUP_FAILED'
+      });
+    }
+
+    // Create user profile in database
+    if (data.user) {
+      try {
+        const profile = await db.upsertUserProfile({
+          id: data.user.id,
+          email: email,
+          role: role,
+          full_name: userData.full_name || null,
+          phone: userData.phone || null,
+          company_name: userData.company_name || null,
+          address: userData.address || null,
+          city: userData.city || null,
+          state: userData.state || null,
+          zip_code: userData.zip_code || null,
+          email_verified: data.user.email_confirmed_at ? true : false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        console.log('✅ User profile created:', email, 'Role:', role);
+      } catch (dbError) {
+        console.error('Error creating user profile:', dbError);
+        // Continue - auth user is created even if profile creation fails
+      }
+    }
+
+    res.status(201).json({
+      user: data.user,
+      session: data.session,
+      message: 'Account created successfully'
+    });
+
+  } catch (error) {
+    console.error('Signup endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during signup',
+      code: 'SIGNUP_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/signin
+ * Sign in an existing user
+ */
+app.post('/api/auth/signin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Email and password are required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Sign in with Supabase
+    const { data, error } = await supabaseAuth.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      console.error('Signin error:', error);
+      return res.status(401).json({
+        error: error.message,
+        code: 'SIGNIN_FAILED'
+      });
+    }
+
+    // Get user profile
+    let profile = null;
+    try {
+      profile = await db.getUserProfile(email);
+    } catch (dbError) {
+      console.error('Error fetching user profile:', dbError);
+    }
+
+    console.log('✅ User signed in:', email);
+
+    res.json({
+      user: data.user,
+      session: data.session,
+      profile: profile,
+      message: 'Signed in successfully'
+    });
+
+  } catch (error) {
+    console.error('Signin endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during signin',
+      code: 'SIGNIN_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/signout
+ * Sign out the current user
+ */
+app.post('/api/auth/signout', requireAuth, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader.substring(7);
+
+    // Sign out from Supabase
+    const { error } = await supabaseAuth.auth.signOut(token);
+
+    if (error) {
+      console.error('Signout error:', error);
+    }
+
+    console.log('✅ User signed out:', req.user.email);
+
+    res.json({
+      message: 'Signed out successfully'
+    });
+
+  } catch (error) {
+    console.error('Signout endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during signout',
+      code: 'SIGNOUT_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/refresh
+ * Refresh the access token
+ */
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+      return res.status(400).json({
+        error: 'Refresh token is required',
+        code: 'MISSING_REFRESH_TOKEN'
+      });
+    }
+
+    // Refresh session with Supabase
+    const { data, error } = await supabaseAuth.auth.refreshSession({
+      refresh_token
+    });
+
+    if (error) {
+      console.error('Token refresh error:', error);
+      return res.status(401).json({
+        error: error.message,
+        code: 'REFRESH_FAILED'
+      });
+    }
+
+    res.json({
+      session: data.session,
+      user: data.user,
+      message: 'Token refreshed successfully'
+    });
+
+  } catch (error) {
+    console.error('Refresh endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during token refresh',
+      code: 'REFRESH_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/auth/user
+ * Get current authenticated user and profile
+ */
+app.get('/api/auth/user', requireAuth, async (req, res) => {
+  try {
+    // Get user profile from database
+    const profile = await db.getUserProfile(req.user.email);
+
+    res.json({
+      user: req.user,
+      profile: profile,
+      authenticated: true
+    });
+
+  } catch (error) {
+    console.error('Get user endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error fetching user',
+      code: 'FETCH_USER_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Send password reset email
+ */
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Email is required',
+        code: 'MISSING_EMAIL'
+      });
+    }
+
+    // Send password reset email via Supabase
+    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
+      redirectTo: `${req.protocol}://${req.get('host')}/reset-password`
+    });
+
+    if (error) {
+      console.error('Password reset error:', error);
+      return res.status(400).json({
+        error: error.message,
+        code: 'RESET_FAILED'
+      });
+    }
+
+    console.log('✅ Password reset email sent to:', email);
+
+    res.json({
+      message: 'Password reset email sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during password reset',
+      code: 'RESET_ERROR'
+    });
+  }
+});
+
+/**
+ * PUT /api/auth/update-password
+ * Update user password (requires authentication)
+ */
+app.put('/api/auth/update-password', requireAuth, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({
+        error: 'New password is required',
+        code: 'MISSING_PASSWORD'
+      });
+    }
+
+    // Update password via Supabase
+    const { error } = await supabaseAuth.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      console.error('Update password error:', error);
+      return res.status(400).json({
+        error: error.message,
+        code: 'UPDATE_FAILED'
+      });
+    }
+
+    console.log('✅ Password updated for:', req.user.email);
+
+    res.json({
+      message: 'Password updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update password endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during password update',
+      code: 'UPDATE_ERROR'
+    });
   }
 });
 
@@ -1068,7 +1506,6 @@ app.get("/grading-data", (req, res) => {
 // ========================================
 // DATABASE API ENDPOINTS
 // ========================================
-const db = require('./database/db');
 const emailService = require('./email/email-service');
 
 // Load license requirements data
@@ -1089,7 +1526,7 @@ try {
  * GET /api/license/status
  * Get current license verification status for a contractor
  */
-app.get("/api/license/status", async (req, res) => {
+app.get("/api/license/status", requireAuth, requireRole('contractor'), async (req, res) => {
   try {
     const { email } = req.query;
 
@@ -1134,7 +1571,7 @@ app.get("/api/license/status", async (req, res) => {
  * POST /api/license/submit
  * Submit contractor license and insurance documents for verification
  */
-app.post("/api/license/submit", async (req, res) => {
+app.post("/api/license/submit", requireAuth, requireRole('contractor'), async (req, res) => {
   try {
     const {
       contractorEmail,
@@ -1462,7 +1899,7 @@ app.get("/api/license/verify", async (req, res) => {
  * POST /api/submit-job
  * Submit a new job posting from homeowner
  */
-app.post("/api/submit-job", async (req, res) => {
+app.post("/api/submit-job", requireAuth, requireRole('homeowner'), async (req, res) => {
   try {
     const {
       title,
@@ -1540,7 +1977,7 @@ app.post("/api/submit-job", async (req, res) => {
  * GET /api/jobs
  * Get all open jobs (optionally filter by zip code, status)
  */
-app.get("/api/jobs", async (req, res) => {
+app.get("/api/jobs", optionalAuth, async (req, res) => {
   try {
     const { zipCode, status, limit } = req.query;
 
@@ -1568,7 +2005,7 @@ app.get("/api/jobs", async (req, res) => {
  * POST /api/jobs
  * Create a new job posting (modern endpoint matching frontend)
  */
-app.post("/api/jobs", async (req, res) => {
+app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) => {
   try {
     const {
       title,
@@ -1669,7 +2106,7 @@ app.post("/api/jobs", async (req, res) => {
  * GET /api/jobs/:jobId
  * Get a specific job with all bids
  */
-app.get("/api/jobs/:jobId", async (req, res) => {
+app.get("/api/jobs/:jobId", optionalAuth, async (req, res) => {
   try {
     const { jobId } = req.params;
     const job = await db.getJobById(jobId);
@@ -1701,7 +2138,7 @@ app.get("/api/jobs/:jobId", async (req, res) => {
  * GET /api/homeowner/jobs
  * Get all jobs posted by a homeowner
  */
-app.get("/api/homeowner/jobs", async (req, res) => {
+app.get("/api/homeowner/jobs", requireAuth, requireRole('homeowner'), async (req, res) => {
   try {
     const { email } = req.query;
 
@@ -1731,7 +2168,7 @@ app.get("/api/homeowner/jobs", async (req, res) => {
  * POST /api/submit-bid
  * Submit a contractor bid on a job
  */
-app.post("/api/submit-bid", async (req, res) => {
+app.post("/api/submit-bid", requireAuth, requireRole('contractor'), async (req, res) => {
   try {
     const {
       jobId,
@@ -1852,7 +2289,7 @@ app.post("/api/submit-bid", async (req, res) => {
  * GET /api/contractor/bids
  * Get all bids submitted by a contractor
  */
-app.get("/api/contractor/bids", async (req, res) => {
+app.get("/api/contractor/bids", requireAuth, requireRole('contractor'), async (req, res) => {
   try {
     const { email } = req.query;
 
@@ -1882,7 +2319,7 @@ app.get("/api/contractor/bids", async (req, res) => {
  * POST /api/bid/accept
  * Homeowner accepts a bid
  */
-app.post("/api/bid/accept", async (req, res) => {
+app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, res) => {
   try {
     const { bidId, jobId, homeownerEmail } = req.body;
 
@@ -1958,7 +2395,7 @@ app.post("/api/bid/accept", async (req, res) => {
  * POST /api/contractor/licenses
  * Add or update contractor license
  */
-app.post("/api/contractor/licenses", async (req, res) => {
+app.post("/api/contractor/licenses", requireAuth, requireRole('contractor'), async (req, res) => {
   try {
     const {
       contractorEmail,
@@ -2018,7 +2455,7 @@ app.post("/api/contractor/licenses", async (req, res) => {
  * GET /api/contractor/licenses
  * Get all licenses for a contractor
  */
-app.get("/api/contractor/licenses", async (req, res) => {
+app.get("/api/contractor/licenses", requireAuth, requireRole('contractor'), async (req, res) => {
   try {
     const { contractorEmail } = req.query;
 
@@ -2047,7 +2484,7 @@ app.get("/api/contractor/licenses", async (req, res) => {
  * GET /api/contractor/licenses/check
  * Check if contractor has required license for a job
  */
-app.get("/api/contractor/licenses/check", async (req, res) => {
+app.get("/api/contractor/licenses/check", optionalAuth, async (req, res) => {
   try {
     const { contractorEmail, category, state } = req.query;
 
@@ -2091,7 +2528,7 @@ app.get("/api/contractor/licenses/check", async (req, res) => {
  * PUT /api/contractor/licenses/:id/verify
  * Update license verification status (admin only)
  */
-app.put("/api/contractor/licenses/:id/verify", async (req, res) => {
+app.put("/api/contractor/licenses/:id/verify", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, verifiedBy, rejectionReason } = req.body;
@@ -2308,7 +2745,7 @@ app.get("/api/top-rated-homeowners", async (req, res) => {
  * POST /api/messages/send
  * Send a message - supports both conversation-based and legacy thread-based messaging
  */
-app.post("/api/messages/send", async (req, res) => {
+app.post("/api/messages/send", requireAuth, async (req, res) => {
   try {
     const {
       // New conversation-based format
@@ -2412,7 +2849,7 @@ app.post("/api/messages/send", async (req, res) => {
  * GET /api/messages/thread/:threadId
  * Get all messages in a thread
  */
-app.get("/api/messages/thread/:threadId", async (req, res) => {
+app.get("/api/messages/thread/:threadId", requireAuth, async (req, res) => {
   try {
     const { threadId } = req.params;
     const { userEmail } = req.query;
@@ -2441,7 +2878,7 @@ app.get("/api/messages/thread/:threadId", async (req, res) => {
  * GET /api/messages/conversations
  * Get all conversations for a user
  */
-app.get("/api/messages/conversations", async (req, res) => {
+app.get("/api/messages/conversations", requireAuth, async (req, res) => {
   try {
     const { email } = req.query;
 
@@ -2475,7 +2912,7 @@ app.get("/api/messages/conversations", async (req, res) => {
  * POST /api/conversations/create
  * Create or find an existing conversation between homeowner and contractor for a job
  */
-app.post("/api/conversations/create", async (req, res) => {
+app.post("/api/conversations/create", requireAuth, async (req, res) => {
   try {
     const { job_id, homeowner_email, contractor_email } = req.body;
 
@@ -2510,7 +2947,7 @@ app.post("/api/conversations/create", async (req, res) => {
  * GET /api/conversations
  * Get all conversations for a user with details
  */
-app.get("/api/conversations", async (req, res) => {
+app.get("/api/conversations", requireAuth, async (req, res) => {
   try {
     const { email } = req.query;
 
@@ -2540,7 +2977,7 @@ app.get("/api/conversations", async (req, res) => {
  * GET /api/messages/:conversationId
  * Get all messages for a specific conversation
  */
-app.get("/api/messages/:conversationId", async (req, res) => {
+app.get("/api/messages/:conversationId", requireAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { email } = req.query;
@@ -2569,7 +3006,7 @@ app.get("/api/messages/:conversationId", async (req, res) => {
  * POST /api/messages/send
  * Send a message in a conversation
  */
-app.post("/api/messages/send-conversation", async (req, res) => {
+app.post("/api/messages/send-conversation", requireAuth, async (req, res) => {
   try {
     const {
       conversation_id,
@@ -2613,7 +3050,7 @@ app.post("/api/messages/send-conversation", async (req, res) => {
  * POST /api/conversations/:conversationId/read
  * Mark all messages in a conversation as read for a user
  */
-app.post("/api/conversations/:conversationId/read", async (req, res) => {
+app.post("/api/conversations/:conversationId/read", requireAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { email } = req.body;
@@ -2644,7 +3081,7 @@ app.post("/api/conversations/:conversationId/read", async (req, res) => {
  * GET /api/notifications
  * Get notifications for a user
  */
-app.get("/api/notifications", async (req, res) => {
+app.get("/api/notifications", requireAuth, async (req, res) => {
   try {
     const { email, limit } = req.query;
 
@@ -2768,7 +3205,7 @@ app.get("/api/notifications/unread", async (req, res) => {
  * GET /api/messages/unread
  * Get unread message count only (for navigation)
  */
-app.get("/api/messages/unread", async (req, res) => {
+app.get("/api/messages/unread", requireAuth, async (req, res) => {
   try {
     const { email } = req.query;
 

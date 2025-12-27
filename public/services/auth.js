@@ -63,27 +63,42 @@ class AuthService {
    */
   async signUp(email, password, userData = {}) {
     try {
-      const { data, error } = await this.supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            role: userData.role || 'homeowner',
-            full_name: userData.full_name,
-            business_name: userData.business_name,
-            phone: userData.phone
-          }
-        }
+      // Use backend endpoint for signup (handles both auth and profile creation)
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          role: userData.role || 'homeowner',
+          full_name: userData.full_name,
+          phone: userData.phone,
+          company_name: userData.company_name || userData.business_name,
+          address: userData.address,
+          city: userData.city,
+          state: userData.state,
+          zip_code: userData.zip_code
+        })
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      // Create user profile in database
-      if (data.user) {
-        await this.createUserProfile(data.user, userData);
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
       }
 
-      return { success: true, user: data.user };
+      // Update local state
+      this.currentUser = data.user;
+
+      // Set session in Supabase client
+      if (data.session && this.supabase) {
+        await this.supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+      }
+
+      return { success: true, user: data.user, session: data.session };
     } catch (error) {
       console.error('Sign up error:', error);
       return { success: false, error: error.message };
@@ -95,15 +110,31 @@ class AuthService {
    */
   async signIn(email, password) {
     try {
-      const { data, error } = await this.supabase.auth.signInWithPassword({
-        email,
-        password
+      // Use backend endpoint for signin
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.error || 'Sign in failed');
+      }
+
+      // Update local state
       this.currentUser = data.user;
-      return { success: true, user: data.user };
+
+      // Set session in Supabase client
+      if (data.session && this.supabase) {
+        await this.supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+      }
+
+      return { success: true, user: data.user, profile: data.profile };
     } catch (error) {
       console.error('Sign in error:', error);
       return { success: false, error: error.message };
@@ -115,13 +146,32 @@ class AuthService {
    */
   async signOut() {
     try {
-      const { error } = await this.supabase.auth.signOut();
-      if (error) throw error;
+      // Call backend signout endpoint if we have a token
+      const token = await this.getAccessToken();
+      if (token) {
+        await fetch('/api/auth/signout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+
+      // Also sign out from Supabase client
+      if (this.supabase) {
+        await this.supabase.auth.signOut();
+      }
 
       this.currentUser = null;
+      this.handleSignOut();
+
       return { success: true };
     } catch (error) {
       console.error('Sign out error:', error);
+      // Even if there's an error, clear local state
+      this.currentUser = null;
+      this.handleSignOut();
       return { success: false, error: error.message };
     }
   }
@@ -164,22 +214,63 @@ class AuthService {
   }
 
   /**
-   * Get user role from profile
+   * Get access token for API requests
    */
-  async getUserRole() {
+  async getAccessToken() {
+    try {
+      const { data: { session } } = await this.supabase.auth.getSession();
+      return session?.access_token || null;
+    } catch (error) {
+      console.error('Get token error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Make authenticated API request
+   * Automatically adds Authorization header with JWT token
+   */
+  async authenticatedFetch(url, options = {}) {
+    const token = await this.getAccessToken();
+
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    const headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+
+    return fetch(url, { ...options, headers });
+  }
+
+  /**
+   * Get user profile from backend
+   */
+  async getUserProfile() {
     const user = await this.getCurrentUser();
     if (!user) return null;
 
     try {
-      const response = await fetch(`/api/user/profile?email=${encodeURIComponent(user.email)}`);
+      const response = await this.authenticatedFetch('/api/auth/user');
       if (!response.ok) return null;
 
-      const profile = await response.json();
-      return profile.role;
+      const data = await response.json();
+      return data.profile;
     } catch (error) {
-      console.error('Get role error:', error);
+      console.error('Get profile error:', error);
       return null;
     }
+  }
+
+  /**
+   * Get user role from profile
+   */
+  async getUserRole() {
+    const profile = await this.getUserProfile();
+    return profile?.role || null;
   }
 
   /**

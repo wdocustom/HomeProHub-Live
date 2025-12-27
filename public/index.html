@@ -1367,6 +1367,10 @@
     </div>
   </div>
 
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
   <script>
     // Auth Modal Functions
     function showAuthModal(tab = 'signup', role = null) {
@@ -1412,35 +1416,34 @@
 
       const email = document.getElementById('loginEmail').value;
       const password = document.getElementById('loginPassword').value;
+      const submitBtn = event.target.querySelector('button[type="submit"]');
 
       try {
-        // Simple mock auth - check if user exists in localStorage
-        const users = JSON.parse(localStorage.getItem('homeprohub_users') || '{}');
-        const user = users[email];
+        // Disable button and show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing In...';
 
-        if (user && user.password === password) {
-          // Set auth tokens
-          localStorage.setItem('homeprohub_username', email);
-          localStorage.setItem('homeprohub_auth_token', 'token_' + Date.now());
-          localStorage.setItem('homeprohub_user_role', user.role);
-          localStorage.setItem('homeprohub_user', JSON.stringify({
-            email: email,
-            name: user.name,
-            role: user.role
-          }));
+        // Use authService for authentication
+        const result = await window.authService.signIn(email, password);
 
+        if (result.success) {
           // Redirect based on role
-          if (user.role === 'contractor') {
+          const role = result.profile?.role;
+          if (role === 'contractor') {
             window.location.href = 'contractor-dashboard.html';
           } else {
             window.location.href = 'homeowner-dashboard.html';
           }
         } else {
-          alert('Invalid email or password. Please try signing up if you don\'t have an account.');
+          alert(result.error || 'Invalid email or password. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
         }
       } catch (error) {
         console.error('Login error:', error);
         alert('Login failed. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In';
       }
     }
 
@@ -1452,6 +1455,7 @@
       const password = document.getElementById('signupPassword').value;
       const name = document.getElementById('signupName').value;
       const role = document.getElementById('signupRole').value;
+      const submitBtn = event.target.querySelector('button[type="submit"]');
 
       if (!role) {
         alert('Please select whether you are a homeowner or contractor');
@@ -1459,43 +1463,33 @@
       }
 
       try {
-        // Store user in localStorage (mock database)
-        const users = JSON.parse(localStorage.getItem('homeprohub_users') || '{}');
+        // Disable button and show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating Account...';
 
-        if (users[email]) {
-          alert('An account with this email already exists. Please sign in instead.');
-          return;
-        }
+        // Use authService for registration
+        const result = await window.authService.signUp(email, password, {
+          role: role,
+          full_name: name
+        });
 
-        users[email] = {
-          email,
-          password,
-          name,
-          role,
-          createdAt: new Date().toISOString()
-        };
-
-        localStorage.setItem('homeprohub_users', JSON.stringify(users));
-
-        // Set auth tokens
-        localStorage.setItem('homeprohub_username', email);
-        localStorage.setItem('homeprohub_auth_token', 'token_' + Date.now());
-        localStorage.setItem('homeprohub_user_role', role);
-        localStorage.setItem('homeprohub_user', JSON.stringify({
-          email: email,
-          name: name,
-          role: role
-        }));
-
-        // Redirect based on role
-        if (role === 'contractor') {
-          window.location.href = 'contractor-dashboard.html';
+        if (result.success) {
+          // Redirect based on role
+          if (role === 'contractor') {
+            window.location.href = 'contractor-dashboard.html';
+          } else {
+            window.location.href = 'homeowner-dashboard.html';
+          }
         } else {
-          window.location.href = 'homeowner-dashboard.html';
+          alert(result.error || 'Signup failed. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Account';
         }
       } catch (error) {
         console.error('Signup error:', error);
         alert('Signup failed. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Account';
       }
     }
 

@@ -31,27 +31,56 @@
 
   class UnifiedNavigation {
     constructor() {
-      this.user = this.getUserData();
+      this.user = null;
+      this.profile = null;
       this.notificationCount = 0;
       this.messageCount = 0;
-      this.init();
+      this.initAuth();
+    }
+
+    async initAuth() {
+      try {
+        // Wait for authService to be ready
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        // Get current user
+        const user = await window.authService.getCurrentUser();
+        if (user) {
+          this.user = user;
+          // Get profile for role information
+          this.profile = await window.authService.getUserProfile();
+          this.init();
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      }
     }
 
     getUserData() {
-      const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-      const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+      if (!this.user || !this.profile) return null;
 
-      if (!username || !token) return null;
-
-      return { username, token, role };
+      return {
+        username: this.user.email,
+        role: this.profile.role
+      };
     }
 
     async fetchNotificationCount() {
       if (!this.user) return;
 
       try {
-        const response = await fetch(`/api/notifications/unread?email=${encodeURIComponent(this.user.username)}`);
+        const response = await window.authService.authenticatedFetch(
+          `/api/notifications/unread?email=${encodeURIComponent(this.user.email)}`
+        );
         if (response.ok) {
           const data = await response.json();
           this.notificationCount = data.count || 0;
@@ -66,7 +95,9 @@
       if (!this.user) return;
 
       try {
-        const response = await fetch(`/api/messages/unread?email=${encodeURIComponent(this.user.username)}`);
+        const response = await window.authService.authenticatedFetch(
+          `/api/messages/unread?email=${encodeURIComponent(this.user.email)}`
+        );
         if (response.ok) {
           const data = await response.json();
           this.messageCount = data.count || 0;
@@ -210,7 +241,9 @@
       list.innerHTML = '<div class="notifications-loading">Loading...</div>';
 
       try {
-        const response = await fetch(`/api/notifications?email=${encodeURIComponent(this.user.username)}&limit=10`);
+        const response = await window.authService.authenticatedFetch(
+          `/api/notifications?email=${encodeURIComponent(this.user.email)}&limit=10`
+        );
         if (!response.ok) throw new Error('Failed to load notifications');
 
         const data = await response.json();
@@ -268,9 +301,8 @@
 
     async markAsRead(notificationId) {
       try {
-        await fetch(`/api/notifications/${notificationId}/read`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+        await window.authService.authenticatedFetch(`/api/notifications/${notificationId}/read`, {
+          method: 'POST'
         });
 
         this.notificationCount = Math.max(0, this.notificationCount - 1);
@@ -283,10 +315,9 @@
 
     async markAllAsRead() {
       try {
-        await fetch(`/api/notifications/mark-all-read`, {
+        await window.authService.authenticatedFetch(`/api/notifications/mark-all-read`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: this.user.username })
+          body: JSON.stringify({ email: this.user.email })
         });
 
         this.notificationCount = 0;
@@ -297,14 +328,16 @@
       }
     }
 
-    logout() {
+    async logout() {
       try {
-        Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
-        localStorage.removeItem('homeprohub_profile_complete');
+        // Use authService to sign out
+        await window.authService.signOut();
+        // authService.signOut() will handle the redirect
       } catch (e) {
         console.error('Error during logout:', e);
+        // Fallback: redirect to home
+        window.location.href = 'index.html';
       }
-      window.location.href = 'index.html';
     }
 
     init() {
