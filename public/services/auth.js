@@ -332,10 +332,9 @@ class AuthService {
     // Clear any local state
     this.currentUser = null;
 
-    // Redirect to home
-    if (window.location.pathname !== '/index.html' && !window.location.pathname.endsWith('/')) {
-      window.location.href = '/index.html';
-    }
+    // Note: Navigation component (navigation.js) handles redirects
+    // We don't redirect here to avoid race conditions with page auth checks
+    console.log('User signed out - navigation will handle redirect');
   }
 
   /**

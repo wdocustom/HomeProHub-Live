@@ -989,7 +989,10 @@
             });
 
             if (!response.ok) {
-              throw new Error('Failed to decline bid');
+              const errorData = await response.json().catch(() => ({}));
+              const errorMsg = errorData.error || `Server error: ${response.status}`;
+              console.error('Decline bid failed:', errorMsg, errorData);
+              throw new Error(errorMsg);
             }
 
             alert('Bid declined successfully. The contractor has been notified.');
@@ -997,7 +1000,7 @@
 
           } catch (error) {
             console.error('Error declining bid:', error);
-            alert('Failed to decline bid. Please try again.');
+            alert(`Failed to decline bid: ${error.message}`);
             this.disabled = false;
             this.textContent = 'Decline';
           }
