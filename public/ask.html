@@ -3,6 +3,9 @@
   <title>HomeProHub – Home Issue Assistant</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
   <style>
     .hero {
       max-width: 900px;
@@ -297,34 +300,78 @@
     return input.trim().slice(0, MAX_QUESTION_LENGTH);
   }
 
-  // Auth: Get user data
-  function getUserData() {
+  // Auth: Check authentication with Supabase
+  async function checkAuth() {
     try {
-      const username = localStorage.getItem("homeprohub_username");
-      const token = localStorage.getItem("homeprohub_auth_token");
-      const role = localStorage.getItem("homeprohub_user_role");
-
-      if (username && token && role === "homeowner") {
-        return {
-          username: username,
-          token: token,
-          role: role,
-          name: username.split('@')[0] || "User"
-        };
+      // Wait for authService to be ready
+      if (!window.authService || !window.authService.initialized) {
+        await new Promise((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 50;
+          const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.authService && window.authService.initialized) {
+              clearInterval(checkInterval);
+              resolve();
+            } else if (attempts >= maxAttempts) {
+              clearInterval(checkInterval);
+              reject(new Error('AuthService timeout'));
+            }
+          }, 100);
+        });
       }
-      return null;
-    } catch (e) {
+
+      const user = await window.authService.getCurrentUser();
+      if (!user) {
+        console.log('No user found, redirecting to index');
+        window.location.href = "index.html";
+        return null;
+      }
+
+      const profile = await window.authService.getUserProfile();
+      if (!profile || profile.role !== 'homeowner') {
+        console.log('Not a homeowner, redirecting to index');
+        window.location.href = "index.html";
+        return null;
+      }
+
+      console.log('✓ Homeowner authenticated successfully');
+      return { user, profile };
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      window.location.href = "index.html";
       return null;
     }
   }
 
-  // Auth check
-  const user = getUserData();
-  if (!user) {
-    window.location.href = "index.html";
-  } else if (profileLinkEl) {
-    profileLinkEl.textContent = user.name;
+  // Auth: Get user data (async wrapper for compatibility)
+  async function getUserData() {
+    try {
+      const user = await window.authService.getCurrentUser();
+      const profile = await window.authService.getUserProfile();
+
+      if (user && profile && profile.role === "homeowner") {
+        return {
+          username: user.email,
+          token: 'supabase_session', // Token handled by authService
+          role: profile.role,
+          name: profile.full_name || user.email.split('@')[0] || "User"
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error('Error getting user data:', e);
+      return null;
+    }
   }
+
+  // Initialize auth check
+  let currentUser = null;
+  checkAuth().then(auth => {
+    if (auth) {
+      currentUser = auth;
+    }
+  });
 
   // Image: Read as base64
   function readImageAsBase64(file) {
@@ -362,17 +409,13 @@
       throw new Error('Question cannot be empty');
     }
 
-    const user = getUserData();
+    const user = await window.authService.getCurrentUser();
     if (!user) {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch("/ask", {
+    const response = await window.authService.authenticatedFetch("/ask", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${user.token}`
-      },
       body: JSON.stringify({
         question: sanitizedQuestion,
         imageBase64,
@@ -621,19 +664,19 @@
   };
 
   if (postJobBtn) {
-    postJobBtn.addEventListener('click', () => {
+    postJobBtn.addEventListener('click', async () => {
       if (!lastQuestion || !lastAIAnswer) {
         alert("Please generate a project analysis first.");
         return;
       }
 
       // Get user profile data
-      const userProfile = JSON.parse(localStorage.getItem('homeprohub_user') || '{}');
+      const userProfile = await window.authService.getUserProfile();
 
       // Pre-fill the form
       document.getElementById('jobDescription').value = lastQuestion + '\n\nAI Analysis:\n' + lastAIAnswer;
-      document.getElementById('jobZip').value = userProfile.zipCode || '';
-      document.getElementById('jobAddress').value = userProfile.address || '';
+      document.getElementById('jobZip').value = userProfile?.zip_code || '';
+      document.getElementById('jobAddress').value = userProfile?.address || '';
 
       // Try to extract budget from AI response (simple approach - look for dollar amounts)
       const dollarMatches = lastAIAnswer.match(/\$[\d,]+/g);
@@ -657,7 +700,7 @@
       const submitBtn = document.getElementById('submitJobBtn');
       const statusEl = document.getElementById('jobSubmissionStatus');
 
-      const user = getUserData();
+      const user = await window.authService.getCurrentUser();
       if (!user) {
         statusEl.textContent = 'Authentication required';
         statusEl.style.color = '#ef4444';
@@ -672,7 +715,7 @@
         urgency: document.getElementById('jobUrgency').value,
         budgetLow: parseInt(document.getElementById('budgetLow').value),
         budgetHigh: parseInt(document.getElementById('budgetHigh').value),
-        homeownerEmail: user.username,
+        homeownerEmail: user.email,
         originalQuestion: lastQuestion,
         aiAnalysis: lastAIAnswer,
         status: 'open',
@@ -685,12 +728,8 @@
       statusEl.style.color = '#6b7280';
 
       try {
-        const response = await fetch('/api/submit-job', {
+        const response = await window.authService.authenticatedFetch('/api/submit-job', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.token}`
-          },
           body: JSON.stringify(jobData)
         });
 
