@@ -133,9 +133,12 @@
     }
 
     createNavHTML() {
-      if (!this.user) return '';
+      if (!this.user || !this.profile) return '';
 
-      const navLinks = NAV_CONFIG[this.user.role] || [];
+      const userRole = this.profile.role;
+      const userEmail = this.user.email;
+
+      const navLinks = NAV_CONFIG[userRole] || [];
       const navLinksHTML = navLinks.map(link => `
         <a href="${link.href}" class="nav-link" data-badge="${link.badge || ''}">
           <span class="nav-icon">${link.icon}</span>
@@ -144,7 +147,7 @@
         </a>
       `).join('');
 
-      const brandHref = this.user.role === 'contractor' ? 'contractor.html' : 'home.html';
+      const brandHref = userRole === 'contractor' ? 'contractor.html' : 'home.html';
 
       return `
         <nav class="unified-nav">
@@ -168,18 +171,18 @@
 
               <div class="nav-profile-dropdown">
                 <button class="nav-profile-btn" onclick="homeprohubNav.toggleProfileMenu()">
-                  <span class="profile-avatar">${this.user.username.charAt(0).toUpperCase()}</span>
-                  <span class="profile-name">${this.user.username.split('@')[0]}</span>
+                  <span class="profile-avatar">${userEmail.charAt(0).toUpperCase()}</span>
+                  <span class="profile-name">${userEmail.split('@')[0]}</span>
                   <span class="dropdown-arrow">▼</span>
                 </button>
 
                 <div class="profile-menu" id="profileMenu">
                   <div class="profile-menu-header">
-                    <div class="profile-menu-email">${this.user.username}</div>
-                    <div class="profile-menu-role">${this.user.role}</div>
+                    <div class="profile-menu-email">${userEmail}</div>
+                    <div class="profile-menu-role">${userRole}</div>
                   </div>
                   <div class="profile-menu-divider"></div>
-                  <a href="${this.user.role === 'contractor' ? 'contractor-profile.html' : 'user.profile.html'}" class="profile-menu-item">
+                  <a href="${userRole === 'contractor' ? 'contractor-profile.html' : 'user.profile.html'}" class="profile-menu-item">
                     <span class="menu-icon">👤</span>
                     <span>My Profile</span>
                   </a>
