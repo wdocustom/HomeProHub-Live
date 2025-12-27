@@ -503,7 +503,7 @@
         // Check if user is authenticated
         const user = await window.authService.getCurrentUser();
         if (!user) {
-          window.location.href = 'index.html';
+          console.log('Messages: No user found - navigation will handle redirect');
           return false;
         }
 
@@ -518,7 +518,7 @@
         return true;
       } catch (error) {
         console.error('Auth check failed:', error);
-        window.location.href = 'index.html';
+        console.log('Messages: Auth error - navigation will handle redirect');
         return false;
       }
     }

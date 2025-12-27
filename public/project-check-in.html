@@ -469,7 +469,7 @@
 
         const user = await window.authService.getCurrentUser();
         if (!user) {
-          window.location.href = "index.html";
+          console.log('Project Check-in: No user found - navigation will handle redirect');
           return false;
         }
 
@@ -482,7 +482,7 @@
         return true;
       } catch (error) {
         console.error('Auth check failed:', error);
-        window.location.href = "index.html";
+        console.log('Project Check-in: Auth error - navigation will handle redirect');
         return false;
       }
     }

@@ -380,7 +380,8 @@
     const user = getUserData();
 
     if (!user || user.role !== 'homeowner') {
-      window.location.href = 'index.html';
+      console.log('AI Assistant: User not authenticated or not a homeowner');
+      // Note: Navigation component handles redirects - don't redirect here
       return;
     }
 
