@@ -283,17 +283,6 @@
   }
 
   // --- AUTH AND EVENT LISTENERS ---
-  // Standardized localStorage keys
-  const STORAGE_KEYS = {
-    USER_PROFILE: 'homeprohub_user',
-    USER_ROLE: 'homeprohub_user_role',
-    AUTH_TOKEN: 'homeprohub_auth_token',
-    USERNAME: 'homeprohub_username',
-    PROFILE_COMPLETE: 'homeprohub_profile_complete',
-    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
-    HISTORY: 'homeprohub_history_v1'
-  };
-
   /**
    * Sanitize text for display (prevent XSS)
    */
@@ -305,57 +294,57 @@
   }
 
   /**
-   * Get user data from localStorage
+   * Check authentication using Supabase
    */
-  function getUserData() {
+  async function checkAuth() {
     try {
-      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
-      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      const rawProfile = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+      // Wait for authService to be ready
+      if (!window.authService || !window.authService.initialized) {
+        await new Promise((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 50;
+          const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.authService && window.authService.initialized) {
+              clearInterval(checkInterval);
+              resolve();
+            } else if (attempts >= maxAttempts) {
+              clearInterval(checkInterval);
+              reject(new Error('AuthService timeout'));
+            }
+          }, 100);
+        });
+      }
 
-      if (!role || !authToken) {
+      const user = await window.authService.getCurrentUser();
+      if (!user) {
+        window.location.href = "index.html";
         return null;
       }
 
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
-      return {
-        role: role,
-        name: profile.companyName || 'User'
-      };
-    } catch (e) {
+      const profile = await window.authService.getUserProfile();
+      if (!profile || profile.role !== 'contractor') {
+        window.location.href = "index.html";
+        return null;
+      }
+
+      return { user, profile };
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      window.location.href = "index.html";
       return null;
     }
   }
 
   /**
-   * Clear all user data from localStorage
-   */
-  function clearAllData() {
-    Object.values(STORAGE_KEYS).forEach(key => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {
-        // Silent fail
-      }
-    });
-  }
-
-  /**
    * Logout function
    */
-  function logout() {
-    clearAllData();
-
+  async function logout() {
     try {
-      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      if (authToken) {
-        fetch('/api/logout', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        }).catch(() => {});
-      }
-    } catch (e) {}
-
+      await window.authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     window.location.href = 'index.html';
   }
 
@@ -411,20 +400,21 @@
   /**
    * Initialize page
    */
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     const profileLinkEl = document.getElementById('profileLink');
-    const user = getUserData();
 
-    // Check if user is logged in and is a contractor
-    if (!user || user.role !== 'contractor') {
-      clearAllData();
-      window.location.href = 'index.html';
-      return;
+    // Check authentication
+    const authResult = await checkAuth();
+    if (!authResult) {
+      return; // checkAuth handles redirect
     }
 
+    const { user, profile } = authResult;
+
     // Set profile link (sanitized)
-    if (profileLinkEl && user.name) {
-      const firstName = sanitizeText(user.name.split(' ')[0]);
+    if (profileLinkEl) {
+      const displayName = profile.business_name || profile.first_name || user.email.split('@')[0];
+      const firstName = sanitizeText(displayName.split(' ')[0]);
       profileLinkEl.textContent = firstName;
     }
 
@@ -469,7 +459,7 @@
           paymentReliability: document.getElementById('paymentRating').value,
           projectComplexity: document.getElementById('projectComplexity').value,
           comments: document.getElementById('ratingComments').value.trim(),
-          contractorId: localStorage.getItem(STORAGE_KEYS.USERNAME),
+          contractorId: user.email,
           timestamp: new Date().toISOString()
         };
 
