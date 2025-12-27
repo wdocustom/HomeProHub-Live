@@ -361,13 +361,14 @@ async function checkLicenseStatus() {
   const statusBanner = document.getElementById('licenseStatusBanner');
   const getLicensedPrompt = document.getElementById('getLicensedPrompt');
 
-  // Get user email
-  const userEmail = localStorage.getItem(STORAGE_KEYS.USERNAME);
-  if (!userEmail) return;
+  // Get user email from authService
+  const user = await window.authService.getCurrentUser();
+  if (!user || !user.email) return;
+  const userEmail = user.email;
 
   try {
     // Fetch fresh status from API
-    const response = await fetch(`/api/license/status?email=${encodeURIComponent(userEmail)}`);
+    const response = await window.authService.authenticatedFetch(`/api/license/status?email=${encodeURIComponent(userEmail)}`);
     if (response.ok) {
       const data = await response.json();
 
@@ -660,11 +661,8 @@ function displayLicenseStatus(status, licenseNumber, licenseState) {
             }
 
             // Submit to API
-            const response = await fetch('/api/license/submit', {
+            const response = await window.authService.authenticatedFetch('/api/license/submit', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({
                     contractorEmail,
                     licState,
