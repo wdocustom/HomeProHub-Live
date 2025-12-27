@@ -696,27 +696,59 @@
     let contractorEmail = '';
     let currentJob = null;
 
-    // Auth
-    function getUserData() {
-      const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-      const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+    // Auth - Wait for authService to be ready
+    async function checkAuth() {
+      try {
+        // Wait for authService to initialize
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
 
-      if (!username || !token) return null;
-      return { username, token, role };
-    }
+        // Check if user is authenticated
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = "index.html";
+          return false;
+        }
 
-    const user = getUserData();
-    if (!user || user.role !== 'contractor') {
-      window.location.href = "index.html";
-    } else {
-      contractorEmail = user.username;
-      const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
-      const profileLink = document.getElementById('profileLink');
-      if (profileLink) {
-        profileLink.textContent = profile.businessName || profile.companyName || contractorEmail;
+        // Get profile to check role
+        const profile = await window.authService.getUserProfile();
+        if (!profile || profile.role !== 'contractor') {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        // Set contractor email for API calls
+        contractorEmail = user.email;
+
+        // Update profile link if it exists
+        const profileLink = document.getElementById('profileLink');
+        if (profileLink) {
+          profileLink.textContent = profile.company_name || profile.full_name || user.email;
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = "index.html";
+        return false;
       }
     }
+
+    // Initialize after auth check
+    checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
+        loadAvailableJobs();
+        loadMyBids();
+      }
+    });
 
     // Format currency
     function formatCurrency(amount) {
@@ -757,7 +789,7 @@
     async function loadAvailableJobs() {
       try {
         const params = new URLSearchParams({ status: 'open', limit: '50' });
-        const response = await fetch(`/api/jobs?${params}`);
+        const response = await window.authService.authenticatedFetch(`/api/jobs?${params}`);
 
         if (!response.ok) throw new Error('Failed to load jobs');
 
@@ -776,7 +808,9 @@
     // Load my bids
     async function loadMyBids() {
       try {
-        const response = await fetch(`/api/contractor/bids?email=${encodeURIComponent(contractorEmail)}`);
+        const response = await window.authService.authenticatedFetch(
+          `/api/contractor/bids?email=${encodeURIComponent(contractorEmail)}`
+        );
 
         if (!response.ok) throw new Error('Failed to load bids');
 
@@ -1213,16 +1247,12 @@
     // Contact homeowner - create conversation and go to messages
     async function contactHomeowner(jobId, homeownerEmail) {
       try {
-        const response = await fetch('/api/conversations/create', {
+        const response = await window.authService.authenticatedFetch('/api/conversations/create', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
-          },
           body: JSON.stringify({
             job_id: jobId,
             homeowner_email: homeownerEmail,
-            contractor_email: localStorage.getItem(STORAGE_KEYS.USERNAME)
+            contractor_email: contractorEmail
           })
         });
 
@@ -1286,9 +1316,8 @@
       submitBtn.textContent = 'Submitting...';
 
       try {
-        const response = await fetch('/api/submit-bid', {
+        const response = await window.authService.authenticatedFetch('/api/submit-bid', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bidData)
         });
 
@@ -1333,11 +1362,11 @@
         }
       });
     });
-
-    // Initialize
-    loadAvailableJobs();
-    loadMyBids();
   </script>
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
 
   <!-- License Badge Component -->
   <script src="components/license-badge.js"></script>

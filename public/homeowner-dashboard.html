@@ -630,28 +630,58 @@
     let currentFilter = 'all';
     let userEmail = '';
 
-    // Auth check
-    function getUserData() {
-      const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-      const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+    // Auth - Wait for authService to be ready
+    async function checkAuth() {
+      try {
+        // Wait for authService to initialize
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
 
-      if (!username || !token) return null;
+        // Check if user is authenticated
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = "index.html";
+          return false;
+        }
 
-      return { username, token, role };
-    }
+        // Get profile to check role
+        const profile = await window.authService.getUserProfile();
+        if (!profile || profile.role !== 'homeowner') {
+          window.location.href = "index.html";
+          return false;
+        }
 
-    const user = getUserData();
-    if (!user) {
-      window.location.href = "index.html";
-    } else {
-      userEmail = user.username;
-      const profileLink = document.getElementById('profileLink');
-      if (profileLink) {
-        const userData = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || '{}');
-        profileLink.textContent = userData.name || user.username;
+        // Set user email for API calls
+        userEmail = user.email;
+
+        // Update profile link if it exists
+        const profileLink = document.getElementById('profileLink');
+        if (profileLink) {
+          profileLink.textContent = profile.full_name || user.email;
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = "index.html";
+        return false;
       }
     }
+
+    // Initialize after auth check
+    checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
+        loadJobs();
+      }
+    });
 
     // Format currency
     function formatCurrency(amount) {
@@ -680,7 +710,9 @@
     // Load jobs
     async function loadJobs() {
       try {
-        const response = await fetch(`/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}`);
+        const response = await window.authService.authenticatedFetch(
+          `/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}`
+        );
 
         if (!response.ok) {
           throw new Error('Failed to load jobs');
@@ -866,9 +898,8 @@
             this.disabled = true;
             this.textContent = 'Accepting...';
 
-            const response = await fetch('/api/bid/accept', {
+            const response = await window.authService.authenticatedFetch('/api/bid/accept', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 bidId,
                 jobId,
@@ -900,15 +931,11 @@
 
           // Create or find conversation and redirect to messages
           try {
-            const response = await fetch('/api/conversations/create', {
+            const response = await window.authService.authenticatedFetch('/api/conversations/create', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('homeprohub_auth_token')}`
-              },
               body: JSON.stringify({
                 job_id: jobId,
-                homeowner_email: localStorage.getItem('homeprohub_username'),
+                homeowner_email: userEmail,
                 contractor_email: contractorEmail
               })
             });
@@ -1214,12 +1241,8 @@
           homeowner_email: userEmail
         };
 
-        const response = await fetch('/api/jobs', {
+        const response = await window.authService.authenticatedFetch('/api/jobs', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
-          },
           body: JSON.stringify(formData)
         });
 
@@ -1249,14 +1272,15 @@
     // New Job button click handler
     document.getElementById('newJobBtn').addEventListener('click', openJobModal);
 
-    // Initialize
-    loadJobs();
-
     // Auto-open modal if coming from AI assistant
     if (sessionStorage.getItem('pendingJob')) {
       setTimeout(() => openJobModal(), 500);
     }
   </script>
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
 
   <!-- License Badge Component -->
   <script src="components/license-badge.js"></script>
