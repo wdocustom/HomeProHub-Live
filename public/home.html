@@ -6,6 +6,9 @@
   <title>HomeProHub – Your Home Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
   <style>
     /* Welcome section */
     .welcome-hero {
@@ -660,6 +663,46 @@
     </section>
 
   </main>
+
+  <script>
+    // Auth check for homeowner home page
+    async function checkAuth() {
+      try {
+        // Wait for authService to be ready
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        const profile = await window.authService.getUserProfile();
+        if (!profile || profile.role !== 'homeowner') {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = "index.html";
+        return false;
+      }
+    }
+
+    // Initialize auth check
+    checkAuth();
+  </script>
 
   <!-- AI Assistant Component -->
   <script src="components/ai-assistant.js"></script>
