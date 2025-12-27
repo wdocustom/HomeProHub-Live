@@ -2264,49 +2264,76 @@ app.post("/api/submit-bid", requireAuth, requireRole('contractor'), async (req, 
       console.log('✓ Estimate data included with bid submission');
     }
 
-    const bid = await db.submitBid(bidData);
+    console.log('📝 Submitting bid to database...');
+    let bid;
+    try {
+      bid = await db.submitBid(bidData);
+      console.log('✓ Bid inserted into database:', bid.id);
+    } catch (bidErr) {
+      console.error('❌ Error inserting bid:', bidErr);
+      throw new Error(`Bid insertion failed: ${bidErr.message}`);
+    }
 
     // Get job details for notification
+    console.log('📋 Fetching job details for notifications...');
     const job = await db.getJobById(jobId);
 
     // Create notification for homeowner
-    await db.createNotification({
-      user_email: job.homeowner_email,
-      user_id: job.homeowner_id,
-      notification_type: 'new_bid',
-      title: 'New Bid Received',
-      message: `${contractorProfile.business_name || contractorProfile.email} submitted a bid on your job "${job.title}"`,
-      job_id: jobId,
-      bid_id: bid.id,
-      action_url: `/homeowner-dashboard.html?job=${jobId}`
-    });
+    console.log('🔔 Creating notification for homeowner...');
+    try {
+      await db.createNotification({
+        user_email: job.homeowner_email,
+        user_id: job.homeowner_id,
+        notification_type: 'new_bid',
+        title: 'New Bid Received',
+        message: `${contractorProfile.business_name || contractorProfile.email} submitted a bid on your job "${job.title}"`,
+        job_id: jobId,
+        bid_id: bid.id,
+        action_url: `/homeowner-dashboard.html?job=${jobId}`
+      });
+      console.log('✓ Notification created');
+    } catch (notifErr) {
+      console.error('⚠️  Failed to create notification (non-fatal):', notifErr.message);
+      // Don't fail if notification creation fails
+    }
 
     // Send bid notification email to homeowner
     try {
       const homeownerProfile = await db.getUserProfile(job.homeowner_email);
-      await emailService.sendBidNotification({
-        homeownerEmail: job.homeowner_email,
-        homeownerName: homeownerProfile?.full_name || job.homeowner_email.split('@')[0],
-        contractor: contractorProfile,
-        job: job,
-        bid: bid
-      });
-      console.log(`✓ Bid notification email sent to ${job.homeowner_email}`);
+      if (typeof emailService !== 'undefined' && emailService.sendBidNotification) {
+        await emailService.sendBidNotification({
+          homeownerEmail: job.homeowner_email,
+          homeownerName: homeownerProfile?.full_name || job.homeowner_email.split('@')[0],
+          contractor: contractorProfile,
+          job: job,
+          bid: bid
+        });
+        console.log(`✓ Bid notification email sent to ${job.homeowner_email}`);
+      } else {
+        console.log('⚠️  Email service not configured, skipping email notification');
+      }
     } catch (emailErr) {
       console.error('⚠️  Failed to send bid notification email:', emailErr.message);
       // Don't fail the request if email fails
     }
 
     // Log activity
-    await db.logActivity({
-      user_email: contractorEmail,
-      user_id: contractorProfile.id,
-      activity_type: 'bid_submitted',
-      description: `Submitted bid on job: ${job.title}`,
-      metadata: { job_id: jobId, bid_id: bid.id }
-    });
+    console.log('📊 Logging activity...');
+    try {
+      await db.logActivity({
+        user_email: contractorEmail,
+        user_id: contractorProfile.id,
+        activity_type: 'bid_submitted',
+        description: `Submitted bid on job: ${job.title}`,
+        metadata: { job_id: jobId, bid_id: bid.id }
+      });
+      console.log('✓ Activity logged');
+    } catch (activityErr) {
+      console.error('⚠️  Failed to log activity (non-fatal):', activityErr.message);
+      // Don't fail if activity logging fails
+    }
 
-    console.log(`✓ Bid submitted: ${bid.id} by ${contractorEmail} on job ${jobId}`);
+    console.log(`✓ Bid submitted successfully: ${bid.id} by ${contractorEmail} on job ${jobId}`);
     res.json({ success: true, bid });
 
   } catch (err) {

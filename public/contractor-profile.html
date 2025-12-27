@@ -118,6 +118,10 @@
           <input id="yearsInBusiness" type="number" placeholder="5" min="0" max="100" />
         </div>
         <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input id="phone" type="tel" placeholder="(555) 123-4567" maxlength="14" />
+        </div>
+        <div class="form-group">
           <label for="licenseNumber">License Number</label>
           <input id="licenseNumber" type="text" placeholder="ABC-123456" maxlength="50" />
         </div>
@@ -1003,16 +1007,17 @@ function cancelVerification() {
         try {
             const profile = await window.authService.getUserProfile();
             if (profile) {
-                if (profile.firstName) document.getElementById('firstName').value = profile.firstName;
-                if (profile.lastName) document.getElementById('lastName').value = profile.lastName;
-                if (profile.businessName) document.getElementById('businessName').value = profile.businessName;
-                if (profile.yearsInBusiness) document.getElementById('yearsInBusiness').value = profile.yearsInBusiness;
-                if (profile.licenseNumber) document.getElementById('licenseNumber').value = profile.licenseNumber;
+                if (profile.first_name) document.getElementById('firstName').value = profile.first_name;
+                if (profile.last_name) document.getElementById('lastName').value = profile.last_name;
+                if (profile.business_name) document.getElementById('businessName').value = profile.business_name;
+                if (profile.years_in_business) document.getElementById('yearsInBusiness').value = profile.years_in_business;
+                if (profile.phone) document.getElementById('phone').value = profile.phone;
+                if (profile.license_number) document.getElementById('licenseNumber').value = profile.license_number;
                 if (profile.trade) document.getElementById('trade').value = profile.trade;
                 if (profile.street) document.getElementById('street').value = profile.street;
                 if (profile.city) document.getElementById('city').value = profile.city;
                 if (profile.state) document.getElementById('state').value = profile.state;
-                if (profile.zipCode) document.getElementById('zipCode').value = profile.zipCode;
+                if (profile.zip_code) document.getElementById('zipCode').value = profile.zip_code;
                 if (profile.instagram) document.getElementById('instagram').value = profile.instagram;
                 if (profile.facebook) document.getElementById('facebook').value = profile.facebook;
                 if (profile.tiktok) document.getElementById('tiktok').value = profile.tiktok;
@@ -1042,6 +1047,7 @@ function cancelVerification() {
                 business_name: document.getElementById('businessName').value.trim(),
                 company_name: document.getElementById('businessName').value.trim(),
                 years_in_business: parseInt(document.getElementById('yearsInBusiness').value) || null,
+                phone: document.getElementById('phone').value.trim(),
                 license_number: document.getElementById('licenseNumber').value.trim(),
                 trade: document.getElementById('trade').value,
                 street: document.getElementById('street').value.trim(),
