@@ -13,7 +13,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const twilio = require('twilio');
-const sgMail = require('@sendgrid/mail');
+const brevo = require('@getbrevo/brevo');
 
 // Environment configuration
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -21,8 +21,9 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'notifications@homeprohub.today';
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || 'notifications@homeprohub.today';
+const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || 'HomeProHub';
 const POLL_INTERVAL = parseInt(process.env.NOTIFICATION_POLL_INTERVAL) || 30000; // 30 seconds default
 
 // Validate required environment variables
@@ -42,11 +43,13 @@ if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER) {
   console.warn('⚠️  Twilio not configured - SMS notifications disabled');
 }
 
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-  console.log('✓ SendGrid initialized');
+let brevoClient = null;
+if (BREVO_API_KEY) {
+  brevoClient = new brevo.TransactionalEmailsApi();
+  brevoClient.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, BREVO_API_KEY);
+  console.log('✓ Brevo initialized');
 } else {
-  console.warn('⚠️  SendGrid not configured - Email notifications disabled');
+  console.warn('⚠️  Brevo not configured - Email notifications disabled');
 }
 
 /**
@@ -123,12 +126,12 @@ async function sendSMS(notification) {
 }
 
 /**
- * Send email via SendGrid
+ * Send email via Brevo
  */
 async function sendEmail(notification) {
-  if (!SENDGRID_API_KEY) {
+  if (!brevoClient) {
     console.warn(`⚠️  Email disabled, skipping notification ${notification.id}`);
-    return { success: false, error: 'SendGrid not configured' };
+    return { success: false, error: 'Brevo not configured' };
   }
 
   if (!notification.recipient_email) {
@@ -138,19 +141,15 @@ async function sendEmail(notification) {
   try {
     console.log(`📧 Sending email to ${notification.recipient_email}...`);
 
-    const msg = {
-      to: notification.recipient_email,
-      from: {
-        email: SENDGRID_FROM_EMAIL,
-        name: 'HomeProHub Notifications'
-      },
-      subject: notification.subject || 'HomeProHub Notification',
-      text: notification.message,
-      html: formatEmailHTML(notification)
-    };
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = { name: BREVO_FROM_NAME, email: BREVO_FROM_EMAIL };
+    sendSmtpEmail.to = [{ email: notification.recipient_email }];
+    sendSmtpEmail.subject = notification.subject || 'HomeProHub Notification';
+    sendSmtpEmail.textContent = notification.message;
+    sendSmtpEmail.htmlContent = formatEmailHTML(notification);
 
-    const response = await sgMail.send(msg);
-    const messageId = response[0].headers['x-message-id'] || 'unknown';
+    const response = await brevoClient.sendTransacEmail(sendSmtpEmail);
+    const messageId = response.messageId || 'unknown';
 
     console.log(`✓ Email sent: ${messageId}`);
 
@@ -290,7 +289,7 @@ function startWorker() {
   console.log('Configuration:');
   console.log(`  Poll Interval: ${POLL_INTERVAL / 1000}s`);
   console.log(`  SMS:           ${twilioClient ? '✓ Enabled' : '✗ Disabled'}`);
-  console.log(`  Email:         ${SENDGRID_API_KEY ? '✓ Enabled' : '✗ Disabled'}`);
+  console.log(`  Email:         ${brevoClient ? '✓ Enabled' : '✗ Disabled'}`);
   console.log('');
   console.log('Starting worker loop...');
   console.log('Press Ctrl+C to stop');

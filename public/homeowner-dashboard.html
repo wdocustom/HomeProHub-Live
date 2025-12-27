@@ -967,10 +967,40 @@
 
       // Decline bid buttons
       document.querySelectorAll('.btn-decline').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', async function() {
           const bidId = this.dataset.bidId;
-          // TODO: Implement decline functionality
-          alert('Decline bid functionality coming soon!');
+          const jobId = currentJob.id;
+
+          if (!confirm('Are you sure you want to decline this bid? The contractor will be notified.')) {
+            return;
+          }
+
+          try {
+            this.disabled = true;
+            this.textContent = 'Declining...';
+
+            const response = await window.authService.authenticatedFetch('/api/bid/decline', {
+              method: 'POST',
+              body: JSON.stringify({
+                bidId,
+                jobId,
+                homeownerEmail: userEmail
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to decline bid');
+            }
+
+            alert('Bid declined successfully. The contractor has been notified.');
+            await loadJobs(); // Reload jobs to show updated status
+
+          } catch (error) {
+            console.error('Error declining bid:', error);
+            alert('Failed to decline bid. Please try again.');
+            this.disabled = false;
+            this.textContent = 'Decline';
+          }
         });
       });
 

@@ -2484,6 +2484,70 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
   }
 });
 
+/**
+ * POST /api/bid/decline
+ * Homeowner declines a bid
+ */
+app.post("/api/bid/decline", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const { bidId, jobId, homeownerEmail } = req.body;
+
+    if (!bidId || !jobId || !homeownerEmail) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Verify job belongs to homeowner
+    const job = await db.getJobById(jobId);
+    if (job.homeowner_email !== homeownerEmail) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        code: 'UNAUTHORIZED'
+      });
+    }
+
+    // Update bid status to declined
+    const { data, error } = await db.supabase
+      .from('contractor_bids')
+      .update({
+        status: 'declined',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bidId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Get contractor details
+    const contractor = await db.getUserProfile(data.contractor_email);
+
+    // Create notification for contractor
+    await db.createNotification({
+      user_email: data.contractor_email,
+      user_id: contractor.id,
+      notification_type: 'bid_rejected',
+      title: 'Bid Declined',
+      message: `Your bid on "${job.title}" has been declined`,
+      job_id: jobId,
+      bid_id: bidId
+    });
+
+    console.log(`✓ Bid declined: ${bidId} for job ${jobId}`);
+    res.json({ success: true, bid: data });
+
+  } catch (err) {
+    console.error("❌ Error in /api/bid/decline:", err);
+    res.status(500).json({
+      error: "Failed to decline bid",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
 // ========================================
 // LICENSE MANAGEMENT API ENDPOINTS
 // ========================================
