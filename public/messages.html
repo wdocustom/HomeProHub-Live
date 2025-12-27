@@ -566,7 +566,6 @@
       list.innerHTML = conversations.map(conv => {
         const isActive = currentConversation && currentConversation.id === conv.id;
         const otherParty = currentUser.role === 'homeowner' ? conv.contractor_name : conv.homeowner_name;
-        const lastMessagePreview = conv.last_message || 'No messages yet';
         const isUnread = conv.unread_count > 0;
 
         return `
@@ -577,7 +576,6 @@
               <div class="conv-time">${formatTime(conv.last_message_time)}</div>
             </div>
             <div class="conv-job">${escapeHtml(conv.job_title)}</div>
-            <div class="conv-preview ${isUnread ? 'unread' : ''}">${escapeHtml(lastMessagePreview)}</div>
           </div>
         `;
       }).join('');
