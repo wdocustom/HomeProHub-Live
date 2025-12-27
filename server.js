@@ -1896,6 +1896,40 @@ app.get("/api/license/verify", async (req, res) => {
 });
 
 /**
+ * PUT /api/profile/update
+ * Update user profile (contractor or homeowner)
+ */
+app.put("/api/profile/update", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const profileData = req.body;
+
+    // Get current profile to check role
+    const currentProfile = await db.getUserProfile(userEmail);
+    if (!currentProfile) {
+      return res.status(404).json({
+        error: "Profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Update profile in database
+    const updatedProfile = await db.updateUserProfile(userEmail, profileData);
+
+    console.log(`✓ Profile updated for ${userEmail}`);
+    res.json({ success: true, profile: updatedProfile });
+
+  } catch (err) {
+    console.error("❌ Error updating profile:", err);
+    res.status(500).json({
+      error: "Failed to update profile",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * POST /api/submit-job
  * Submit a new job posting from homeowner
  */

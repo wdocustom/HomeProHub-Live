@@ -1024,36 +1024,76 @@ function cancelVerification() {
         }
     }
 
-    profileForm.addEventListener('submit', function(e) {
+    profileForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         saveButton.disabled = true;
         saveButton.textContent = 'Saving...';
+        statusMessage.textContent = '';
 
         try {
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
+                throw new Error('Not logged in');
+            }
+
+            const profileData = {
+                first_name: document.getElementById('firstName').value.trim(),
+                last_name: document.getElementById('lastName').value.trim(),
+                business_name: document.getElementById('businessName').value.trim(),
+                company_name: document.getElementById('businessName').value.trim(),
+                years_in_business: parseInt(document.getElementById('yearsInBusiness').value) || null,
+                license_number: document.getElementById('licenseNumber').value.trim(),
+                trade: document.getElementById('trade').value,
+                street: document.getElementById('street').value.trim(),
+                city: document.getElementById('city').value.trim(),
+                state: document.getElementById('state').value.trim(),
+                zip_code: document.getElementById('zipCode').value.trim(),
+                profile_complete: true
+            };
+
+            // Update Supabase database
+            const response = await window.authService.authenticatedFetch('/api/profile/update', {
+                method: 'PUT',
+                body: JSON.stringify(profileData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save profile');
+            }
+
+            // Also save to localStorage for backward compatibility
             const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
             const profile = existing ? JSON.parse(existing) : {};
-
-            profile.firstName = document.getElementById('firstName').value.trim();
-            profile.lastName = document.getElementById('lastName').value.trim();
-            profile.businessName = document.getElementById('businessName').value.trim();
-            profile.companyName = document.getElementById('businessName').value.trim();
-            profile.yearsInBusiness = document.getElementById('yearsInBusiness').value.trim();
-            profile.licenseNumber = document.getElementById('licenseNumber').value.trim();
-            profile.license = profile.licenseNumber;
-            profile.trade = document.getElementById('trade').value;
-            profile.street = document.getElementById('street').value.trim();
-            profile.city = document.getElementById('city').value.trim();
-            profile.state = document.getElementById('state').value.trim();
-            profile.zipCode = document.getElementById('zipCode').value.trim();
-            profile.profileComplete = true;
-
+            Object.assign(profile, {
+                firstName: profileData.first_name,
+                lastName: profileData.last_name,
+                businessName: profileData.business_name,
+                companyName: profileData.company_name,
+                yearsInBusiness: profileData.years_in_business,
+                licenseNumber: profileData.license_number,
+                license: profileData.license_number,
+                trade: profileData.trade,
+                street: profileData.street,
+                city: profileData.city,
+                state: profileData.state,
+                zipCode: profileData.zip_code,
+                profileComplete: true
+            });
             localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
             localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, 'true');
 
-            statusMessage.textContent = 'Profile saved successfully!';
+            statusMessage.textContent = '✅ Profile saved successfully!';
             statusMessage.style.color = '#10b981';
+
+            // Redirect to contractor dashboard after 1 second
+            setTimeout(() => {
+                window.location.href = 'contractor.html';
+            }, 1000);
+
         } catch (err) {
-            statusMessage.textContent = 'Error saving profile';
+            console.error('Error saving profile:', err);
+            statusMessage.textContent = '❌ Error: ' + err.message;
             statusMessage.style.color = '#ef4444';
         } finally {
             saveButton.disabled = false;
@@ -1061,27 +1101,49 @@ function cancelVerification() {
         }
     });
 
-    socialForm.addEventListener('submit', function(e) {
+    socialForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         saveSocialButton.disabled = true;
         saveSocialButton.textContent = 'Saving...';
+        socialStatusMessage.textContent = '';
 
         try {
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
+                throw new Error('Not logged in');
+            }
+
+            const socialData = {
+                instagram: document.getElementById('instagram').value.trim(),
+                facebook: document.getElementById('facebook').value.trim(),
+                tiktok: document.getElementById('tiktok').value.trim(),
+                youtube: document.getElementById('youtube').value.trim(),
+                reddit: document.getElementById('reddit').value.trim()
+            };
+
+            // Update Supabase database
+            const response = await window.authService.authenticatedFetch('/api/profile/update', {
+                method: 'PUT',
+                body: JSON.stringify(socialData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save social links');
+            }
+
+            // Also save to localStorage for backward compatibility
             const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
             const profile = existing ? JSON.parse(existing) : {};
-
-            profile.instagram = document.getElementById('instagram').value.trim();
-            profile.facebook = document.getElementById('facebook').value.trim();
-            profile.tiktok = document.getElementById('tiktok').value.trim();
-            profile.youtube = document.getElementById('youtube').value.trim();
-            profile.reddit = document.getElementById('reddit').value.trim();
-
+            Object.assign(profile, socialData);
             localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
 
-            socialStatusMessage.textContent = 'Social links saved successfully!';
+            socialStatusMessage.textContent = '✅ Social links saved successfully!';
             socialStatusMessage.style.color = '#10b981';
+
         } catch (err) {
-            socialStatusMessage.textContent = 'Error saving social links';
+            console.error('Error saving social links:', err);
+            socialStatusMessage.textContent = '❌ Error: ' + err.message;
             socialStatusMessage.style.color = '#ef4444';
         } finally {
             saveSocialButton.disabled = false;
