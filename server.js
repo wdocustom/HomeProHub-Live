@@ -3701,24 +3701,6 @@ app.get("/api/contractors/:email/reviews", async (req, res) => {
   }
 });
 
-// ====== 404 HANDLER ======
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Endpoint not found',
-    path: req.path,
-    method: req.method
-  });
-});
-
-// ====== GLOBAL ERROR HANDLER ======
-app.use((err, req, res, next) => {
-  console.error('❌ Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: err.message
-  });
-});
-
 // ========================================
 // NOTIFICATIONS SYSTEM (SMS & EMAIL)
 // ========================================
@@ -4311,6 +4293,25 @@ app.get("/api/homeowner/stats", requireAuth, async (req, res) => {
       message: err.message
     });
   }
+});
+
+// ====== 404 HANDLER ======
+// This must be the LAST route handler, after all other routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    path: req.path,
+    method: req.method
+  });
+});
+
+// ====== GLOBAL ERROR HANDLER ======
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message
+  });
 });
 
 // ====== START SERVER ======

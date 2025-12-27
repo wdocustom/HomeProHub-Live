@@ -720,10 +720,12 @@
         if (msg.attachments && msg.attachments.length > 0) {
           attachmentsHtml = '<div class="message-attachment">';
           msg.attachments.forEach(att => {
+            // Use att.data (base64 data URL) or fall back to att.url
+            const attUrl = att.data || att.url;
             if (att.type && att.type.startsWith('image/')) {
-              attachmentsHtml += `<img src="${att.url}" alt="${att.name}" onclick="window.open('${att.url}', '_blank')" />`;
+              attachmentsHtml += `<img src="${attUrl}" alt="${att.name}" onclick="window.open('${attUrl}', '_blank')" />`;
             } else {
-              attachmentsHtml += `<a href="${att.url}" target="_blank" download="${att.name}">📄 ${att.name}</a>`;
+              attachmentsHtml += `<a href="${attUrl}" target="_blank" download="${att.name}">📄 ${att.name}</a>`;
             }
           });
           attachmentsHtml += '</div>';
