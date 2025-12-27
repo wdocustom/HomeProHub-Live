@@ -665,62 +665,8 @@
   </main>
 
   <script>
-    // Auth check for homeowner home page
-    async function checkAuth() {
-      try {
-        // Wait for authService to be ready (with timeout)
-        if (!window.authService || !window.authService.initialized) {
-          await new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 50; // 5 seconds max
-            const checkInterval = setInterval(() => {
-              attempts++;
-              if (window.authService && window.authService.initialized) {
-                clearInterval(checkInterval);
-                resolve();
-              } else if (attempts >= maxAttempts) {
-                clearInterval(checkInterval);
-                reject(new Error('AuthService timeout'));
-              }
-            }, 100);
-          });
-        }
-
-        const user = await window.authService.getCurrentUser();
-        if (!user) {
-          console.log('No user found, redirecting to index');
-          window.location.href = "index.html";
-          return false;
-        }
-
-        const profile = await window.authService.getUserProfile();
-        if (!profile) {
-          console.log('No profile found, redirecting to index');
-          window.location.href = "index.html";
-          return false;
-        }
-
-        if (profile.role !== 'homeowner') {
-          console.log('User is not a homeowner, redirecting to index');
-          window.location.href = "index.html";
-          return false;
-        }
-
-        console.log('✓ Homeowner authenticated successfully');
-        return true;
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        window.location.href = "index.html";
-        return false;
-      }
-    }
-
-    // Initialize auth check when page loads
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', checkAuth);
-    } else {
-      checkAuth();
-    }
+    // Note: Auth check is handled by navigation.js component
+    // No need for redundant inline auth check that causes race conditions
   </script>
 
   <!-- AI Assistant Component -->

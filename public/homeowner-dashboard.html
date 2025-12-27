@@ -884,7 +884,7 @@
               <button class="btn-accept" data-bid-id="${bid.id}" data-job-id="${job.id}">Accept Bid</button>
               ${hasEstimate ? `<button class="btn-view-estimate" data-bid-id="${bid.id}" style="background: #059669;">📊 View Detailed Estimate</button>` : ''}
               <button class="btn-message" data-contractor-email="${bid.contractor_email}" data-job-id="${job.id}">Message Contractor</button>
-              <button class="btn-decline" data-bid-id="${bid.id}">Decline</button>
+              <button class="btn-decline" data-bid-id="${bid.id}" data-job-id="${job.id}">Decline</button>
             ` : `
               <span style="color: #6b7280;">Status: ${bid.status}</span>
             `}
@@ -969,7 +969,7 @@
       document.querySelectorAll('.btn-decline').forEach(btn => {
         btn.addEventListener('click', async function() {
           const bidId = this.dataset.bidId;
-          const jobId = currentJob.id;
+          const jobId = this.dataset.jobId;
 
           if (!confirm('Are you sure you want to decline this bid? The contractor will be notified.')) {
             return;

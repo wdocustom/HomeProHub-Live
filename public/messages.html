@@ -723,7 +723,8 @@
             // Use att.data (base64 data URL) or fall back to att.url
             const attUrl = att.data || att.url;
             if (att.type && att.type.startsWith('image/')) {
-              attachmentsHtml += `<img src="${attUrl}" alt="${att.name}" onclick="window.open('${attUrl}', '_blank')" />`;
+              // Store the URL in a data attribute to avoid escaping issues
+              attachmentsHtml += `<img src="${attUrl}" alt="${att.name}" class="clickable-image" data-img-src="${attUrl}" data-img-name="${att.name}" />`;
             } else {
               attachmentsHtml += `<a href="${attUrl}" target="_blank" download="${att.name}">📄 ${att.name}</a>`;
             }
@@ -749,6 +750,35 @@
       });
 
       body.innerHTML = html;
+
+      // Add click handlers to images
+      document.querySelectorAll('.clickable-image').forEach(img => {
+        img.addEventListener('click', function() {
+          const imgSrc = this.dataset.imgSrc;
+          const imgName = this.dataset.imgName;
+          showImageModal(imgSrc, imgName);
+        });
+      });
+    }
+
+    // Show image in modal
+    function showImageModal(imgSrc, imgName) {
+      // Create modal if it doesn't exist
+      let modal = document.getElementById('imageModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'imageModal';
+        modal.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;cursor:pointer;';
+        modal.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:20px;"><img id="modalImage" style="max-width:90%;max-height:90%;object-fit:contain;"/></div>';
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', function() {
+          this.style.display = 'none';
+        });
+      }
+
+      document.getElementById('modalImage').src = imgSrc;
+      modal.style.display = 'block';
     }
 
     // Send message
