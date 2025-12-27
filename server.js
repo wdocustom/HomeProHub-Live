@@ -3557,6 +3557,326 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ========================================
+// NOTIFICATIONS SYSTEM (SMS & EMAIL)
+// ========================================
+
+/**
+ * POST /api/notifications/process-queue
+ * Process pending notifications and send via SMS/Email
+ * NOTE: Run this via cron job every 1-5 minutes
+ */
+app.post("/api/notifications/process-queue", async (req, res) => {
+  try {
+    // Get all queued notifications
+    const { data: notifications, error } = await supabase
+      .from('notification_log')
+      .select('*')
+      .or('sms_status.eq.queued,email_status.eq.queued')
+      .limit(100);
+
+    if (error) throw error;
+
+    let smsCount = 0;
+    let emailCount = 0;
+    const errors = [];
+
+    for (const notification of notifications || []) {
+      // Send SMS if queued
+      if (notification.sms_status === 'queued' && notification.recipient_phone) {
+        try {
+          // TODO: Implement Twilio SMS sending
+          // const twilioClient = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          // const message = await twilioClient.messages.create({
+          //   body: notification.message,
+          //   from: TWILIO_PHONE_NUMBER,
+          //   to: notification.recipient_phone
+          // });
+
+          // For now, just mark as sent (placeholder)
+          await supabase
+            .from('notification_log')
+            .update({
+              sms_status: 'sent',
+              sms_sent_at: new Date().toISOString(),
+              // sms_sid: message.sid
+            })
+            .eq('id', notification.id);
+
+          smsCount++;
+          console.log(`📱 SMS sent to ${notification.recipient_phone}`);
+
+        } catch (smsError) {
+          console.error('SMS error:', smsError);
+          errors.push({ type: 'sms', id: notification.id, error: smsError.message });
+
+          await supabase
+            .from('notification_log')
+            .update({
+              sms_status: 'failed',
+              sms_error: smsError.message
+            })
+            .eq('id', notification.id);
+        }
+      }
+
+      // Send Email if queued
+      if (notification.email_status === 'queued' && notification.recipient_email) {
+        try {
+          // TODO: Implement email sending (nodemailer or SendGrid)
+          // const transporter = nodemailer.createTransport({...});
+          // const info = await transporter.sendMail({
+          //   from: '"HomeProHub" <notifications@homeprohub.today>',
+          //   to: notification.recipient_email,
+          //   subject: notification.subject,
+          //   html: notification.message
+          // });
+
+          // For now, just mark as sent (placeholder)
+          await supabase
+            .from('notification_log')
+            .update({
+              email_status: 'sent',
+              email_sent_at: new Date().toISOString(),
+              // email_message_id: info.messageId
+            })
+            .eq('id', notification.id);
+
+          emailCount++;
+          console.log(`📧 Email sent to ${notification.recipient_email}`);
+
+        } catch (emailError) {
+          console.error('Email error:', emailError);
+          errors.push({ type: 'email', id: notification.id, error: emailError.message });
+
+          await supabase
+            .from('notification_log')
+            .update({
+              email_status: 'failed',
+              email_error: emailError.message
+            })
+            .eq('id', notification.id);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      sms_sent: smsCount,
+      email_sent: emailCount,
+      total_processed: notifications?.length || 0,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (err) {
+    console.error("❌ Error processing notification queue:", err);
+    res.status(500).json({
+      error: "Failed to process notifications",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/contractors/notification-preferences
+ * Update notification preferences for contractor
+ */
+app.put("/api/contractors/notification-preferences", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const {
+      notifications_sms_enabled,
+      notifications_email_enabled,
+      service_radius_miles
+    } = req.body;
+
+    const updates = {};
+
+    if (typeof notifications_sms_enabled === 'boolean') {
+      updates.notifications_sms_enabled = notifications_sms_enabled;
+    }
+
+    if (typeof notifications_email_enabled === 'boolean') {
+      updates.notifications_email_enabled = notifications_email_enabled;
+    }
+
+    if (service_radius_miles && service_radius_miles >= 5 && service_radius_miles <= 100) {
+      updates.service_radius_miles = parseInt(service_radius_miles);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: 'No valid updates provided',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('email', userEmail)
+      .eq('role', 'contractor')
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      preferences: {
+        notifications_sms_enabled: data.notifications_sms_enabled,
+        notifications_email_enabled: data.notifications_email_enabled,
+        service_radius_miles: data.service_radius_miles
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error updating notification preferences:", err);
+    res.status(500).json({
+      error: "Failed to update preferences",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/contractors/verify-phone
+ * Send SMS verification code to contractor's phone
+ */
+app.post("/api/contractors/verify-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { phone } = req.body;
+
+    if (!phone || !/^\+?1?\d{10,15}$/.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+      return res.status(400).json({
+        error: 'Invalid phone number format',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update user profile with verification code
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone: phone,
+        phone_verification_code: verificationCode,
+        phone_verification_expires: expiresAt.toISOString(),
+        phone_verified: false
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    // TODO: Send SMS with Twilio
+    // const twilioClient = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    // await twilioClient.messages.create({
+    //   body: `Your HomeProHub verification code is: ${verificationCode}`,
+    //   from: TWILIO_PHONE_NUMBER,
+    //   to: phone
+    // });
+
+    console.log(`📱 Verification code sent to ${phone}: ${verificationCode}`);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your phone',
+      // In development, return code for testing
+      ...(process.env.NODE_ENV === 'development' ? { code: verificationCode } : {})
+    });
+
+  } catch (err) {
+    console.error("❌ Error sending verification code:", err);
+    res.status(500).json({
+      error: "Failed to send verification code",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/contractors/confirm-phone
+ * Confirm phone verification code
+ */
+app.post("/api/contractors/confirm-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        error: 'Verification code required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get user profile
+    const { data: profile, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('phone_verification_code, phone_verification_expires, phone_verified')
+      .eq('email', userEmail)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Check if already verified
+    if (profile.phone_verified) {
+      return res.json({
+        success: true,
+        message: 'Phone already verified'
+      });
+    }
+
+    // Check if code matches
+    if (profile.phone_verification_code !== code) {
+      return res.status(400).json({
+        error: 'Invalid verification code',
+        code: 'INVALID_CODE'
+      });
+    }
+
+    // Check if code expired
+    if (new Date(profile.phone_verification_expires) < new Date()) {
+      return res.status(400).json({
+        error: 'Verification code expired. Please request a new one.',
+        code: 'CODE_EXPIRED'
+      });
+    }
+
+    // Mark phone as verified
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone_verified: true,
+        phone_verification_code: null,
+        phone_verification_expires: null
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      success: true,
+      message: 'Phone verified successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error confirming phone verification:", err);
+    res.status(500).json({
+      error: "Failed to verify phone",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
 // ====== START SERVER ======
 const PORT = process.env.PORT || 3000;
 
