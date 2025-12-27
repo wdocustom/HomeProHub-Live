@@ -4039,6 +4039,280 @@ app.post("/api/contractors/confirm-phone", requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/homeowners/notification-preferences
+ * Update notification preferences for homeowner
+ */
+app.put("/api/homeowners/notification-preferences", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const {
+      notifications_sms_enabled,
+      notifications_email_enabled
+    } = req.body;
+
+    const updates = {};
+
+    if (typeof notifications_sms_enabled === 'boolean') {
+      updates.notifications_sms_enabled = notifications_sms_enabled;
+    }
+
+    if (typeof notifications_email_enabled === 'boolean') {
+      updates.notifications_email_enabled = notifications_email_enabled;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: 'No valid updates provided',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('email', userEmail)
+      .eq('role', 'homeowner')
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      preferences: {
+        notifications_sms_enabled: data.notifications_sms_enabled,
+        notifications_email_enabled: data.notifications_email_enabled
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error updating notification preferences:", err);
+    res.status(500).json({
+      error: "Failed to update preferences",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/homeowners/verify-phone
+ * Send SMS verification code to homeowner's phone
+ */
+app.post("/api/homeowners/verify-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    // Get phone from user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('phone')
+      .eq('email', userEmail)
+      .eq('role', 'homeowner')
+      .single();
+
+    if (profileError) throw profileError;
+
+    const phone = profile.phone;
+
+    if (!phone || !/^\+?1?\d{10,15}$/.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+      return res.status(400).json({
+        error: 'Invalid phone number format. Please update your phone number in your profile.',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update user profile with verification code
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone_verification_code: verificationCode,
+        phone_verification_expires: expiresAt.toISOString(),
+        phone_verified: false
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    // TODO: Send SMS with Twilio
+    // const twilioClient = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    // await twilioClient.messages.create({
+    //   body: `Your HomeProHub verification code is: ${verificationCode}`,
+    //   from: TWILIO_PHONE_NUMBER,
+    //   to: phone
+    // });
+
+    console.log(`📱 Verification code sent to ${phone}: ${verificationCode}`);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your phone',
+      // In development, return code for testing
+      code: verificationCode // Always return for now since SMS not fully configured
+    });
+
+  } catch (err) {
+    console.error("❌ Error sending verification code:", err);
+    res.status(500).json({
+      error: "Failed to send verification code",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/homeowners/confirm-phone
+ * Confirm phone verification code
+ */
+app.post("/api/homeowners/confirm-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        error: 'Verification code required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get user profile
+    const { data: profile, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('phone_verification_code, phone_verification_expires, phone_verified')
+      .eq('email', userEmail)
+      .eq('role', 'homeowner')
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Check if already verified
+    if (profile.phone_verified) {
+      return res.json({
+        success: true,
+        message: 'Phone already verified'
+      });
+    }
+
+    // Check if code matches
+    if (profile.phone_verification_code !== code) {
+      return res.status(400).json({
+        error: 'Invalid verification code',
+        code: 'INVALID_CODE'
+      });
+    }
+
+    // Check if code expired
+    if (new Date(profile.phone_verification_expires) < new Date()) {
+      return res.status(400).json({
+        error: 'Verification code expired. Please request a new one.',
+        code: 'CODE_EXPIRED'
+      });
+    }
+
+    // Mark phone as verified
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone_verified: true,
+        phone_verification_code: null,
+        phone_verification_expires: null
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      success: true,
+      message: 'Phone verified successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error confirming phone verification:", err);
+    res.status(500).json({
+      error: "Failed to verify phone",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/homeowner/stats
+ * Get homeowner's activity statistics
+ */
+app.get("/api/homeowner/stats", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.query.email || req.user.email;
+
+    // Get total jobs
+    const { count: totalJobs, error: jobsError } = await supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('homeowner_email', userEmail);
+
+    if (jobsError) throw jobsError;
+
+    // Get active jobs
+    const { count: activeJobs, error: activeError } = await supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('homeowner_email', userEmail)
+      .in('status', ['open', 'in_progress']);
+
+    if (activeError) throw activeError;
+
+    // Get completed jobs
+    const { count: completedJobs, error: completedError } = await supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('homeowner_email', userEmail)
+      .eq('status', 'completed');
+
+    if (completedError) throw completedError;
+
+    // Get total bids received
+    const { data: jobs } = await supabase
+      .from('jobs')
+      .select('id')
+      .eq('homeowner_email', userEmail);
+
+    const jobIds = jobs?.map(j => j.id) || [];
+
+    let totalBids = 0;
+    if (jobIds.length > 0) {
+      const { count: bidsCount, error: bidsError } = await supabase
+        .from('contractor_bids')
+        .select('*', { count: 'exact', head: true })
+        .in('job_id', jobIds);
+
+      if (bidsError) throw bidsError;
+      totalBids = bidsCount || 0;
+    }
+
+    res.json({
+      total_jobs: totalJobs || 0,
+      active_jobs: activeJobs || 0,
+      completed_jobs: completedJobs || 0,
+      total_bids: totalBids
+    });
+
+  } catch (err) {
+    console.error("❌ Error fetching homeowner stats:", err);
+    res.status(500).json({
+      error: "Failed to fetch statistics",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
 // ====== START SERVER ======
 const PORT = process.env.PORT || 3000;
 

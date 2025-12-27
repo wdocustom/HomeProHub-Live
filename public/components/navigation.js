@@ -182,7 +182,7 @@
                     <div class="profile-menu-role">${userRole}</div>
                   </div>
                   <div class="profile-menu-divider"></div>
-                  <a href="${userRole === 'contractor' ? 'contractor-profile.html' : 'user.profile.html'}" class="profile-menu-item">
+                  <a href="${userRole === 'contractor' ? 'contractor-profile.html' : 'homeowner-profile.html'}" class="profile-menu-item">
                     <span class="menu-icon">👤</span>
                     <span>My Profile</span>
                   </a>
