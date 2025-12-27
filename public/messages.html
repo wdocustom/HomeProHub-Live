@@ -486,28 +486,49 @@
     let attachedFiles = [];
 
     // Check authentication
-    function checkAuth() {
-      const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-      const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+    async function checkAuth() {
+      try {
+        // Wait for authService to initialize
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
 
-      if (!username || !token || !role) {
+        // Check if user is authenticated
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return false;
+        }
+
+        // Get profile for role
+        const profile = await window.authService.getUserProfile();
+
+        currentUser = {
+          username: user.email,
+          email: user.email,
+          role: profile?.role || 'homeowner'
+        };
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
         window.location.href = 'index.html';
         return false;
       }
-
-      currentUser = { username, token, role };
-      return true;
     }
 
     // Fetch conversations
     async function fetchConversations() {
       try {
-        const response = await fetch(`/api/conversations?email=${encodeURIComponent(currentUser.username)}`, {
-          headers: {
-            'Authorization': `Bearer ${currentUser.token}`
-          }
-        });
+        const response = await window.authService.authenticatedFetch(
+          `/api/conversations?email=${encodeURIComponent(currentUser.email)}`
+        );
 
         if (!response.ok) throw new Error('Failed to fetch conversations');
 
@@ -587,11 +608,9 @@
       body.innerHTML = '<div class="loading">Loading messages...</div>';
 
       try {
-        const response = await fetch(`/api/messages/${conversationId}?email=${encodeURIComponent(currentUser.username)}`, {
-          headers: {
-            'Authorization': `Bearer ${currentUser.token}`
-          }
-        });
+        const response = await window.authService.authenticatedFetch(
+          `/api/messages/${conversationId}?email=${encodeURIComponent(currentUser.email)}`
+        );
 
         if (!response.ok) throw new Error('Failed to fetch messages');
 
@@ -756,16 +775,12 @@
           });
         }
 
-        const response = await fetch('/api/messages/send', {
+        const response = await window.authService.authenticatedFetch('/api/messages/send', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentUser.token}`
-          },
           body: JSON.stringify({
             conversation_id: currentConversation.id,
             job_id: currentConversation.job_id,
-            sender_email: currentUser.username,
+            sender_email: currentUser.email,
             recipient_email: currentUser.role === 'homeowner' ? currentConversation.contractor_email : currentConversation.homeowner_email,
             message: message || '(File attachment)',
             attachments: attachments
@@ -792,13 +807,9 @@
     // Mark conversation as read
     async function markConversationAsRead(conversationId) {
       try {
-        await fetch(`/api/conversations/${conversationId}/read`, {
+        await window.authService.authenticatedFetch(`/api/conversations/${conversationId}/read`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentUser.token}`
-          },
-          body: JSON.stringify({ email: currentUser.username })
+          body: JSON.stringify({ email: currentUser.email })
         });
 
         // Update local conversation
@@ -884,23 +895,29 @@
     }
 
     // Initialize
-    if (checkAuth()) {
-      fetchConversations();
-
-      // Poll for new messages every 10 seconds
-      pollInterval = setInterval(() => {
+    checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
         fetchConversations();
-        if (currentConversation) {
-          fetchMessages(currentConversation.id);
-        }
-      }, 10000);
-    }
+
+        // Poll for new messages every 10 seconds
+        pollInterval = setInterval(() => {
+          fetchConversations();
+          if (currentConversation) {
+            fetchMessages(currentConversation.id);
+          }
+        }, 10000);
+      }
+    });
 
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
       if (pollInterval) clearInterval(pollInterval);
     });
   </script>
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
 
   <!-- Unified Navigation Component -->
   <script src="components/navigation.js"></script>
