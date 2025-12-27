@@ -799,9 +799,52 @@
         renderAvailableJobs();
         updateStats();
 
+        // Check for attached estimate from pricing estimator
+        checkForAttachedEstimate();
+
       } catch (error) {
         console.error('Error loading jobs:', error);
         document.getElementById('availableJobsContainer').innerHTML = '<div class="no-jobs"><h3>Failed to load jobs</h3></div>';
+      }
+    }
+
+    // Check for attached estimate from pricing estimator and auto-open bid modal
+    function checkForAttachedEstimate() {
+      // Check all sessionStorage keys for attached estimates
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('attachedEstimate_')) {
+          const jobId = key.replace('attachedEstimate_', '');
+          const attachedEstimate = sessionStorage.getItem(key);
+
+          if (attachedEstimate) {
+            try {
+              const estimate = JSON.parse(attachedEstimate);
+              console.log('✓ Found attached estimate for job:', jobId, estimate);
+
+              // Small delay to ensure DOM is ready
+              setTimeout(() => {
+                // Show a notification
+                if (confirm(
+                  `🎉 Your AI estimate is ready!\n\n` +
+                  `Estimated Range: $${Math.round(estimate.total_low || 0).toLocaleString()} - $${Math.round(estimate.total_high || 0).toLocaleString()}\n\n` +
+                  `Would you like to submit your bid now with this estimate?`
+                )) {
+                  openBidModal(jobId);
+                } else {
+                  // Clear the estimate if they decline
+                  sessionStorage.removeItem(key);
+                }
+              }, 500);
+
+              // Only process the first one found
+              break;
+            } catch (err) {
+              console.error('Error processing attached estimate:', err);
+              sessionStorage.removeItem(key);
+            }
+          }
+        }
       }
     }
 
