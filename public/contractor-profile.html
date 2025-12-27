@@ -634,10 +634,12 @@ function displayLicenseStatus(status, licenseNumber, licenseState) {
         saveLicenseButton.textContent = 'Submitting...';
 
         try {
-            const contractorEmail = localStorage.getItem(STORAGE_KEYS.USERNAME);
-            if (!contractorEmail) {
+            // Get contractor email from authService
+            const user = await window.authService.getCurrentUser();
+            if (!user || !user.email) {
                 throw new Error('Not logged in');
             }
+            const contractorEmail = user.email;
 
             // Gather form data
             const licState = document.getElementById('licState').value.trim().toUpperCase();
