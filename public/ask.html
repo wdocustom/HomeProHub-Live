@@ -300,51 +300,9 @@
     return input.trim().slice(0, MAX_QUESTION_LENGTH);
   }
 
-  // Auth: Check authentication with Supabase
-  async function checkAuth() {
-    try {
-      // Wait for authService to be ready
-      if (!window.authService || !window.authService.initialized) {
-        await new Promise((resolve, reject) => {
-          let attempts = 0;
-          const maxAttempts = 50;
-          const checkInterval = setInterval(() => {
-            attempts++;
-            if (window.authService && window.authService.initialized) {
-              clearInterval(checkInterval);
-              resolve();
-            } else if (attempts >= maxAttempts) {
-              clearInterval(checkInterval);
-              reject(new Error('AuthService timeout'));
-            }
-          }, 100);
-        });
-      }
-
-      const user = await window.authService.getCurrentUser();
-      if (!user) {
-        console.log('No user found, redirecting to index');
-        window.location.href = "index.html";
-        return null;
-      }
-
-      const profile = await window.authService.getUserProfile();
-      if (!profile || profile.role !== 'homeowner') {
-        console.log('Not a homeowner, redirecting to index');
-        window.location.href = "index.html";
-        return null;
-      }
-
-      console.log('✓ Homeowner authenticated successfully');
-      return { user, profile };
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      window.location.href = "index.html";
-      return null;
-    }
-  }
-
   // Auth: Get user data (async wrapper for compatibility)
+  // Note: Auth is handled by navigation.js component
+  let currentUser = null;
   async function getUserData() {
     try {
       const user = await window.authService.getCurrentUser();
@@ -364,14 +322,6 @@
       return null;
     }
   }
-
-  // Initialize auth check
-  let currentUser = null;
-  checkAuth().then(auth => {
-    if (auth) {
-      currentUser = auth;
-    }
-  });
 
   // Image: Read as base64
   function readImageAsBase64(file) {

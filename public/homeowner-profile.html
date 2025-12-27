@@ -663,20 +663,19 @@ async function loadActivityStats() {
 
             const user = await window.authService.getCurrentUser();
             if (!user) {
-                window.location.href = "index.html";
+                console.log('No user found - navigation will handle redirect');
                 return false;
             }
 
             const userProfile = await window.authService.getUserProfile();
             if (!userProfile || userProfile.role !== 'homeowner') {
-                window.location.href = "index.html";
+                console.log('Not a homeowner - navigation will handle redirect');
                 return false;
             }
 
             return true;
         } catch (error) {
             console.error('Auth check failed:', error);
-            window.location.href = "index.html";
             return false;
         }
     }
