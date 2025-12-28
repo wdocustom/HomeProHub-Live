@@ -13,46 +13,48 @@
       background: #f9fafb;
     }
 
-    .hero {
-      max-width: 896px;
-      margin: 48px auto 24px;
-      padding: 0 24px;
-      text-align: center;
-    }
-    .hero-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #9ca3af;
-      margin-bottom: 8px;
-    }
-    .hero-title {
-      font-size: 32px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 12px;
-      color: #111827;
-    }
-    .hero-subtitle {
-      font-size: 15px;
-      line-height: 1.6;
-      color: #6b7280;
-      max-width: 640px;
-      margin: 0 auto;
+    /* Hero Section with Dark Blue Gradient */
+    .hero-wrapper {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #7c3aed 100%);
+      padding: 64px 24px;
+      margin-bottom: 60px;
     }
 
+    .hero {
+      max-width: 896px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero-title {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+      color: white;
+    }
+
+    .hero-subtitle {
+      font-size: 17px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 640px;
+      margin: 0 auto 40px;
+    }
+
+    /* Input Container inside Hero */
     .input-container {
       max-width: 896px;
-      margin: 0 auto 60px;
-      padding: 0 24px;
+      margin: 0 auto;
+      padding: 0;
     }
 
     .input-card {
       background: white;
       border-radius: 16px;
       padding: 40px;
-      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-      border: 2px solid #e5e7eb;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.2);
+      border: none;
     }
 
     .input-label {
@@ -93,9 +95,10 @@
       margin-top: 20px;
     }
 
+    /* Yellow/Gold Analyze Button */
     .btn-analyze {
-      background: #2563eb;
-      color: white;
+      background: #fbbf24;
+      color: #111827;
       border: none;
       padding: 16px 32px;
       border-radius: 10px;
@@ -107,15 +110,15 @@
       justify-content: center;
       gap: 8px;
       transition: all 0.2s;
-      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 4px 6px rgba(251, 191, 36, 0.4);
       width: 100%;
       max-width: 320px;
     }
 
     .btn-analyze:hover:not(:disabled) {
-      background: #1d4ed8;
+      background: #f59e0b;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      box-shadow: 0 6px 12px rgba(251, 191, 36, 0.5);
     }
 
     .btn-analyze:disabled {
@@ -337,38 +340,41 @@
   <!-- Navigation component will be injected here by navigation.js -->
 
   <main>
-  <section class="hero">
-    <h1 class="hero-title">AI Home Assistant</h1>
-    <p class="hero-subtitle">
-      Describe what you see, hear, or smell. We'll analyze it instantly.
-    </p>
-  </section>
+  <!-- Hero Wrapper with Dark Blue Gradient -->
+  <div class="hero-wrapper">
+    <section class="hero">
+      <h1 class="hero-title">Your AI Home Expert</h1>
+      <p class="hero-subtitle">
+        What is happening? Describe the issue and let our veteran AI diagnose it instantly.
+      </p>
+    </section>
 
-  <!-- Input Section -->
-  <div class="input-container">
-    <div class="input-card">
-      <label for="question" class="input-label">Describe the issue in detail</label>
-      <textarea
-        id="question"
-        class="input-textarea"
-        placeholder="Example: There is a brown stain on my living room ceiling under the upstairs bathroom. It seems to grow slowly after showers, slight musty smell, and the drywall feels a little soft to the touch..."
-      ></textarea>
+    <!-- Input Section (White Card inside Dark Hero) -->
+    <div class="input-container">
+      <div class="input-card">
+        <label for="question" class="input-label">Describe the issue in detail</label>
+        <textarea
+          id="question"
+          class="input-textarea"
+          placeholder="Example: There is a brown stain on my living room ceiling under the upstairs bathroom. It seems to grow slowly after showers, slight musty smell, and the drywall feels a little soft to the touch..."
+        ></textarea>
 
-      <div class="input-hint">
-        Be specific: location, when it happens, smells, sounds, age of the home, any recent work, and how long it's been going on.
-      </div>
+        <div class="input-hint">
+          Be specific: location, when it happens, smells, sounds, age of the home, any recent work, and how long it's been going on.
+        </div>
 
-      <div class="photo-upload-section">
-        <label for="photoInput" class="input-label">Optional photo (helps the AI see stains, cracks, etc.):</label>
-        <input type="file" id="photoInput" accept="image/*" />
-      </div>
+        <div class="photo-upload-section">
+          <label for="photoInput" class="input-label">Optional photo (helps the AI see stains, cracks, etc.):</label>
+          <input type="file" id="photoInput" accept="image/*" />
+        </div>
 
-      <div style="margin-top:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <button type="button" id="askBtn" class="btn-analyze">
-          <span>✨</span>
-          <span>Analyze My Issue</span>
-        </button>
-        <div id="status" class="status"></div>
+        <div style="margin-top:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:center;">
+          <button type="button" id="askBtn" class="btn-analyze">
+            <span>✨</span>
+            <span>Analyze My Issue</span>
+          </button>
+          <div id="status" class="status"></div>
+        </div>
       </div>
     </div>
   </div>
