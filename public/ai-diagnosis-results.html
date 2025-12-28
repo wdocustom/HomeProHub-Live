@@ -103,7 +103,7 @@
       line-height: 1.5;
     }
 
-    /* Path 1: Understanding section */
+    /* Path 1: Understanding section - Enhanced readability */
     .diagnosis-content {
       font-size: 15px;
       line-height: 1.8;
@@ -111,17 +111,82 @@
     }
 
     .diagnosis-section {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border-left: 3px solid #d1d5db;
+    }
+
+    .diagnosis-section:last-of-type {
+      margin-bottom: 0;
     }
 
     .diagnosis-section-title {
-      font-size: 16px;
-      font-weight: 600;
+      font-size: 15px;
+      font-weight: 700;
       color: #111827;
       margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 13px;
+    }
+
+    .diagnosis-section-content {
+      color: #374151;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .diagnosis-section-content p {
+      margin-bottom: 12px;
+    }
+
+    .diagnosis-section-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .diagnosis-section-content ul {
+      margin: 12px 0;
+      padding-left: 20px;
+    }
+
+    .diagnosis-section-content li {
+      margin-bottom: 8px;
+    }
+
+    /* Section-specific styling */
+    .diagnosis-section.summary {
+      border-left-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .diagnosis-section.severity {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .diagnosis-section.urgency {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .diagnosis-section.diy {
+      border-left-color: #10b981;
+      background: #f0fdf4;
+    }
+
+    .diagnosis-section.materials {
+      border-left-color: #8b5cf6;
+      background: #f5f3ff;
+    }
+
+    .diagnosis-section.contractor-script {
+      border-left-color: #06b6d4;
+      background: #ecfeff;
     }
 
     .safety-warning {
@@ -409,8 +474,9 @@
       const data = JSON.parse(diagnosisData);
       const { question, answer, intent, budgetLow, budgetHigh } = data;
 
-      // Populate Path 1: Understand section
-      document.getElementById('diagnosisText').textContent = answer;
+      // Populate Path 1: Understand section with structured display
+      const diagnosisHTML = parseDiagnosisIntoSections(answer);
+      document.getElementById('diagnosisText').innerHTML = diagnosisHTML;
 
       // Extract safety warnings if present in AI response
       const safetyKeywords = ['danger', 'urgent', 'immediate', 'safety', 'hazard', 'emergency', 'risk'];
@@ -445,6 +511,164 @@
         intent: intent
       };
     })();
+
+    /**
+     * Parse AI diagnosis text into structured, visually organized sections
+     */
+    function parseDiagnosisIntoSections(text) {
+      // Common section headers the AI might use
+      const sectionPatterns = [
+        { pattern: /(?:^|\n)(Summary|Overview|What This Is|The Issue):?\s*/i, name: 'Summary', icon: '📋', class: 'summary' },
+        { pattern: /(?:^|\n)(Severity|How Serious|Concern Level):?\s*/i, name: 'Severity', icon: '⚠️', class: 'severity' },
+        { pattern: /(?:^|\n)(Urgency|Timeline|How Soon):?\s*/i, name: 'Urgency', icon: '⏰', class: 'urgency' },
+        { pattern: /(?:^|\n)(DIY Checks?|Things to Check|What You Can Do):?\s*/i, name: 'DIY Checks', icon: '🔍', class: 'diy' },
+        { pattern: /(?:^|\n)(Materials?|Supplies|What You'?ll Need):?\s*/i, name: 'Materials Needed', icon: '🛠️', class: 'materials' },
+        { pattern: /(?:^|\n)(Safety|Precautions|Warnings?):?\s*/i, name: 'Safety', icon: '⚠️', class: 'urgency' },
+        { pattern: /(?:^|\n)(When to Call|Call a Pro|Hire a Professional):?\s*/i, name: 'When to Call a Pro', icon: '📞', class: 'contractor-script' },
+        { pattern: /(?:^|\n)(Script|What to Say|Contractor Script):?\s*/i, name: 'What to Tell Contractor', icon: '💬', class: 'contractor-script' }
+      ];
+
+      let html = '';
+      let remainingText = text;
+      let foundSections = [];
+
+      // Try to identify sections
+      for (const section of sectionPatterns) {
+        const match = remainingText.match(section.pattern);
+        if (match) {
+          foundSections.push({
+            ...section,
+            startIndex: match.index,
+            headerLength: match[0].length
+          });
+        }
+      }
+
+      // Sort by appearance order
+      foundSections.sort((a, b) => a.startIndex - b.startIndex);
+
+      if (foundSections.length === 0) {
+        // No structured sections found - create intelligent paragraphs
+        const paragraphs = remainingText
+          .split(/\n\n+/)
+          .filter(p => p.trim().length > 0)
+          .map(p => p.trim());
+
+        // If it's just one big block, break it into sentences
+        if (paragraphs.length === 1 && paragraphs[0].length > 300) {
+          const sentences = paragraphs[0].match(/[^.!?]+[.!?]+/g) || [paragraphs[0]];
+          const midpoint = Math.floor(sentences.length / 2);
+          paragraphs.length = 0;
+          paragraphs.push(sentences.slice(0, midpoint).join(' ').trim());
+          paragraphs.push(sentences.slice(midpoint).join(' ').trim());
+        }
+
+        html = `
+          <div class="diagnosis-section summary">
+            <div class="diagnosis-section-title">
+              <span>📋</span>
+              <span>AI Analysis</span>
+            </div>
+            <div class="diagnosis-section-content">
+              ${paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        // Extract content for each section
+        for (let i = 0; i < foundSections.length; i++) {
+          const currentSection = foundSections[i];
+          const nextSection = foundSections[i + 1];
+
+          const contentStart = currentSection.startIndex + currentSection.headerLength;
+          const contentEnd = nextSection ? nextSection.startIndex : remainingText.length;
+
+          let content = remainingText.substring(contentStart, contentEnd).trim();
+
+          // Format content into paragraphs or lists
+          const formattedContent = formatSectionContent(content);
+
+          html += `
+            <div class="diagnosis-section ${currentSection.class}">
+              <div class="diagnosis-section-title">
+                <span>${currentSection.icon}</span>
+                <span>${currentSection.name}</span>
+              </div>
+              <div class="diagnosis-section-content">
+                ${formattedContent}
+              </div>
+            </div>
+          `;
+        }
+
+        // Add any intro text before first section
+        if (foundSections[0].startIndex > 0) {
+          const intro = remainingText.substring(0, foundSections[0].startIndex).trim();
+          if (intro.length > 20) {
+            html = `
+              <div class="diagnosis-section summary">
+                <div class="diagnosis-section-title">
+                  <span>📋</span>
+                  <span>Overview</span>
+                </div>
+                <div class="diagnosis-section-content">
+                  <p>${escapeHtml(intro)}</p>
+                </div>
+              </div>
+            ` + html;
+          }
+        }
+      }
+
+      // Add educational disclaimer at bottom
+      html += `
+        <div style="margin-top: 24px; padding: 16px; background: #f3f4f6; border-radius: 8px; font-size: 13px; color: #6b7280; font-style: italic;">
+          ℹ️ This guidance is educational and does not replace an in-person inspection by a licensed professional.
+        </div>
+      `;
+
+      return html;
+    }
+
+    /**
+     * Format section content with paragraphs and lists
+     */
+    function formatSectionContent(content) {
+      // Check if content has bullet points or numbered lists
+      const hasBullets = /^[\s]*[-•*]\s/m.test(content);
+      const hasNumbers = /^[\s]*\d+[.)]\s/m.test(content);
+
+      if (hasBullets || hasNumbers) {
+        // Parse as list
+        const items = content
+          .split(/\n/)
+          .map(line => line.trim())
+          .filter(line => line.length > 0)
+          .map(line => line.replace(/^[-•*\d+.)]\s*/, ''));
+
+        return `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+      } else {
+        // Parse as paragraphs
+        const paragraphs = content
+          .split(/\n\n+/)
+          .map(p => p.trim())
+          .filter(p => p.length > 0);
+
+        return paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+      }
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
     function generateContractorTips(question, diagnosis) {
       // Generate helpful tips based on the diagnosis
