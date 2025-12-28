@@ -2892,7 +2892,7 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
     const contractorEmail = req.user.email;
 
     // Get contractor profile to check their location and trade
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await db.supabase
       .from('user_profiles')
       .select('trade, city, state, zip_code')
       .eq('email', contractorEmail)
@@ -2903,7 +2903,7 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
     }
 
     // Fetch recent active job postings
-    let query = supabase
+    let query = db.supabase
       .from('job_postings')
       .select(`
         id,
@@ -2941,7 +2941,7 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
 
     // Get homeowner grades for each job
     const jobsWithGrades = await Promise.all(jobs.map(async (job) => {
-      const { data: homeownerProfile } = await supabase
+      const { data: homeownerProfile } = await db.supabase
         .from('user_profiles')
         .select('name')
         .eq('email', job.homeowner_email)
@@ -3877,7 +3877,7 @@ app.get("/api/contractors/directory", optionalAuth, async (req, res) => {
     const enrichedContractors = await Promise.all(
       contractors.map(async (contractor) => {
         // Get grade
-        const gradeResult = await supabase.rpc('calculate_contractor_grade', {
+        const gradeResult = await db.supabase.rpc('calculate_contractor_grade', {
           p_contractor_email: contractor.email
         });
 
@@ -3888,7 +3888,7 @@ app.get("/api/contractors/directory", optionalAuth, async (req, res) => {
         };
 
         // Get license status
-        const { data: licenses } = await supabase
+        const { data: licenses } = await db.supabase
           .from('contractor_licenses')
           .select('verification_status, trade_type, state')
           .eq('contractor_email', contractor.email)
@@ -3897,7 +3897,7 @@ app.get("/api/contractors/directory", optionalAuth, async (req, res) => {
           .limit(1);
 
         // Get review count and average
-        const { data: ratings } = await supabase
+        const { data: ratings } = await db.supabase
           .from('contractor_ratings')
           .select('quality_rating, communication_rating, timeliness_rating, professionalism_rating, value_rating')
           .eq('contractor_email', contractor.email);
@@ -3982,7 +3982,7 @@ app.get("/api/contractors/:email/grade", async (req, res) => {
   try {
     const { email } = req.params;
 
-    const { data: grade, error } = await supabase.rpc('calculate_contractor_grade', {
+    const { data: grade, error } = await db.supabase.rpc('calculate_contractor_grade', {
       p_contractor_email: email
     });
 

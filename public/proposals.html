@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proposals – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <link rel="stylesheet" href="components/footer.css" />
+  <style>
+    body {
+      background: #f9fafb;
+    }
+
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+    }
+
+    .project-summary {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .project-summary h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .project-summary p {
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .project-meta {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .project-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .proposals-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .proposal-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.2s;
+    }
+
+    .proposal-card:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .proposal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .contractor-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .contractor-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .contractor-details h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .contractor-meta {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .proposal-amount {
+      text-align: right;
+    }
+
+    .amount-label {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .amount-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2563eb;
+    }
+
+    .proposal-details {
+      margin-bottom: 16px;
+    }
+
+    .proposal-message {
+      color: #374151;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .proposal-timeline {
+      display: flex;
+      gap: 24px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .timeline-item strong {
+      color: #111827;
+    }
+
+    .proposal-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .empty-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .empty-text {
+      color: #6b7280;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: #6b7280;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-accepted {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-rejected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation will be injected here -->
+
+  <div class="main-container">
+    <div class="page-header">
+      <h1 class="page-title">Project Proposals</h1>
+      <p class="page-subtitle">Review and respond to contractor bids for your project</p>
+    </div>
+
+    <!-- Project Summary -->
+    <div class="project-summary" id="projectSummary">
+      <div class="loading">Loading project details...</div>
+    </div>
+
+    <!-- Proposals List -->
+    <div class="proposals-list" id="proposalsList">
+      <div class="loading">Loading proposals...</div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <script src="components/navigation.js"></script>
+  <script src="components/footer.js"></script>
+
+  <script>
+    // Get project ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('project_id');
+
+    if (!projectId) {
+      document.getElementById('proposalsList').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">❌</div>
+          <div class="empty-title">No Project Selected</div>
+          <div class="empty-text">Please select a project to view its proposals.</div>
+        </div>
+      `;
+    }
+
+    async function loadProjectAndProposals() {
+      try {
+        if (!projectId) return;
+
+        // Wait for auth service
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // Fetch project details
+        const projectResponse = await window.authService.authenticatedFetch(
+          `/api/jobs/${projectId}`
+        );
+
+        if (!projectResponse.ok) {
+          throw new Error('Failed to load project');
+        }
+
+        const { job: project } = await projectResponse.json();
+
+        // Render project summary
+        renderProjectSummary(project);
+
+        // Render proposals
+        renderProposals(project.bids || []);
+
+      } catch (error) {
+        console.error('Error loading proposals:', error);
+        document.getElementById('proposalsList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-title">Error Loading Proposals</div>
+            <div class="empty-text">Please try refreshing the page.</div>
+          </div>
+        `;
+      }
+    }
+
+    function renderProjectSummary(project) {
+      const summary = document.getElementById('projectSummary');
+      summary.innerHTML = `
+        <h2>${escapeHtml(project.title)}</h2>
+        <p>${escapeHtml(project.description)}</p>
+        <div class="project-meta">
+          <div class="project-meta-item">
+            <span>📍</span>
+            <span>${escapeHtml(project.city || '')}, ${escapeHtml(project.state || '')}</span>
+          </div>
+          <div class="project-meta-item">
+            <span>💰</span>
+            <span>$${project.budget_low || 0} - $${project.budget_high || 0}</span>
+          </div>
+          <div class="project-meta-item">
+            <span>📅</span>
+            <span>Posted ${formatDate(project.posted_at)}</span>
+          </div>
+          <div class="project-meta-item">
+            <span>📋</span>
+            <span>${(project.bids || []).length} Proposal${(project.bids || []).length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderProposals(bids) {
+      const list = document.getElementById('proposalsList');
+
+      if (!bids || bids.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div class="empty-title">No Proposals Yet</div>
+            <div class="empty-text">Contractors will submit their proposals soon. Check back later!</div>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = bids.map(bid => {
+        const contractorName = bid.contractor?.business_name || bid.contractor_business_name || 'Contractor';
+        const contractorInitial = contractorName.charAt(0).toUpperCase();
+        const statusClass = bid.status === 'accepted' ? 'status-accepted' :
+                           bid.status === 'rejected' ? 'status-rejected' :
+                           'status-pending';
+
+        return `
+          <div class="proposal-card">
+            <div class="proposal-header">
+              <div class="contractor-info">
+                <div class="contractor-avatar">${contractorInitial}</div>
+                <div class="contractor-details">
+                  <h3>${escapeHtml(contractorName)}</h3>
+                  <div class="contractor-meta">
+                    <span class="status-badge ${statusClass}">
+                      ${bid.status === 'accepted' ? 'Accepted' :
+                        bid.status === 'rejected' ? 'Declined' :
+                        'Pending Review'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="proposal-amount">
+                <div class="amount-label">Bid Amount</div>
+                <div class="amount-value">$${bid.bid_amount_low || 0} - $${bid.bid_amount_high || 0}</div>
+              </div>
+            </div>
+
+            <div class="proposal-details">
+              ${bid.message ? `
+                <div class="proposal-message">${escapeHtml(bid.message)}</div>
+              ` : ''}
+
+              <div class="proposal-timeline">
+                <div class="timeline-item">
+                  <span>⏱️</span>
+                  <span><strong>Duration:</strong> ${escapeHtml(bid.estimated_duration || 'Not specified')}</span>
+                </div>
+                <div class="timeline-item">
+                  <span>📅</span>
+                  <span><strong>Can Start:</strong> ${escapeHtml(bid.start_availability || 'ASAP')}</span>
+                </div>
+              </div>
+            </div>
+
+            ${bid.status === 'pending' ? `
+              <div class="proposal-actions">
+                <button class="btn btn-primary" onclick="acceptBid('${bid.id}')">Accept Proposal</button>
+                <button class="btn btn-secondary" onclick="rejectBid('${bid.id}')">Decline</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function acceptBid(bidId) {
+      if (!confirm('Accept this proposal? Other pending proposals will be automatically declined.')) {
+        return;
+      }
+
+      try {
+        const response = await window.authService.authenticatedFetch(`/api/bids/${bidId}/accept`, {
+          method: 'POST',
+          body: JSON.stringify({ job_id: projectId })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to accept proposal');
+        }
+
+        alert('Proposal accepted! The contractor will be notified.');
+        location.reload();
+
+      } catch (error) {
+        console.error('Error accepting proposal:', error);
+        alert('Failed to accept proposal. Please try again.');
+      }
+    }
+
+    async function rejectBid(bidId) {
+      if (!confirm('Decline this proposal?')) {
+        return;
+      }
+
+      try {
+        const response = await window.authService.authenticatedFetch(`/api/bids/${bidId}/reject`, {
+          method: 'POST'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to decline proposal');
+        }
+
+        alert('Proposal declined.');
+        location.reload();
+
+      } catch (error) {
+        console.error('Error declining proposal:', error);
+        alert('Failed to decline proposal. Please try again.');
+      }
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'Unknown';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProjectAndProposals();
+    });
+  </script>
+</body>
+</html>
