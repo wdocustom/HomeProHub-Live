@@ -175,8 +175,10 @@
       if (photoInput) photoInput.disabled = true;
       if (clarifyBtn) clarifyBtn.disabled = true;
 
-      aiStatus.textContent = "Analyzing your issue...";
-      aiStatus.style.color = '#6b7280';
+      aiStatus.textContent = "🔍 Analyzing your issue...";
+      aiStatus.style.color = '#ffffff';
+      aiStatus.style.fontWeight = '600';
+      aiStatus.style.textShadow = '0 2px 4px rgba(0,0,0,0.2)';
       if (aiResponseSection) aiResponseSection.classList.remove('show');
       if (jobPostCta) jobPostCta.classList.remove('show');
 
