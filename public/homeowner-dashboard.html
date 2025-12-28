@@ -248,7 +248,7 @@
       background: white;
       border-radius: 16px;
       border: 2px solid #e5e7eb;
-      overflow: hidden;
+      overflow: visible;
       transition: all 0.3s;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
@@ -293,18 +293,18 @@
     }
 
     .status-badge.active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-badge.in_progress {
       background: #dbeafe;
       color: #1e40af;
     }
 
-    .status-badge.in_progress {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
     .status-badge.completed {
-      background: #d1fae5;
-      color: #065f46;
+      background: #f3f4f6;
+      color: #1f2937;
     }
 
     .project-summary {
@@ -406,7 +406,7 @@
       border-radius: 12px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.15);
       min-width: 200px;
-      z-index: 100;
+      z-index: 50;
       display: none;
     }
 
