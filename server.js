@@ -2686,6 +2686,144 @@ app.get("/api/contractor/licenses/check", optionalAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/contractor/recent-jobs
+ * Get recent job opportunities for contractor dashboard
+ */
+app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { limit = 5 } = req.query;
+    const contractorEmail = req.user.email;
+
+    // Get contractor profile to check their location and trade
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('trade, city, state, zip_code')
+      .eq('email', contractorEmail)
+      .single();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    // Fetch recent active job postings
+    let query = supabase
+      .from('job_postings')
+      .select(`
+        id,
+        title,
+        description,
+        category,
+        urgency,
+        budget_low,
+        budget_high,
+        city,
+        state,
+        zip_code,
+        created_at,
+        homeowner_email
+      `)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit));
+
+    // Filter by contractor's trade if specified
+    if (profile.trade) {
+      query = query.eq('category', profile.trade);
+    }
+
+    // Filter by contractor's state if specified
+    if (profile.state) {
+      query = query.eq('state', profile.state);
+    }
+
+    const { data: jobs, error: jobsError } = await query;
+
+    if (jobsError) {
+      throw jobsError;
+    }
+
+    // Get homeowner grades for each job
+    const jobsWithGrades = await Promise.all(jobs.map(async (job) => {
+      const { data: homeownerProfile } = await supabase
+        .from('user_profiles')
+        .select('name')
+        .eq('email', job.homeowner_email)
+        .single();
+
+      // TODO: Implement homeowner grading
+      const homeowner_grade = 'A'; // Placeholder
+
+      return {
+        ...job,
+        homeowner_name: homeownerProfile?.name || 'Homeowner',
+        homeowner_grade
+      };
+    }));
+
+    res.json({
+      success: true,
+      jobs: jobsWithGrades
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/recent-jobs:", err);
+    res.status(500).json({
+      error: "Failed to fetch recent jobs",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/contractor/update-subscription
+ * Update contractor subscription tier
+ */
+app.post("/api/contractor/update-subscription", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { tier } = req.body;
+    const contractorEmail = req.user.email;
+
+    // Validate tier
+    const validTiers = ['starter', 'pro', 'premium'];
+    if (!tier || !validTiers.includes(tier.toLowerCase())) {
+      return res.status(400).json({
+        error: "Invalid tier. Must be one of: starter, pro, premium",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Update user profile with new subscription tier
+    const { data: profile, error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ subscription_tier: tier.toLowerCase() })
+      .eq('email', contractorEmail)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("❌ Error updating subscription:", updateError);
+      throw updateError;
+    }
+
+    console.log(`✓ Subscription updated: ${contractorEmail} -> ${tier}`);
+    res.json({
+      success: true,
+      subscription_tier: tier.toLowerCase(),
+      message: `Successfully updated to ${tier} plan`
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/update-subscription:", err);
+    res.status(500).json({
+      error: "Failed to update subscription",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * PUT /api/contractor/licenses/:id/verify
  * Update license verification status (admin only)
  */

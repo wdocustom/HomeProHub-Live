@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Grade – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <!-- Chart.js for donut chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      line-height: 1.6;
+    }
+
+    .main-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+    }
+
+    .grade-grid {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    /* Donut Chart Card */
+    .chart-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .chart-container {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      margin: 0 auto 24px;
+    }
+
+    .chart-center-grade {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .center-grade-letter {
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .center-grade-label {
+      font-size: 14px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .grade-details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .grade-stat {
+      text-align: center;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+
+    .grade-stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .grade-stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* Breakdown Card */
+    .breakdown-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 32px;
+    }
+
+    .breakdown-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 20px;
+    }
+
+    .breakdown-item {
+      margin-bottom: 20px;
+    }
+
+    .breakdown-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .breakdown-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .breakdown-score {
+      font-size: 15px;
+      font-weight: 700;
+      color: #6b7280;
+    }
+
+    .breakdown-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .breakdown-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    /* Boost Section */
+    .boost-section {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 32px;
+    }
+
+    .boost-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 20px;
+    }
+
+    .boost-items {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .boost-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .boost-item:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    }
+
+    .boost-icon {
+      width: 48px;
+      height: 48px;
+      background: #eff6ff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .boost-content {
+      flex: 1;
+    }
+
+    .boost-content-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .boost-points {
+      font-size: 14px;
+      color: #10b981;
+      font-weight: 600;
+    }
+
+    .boost-action {
+      padding: 8px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .boost-action:hover {
+      background: #2563eb;
+    }
+
+    .boost-action.secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .boost-action.secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .boost-item.completed {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+
+    .boost-item.completed .boost-icon {
+      background: #dcfce7;
+    }
+
+    @media (max-width: 968px) {
+      .grade-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <div class="main-container">
+    <div class="page-header">
+      <h1 class="page-title">My Grade</h1>
+      <p class="page-subtitle">Performance breakdown and improvement opportunities</p>
+    </div>
+
+    <div class="grade-grid">
+      <!-- Donut Chart -->
+      <div class="chart-card">
+        <div class="chart-container">
+          <canvas id="gradeChart"></canvas>
+          <div class="chart-center-grade">
+            <div class="center-grade-letter" id="centerGrade">-</div>
+            <div class="center-grade-label">Overall</div>
+          </div>
+        </div>
+
+        <div class="grade-details">
+          <div class="grade-stat">
+            <div class="grade-stat-value" id="overallScore">0</div>
+            <div class="grade-stat-label">Score</div>
+          </div>
+          <div class="grade-stat">
+            <div class="grade-stat-value" id="percentile">-</div>
+            <div class="grade-stat-label">Percentile</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Breakdown -->
+      <div class="breakdown-card">
+        <h2 class="breakdown-title">Score Breakdown</h2>
+
+        <div class="breakdown-item">
+          <div class="breakdown-header">
+            <span class="breakdown-label">Verification (40%)</span>
+            <span class="breakdown-score" id="verificationScore">0/100</span>
+          </div>
+          <div class="breakdown-bar">
+            <div class="breakdown-fill" id="verificationBar" style="width: 0%; background: #3b82f6;"></div>
+          </div>
+        </div>
+
+        <div class="breakdown-item">
+          <div class="breakdown-header">
+            <span class="breakdown-label">Reputation (35%)</span>
+            <span class="breakdown-score" id="reputationScore">0/100</span>
+          </div>
+          <div class="breakdown-bar">
+            <div class="breakdown-fill" id="reputationBar" style="width: 0%; background: #10b981;"></div>
+          </div>
+        </div>
+
+        <div class="breakdown-item">
+          <div class="breakdown-header">
+            <span class="breakdown-label">Velocity (15%)</span>
+            <span class="breakdown-score" id="velocityScore">0/100</span>
+          </div>
+          <div class="breakdown-bar">
+            <div class="breakdown-fill" id="velocityBar" style="width: 0%; background: #f59e0b;"></div>
+          </div>
+        </div>
+
+        <div class="breakdown-item">
+          <div class="breakdown-header">
+            <span class="breakdown-label">Profile (10%)</span>
+            <span class="breakdown-score" id="profileScore">0/100</span>
+          </div>
+          <div class="breakdown-bar">
+            <div class="breakdown-fill" id="profileBar" style="width: 0%; background: #8b5cf6;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Boost Section -->
+    <div class="boost-section">
+      <h2 class="boost-title">How to Boost Your Score</h2>
+      <div class="boost-items" id="boostItems">
+        <!-- Dynamic boost items will be loaded here -->
+        <div style="text-align: center; padding: 40px; color: #6b7280;">
+          Loading recommendations...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="components/navigation.js"></script>
+  <script>
+    let gradeChart = null;
+
+    async function loadGradeData() {
+      try {
+        // Wait for auth service
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // Fetch grade data from API
+        const response = await window.authService.authenticatedFetch(
+          `/api/contractors/${encodeURIComponent(user.email)}/grade`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to load grade data');
+        }
+
+        const gradeData = await response.json();
+        renderGradeData(gradeData);
+        renderBoostItems(gradeData);
+
+      } catch (error) {
+        console.error('Error loading grade:', error);
+        document.getElementById('centerGrade').textContent = 'Error';
+      }
+    }
+
+    function renderGradeData(data) {
+      // Update center grade
+      document.getElementById('centerGrade').textContent = data.grade;
+      document.getElementById('centerGrade').style.color = data.color;
+      document.getElementById('overallScore').textContent = data.score;
+      document.getElementById('percentile').textContent = data.percentile || '-';
+
+      // Update breakdown bars
+      const breakdown = data.breakdown || {};
+      updateBreakdownBar('verification', breakdown.verification_score || 0);
+      updateBreakdownBar('reputation', breakdown.reputation_score || 0);
+      updateBreakdownBar('velocity', breakdown.velocity_score || 0);
+      updateBreakdownBar('profile', breakdown.profile_score || 0);
+
+      // Create donut chart
+      createDonutChart(breakdown);
+    }
+
+    function updateBreakdownBar(category, score) {
+      document.getElementById(`${category}Score`).textContent = `${Math.round(score)}/100`;
+      document.getElementById(`${category}Bar`).style.width = `${score}%`;
+    }
+
+    function createDonutChart(breakdown) {
+      const ctx = document.getElementById('gradeChart').getContext('2d');
+
+      if (gradeChart) {
+        gradeChart.destroy();
+      }
+
+      gradeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Verification (40%)', 'Reputation (35%)', 'Velocity (15%)', 'Profile (10%)'],
+          datasets: [{
+            data: [
+              breakdown.verification_score || 0,
+              breakdown.reputation_score || 0,
+              breakdown.velocity_score || 0,
+              breakdown.profile_score || 0
+            ],
+            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
+            borderWidth: 0,
+            borderRadius: 4,
+            spacing: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '70%',
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.label}: ${Math.round(context.raw)}/100`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderBoostItems(data) {
+      const details = data.details || {};
+      const boostItems = [];
+
+      // Verification boosts
+      if (!details.has_verified_license) {
+        boostItems.push({
+          icon: '🎓',
+          title: 'Upload License Verification',
+          points: '+28 pts',
+          action: 'Upload',
+          onclick: () => window.location.href = 'contractor-profile.html#licenses'
+        });
+      }
+
+      if (!details.insurance_verified) {
+        boostItems.push({
+          icon: '🛡️',
+          title: 'Upload Insurance Info',
+          points: '+12 pts',
+          action: 'Upload',
+          onclick: () => window.location.href = 'contractor-profile.html#insurance'
+        });
+      }
+
+      // Reputation boosts
+      if ((details.review_count || 0) < 5) {
+        boostItems.push({
+          icon: '⭐',
+          title: 'Get More Reviews',
+          points: `+${Math.round((5 - (details.review_count || 0)) * 2)} pts`,
+          action: 'Share Link',
+          onclick: () => alert('Review link: https://homeprohub.today/review/[your-id]')
+        });
+      }
+
+      // Velocity boosts
+      if ((details.avg_response_hours || 24) > 4) {
+        boostItems.push({
+          icon: '⚡',
+          title: 'Improve Response Time',
+          points: `Current: ${Math.round(details.avg_response_hours || 0)}hrs | Goal: <2hrs`,
+          action: 'Tips',
+          secondary: true,
+          onclick: () => alert('Tip: Enable push notifications and check messages daily!')
+        });
+      }
+
+      // Profile boosts
+      if (!details.has_bio) {
+        boostItems.push({
+          icon: '📝',
+          title: 'Write Your Bio',
+          points: '+4 pts',
+          action: 'Write',
+          onclick: () => window.location.href = 'contractor-profile.html#bio'
+        });
+      }
+
+      if (!details.has_profile_photo) {
+        boostItems.push({
+          icon: '📸',
+          title: 'Add Profile Photo',
+          points: '+3 pts',
+          action: 'Upload',
+          onclick: () => window.location.href = 'contractor-profile.html#photo'
+        });
+      }
+
+      if ((details.portfolio_count || 0) === 0) {
+        boostItems.push({
+          icon: '🖼️',
+          title: 'Add Portfolio Photos',
+          points: '+3 pts',
+          action: 'Upload',
+          onclick: () => window.location.href = 'contractor-profile.html#portfolio'
+        });
+      }
+
+      // Render items
+      const container = document.getElementById('boostItems');
+
+      if (boostItems.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #10b981;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
+            <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Excellent Work!</div>
+            <div style="font-size: 14px; color: #6b7280;">You've completed all available improvements.</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = boostItems.map(item => `
+        <div class="boost-item">
+          <div class="boost-icon">${item.icon}</div>
+          <div class="boost-content">
+            <div class="boost-content-title">${item.title}</div>
+            <div class="boost-points">${item.points}</div>
+          </div>
+          <button class="boost-action ${item.secondary ? 'secondary' : ''}" onclick='${item.onclick.toString().replace(/^[^{]*{/, '').replace(/}[^}]*$/, '')}'>${item.action}</button>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadGradeData();
+    });
+  </script>
+</body>
+</html>
