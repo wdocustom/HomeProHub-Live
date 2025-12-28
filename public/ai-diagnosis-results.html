@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Analysis Results – HomeProHub</title>
+  <title>Analysis Report – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
 
@@ -14,17 +14,19 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Marked.js for Markdown Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
   <style>
     body {
-      background: #f9fafb;
+      background: #f3f4f6;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
-    /* Academic, calm design */
-    .diagnosis-container {
+    .page-container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 40px 24px;
+      padding: 48px 24px 80px;
     }
 
     .page-header {
@@ -33,49 +35,295 @@
     }
 
     .page-title {
-      font-size: 32px;
-      font-weight: 700;
+      font-size: 36px;
+      font-weight: 800;
       color: #111827;
       margin-bottom: 12px;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
     }
 
     .page-subtitle {
-      font-size: 16px;
+      font-size: 17px;
       color: #6b7280;
       max-width: 600px;
       margin: 0 auto;
       line-height: 1.6;
     }
 
-    /* Three-column grid with equal weight */
-    .three-paths-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 32px;
-      margin-top: 40px;
+    /* ============================================
+       PHASE 1: THE DIAGNOSIS (Report Card)
+       ============================================ */
+    .diagnosis-report {
+      max-width: 800px;
+      margin: 0 auto 80px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
     }
 
-    @media (max-width: 1024px) {
-      .three-paths-grid {
+    .report-header {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .report-icon {
+      font-size: 48px;
+      flex-shrink: 0;
+    }
+
+    .report-header-content h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .report-header-content p {
+      font-size: 15px;
+      opacity: 0.95;
+      line-height: 1.5;
+    }
+
+    .report-body {
+      padding: 48px 40px;
+    }
+
+    /* Rich Typography for AI Content */
+    .diagnosis-content {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #374151;
+    }
+
+    .diagnosis-content h1,
+    .diagnosis-content h2,
+    .diagnosis-content h3,
+    .diagnosis-content h4 {
+      color: #111827;
+      font-weight: 700;
+      margin-top: 32px;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .diagnosis-content h1 {
+      font-size: 28px;
+      margin-top: 0;
+    }
+
+    .diagnosis-content h2 {
+      font-size: 22px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .diagnosis-content h3 {
+      font-size: 18px;
+    }
+
+    .diagnosis-content h4 {
+      font-size: 16px;
+      text-transform: uppercase;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    .diagnosis-content p {
+      margin-bottom: 20px;
+      line-height: 1.8;
+    }
+
+    .diagnosis-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .diagnosis-content ul,
+    .diagnosis-content ol {
+      margin: 20px 0;
+      padding-left: 28px;
+    }
+
+    .diagnosis-content li {
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+
+    .diagnosis-content strong {
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .diagnosis-content em {
+      font-style: italic;
+      color: #6b7280;
+    }
+
+    .diagnosis-content blockquote {
+      border-left: 4px solid #3b82f6;
+      padding: 16px 24px;
+      margin: 24px 0;
+      background: #eff6ff;
+      border-radius: 8px;
+      font-style: italic;
+      color: #1e3a8a;
+    }
+
+    .diagnosis-content code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      color: #991b1b;
+    }
+
+    .diagnosis-content pre {
+      background: #1f2937;
+      color: #f3f4f6;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 24px 0;
+    }
+
+    .diagnosis-content pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Safety Warnings */
+    .diagnosis-content .warning,
+    .diagnosis-content .safety {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+
+    .diagnosis-content .warning strong,
+    .diagnosis-content .safety strong {
+      color: #991b1b;
+    }
+
+    .diagnosis-content .info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+
+    .diagnosis-content .tip {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+
+    .report-footer {
+      background: #f9fafb;
+      padding: 24px 40px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    .report-footer-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* ============================================
+       PHASE 2: NEXT STEPS (Call to Action)
+       ============================================ */
+    .next-steps-section {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .next-steps-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .next-steps-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .next-steps-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+    }
+
+    .next-steps-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .next-steps-grid {
         grid-template-columns: 1fr;
         gap: 24px;
       }
+
+      .report-body {
+        padding: 32px 24px;
+      }
+
+      .report-header {
+        padding: 24px;
+      }
+
+      .report-footer {
+        padding: 20px 24px;
+      }
     }
 
-    /* Path cards - equal visual weight */
+    /* Path Cards */
     .path-card {
       background: white;
       border-radius: 12px;
-      padding: 32px;
+      padding: 36px 32px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       border: 2px solid #e5e7eb;
       transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
     }
 
     .path-card:hover {
-      border-color: #d1d5db;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-color: #3b82f6;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .path-card.premium {
+      border-color: #fbbf24;
+      background: linear-gradient(to bottom, #fffbeb, white);
+    }
+
+    .path-card.premium:hover {
+      border-color: #f59e0b;
+      box-shadow: 0 8px 24px rgba(251, 191, 36, 0.25);
     }
 
     .path-header {
@@ -85,154 +333,27 @@
     }
 
     .path-icon {
-      font-size: 36px;
-      margin-bottom: 12px;
+      font-size: 40px;
+      margin-bottom: 16px;
       display: block;
     }
 
     .path-title {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
       color: #111827;
       margin-bottom: 8px;
+      letter-spacing: -0.02em;
     }
 
     .path-description {
-      font-size: 14px;
+      font-size: 15px;
       color: #6b7280;
-      line-height: 1.5;
-    }
-
-    /* Path 1: Understanding section - Enhanced readability */
-    .diagnosis-content {
-      font-size: 15px;
-      line-height: 1.8;
-      color: #374151;
-    }
-
-    .diagnosis-section {
-      margin-bottom: 20px;
-      padding: 16px;
-      background: #f9fafb;
-      border-radius: 8px;
-      border-left: 3px solid #d1d5db;
-    }
-
-    .diagnosis-section:last-of-type {
-      margin-bottom: 0;
-    }
-
-    .diagnosis-section-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      font-size: 13px;
-    }
-
-    .diagnosis-section-content {
-      color: #374151;
-      font-size: 15px;
-      line-height: 1.7;
-    }
-
-    .diagnosis-section-content p {
-      margin-bottom: 12px;
-    }
-
-    .diagnosis-section-content p:last-child {
-      margin-bottom: 0;
-    }
-
-    .diagnosis-section-content ul {
-      margin: 12px 0;
-      padding-left: 20px;
-    }
-
-    .diagnosis-section-content li {
-      margin-bottom: 8px;
-    }
-
-    /* Section-specific styling */
-    .diagnosis-section.summary {
-      border-left-color: #3b82f6;
-      background: #eff6ff;
-    }
-
-    .diagnosis-section.severity {
-      border-left-color: #f59e0b;
-      background: #fffbeb;
-    }
-
-    .diagnosis-section.urgency {
-      border-left-color: #ef4444;
-      background: #fef2f2;
-    }
-
-    .diagnosis-section.diy {
-      border-left-color: #10b981;
-      background: #f0fdf4;
-    }
-
-    .diagnosis-section.materials {
-      border-left-color: #8b5cf6;
-      background: #f5f3ff;
-    }
-
-    .diagnosis-section.contractor-script {
-      border-left-color: #06b6d4;
-      background: #ecfeff;
-    }
-
-    .safety-warning {
-      background: #fef2f2;
-      border-left: 4px solid #ef4444;
-      padding: 16px;
-      border-radius: 8px;
-      margin-top: 16px;
-    }
-
-    .safety-warning-title {
-      font-weight: 600;
-      color: #991b1b;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-
-    .safety-warning-text {
-      color: #7f1d1d;
-      font-size: 14px;
       line-height: 1.6;
     }
 
-    .contractor-tips {
-      background: #f0f9ff;
-      border-left: 4px solid #3b82f6;
-      padding: 16px;
-      border-radius: 8px;
-      margin-top: 16px;
-    }
-
-    .contractor-tips-title {
-      font-weight: 600;
-      color: #1e40af;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-
-    .contractor-tips-text {
-      color: #1e3a8a;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    /* Path 2: Hire a Pro */
     .path-features {
+      flex: 1;
       margin: 20px 0;
     }
 
@@ -240,26 +361,44 @@
       display: flex;
       align-items: start;
       gap: 12px;
-      margin-bottom: 12px;
-      font-size: 14px;
+      margin-bottom: 14px;
+      font-size: 15px;
       color: #374151;
+      line-height: 1.6;
     }
 
     .feature-icon {
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 3px;
+      color: #10b981;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .price-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 20px;
+      margin: 16px 0;
+      border: 2px solid #fbbf24;
     }
 
     .cta-button {
       width: 100%;
-      padding: 14px 24px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 15px;
+      padding: 16px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 16px;
       cursor: pointer;
       transition: all 0.2s ease;
       border: none;
-      margin-top: 20px;
+      margin-top: auto;
     }
 
     .cta-button-primary {
@@ -270,18 +409,31 @@
     .cta-button-primary:hover {
       background: #2563eb;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
     }
 
     .cta-button-secondary {
       background: #10b981;
       color: white;
+      margin-top: 12px;
     }
 
     .cta-button-secondary:hover {
       background: #059669;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .cta-button-premium {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #78350f;
+      font-weight: 800;
+    }
+
+    .cta-button-premium:hover {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
     }
 
     .microcopy {
@@ -290,169 +442,156 @@
       text-align: center;
       margin-top: 12px;
       font-style: italic;
+      line-height: 1.5;
     }
 
-    /* Path 3: Ask an Expert */
-    .price-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: #fef3c7;
-      color: #92400e;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 18px;
-      margin: 16px 0;
-    }
-
-    .expert-benefits {
-      background: #f9fafb;
-      padding: 16px;
+    /* Loading State */
+    .loading-skeleton {
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s ease-in-out infinite;
       border-radius: 8px;
-      margin: 16px 0;
+      height: 20px;
+      margin-bottom: 16px;
     }
 
-    .expert-benefit {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: #374151;
-    }
-
-    .expert-benefit:last-child {
-      margin-bottom: 0;
+    @keyframes loading {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
     }
   </style>
 </head>
 <body>
   <div id="nav-container"></div>
 
-  <div class="diagnosis-container">
+  <div class="page-container">
     <!-- Page Header -->
     <div class="page-header">
-      <h1 class="page-title">Your Home Analysis is Complete</h1>
+      <h1 class="page-title">Your Home Analysis Report</h1>
       <p class="page-subtitle">
-        We've analyzed your situation. Below are three distinct paths forward—choose the one that fits your needs best.
+        Review the diagnosis below, then choose your next step when you're ready.
       </p>
     </div>
 
-    <!-- Three Paths Grid -->
-    <div class="three-paths-grid">
-
-      <!-- PATH 1: UNDERSTAND (Thinking Space) -->
-      <div class="path-card">
-        <div class="path-header">
-          <span class="path-icon">🔍</span>
-          <h2 class="path-title">Understand</h2>
-          <p class="path-description">Review the diagnosis and learn what's happening with your home</p>
+    <!-- PHASE 1: THE DIAGNOSIS (Report Card) -->
+    <div class="diagnosis-report">
+      <div class="report-header">
+        <span class="report-icon">📋</span>
+        <div class="report-header-content">
+          <h2>Preliminary Analysis</h2>
+          <p>AI-generated assessment based on your description</p>
         </div>
+      </div>
 
-        <div class="diagnosis-content">
-          <!-- AI Diagnosis -->
-          <div class="diagnosis-section">
-            <div class="diagnosis-section-title">
-              <span>📋</span>
-              <span>Diagnosis</span>
+      <div class="report-body">
+        <div class="diagnosis-content" id="diagnosisContent">
+          <!-- AI diagnosis will be rendered here with markdown -->
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton" style="width: 90%;"></div>
+          <div class="loading-skeleton" style="width: 95%;"></div>
+        </div>
+      </div>
+
+      <div class="report-footer">
+        <span class="report-footer-icon">ℹ️</span>
+        <span>This is an educational assessment, not a professional inspection. Always consult a licensed professional for official diagnosis and recommendations.</span>
+      </div>
+    </div>
+
+    <!-- PHASE 2: NEXT STEPS -->
+    <div class="next-steps-section">
+      <div class="next-steps-header">
+        <h2 class="next-steps-title">Choose Your Next Step</h2>
+        <p class="next-steps-subtitle">Ready to take action? Select the path that works best for you.</p>
+      </div>
+
+      <div class="next-steps-grid">
+        <!-- PATH 1: HIRE A PRO (Free) -->
+        <div class="path-card">
+          <div class="path-header">
+            <span class="path-icon">🏗️</span>
+            <h3 class="path-title">Hire a Pro</h3>
+            <p class="path-description">Connect with vetted, licensed contractors near you—completely free</p>
+          </div>
+
+          <div class="path-features">
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Browse verified contractors scored A–F based on real performance</span>
             </div>
-            <div id="diagnosisText"></div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Post your project and receive competitive bids</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Licensed, insured, and background-checked professionals</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>100% free to post—no hidden fees or commitments</span>
+            </div>
           </div>
 
-          <!-- Safety Warnings (if any) -->
-          <div id="safetyWarningsContainer"></div>
+          <button class="cta-button cta-button-primary" onclick="window.location.href='contractor-directory.html'">
+            Browse Verified Contractors
+          </button>
 
-          <!-- What to Tell a Contractor -->
-          <div class="contractor-tips">
-            <div class="contractor-tips-title">💡 What to tell a contractor:</div>
-            <div class="contractor-tips-text" id="contractorTips"></div>
+          <button class="cta-button cta-button-secondary" onclick="postJobFromDiagnosis()">
+            Post This Project & Get Bids
+          </button>
+
+          <p class="microcopy">
+            No obligation • Free to post • Cancel anytime
+          </p>
+        </div>
+
+        <!-- PATH 2: ASK AN EXPERT (Paid/Premium) -->
+        <div class="path-card premium">
+          <div class="path-header">
+            <span class="path-icon">👨‍🔧</span>
+            <h3 class="path-title">Ask an Expert</h3>
+            <p class="path-description">Get a straight answer from a licensed professional right now</p>
           </div>
+
+          <div class="price-indicator">
+            <span>💵</span>
+            <span id="expertPrice">$50</span>
+            <span style="font-size: 15px; font-weight: 500; color: #92400e;">/ session</span>
+          </div>
+
+          <div class="path-features">
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Live video or phone consultation with licensed pros</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Get answers in 15-30 minutes, not days</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Experts with 10+ years of field experience</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Receive written summary and next steps after your call</span>
+            </div>
+          </div>
+
+          <button class="cta-button cta-button-premium" onclick="bookExpertConsultation()" id="expertButton">
+            Talk to an Expert Now
+          </button>
+
+          <p class="microcopy" id="expertMicrocopy">
+            Pay per session • No subscription required
+          </p>
         </div>
       </div>
-
-      <!-- PATH 2: HIRE A PRO (Free Connection) -->
-      <div class="path-card">
-        <div class="path-header">
-          <span class="path-icon">🏗️</span>
-          <h2 class="path-title">Hire a Pro</h2>
-          <p class="path-description">Connect with vetted, licensed contractors near you</p>
-        </div>
-
-        <div class="path-features">
-          <div class="feature-item">
-            <span class="feature-icon">✓</span>
-            <span>Browse verified contractors scored A–F</span>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">✓</span>
-            <span>Post your project and receive competitive bids</span>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">✓</span>
-            <span>Licensed, insured, and background-checked</span>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">✓</span>
-            <span>Free to post—no hidden fees</span>
-          </div>
-        </div>
-
-        <button class="cta-button cta-button-primary" onclick="window.location.href='contractor-directory.html'">
-          Browse Verified Contractors
-        </button>
-
-        <button class="cta-button cta-button-secondary" onclick="postJobFromDiagnosis()" style="margin-top: 12px;">
-          Post This Project & Get Bids
-        </button>
-
-        <p class="microcopy">
-          No obligation • Free to post • Cancel anytime
-        </p>
-      </div>
-
-      <!-- PATH 3: ASK AN EXPERT (Paid) -->
-      <div class="path-card">
-        <div class="path-header">
-          <span class="path-icon">👨‍🔧</span>
-          <h2 class="path-title">Ask an Expert</h2>
-          <p class="path-description">Want a straight answer right now?</p>
-        </div>
-
-        <div class="price-indicator">
-          <span>💵</span>
-          <span id="expertPrice">$50</span>
-          <span style="font-size: 14px; font-weight: 400;">/ session</span>
-        </div>
-
-        <div class="expert-benefits">
-          <div class="expert-benefit">
-            <span>📞</span>
-            <span>Live video or phone consultation</span>
-          </div>
-          <div class="expert-benefit">
-            <span>⏱️</span>
-            <span>Get answers in 15-30 minutes</span>
-          </div>
-          <div class="expert-benefit">
-            <span>🎓</span>
-            <span>Licensed professionals with 10+ years experience</span>
-          </div>
-          <div class="expert-benefit">
-            <span>📝</span>
-            <span>Receive written summary after call</span>
-          </div>
-        </div>
-
-        <button class="cta-button cta-button-primary" onclick="bookExpertConsultation()" id="expertButton">
-          Talk to an Expert Now
-        </button>
-
-        <p class="microcopy" id="expertMicrocopy">
-          Pay per session • No subscription required
-        </p>
-      </div>
-
     </div>
   </div>
 
@@ -461,6 +600,14 @@
   <script>
     (async function() {
       'use strict';
+
+      // Configure marked.js options
+      marked.setOptions({
+        breaks: true,
+        gfm: true,
+        headerIds: false,
+        mangle: false
+      });
 
       // Get diagnosis data from sessionStorage
       const diagnosisData = sessionStorage.getItem('aiDiagnosis');
@@ -474,34 +621,22 @@
       const data = JSON.parse(diagnosisData);
       const { question, answer, intent, budgetLow, budgetHigh } = data;
 
-      // Populate Path 1: Understand section with structured display
-      const diagnosisHTML = parseDiagnosisIntoSections(answer);
-      document.getElementById('diagnosisText').innerHTML = diagnosisHTML;
+      // Render AI response with markdown parser
+      const diagnosisContent = document.getElementById('diagnosisContent');
 
-      // Extract safety warnings if present in AI response
-      const safetyKeywords = ['danger', 'urgent', 'immediate', 'safety', 'hazard', 'emergency', 'risk'];
-      const hasSafety = safetyKeywords.some(keyword => answer.toLowerCase().includes(keyword));
+      // Enhance the AI response with better formatting
+      const enhancedAnswer = enhanceAIResponse(answer);
 
-      if (hasSafety) {
-        const safetyContainer = document.getElementById('safetyWarningsContainer');
-        safetyContainer.innerHTML = `
-          <div class="safety-warning">
-            <div class="safety-warning-title">⚠️ Safety Notice</div>
-            <div class="safety-warning-text">
-              This issue may require immediate professional attention. Consider consulting a licensed contractor as soon as possible.
-            </div>
-          </div>
-        `;
-      }
+      // Parse markdown and render
+      diagnosisContent.innerHTML = marked.parse(enhancedAnswer);
 
-      // Generate contractor tips
-      const contractorTips = generateContractorTips(question, answer);
-      document.getElementById('contractorTips').textContent = contractorTips;
+      // Add safety warnings if detected
+      addSafetyWarningsIfNeeded(diagnosisContent, answer);
 
       // Check user's subscription tier for Expert pricing
       await checkSubscriptionTier();
 
-      // Store job posting data for Path 2
+      // Store job posting data for Path 1
       window.jobPostingData = {
         originalQuestion: question,
         aiAnalysis: answer,
@@ -513,168 +648,56 @@
     })();
 
     /**
-     * Parse AI diagnosis text into structured, visually organized sections
+     * Enhance AI response for better markdown formatting
      */
-    function parseDiagnosisIntoSections(text) {
-      // Common section headers the AI might use
-      const sectionPatterns = [
-        { pattern: /(?:^|\n)(Summary|Overview|What This Is|The Issue):?\s*/i, name: 'Summary', icon: '📋', class: 'summary' },
-        { pattern: /(?:^|\n)(Severity|How Serious|Concern Level):?\s*/i, name: 'Severity', icon: '⚠️', class: 'severity' },
-        { pattern: /(?:^|\n)(Urgency|Timeline|How Soon):?\s*/i, name: 'Urgency', icon: '⏰', class: 'urgency' },
-        { pattern: /(?:^|\n)(DIY Checks?|Things to Check|What You Can Do):?\s*/i, name: 'DIY Checks', icon: '🔍', class: 'diy' },
-        { pattern: /(?:^|\n)(Materials?|Supplies|What You'?ll Need):?\s*/i, name: 'Materials Needed', icon: '🛠️', class: 'materials' },
-        { pattern: /(?:^|\n)(Safety|Precautions|Warnings?):?\s*/i, name: 'Safety', icon: '⚠️', class: 'urgency' },
-        { pattern: /(?:^|\n)(When to Call|Call a Pro|Hire a Professional):?\s*/i, name: 'When to Call a Pro', icon: '📞', class: 'contractor-script' },
-        { pattern: /(?:^|\n)(Script|What to Say|Contractor Script):?\s*/i, name: 'What to Tell Contractor', icon: '💬', class: 'contractor-script' }
-      ];
+    function enhanceAIResponse(text) {
+      let enhanced = text;
 
-      let html = '';
-      let remainingText = text;
-      let foundSections = [];
+      // Detect common section patterns and convert to headers
+      enhanced = enhanced.replace(/^(Summary|Overview|What This Is|The Issue):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Severity|How Serious|Concern Level):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Urgency|Timeline|How Soon):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(DIY Checks?|Things to Check|What You Can Do):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Materials?|Supplies|What You'?ll Need):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Safety|Precautions|Warnings?):?\s*/gim, '## ⚠️ $1\n\n');
+      enhanced = enhanced.replace(/^(When to Call|Call a Pro|Hire a Professional):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Next Steps?|Recommendations?):?\s*/gim, '## $1\n\n');
 
-      // Try to identify sections
-      for (const section of sectionPatterns) {
-        const match = remainingText.match(section.pattern);
-        if (match) {
-          foundSections.push({
-            ...section,
-            startIndex: match.index,
-            headerLength: match[0].length
-          });
-        }
-      }
+      // Convert numbered lists if not already formatted
+      enhanced = enhanced.replace(/^(\d+)\.\s+/gm, '$1. ');
 
-      // Sort by appearance order
-      foundSections.sort((a, b) => a.startIndex - b.startIndex);
+      // Ensure bold for emphasis words
+      enhanced = enhanced.replace(/\b(URGENT|WARNING|CAUTION|DANGER|IMPORTANT|NOTE)\b/g, '**$1**');
 
-      if (foundSections.length === 0) {
-        // No structured sections found - create intelligent paragraphs
-        const paragraphs = remainingText
-          .split(/\n\n+/)
-          .filter(p => p.trim().length > 0)
-          .map(p => p.trim());
+      return enhanced;
+    }
 
-        // If it's just one big block, break it into sentences
-        if (paragraphs.length === 1 && paragraphs[0].length > 300) {
-          const sentences = paragraphs[0].match(/[^.!?]+[.!?]+/g) || [paragraphs[0]];
-          const midpoint = Math.floor(sentences.length / 2);
-          paragraphs.length = 0;
-          paragraphs.push(sentences.slice(0, midpoint).join(' ').trim());
-          paragraphs.push(sentences.slice(midpoint).join(' ').trim());
-        }
+    /**
+     * Add safety warnings based on content analysis
+     */
+    function addSafetyWarningsIfNeeded(container, text) {
+      const safetyKeywords = ['danger', 'urgent', 'immediate', 'safety', 'hazard', 'emergency', 'risk', 'electrical', 'gas leak', 'carbon monoxide', 'structural'];
+      const hasSafety = safetyKeywords.some(keyword => text.toLowerCase().includes(keyword));
 
-        html = `
-          <div class="diagnosis-section summary">
-            <div class="diagnosis-section-title">
-              <span>📋</span>
-              <span>AI Analysis</span>
-            </div>
-            <div class="diagnosis-section-content">
-              ${paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('')}
-            </div>
-          </div>
-        `;
-      } else {
-        // Extract content for each section
-        for (let i = 0; i < foundSections.length; i++) {
-          const currentSection = foundSections[i];
-          const nextSection = foundSections[i + 1];
+      if (hasSafety) {
+        // Check if we don't already have a safety section
+        const hasExistingSafety = text.match(/safety|warning|caution/i);
 
-          const contentStart = currentSection.startIndex + currentSection.headerLength;
-          const contentEnd = nextSection ? nextSection.startIndex : remainingText.length;
-
-          let content = remainingText.substring(contentStart, contentEnd).trim();
-
-          // Format content into paragraphs or lists
-          const formattedContent = formatSectionContent(content);
-
-          html += `
-            <div class="diagnosis-section ${currentSection.class}">
-              <div class="diagnosis-section-title">
-                <span>${currentSection.icon}</span>
-                <span>${currentSection.name}</span>
-              </div>
-              <div class="diagnosis-section-content">
-                ${formattedContent}
-              </div>
-            </div>
+        if (!hasExistingSafety || text.toLowerCase().includes('urgent') || text.toLowerCase().includes('danger')) {
+          const safetyNotice = document.createElement('div');
+          safetyNotice.className = 'warning';
+          safetyNotice.innerHTML = `
+            <p><strong>⚠️ Safety Notice</strong></p>
+            <p>This issue may require immediate professional attention. Consider consulting a licensed contractor as soon as possible to ensure safety and prevent further damage.</p>
           `;
+          container.insertBefore(safetyNotice, container.firstChild);
         }
-
-        // Add any intro text before first section
-        if (foundSections[0].startIndex > 0) {
-          const intro = remainingText.substring(0, foundSections[0].startIndex).trim();
-          if (intro.length > 20) {
-            html = `
-              <div class="diagnosis-section summary">
-                <div class="diagnosis-section-title">
-                  <span>📋</span>
-                  <span>Overview</span>
-                </div>
-                <div class="diagnosis-section-content">
-                  <p>${escapeHtml(intro)}</p>
-                </div>
-              </div>
-            ` + html;
-          }
-        }
-      }
-
-      // Add educational disclaimer at bottom
-      html += `
-        <div style="margin-top: 24px; padding: 16px; background: #f3f4f6; border-radius: 8px; font-size: 13px; color: #6b7280; font-style: italic;">
-          ℹ️ This guidance is educational and does not replace an in-person inspection by a licensed professional.
-        </div>
-      `;
-
-      return html;
-    }
-
-    /**
-     * Format section content with paragraphs and lists
-     */
-    function formatSectionContent(content) {
-      // Check if content has bullet points or numbered lists
-      const hasBullets = /^[\s]*[-•*]\s/m.test(content);
-      const hasNumbers = /^[\s]*\d+[.)]\s/m.test(content);
-
-      if (hasBullets || hasNumbers) {
-        // Parse as list
-        const items = content
-          .split(/\n/)
-          .map(line => line.trim())
-          .filter(line => line.length > 0)
-          .map(line => line.replace(/^[-•*\d+.)]\s*/, ''));
-
-        return `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
-      } else {
-        // Parse as paragraphs
-        const paragraphs = content
-          .split(/\n\n+/)
-          .map(p => p.trim())
-          .filter(p => p.length > 0);
-
-        return paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
       }
     }
 
     /**
-     * Escape HTML to prevent XSS
+     * Check subscription tier and update expert pricing
      */
-    function escapeHtml(unsafe) {
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    function generateContractorTips(question, diagnosis) {
-      // Generate helpful tips based on the diagnosis
-      return `When speaking with a contractor, mention: "${question.substring(0, 150)}..." and ask them to verify the AI's assessment. Request a detailed written estimate and timeline before any work begins.`;
-    }
-
     async function checkSubscriptionTier() {
       try {
         // Wait for authService
@@ -725,12 +748,18 @@
       }
     }
 
+    /**
+     * Post job from diagnosis
+     */
     function postJobFromDiagnosis() {
       // Store job data and redirect to dashboard
       sessionStorage.setItem('pendingJob', JSON.stringify(window.jobPostingData));
       window.location.href = 'homeowner-dashboard.html';
     }
 
+    /**
+     * Book expert consultation
+     */
     function bookExpertConsultation() {
       // Store diagnosis data for expert reference
       sessionStorage.setItem('expertConsultationContext', JSON.stringify(window.jobPostingData));
