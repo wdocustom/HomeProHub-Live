@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>For Contractors – HomeProHub</title>
+  <meta name="description" content="Get higher-quality leads with structured intake, homeowner behavior grades, and performance-based ranking. No ads, no bidding wars.">
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #ffffff;
+    }
+
+    /* Top Nav */
+    .top-nav {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1f2937;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #1f2937;
+    }
+
+    .nav-cta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-secondary {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .btn-primary {
+      padding: 10px 20px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: #1f2937;
+      color: white;
+      padding: 80px 24px 120px;
+    }
+
+    .hero-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 52px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+
+    .hero-subhead {
+      font-size: 20px;
+      color: #d1d5db;
+      line-height: 1.6;
+      margin-bottom: 40px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .btn-large {
+      padding: 16px 32px;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-large:hover {
+      background: #f3f4f6;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255,255,255,0.3);
+    }
+
+    /* Benefits Section */
+    .benefits {
+      padding: 80px 24px;
+      background: #f9fafb;
+    }
+
+    .section-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 56px;
+      letter-spacing: -0.02em;
+    }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    .benefit-card {
+      background: white;
+      padding: 32px;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+    }
+
+    .benefit-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .benefit-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .benefit-description {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    /* How It Works */
+    .how-it-works {
+      padding: 80px 24px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+
+    .step-card {
+      text-align: center;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 48px;
+      height: 48px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 48px;
+      margin-bottom: 20px;
+    }
+
+    .step-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .step-description {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    /* Pricing Section */
+    .pricing {
+      padding: 80px 24px;
+      background: #f9fafb;
+    }
+
+    .pricing-note {
+      text-align: center;
+      font-size: 16px;
+      color: #6b7280;
+      max-width: 600px;
+      margin: 0 auto 48px;
+    }
+
+    .pricing-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .pricing-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .pricing-description {
+      font-size: 15px;
+      color: #6b7280;
+    }
+
+    .pricing-features {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .pricing-features li {
+      padding: 12px 0;
+      color: #374151;
+      font-size: 15px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-left: 32px;
+      position: relative;
+    }
+
+    .pricing-features li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .pricing-features li:last-child {
+      border-bottom: none;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      padding: 80px 24px;
+      background: #1f2937;
+      color: white;
+      text-align: center;
+    }
+
+    .cta-section h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .cta-section p {
+      font-size: 18px;
+      color: #d1d5db;
+      margin-bottom: 40px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Footer */
+    .footer {
+      background: #1f2937;
+      color: #9ca3af;
+      padding: 48px 24px 32px;
+    }
+
+    .footer-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .benefits-grid,
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="nav-container">
+      <a href="/" class="logo">HomeProHub</a>
+
+      <div class="nav-links">
+        <a href="/">Homeowners</a>
+        <a href="/contractors.html">Contractors</a>
+        <a href="/#how-it-works">How it Works</a>
+        <a href="/#faq">FAQ</a>
+      </div>
+
+      <div class="nav-cta">
+        <button class="btn-secondary" onclick="window.location.href='signin.html'">Sign in</button>
+        <button class="btn-primary" onclick="signUpContractor()">Get Started</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-container">
+      <h1>Better homeowners. Better jobs. Less chaos.</h1>
+      <p class="hero-subhead">
+        HomeProHub gives contractors higher-quality leads with structured intake,
+        AI-drafted scope language you approve, and homeowner behavior grades.
+      </p>
+      <button class="btn-large" onclick="signUpContractor()">Get Lead Access</button>
+    </div>
+  </section>
+
+  <!-- Benefits Section -->
+  <section class="benefits">
+    <div class="section-container">
+      <h2 class="section-title">Why Contractors Choose HomeProHub</h2>
+
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <span class="benefit-icon">📋</span>
+          <h3 class="benefit-title">Structured Intake</h3>
+          <p class="benefit-description">
+            Every job includes photos, AI summaries, and homeowner context. No more "just come look at it" calls.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <span class="benefit-icon">🎓</span>
+          <h3 class="benefit-title">Licenses Rewarded</h3>
+          <p class="benefit-description">
+            Your certifications and education are front and center. Get ranked based on qualifications, not who pays the most.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <span class="benefit-icon">📊</span>
+          <h3 class="benefit-title">Performance Grading</h3>
+          <p class="benefit-description">
+            Graded A–F based on transparent criteria. No paid placement, no advertising tricks. Just honest evaluation.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <span class="benefit-icon">🎯</span>
+          <h3 class="benefit-title">Fewer Wasted Visits</h3>
+          <p class="benefit-description">
+            Homeowners come prepared with AI guidance and realistic expectations. Higher conversion, less time wasted.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works">
+    <div class="section-container">
+      <h2 class="section-title">How It Works</h2>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3 class="step-title">Browse Quality Leads</h3>
+          <p class="step-description">
+            See homeowner job posts with photos, AI analysis, and prepared questions. Filter by trade, location, and project size.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3 class="step-title">Respond with Confidence</h3>
+          <p class="step-description">
+            Submit bids with AI-drafted scope language you can edit. Homeowners see your grade, licenses, and verified credentials.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3 class="step-title">Win Better Jobs</h3>
+          <p class="step-description">
+            Homeowners choose based on your grade and fit—not just price. Build your reputation with performance, not ads.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing">
+    <div class="section-container">
+      <h2 class="section-title">Lead Access Pricing</h2>
+      <p class="pricing-note">
+        Pay for access to homeowner job leads. No subscriptions, no hidden fees. Pricing varies by market.
+      </p>
+
+      <div class="pricing-card">
+        <div class="pricing-header">
+          <h3 class="pricing-title">Pay Per Lead</h3>
+          <p class="pricing-description">
+            Get access to structured, pre-qualified homeowner job posts in your area.
+          </p>
+        </div>
+
+        <ul class="pricing-features">
+          <li>AI-drafted scope summaries</li>
+          <li>Photos and homeowner context</li>
+          <li>Homeowner behavior grade</li>
+          <li>Performance-based ranking</li>
+          <li>License verification included</li>
+          <li>Pricing varies by market and trade</li>
+        </ul>
+
+        <button class="btn-primary" style="width: 100%; padding: 16px;" onclick="signUpContractor()">
+          Get Started
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="section-container">
+      <h2>Ready to get better leads?</h2>
+      <p>Join contractors who are building their reputation with performance, not paid placement.</p>
+      <button class="btn-large" onclick="signUpContractor()">Create Contractor Account</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>© 2025 HomeProHub. Building trust through transparency.</p>
+    </div>
+  </footer>
+
+  <script>
+    function signUpContractor() {
+      sessionStorage.setItem('signup_role', 'contractor');
+      window.location.href = 'signup.html';
+    }
+  </script>
+</body>
+</html>

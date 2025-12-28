@@ -333,149 +333,7 @@
       display: none;
     }
 
-    /* SECTION E: CONTRACTOR SECTION */
-    .contractor-section {
-      background: #1f2937;
-      color: white;
-      padding: 80px 24px;
-    }
-
-    .contractor-section .section-title {
-      color: white;
-    }
-
-    .contractor-content {
-      max-width: 800px;
-      margin: 0 auto;
-      text-align: center;
-    }
-
-    .contractor-benefits {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-      margin: 40px 0;
-      text-align: left;
-    }
-
-    .benefit-item {
-      display: flex;
-      align-items: start;
-      gap: 12px;
-    }
-
-    .benefit-icon {
-      font-size: 24px;
-      flex-shrink: 0;
-    }
-
-    .benefit-text {
-      font-size: 15px;
-      color: #d1d5db;
-      line-height: 1.6;
-    }
-
-    .contractor-section .btn-primary {
-      background: white;
-      color: #1f2937;
-      padding: 16px 32px;
-      font-size: 16px;
-      margin-top: 32px;
-    }
-
-    .contractor-section .btn-primary:hover {
-      background: #f3f4f6;
-    }
-
-    /* SECTION F: PRICING */
-    .pricing {
-      padding: 80px 24px;
-      background: #f9fafb;
-    }
-
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 32px;
-      margin-top: 48px;
-      max-width: 1100px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .pricing-card {
-      background: white;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 40px 32px;
-      text-align: center;
-    }
-
-    .pricing-card.featured {
-      border-color: #3b82f6;
-      position: relative;
-    }
-
-    .pricing-badge {
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #3b82f6;
-      color: white;
-      padding: 4px 16px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .pricing-role {
-      font-size: 14px;
-      font-weight: 600;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 12px;
-    }
-
-    .pricing-price {
-      font-size: 48px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 8px;
-    }
-
-    .pricing-note {
-      font-size: 14px;
-      color: #6b7280;
-      margin-bottom: 24px;
-    }
-
-    .pricing-features {
-      text-align: left;
-      margin: 24px 0;
-    }
-
-    .pricing-features li {
-      padding: 8px 0;
-      color: #374151;
-      font-size: 14px;
-      list-style: none;
-      padding-left: 24px;
-      position: relative;
-    }
-
-    .pricing-features li:before {
-      content: "✓";
-      position: absolute;
-      left: 0;
-      color: #10b981;
-      font-weight: 700;
-    }
-
-    /* SECTION G: FAQ */
+    /* SECTION E: FAQ */
     .faq {
       padding: 80px 24px;
     }
@@ -590,8 +448,6 @@
 
       .steps-grid,
       .paths-grid,
-      .pricing-grid,
-      .contractor-benefits,
       .footer-grid {
         grid-template-columns: 1fr;
       }
@@ -685,9 +541,8 @@
 
       <div class="nav-links">
         <a href="#homeowners">Homeowners</a>
-        <a href="#contractors">Contractors</a>
+        <a href="/contractors.html">Contractors</a>
         <a href="#how-it-works">How it Works</a>
-        <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
       </div>
 
@@ -723,7 +578,7 @@
       </div>
 
       <a href="#" class="hero-secondary-link" onclick="event.preventDefault(); redirectToDirectory();">
-        Free to connect with verified contractors when you're ready
+        Free to browse verified contractors when you're ready
       </a>
     </div>
 
@@ -852,8 +707,8 @@
               <span>15-30 minute sessions</span>
             </div>
             <div class="path-feature">
-              <span>💵</span>
-              <span>$50 per session (paid)</span>
+              <span>🎓</span>
+              <span>Licensed professionals with 10+ years</span>
             </div>
             <div class="path-feature">
               <span>📝</span>
@@ -862,123 +717,13 @@
           </div>
 
           <button class="btn-primary" onclick="showExpertAccess()">Talk to an Expert (Paid)</button>
-          <p class="path-note">Optional paid service. No subscription required.</p>
+          <p class="path-note">Optional paid service. Pricing shown before confirmation.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- SECTION E: CONTRACTOR SECTION -->
-  <section class="contractor-section" id="contractors">
-    <div class="section-container">
-      <h2 class="section-title">Better homeowners. Better jobs. Less chaos.</h2>
-
-      <div class="contractor-content">
-        <p style="font-size: 18px; color: #d1d5db; margin-bottom: 40px;">
-          HomeProHub gives contractors higher-quality leads with structured intake,
-          AI-drafted scope language you approve, and homeowner behavior grades.
-        </p>
-
-        <div class="contractor-benefits">
-          <div class="benefit-item">
-            <span class="benefit-icon">📋</span>
-            <div class="benefit-text">
-              <strong style="color: white;">Structured Intake</strong><br>
-              Every job includes photos, AI summaries, and homeowner context.
-            </div>
-          </div>
-
-          <div class="benefit-item">
-            <span class="benefit-icon">🎓</span>
-            <div class="benefit-text">
-              <strong style="color: white;">Licenses Rewarded</strong><br>
-              Your certifications and education are front and center.
-            </div>
-          </div>
-
-          <div class="benefit-item">
-            <span class="benefit-icon">📊</span>
-            <div class="benefit-text">
-              <strong style="color: white;">Performance Grading</strong><br>
-              Graded A–F based on transparent criteria, not paid placement.
-            </div>
-          </div>
-
-          <div class="benefit-item">
-            <span class="benefit-icon">🎯</span>
-            <div class="benefit-text">
-              <strong style="color: white;">Fewer Wasted Visits</strong><br>
-              Homeowners come prepared with AI guidance and realistic expectations.
-            </div>
-          </div>
-        </div>
-
-        <button class="btn-primary" onclick="showRoleSelection('contractor')">Get Lead Access</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- SECTION F: PRICING -->
-  <section class="pricing" id="pricing">
-    <div class="section-container">
-      <h2 class="section-title">Honest, Simple Pricing</h2>
-      <p style="text-align: center; color: #6b7280; max-width: 600px; margin: 0 auto 0; font-size: 16px;">
-        No tricks. No "starting at $0" nonsense. Here's exactly what costs money.
-      </p>
-
-      <div class="pricing-grid">
-        <!-- HOMEOWNER PRICING -->
-        <div class="pricing-card featured">
-          <div class="pricing-badge">Most Popular</div>
-          <div class="pricing-role">Homeowner</div>
-          <div class="pricing-price">Free</div>
-          <div class="pricing-note">Always free to use</div>
-
-          <ul class="pricing-features">
-            <li>AI issue exploration & photo upload</li>
-            <li>Safety & urgency guidance</li>
-            <li>"What to tell a contractor" summaries</li>
-            <li>Post unlimited jobs</li>
-            <li>Browse verified contractors</li>
-            <li>Receive & review bids</li>
-          </ul>
-        </div>
-
-        <!-- EXPERT ACCESS PRICING -->
-        <div class="pricing-card">
-          <div class="pricing-role">Expert Access</div>
-          <div class="pricing-price">$50</div>
-          <div class="pricing-note">Per session (optional)</div>
-
-          <ul class="pricing-features">
-            <li>15-30 minute video/phone call</li>
-            <li>On-demand scheduling</li>
-            <li>Licensed professionals</li>
-            <li>Written summary provided</li>
-            <li>One-time or subscription available</li>
-          </ul>
-        </div>
-
-        <!-- CONTRACTOR PRICING -->
-        <div class="pricing-card">
-          <div class="pricing-role">Contractor</div>
-          <div class="pricing-price">Varies</div>
-          <div class="pricing-note">Pay for lead access</div>
-
-          <ul class="pricing-features">
-            <li>Access to homeowner job leads</li>
-            <li>Structured intake data</li>
-            <li>AI-drafted scope summaries</li>
-            <li>Homeowner behavior grades</li>
-            <li>Performance-based ranking</li>
-            <li>Pricing varies by market</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SECTION G: FAQ -->
+  <!-- SECTION E: FAQ -->
   <section class="faq" id="faq">
     <div class="faq-container">
       <h2 class="section-title">Frequently Asked Questions</h2>
