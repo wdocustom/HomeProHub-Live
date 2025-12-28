@@ -166,12 +166,16 @@ class AuthService {
       this.currentUser = null;
       this.handleSignOut();
 
+      // Redirect to landing page after sign out
+      window.location.href = 'index.html';
+
       return { success: true };
     } catch (error) {
       console.error('Sign out error:', error);
-      // Even if there's an error, clear local state
+      // Even if there's an error, clear local state and redirect
       this.currentUser = null;
       this.handleSignOut();
+      window.location.href = 'index.html';
       return { success: false, error: error.message };
     }
   }
