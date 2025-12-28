@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>For Contractors – HomeProHub</title>
-  <meta name="description" content="Get higher-quality leads with structured intake, homeowner behavior grades, and performance-based ranking. No ads, no bidding wars.">
+  <meta name="description" content="Better clients. Faster estimates. Less chaos. The only platform that grades homeowners, helps you write veteran-level estimates in seconds, and rewards your license with priority placement.">
 
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -107,205 +107,342 @@
       background: #2563eb;
     }
 
-    /* Hero Section */
+    /* Hero Section - High Energy */
     .hero {
-      background: #1f2937;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
       color: white;
-      padding: 80px 24px 120px;
+      padding: 100px 24px 140px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1" fill="white" opacity="0.1"/></svg>') repeat;
+      opacity: 0.1;
     }
 
     .hero-container {
       max-width: 1100px;
       margin: 0 auto;
       text-align: center;
+      position: relative;
+      z-index: 1;
     }
 
     .hero h1 {
-      font-size: 52px;
-      font-weight: 700;
+      font-size: 60px;
+      font-weight: 800;
       letter-spacing: -0.03em;
       line-height: 1.1;
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.2);
     }
 
     .hero-subhead {
-      font-size: 20px;
-      color: #d1d5db;
+      font-size: 22px;
+      color: #e0e7ff;
       line-height: 1.6;
-      margin-bottom: 40px;
-      max-width: 700px;
+      margin-bottom: 48px;
+      max-width: 800px;
       margin-left: auto;
       margin-right: auto;
+      font-weight: 500;
     }
 
     .btn-large {
-      padding: 16px 32px;
+      padding: 18px 40px;
       background: white;
       border: none;
       border-radius: 8px;
-      color: #1f2937;
-      font-size: 16px;
-      font-weight: 600;
+      color: #1e3a8a;
+      font-size: 18px;
+      font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
 
     .btn-large:hover {
-      background: #f3f4f6;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(255,255,255,0.3);
+      background: #fef3c7;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.2);
     }
 
-    /* Benefits Section */
-    .benefits {
-      padding: 80px 24px;
+    /* Feature Blocks - Value-Focused */
+    .feature-block {
+      padding: 100px 24px;
+    }
+
+    .feature-block.dark {
       background: #f9fafb;
     }
 
-    .section-container {
+    .feature-container {
       max-width: 1100px;
       margin: 0 auto;
-    }
-
-    .section-title {
-      font-size: 36px;
-      font-weight: 700;
-      color: #111827;
-      text-align: center;
-      margin-bottom: 56px;
-      letter-spacing: -0.02em;
-    }
-
-    .benefits-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 32px;
-      margin-bottom: 48px;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
     }
 
-    .benefit-card {
-      background: white;
-      padding: 32px;
-      border-radius: 12px;
-      border: 2px solid #e5e7eb;
+    .feature-container.reverse {
+      direction: rtl;
     }
 
-    .benefit-icon {
-      font-size: 40px;
-      margin-bottom: 16px;
-      display: block;
+    .feature-container.reverse > * {
+      direction: ltr;
     }
 
-    .benefit-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #111827;
-      margin-bottom: 12px;
-    }
-
-    .benefit-description {
-      font-size: 15px;
-      color: #6b7280;
-      line-height: 1.6;
-    }
-
-    /* How It Works */
-    .how-it-works {
-      padding: 80px 24px;
-    }
-
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 48px;
-    }
-
-    .step-card {
+    .feature-visual {
+      background: #1e3a8a;
+      border-radius: 16px;
+      padding: 60px 40px;
       text-align: center;
+      box-shadow: 0 8px 32px rgba(30, 58, 138, 0.2);
+      position: relative;
+      overflow: hidden;
     }
 
-    .step-number {
-      display: inline-block;
-      width: 48px;
-      height: 48px;
-      background: #3b82f6;
-      color: white;
-      border-radius: 50%;
-      font-size: 20px;
-      font-weight: 700;
-      line-height: 48px;
+    .feature-visual::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    }
+
+    .feature-icon {
+      font-size: 80px;
       margin-bottom: 20px;
+      display: block;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+      position: relative;
+      z-index: 1;
     }
 
-    .step-title {
+    .feature-visual-text {
+      font-size: 24px;
+      color: white;
+      font-weight: 700;
+      line-height: 1.3;
+      position: relative;
+      z-index: 1;
+    }
+
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: #10b981;
+      color: white;
+      padding: 16px 28px;
+      border-radius: 50px;
       font-size: 20px;
-      font-weight: 600;
-      color: #111827;
-      margin-bottom: 12px;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+      margin-top: 20px;
     }
 
-    .step-description {
-      font-size: 15px;
-      color: #6b7280;
+    .verified-badge::before {
+      content: '✓';
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .feature-content h2 {
+      font-size: 44px;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .feature-benefit {
+      font-size: 24px;
+      color: #3b82f6;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feature-benefit::before {
+      content: '→';
+      font-size: 28px;
+    }
+
+    .feature-content p {
+      font-size: 17px;
+      color: #4b5563;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .feature-content ul {
+      list-style: none;
+      margin: 28px 0;
+    }
+
+    .feature-content ul li {
+      font-size: 17px;
+      color: #374151;
+      padding: 12px 0;
+      padding-left: 36px;
+      position: relative;
       line-height: 1.6;
     }
 
-    /* Pricing Section */
+    .feature-content ul li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 800;
+      font-size: 20px;
+    }
+
+    .feature-highlight {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 20px 24px;
+      margin: 28px 0;
+      border-radius: 8px;
+    }
+
+    .feature-highlight strong {
+      color: #92400e;
+      font-size: 18px;
+    }
+
+    /* Pricing Section - Persuasive */
     .pricing {
-      padding: 80px 24px;
-      background: #f9fafb;
+      padding: 100px 24px;
+      background: #1f2937;
+      color: white;
     }
 
-    .pricing-note {
-      text-align: center;
-      font-size: 16px;
-      color: #6b7280;
-      max-width: 600px;
-      margin: 0 auto 48px;
-    }
-
-    .pricing-card {
-      background: white;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 40px;
-      max-width: 500px;
+    .pricing-container {
+      max-width: 1200px;
       margin: 0 auto;
     }
 
     .pricing-header {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 60px;
     }
 
-    .pricing-title {
-      font-size: 24px;
-      font-weight: 700;
-      color: #111827;
+    .pricing-header h2 {
+      font-size: 48px;
+      font-weight: 800;
       margin-bottom: 16px;
     }
 
-    .pricing-description {
-      font-size: 15px;
+    .pricing-header p {
+      font-size: 20px;
+      color: #9ca3af;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    .pricing-card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px 32px;
+      color: #1f2937;
+      position: relative;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.3);
+    }
+
+    .pricing-card.featured {
+      border: 3px solid #3b82f6;
+      transform: scale(1.05);
+    }
+
+    .pricing-card.featured::before {
+      content: 'MOST POPULAR';
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3b82f6;
+      color: white;
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .pricing-tier {
+      font-size: 14px;
       color: #6b7280;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .pricing-price {
+      font-size: 48px;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .pricing-price span {
+      font-size: 18px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .pricing-roi {
+      background: #ecfdf5;
+      color: #065f46;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      margin: 20px 0;
+      text-align: center;
     }
 
     .pricing-features {
       list-style: none;
-      margin-bottom: 32px;
+      margin: 28px 0;
     }
 
     .pricing-features li {
-      padding: 12px 0;
+      padding: 10px 0;
       color: #374151;
       font-size: 15px;
-      border-bottom: 1px solid #e5e7eb;
-      padding-left: 32px;
+      padding-left: 28px;
       position: relative;
+      line-height: 1.5;
     }
 
-    .pricing-features li:before {
-      content: "✓";
+    .pricing-features li::before {
+      content: '✓';
       position: absolute;
       left: 0;
       color: #10b981;
@@ -313,31 +450,85 @@
       font-size: 18px;
     }
 
-    .pricing-features li:last-child {
-      border-bottom: none;
+    .pricing-cta {
+      width: 100%;
+      padding: 14px 24px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 24px;
+    }
+
+    .pricing-cta:hover {
+      background: #2563eb;
+    }
+
+    .pricing-card.featured .pricing-cta {
+      background: #1e3a8a;
+    }
+
+    .pricing-card.featured .pricing-cta:hover {
+      background: #1e40af;
+    }
+
+    .pay-per-lead-callout {
+      background: #374151;
+      border: 2px solid #4b5563;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .pay-per-lead-callout h3 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: white;
+    }
+
+    .pay-per-lead-callout p {
+      font-size: 16px;
+      color: #d1d5db;
+      margin-bottom: 20px;
     }
 
     /* CTA Section */
     .cta-section {
-      padding: 80px 24px;
-      background: #1f2937;
-      color: white;
+      padding: 100px 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
       text-align: center;
     }
 
     .cta-section h2 {
-      font-size: 36px;
-      font-weight: 700;
+      font-size: 48px;
+      font-weight: 800;
       margin-bottom: 24px;
+      color: #1f2937;
     }
 
     .cta-section p {
-      font-size: 18px;
-      color: #d1d5db;
+      font-size: 20px;
+      color: #78350f;
       margin-bottom: 40px;
-      max-width: 600px;
+      max-width: 700px;
       margin-left: auto;
       margin-right: auto;
+    }
+
+    .cta-section .btn-large {
+      background: #1f2937;
+      color: white;
+    }
+
+    .cta-section .btn-large:hover {
+      background: #111827;
     }
 
     /* Footer */
@@ -354,18 +545,31 @@
       font-size: 14px;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 968px) {
       .nav-links {
         display: none;
       }
 
       .hero h1 {
-        font-size: 36px;
+        font-size: 40px;
       }
 
-      .benefits-grid,
-      .steps-grid {
+      .hero-subhead {
+        font-size: 18px;
+      }
+
+      .feature-container,
+      .pricing-grid {
         grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      .feature-content h2 {
+        font-size: 32px;
+      }
+
+      .pricing-card.featured {
+        transform: scale(1);
       }
     }
   </style>
@@ -385,7 +589,7 @@
       </div>
 
       <div class="nav-cta">
-        <button class="btn-secondary" onclick="window.location.href='signin.html'">Sign in</button>
+        <button class="btn-secondary" onclick="showSignIn()">Sign in</button>
         <button class="btn-primary" onclick="signUpContractor()">Get Started</button>
       </div>
     </div>
@@ -394,117 +598,196 @@
   <!-- Hero Section -->
   <section class="hero">
     <div class="hero-container">
-      <h1>Better homeowners. Better jobs. Less chaos.</h1>
+      <h1>Better Clients. Faster Estimates. Less Chaos.</h1>
       <p class="hero-subhead">
-        HomeProHub gives contractors higher-quality leads with structured intake,
-        AI-drafted scope language you approve, and homeowner behavior grades.
+        The only platform that grades homeowners, helps you write veteran-level estimates in seconds,
+        and rewards your license with priority placement.
       </p>
-      <button class="btn-large" onclick="signUpContractor()">Get Lead Access</button>
+      <button class="btn-large" onclick="signUpContractor()">Claim Your Profile</button>
     </div>
   </section>
 
-  <!-- Benefits Section -->
-  <section class="benefits">
-    <div class="section-container">
-      <h2 class="section-title">Why Contractors Choose HomeProHub</h2>
-
-      <div class="benefits-grid">
-        <div class="benefit-card">
-          <span class="benefit-icon">📋</span>
-          <h3 class="benefit-title">Structured Intake</h3>
-          <p class="benefit-description">
-            Every job includes photos, AI summaries, and homeowner context. No more "just come look at it" calls.
-          </p>
-        </div>
-
-        <div class="benefit-card">
-          <span class="benefit-icon">🎓</span>
-          <h3 class="benefit-title">Licenses Rewarded</h3>
-          <p class="benefit-description">
-            Your certifications and education are front and center. Get ranked based on qualifications, not who pays the most.
-          </p>
-        </div>
-
-        <div class="benefit-card">
-          <span class="benefit-icon">📊</span>
-          <h3 class="benefit-title">Performance Grading</h3>
-          <p class="benefit-description">
-            Graded A–F based on transparent criteria. No paid placement, no advertising tricks. Just honest evaluation.
-          </p>
-        </div>
-
-        <div class="benefit-card">
-          <span class="benefit-icon">🎯</span>
-          <h3 class="benefit-title">Fewer Wasted Visits</h3>
-          <p class="benefit-description">
-            Homeowners come prepared with AI guidance and realistic expectations. Higher conversion, less time wasted.
-          </p>
+  <!-- Feature Block A: AI Veteran Estimator -->
+  <section class="feature-block">
+    <div class="feature-container">
+      <div class="feature-visual">
+        <span class="feature-icon">🎯</span>
+        <div class="feature-visual-text">
+          AI drafts professional estimates in seconds
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- How It Works -->
-  <section class="how-it-works">
-    <div class="section-container">
-      <h2 class="section-title">How It Works</h2>
+      <div class="feature-content">
+        <h2>The AI "Veteran" Estimator</h2>
+        <div class="feature-benefit">Don't leave the driveway without sending the quote</div>
 
-      <div class="steps-grid">
-        <div class="step-card">
-          <div class="step-number">1</div>
-          <h3 class="step-title">Browse Quality Leads</h3>
-          <p class="step-description">
-            See homeowner job posts with photos, AI analysis, and prepared questions. Filter by trade, location, and project size.
-          </p>
-        </div>
+        <p>
+          Our AI isn't just a chatbot—it has the experience of a veteran tradesman.
+          It analyzes the job, considers materials, labor, and scope, then drafts a
+          professional estimate instantly.
+        </p>
 
-        <div class="step-card">
-          <div class="step-number">2</div>
-          <h3 class="step-title">Respond with Confidence</h3>
-          <p class="step-description">
-            Submit bids with AI-drafted scope language you can edit. Homeowners see your grade, licenses, and verified credentials.
-          </p>
-        </div>
-
-        <div class="step-card">
-          <div class="step-number">3</div>
-          <h3 class="step-title">Win Better Jobs</h3>
-          <p class="step-description">
-            Homeowners choose based on your grade and fit—not just price. Build your reputation with performance, not ads.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Pricing -->
-  <section class="pricing">
-    <div class="section-container">
-      <h2 class="section-title">Lead Access Pricing</h2>
-      <p class="pricing-note">
-        Pay for access to homeowner job leads. No subscriptions, no hidden fees. Pricing varies by market.
-      </p>
-
-      <div class="pricing-card">
-        <div class="pricing-header">
-          <h3 class="pricing-title">Pay Per Lead</h3>
-          <p class="pricing-description">
-            Get access to structured, pre-qualified homeowner job posts in your area.
-          </p>
-        </div>
-
-        <ul class="pricing-features">
-          <li>AI-drafted scope summaries</li>
-          <li>Photos and homeowner context</li>
-          <li>Homeowner behavior grade</li>
-          <li>Performance-based ranking</li>
-          <li>License verification included</li>
-          <li>Pricing varies by market and trade</li>
+        <ul>
+          <li>Complete scope of work drafted in under 60 seconds</li>
+          <li>Material lists and labor estimates included</li>
+          <li>Fully editable—tweak it to match your style</li>
+          <li>Download as PDF or send directly to homeowner</li>
         </ul>
 
-        <button class="btn-primary" style="width: 100%; padding: 16px;" onclick="signUpContractor()">
-          Get Started
-        </button>
+        <div class="feature-highlight">
+          <strong>Real Talk:</strong> Finish your site visit, open the app in your truck,
+          review the AI-drafted estimate, make any tweaks, and send it before you even
+          start the engine. Win more jobs while they're still thinking about it.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Block B: Two-Way Grading -->
+  <section class="feature-block dark">
+    <div class="feature-container reverse">
+      <div class="feature-visual">
+        <span class="feature-icon">⭐</span>
+        <div class="feature-visual-text">
+          Grade homeowners before you bid
+        </div>
+      </div>
+
+      <div class="feature-content">
+        <h2>The "Uber" Dynamic (Two-Way Grading)</h2>
+        <div class="feature-benefit">We screen homeowners so you don't have to</div>
+
+        <p>
+          Just like they rate you, you rate them. See a homeowner's grade before you
+          pay for the lead. Avoid tire-kickers, scope-creepers, and abusive clients.
+        </p>
+
+        <ul>
+          <li>See homeowner behavior grades (A–F) before bidding</li>
+          <li>Based on real contractor feedback: responsiveness, scope changes, payment history</li>
+          <li>Rate homeowners after every job to build the database</li>
+          <li>Finally—accountability on both sides of the transaction</li>
+        </ul>
+
+        <div class="feature-highlight">
+          <strong>Restore Trust to the Industry:</strong> For too long, contractors have dealt
+          with homeowners who waste time, change scope mid-job, or leave bad reviews over nothing.
+          Now you can see their track record before you even respond.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Block C: Pathway to Licensure -->
+  <section class="feature-block">
+    <div class="feature-container">
+      <div class="feature-visual">
+        <span class="feature-icon">🎓</span>
+        <div class="verified-badge">VERIFIED PRO</div>
+        <div class="feature-visual-text" style="margin-top: 20px;">
+          Priority placement for licensed contractors
+        </div>
+      </div>
+
+      <div class="feature-content">
+        <h2>Pathway to Licensure</h2>
+        <div class="feature-benefit">We support professional growth</div>
+
+        <p>
+          Whether you're working toward your license or already have it, we reward
+          professionalism and help you grow.
+        </p>
+
+        <ul>
+          <li><strong>For Unlicensed Pros:</strong> We guide you through the process to get your General, Electrical, or Plumbing license</li>
+          <li><strong>For Licensed Pros:</strong> You get the Verified Badge and Priority Bid Placement</li>
+          <li>Your credentials are front and center—not buried in fine print</li>
+          <li>Education and certifications boost your grade and visibility</li>
+        </ul>
+
+        <div class="feature-highlight">
+          <strong>Your License is Your Advantage:</strong> Other platforms charge you to advertise.
+          We put your credentials to work. Licensed contractors get higher rankings, more visibility,
+          and better leads—because homeowners want pros, not just the cheapest bid.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section class="pricing">
+    <div class="pricing-container">
+      <div class="pricing-header">
+        <h2>Transparent Pricing. Real ROI.</h2>
+        <p>Choose the plan that fits your business. No hidden fees. No games.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Starter Tier -->
+        <div class="pricing-card">
+          <div class="pricing-tier">Starter</div>
+          <div class="pricing-price">FREE</div>
+          <p style="color: #6b7280; margin-bottom: 20px;">Get started with basic access</p>
+
+          <ul class="pricing-features">
+            <li>View job postings in your area</li>
+            <li>2 bids per month</li>
+            <li>See homeowner grades</li>
+            <li>Basic profile listing</li>
+            <li>Community forum access</li>
+          </ul>
+
+          <button class="pricing-cta" onclick="signUpContractor()">Get Started Free</button>
+        </div>
+
+        <!-- Pro Tier (Featured) -->
+        <div class="pricing-card featured">
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$49<span>/month</span></div>
+          <div class="pricing-roi">Avg member wins $15k/mo in projects</div>
+
+          <ul class="pricing-features">
+            <li><strong>Unlimited bids</strong></li>
+            <li>AI Estimate Tool access</li>
+            <li>Priority support</li>
+            <li>Advanced analytics dashboard</li>
+            <li>Download estimates as PDF</li>
+            <li>Verified Badge for licensed pros</li>
+            <li>Email & SMS notifications</li>
+          </ul>
+
+          <button class="pricing-cta" onclick="signUpContractor()">Start Pro Trial</button>
+        </div>
+
+        <!-- Premium Tier -->
+        <div class="pricing-card">
+          <div class="pricing-tier">Premium</div>
+          <div class="pricing-price">$149<span>/month</span></div>
+          <div class="pricing-roi">Avg member wins $40k/mo in projects</div>
+
+          <ul class="pricing-features">
+            <li><strong>Everything in Pro, plus:</strong></li>
+            <li>Priority ranking in search results</li>
+            <li>Owner's Advocate referrals</li>
+            <li>Project management tools</li>
+            <li>Branded estimate templates</li>
+            <li>Client communication hub</li>
+            <li>Dedicated account manager</li>
+            <li>Early access to new features</li>
+          </ul>
+
+          <button class="pricing-cta" onclick="signUpContractor()">Go Premium</button>
+        </div>
+      </div>
+
+      <!-- Pay-Per-Lead Option -->
+      <div class="pay-per-lead-callout">
+        <h3>Just Starting Out?</h3>
+        <p>Try our pay-per-lead option. No monthly fees. Only pay when you access a qualified lead.</p>
+        <p style="font-size: 18px; font-weight: 700; color: white; margin-bottom: 20px;">
+          $15–$30 per lead (varies by market and trade)
+        </p>
+        <button class="pricing-cta" onclick="signUpContractor()">Learn More</button>
       </div>
     </div>
   </section>
@@ -512,9 +795,12 @@
   <!-- CTA Section -->
   <section class="cta-section">
     <div class="section-container">
-      <h2>Ready to get better leads?</h2>
-      <p>Join contractors who are building their reputation with performance, not paid placement.</p>
-      <button class="btn-large" onclick="signUpContractor()">Create Contractor Account</button>
+      <h2>Ready to Work Smarter?</h2>
+      <p>
+        Join thousands of contractors who are getting better leads, writing faster estimates,
+        and building their reputation with real performance—not paid ads.
+      </p>
+      <button class="btn-large" onclick="signUpContractor()">Claim Your Profile Now</button>
     </div>
   </section>
 
@@ -529,6 +815,10 @@
     function signUpContractor() {
       sessionStorage.setItem('signup_role', 'contractor');
       window.location.href = 'signup.html';
+    }
+
+    function showSignIn() {
+      window.location.href = 'signin.html';
     }
   </script>
 </body>
