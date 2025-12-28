@@ -305,15 +305,3 @@ Simplify
 Remove
 
 Trust is the feature.
-
-If you want, next I can:
-
-Create a wireframe-level text layout for each screen
-
-Write exact microcopy for buttons, modals, and tooltips
-
-Draft the expert onboarding + ruleset
-
-Or pressure-test edge cases (liability, abuse, misuse)
-
-Say what you want next.
