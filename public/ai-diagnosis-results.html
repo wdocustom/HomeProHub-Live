@@ -732,15 +732,11 @@
     }
 
     function bookExpertConsultation() {
-      // Redirect to expert booking/payment page
       // Store diagnosis data for expert reference
       sessionStorage.setItem('expertConsultationContext', JSON.stringify(window.jobPostingData));
 
-      // TODO: Create expert booking page
-      alert('Expert consultation booking coming soon! This will connect you with a licensed professional via video or phone.');
-
-      // For now, redirect to upgrade page
-      // window.location.href = 'upgrade-options.html';
+      // Redirect to expert booking page
+      window.location.href = 'expert-booking.html';
     }
   </script>
 </body>
