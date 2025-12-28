@@ -992,6 +992,58 @@
     </div>
   </div>
 
+  <!-- Edit Project Modal -->
+  <div class="modal-overlay" id="editProjectModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Project Details</h2>
+        <p class="modal-subtitle">Update your project information</p>
+      </div>
+
+      <form id="editProjectForm" onsubmit="event.preventDefault(); saveEditedProject();">
+        <input type="hidden" id="editProjectId" />
+
+        <div class="form-group">
+          <label>Project Title <span style="color: #ef4444;">*</span></label>
+          <input id="editProjectTitle" type="text" placeholder="e.g., Kitchen Remodel" required maxlength="100" />
+        </div>
+
+        <div class="form-group">
+          <label>Project Description <span style="color: #ef4444;">*</span></label>
+          <textarea id="editProjectDescription" rows="6" placeholder="Describe your project in detail..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Your Address <span style="color: #ef4444;">*</span></label>
+          <input id="editProjectAddress" type="text" placeholder="123 Main St, City, State" required maxlength="200" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label>ZIP Code <span style="color: #ef4444;">*</span></label>
+            <input id="editProjectZip" type="text" pattern="[0-9]{5}" placeholder="12345" required maxlength="5" />
+          </div>
+
+          <div class="form-group">
+            <label>Urgency</label>
+            <select id="editProjectUrgency">
+              <option value="flexible">Flexible timing</option>
+              <option value="soon">Within 2 weeks</option>
+              <option value="urgent">Urgent (ASAP)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
@@ -1248,14 +1300,81 @@
       });
     });
 
-    // View bids (placeholder)
+    // View bids - redirect to proposals page
     function viewBids(projectId) {
-      alert('Bids view coming soon! For now, check the full project details.');
+      window.location.href = `proposals.html?project_id=${projectId}`;
     }
 
-    // Edit project (placeholder)
-    function editProject(projectId) {
-      alert('Edit functionality coming soon!');
+    // Edit project - open edit modal
+    async function editProject(projectId) {
+      const project = allProjects.find(p => p.id === projectId);
+      if (!project) {
+        alert('Project not found');
+        return;
+      }
+
+      // Pre-fill edit modal with current project data
+      document.getElementById('editProjectId').value = project.id;
+      document.getElementById('editProjectTitle').value = project.title || '';
+      document.getElementById('editProjectDescription').value = project.description || '';
+      document.getElementById('editProjectAddress').value = project.address || '';
+      document.getElementById('editProjectZip').value = project.zip_code || '';
+      document.getElementById('editProjectUrgency').value = project.urgency || 'flexible';
+
+      // Show edit modal
+      document.getElementById('editProjectModal').classList.add('show');
+    }
+
+    // Close edit modal
+    function closeEditModal() {
+      document.getElementById('editProjectModal').classList.remove('show');
+    }
+
+    // Save edited project
+    async function saveEditedProject() {
+      const projectId = document.getElementById('editProjectId').value;
+      const title = document.getElementById('editProjectTitle').value.trim();
+      const description = document.getElementById('editProjectDescription').value.trim();
+      const address = document.getElementById('editProjectAddress').value.trim();
+      const zipCode = document.getElementById('editProjectZip').value.trim();
+      const urgency = document.getElementById('editProjectUrgency').value;
+
+      if (!title || !description || !address || !zipCode) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      const saveBtn = document.querySelector('#editProjectModal .btn-primary');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        const response = await window.authService.authenticatedFetch(`/api/project/${projectId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            title,
+            description,
+            address,
+            zip_code: zipCode,
+            urgency
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update project');
+        }
+
+        alert('Project updated successfully!');
+        closeEditModal();
+        await loadProjects(); // Reload projects
+
+      } catch (error) {
+        console.error('Error updating project:', error);
+        alert('Failed to update project. Please try again.');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
     }
 
     // Cancel project
@@ -1265,8 +1384,17 @@
       }
 
       try {
-        // Archive project logic would go here
-        alert('Project canceled. (Archive logic not yet implemented)');
+        const response = await window.authService.authenticatedFetch(`/api/project/${projectId}/cancel`, {
+          method: 'PUT'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to cancel project');
+        }
+
+        alert('Project has been cancelled.');
+        await loadProjects(); // Reload to show updated status
+
       } catch (error) {
         console.error('Error canceling project:', error);
         alert('Failed to cancel project. Please try again.');

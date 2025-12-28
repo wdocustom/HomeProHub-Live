@@ -2300,6 +2300,102 @@ app.post("/api/project/complete", requireAuth, requireRole('homeowner'), async (
 });
 
 /**
+ * PUT /api/project/:id
+ * Update project details
+ */
+app.put("/api/project/:id", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const { title, description, address, zip_code, urgency } = req.body;
+
+    // Validation
+    if (!title || !description || !address || !zip_code) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get the project to verify ownership
+    const project = await db.getJobById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: "Project not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Update the project
+    const { data, error } = await db.supabase
+      .from('job_postings')
+      .update({
+        title,
+        description,
+        address,
+        zip_code,
+        urgency: urgency || 'flexible',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`✓ Project ${projectId} updated successfully`);
+    res.json({
+      success: true,
+      project: data,
+      message: 'Project updated successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in PUT /api/project/:id:", err);
+    res.status(500).json({
+      error: "Failed to update project",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/project/:id/cancel
+ * Cancel a project
+ */
+app.put("/api/project/:id/cancel", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const projectId = req.params.id;
+
+    // Get the project to verify it exists
+    const project = await db.getJobById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: "Project not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Update project status to cancelled
+    await db.updateJobStatus(projectId, 'cancelled');
+
+    console.log(`✓ Project ${projectId} cancelled`);
+    res.json({
+      success: true,
+      message: 'Project cancelled successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in PUT /api/project/:id/cancel:", err);
+    res.status(500).json({
+      error: "Failed to cancel project",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * POST /api/submit-bid
  * Submit a contractor bid on a job
  */

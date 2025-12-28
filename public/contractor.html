@@ -508,10 +508,39 @@
       return date.toLocaleDateString();
     }
 
-    // Load stats (placeholder - would fetch from API)
+    // Load stats
     async function loadStats() {
-      // In production, fetch from API
-      // For now using placeholder values
+      try {
+        // Wait for auth service
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const profile = await window.authService.getUserProfile();
+        if (!profile) return;
+
+        // Update subscription tier
+        const subscriptionTier = profile.subscription_tier || 'starter';
+        const tierDisplay = subscriptionTier === 'starter' ? 'Starter (Free)' :
+                           subscriptionTier === 'pro' ? 'Pro' :
+                           subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1);
+
+        document.getElementById('subscriptionTier').textContent = tierDisplay;
+
+        // You could also fetch and display profile views here if available
+        // const profileViews = profile.profile_views || 0;
+        // document.getElementById('profileViews').textContent = profileViews;
+
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
     }
 
     // Initialize
