@@ -17,7 +17,7 @@
     homeowner: [
       { label: 'Home', href: 'home.html', icon: '🏠' },
       { label: 'AI Assistant', href: 'ask.html', icon: '🤖' },
-      { label: 'New Project', href: 'homeowner-dashboard.html', icon: '➕' },
+      { label: 'Projects', href: 'homeowner-dashboard.html', icon: '📋' },
       { label: 'Project Check-in', href: 'project-check-in.html', icon: '📸' },
       { label: 'Messages', href: 'messages.html', icon: '💬', badge: 'messages' }
     ],

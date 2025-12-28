@@ -2199,6 +2199,107 @@ app.get("/api/homeowner/jobs", requireAuth, requireRole('homeowner'), async (req
 });
 
 /**
+ * POST /api/project/complete
+ * Mark a project as completed and submit a review
+ */
+app.post("/api/project/complete", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const {
+      projectId,
+      rating,
+      positiveTags,
+      negativeTags,
+      photos,
+      reviewText,
+      homeownerEmail
+    } = req.body;
+
+    // Validation
+    if (!projectId || !rating || !homeownerEmail) {
+      return res.status(400).json({
+        error: "Missing required fields (projectId, rating, homeownerEmail)",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        error: "Rating must be between 1 and 5",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get the project to find the contractor
+    const project = await db.getJobById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: "Project not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Verify homeowner owns this project
+    if (project.homeowner_email !== homeownerEmail) {
+      return res.status(403).json({
+        error: "Unauthorized: You can only complete your own projects",
+        code: 'FORBIDDEN'
+      });
+    }
+
+    // Find the accepted bid to get contractor email
+    const acceptedBid = project.bids?.find(b => b.status === 'accepted');
+    if (!acceptedBid) {
+      return res.status(400).json({
+        error: "No accepted bid found for this project",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const contractorEmail = acceptedBid.contractor_email;
+
+    // Create the review
+    const review = await db.createReview({
+      projectId,
+      homeownerEmail,
+      contractorEmail,
+      rating,
+      positiveTags: positiveTags || [],
+      negativeTags: negativeTags || [],
+      reviewText: reviewText || '',
+      photos: photos || []
+    });
+
+    // Update project status to completed
+    const completedAt = new Date().toISOString();
+    await db.updateJobStatus(projectId, 'completed', completedAt);
+
+    // Update homeowner's grade (add 10 points for completing a review)
+    const homeownerProfile = await db.getUserProfile(homeownerEmail);
+    if (homeownerProfile) {
+      const currentGrade = homeownerProfile.homeowner_grade || 0;
+      await db.updateUserProfile(homeownerEmail, {
+        homeowner_grade: currentGrade + 10
+      });
+    }
+
+    console.log(`✓ Project ${projectId} marked as completed with review by ${homeownerEmail}`);
+    res.json({
+      success: true,
+      review,
+      message: 'Project completed and review submitted successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/project/complete:", err);
+    res.status(500).json({
+      error: "Failed to complete project and submit review",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * POST /api/submit-bid
  * Submit a contractor bid on a job
  */

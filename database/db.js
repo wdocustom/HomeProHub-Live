@@ -873,6 +873,62 @@ async function markNotificationEmailSent(notificationId) {
 }
 
 // ========================================
+// Review Operations
+// ========================================
+
+/**
+ * Create a review for a completed project
+ */
+async function createReview(reviewData) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert({
+      project_id: reviewData.projectId,
+      reviewer_email: reviewData.homeownerEmail,
+      reviewee_email: reviewData.contractorEmail,
+      rating: reviewData.rating,
+      positive_tags: reviewData.positiveTags || [],
+      negative_tags: reviewData.negativeTags || [],
+      review_text: reviewData.reviewText || '',
+      photos: reviewData.photos || [],
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get reviews for a contractor
+ */
+async function getReviewsByContractor(contractorEmail) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('reviewee_email', contractorEmail)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get reviews by a homeowner
+ */
+async function getReviewsByHomeowner(homeownerEmail) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('reviewer_email', homeownerEmail)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+// ========================================
 // Activity Log Operations
 // ========================================
 
@@ -950,6 +1006,11 @@ module.exports = {
   getUnreadNotificationCount,
   markNotificationAsRead,
   markNotificationEmailSent,
+
+  // Reviews
+  createReview,
+  getReviewsByContractor,
+  getReviewsByHomeowner,
 
   // Activity
   logActivity
