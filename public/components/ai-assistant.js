@@ -190,55 +190,28 @@
         lastQuestion = question;
         lastAIAnswer = answer;
 
-        // Check if this is a project request that should auto-redirect to job posting
-        if (intent === 'project' && autoRedirect) {
-          aiStatus.textContent = "Perfect! Let's get this project posted to find the right contractor...";
-          aiStatus.style.color = '#10b981';
+        // Extract budget from AI response
+        const estimatedBudget = extractBudgetFromAI(answer);
 
-          // Extract budget from AI response
-          const estimatedBudget = extractBudgetFromAI(answer);
+        // Store diagnosis data for results page
+        sessionStorage.setItem('aiDiagnosis', JSON.stringify({
+          question: question,
+          answer: answer,
+          intent: intent || 'general',
+          budgetLow: estimatedBudget.low,
+          budgetHigh: estimatedBudget.high,
+          timestamp: new Date().toISOString()
+        }));
 
-          // Store data for job posting page
-          sessionStorage.setItem('pendingJob', JSON.stringify({
-            originalQuestion: question,
-            aiAnalysis: answer,
-            budgetLow: estimatedBudget.low,
-            budgetHigh: estimatedBudget.high,
-            fromAI: true,
-            isProject: true
-          }));
-
-          // Auto-redirect after short delay to show message
-          setTimeout(() => {
-            window.location.href = 'homeowner-dashboard.html';
-          }, 1500);
-
-          return; // Exit early, don't show response section
-        }
-
-        // For issues, show the response with clarify option
-        if (aiResponseContent) aiResponseContent.textContent = answer;
-        if (aiResponseSection) aiResponseSection.classList.add('show');
-        if (jobPostCta) jobPostCta.classList.add('show');
-
-        // Update button text based on intent
-        if (postJobBtn) {
-          if (intent === 'project') {
-            postJobBtn.textContent = '📋 Post This Project & Get Bids';
-          } else {
-            postJobBtn.textContent = '📋 Post This Issue & Get Help';
-          }
-        }
-
-        aiStatus.textContent = intent === 'project'
-          ? "Project analysis complete! ✅"
-          : "Analysis complete! ✅";
+        // Show success message briefly, then redirect to results page
+        aiStatus.textContent = "✅ Analysis complete! Redirecting to results...";
         aiStatus.style.color = '#10b981';
+        aiStatus.style.fontWeight = '600';
 
-        // Scroll to response
+        // Redirect to new diagnosis results page
         setTimeout(() => {
-          aiResponseSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+          window.location.href = 'ai-diagnosis-results.html';
+        }, 1200);
 
       } catch (err) {
         aiStatus.textContent = err.message || "Unable to process your request. Please try again.";

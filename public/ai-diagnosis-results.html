@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Analysis Results – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* Academic, calm design */
+    .diagnosis-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Three-column grid with equal weight */
+    .three-paths-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 1024px) {
+      .three-paths-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+    }
+
+    /* Path cards - equal visual weight */
+    .path-card {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 2px solid #e5e7eb;
+      transition: all 0.2s ease;
+    }
+
+    .path-card:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .path-header {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f3f4f6;
+    }
+
+    .path-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .path-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .path-description {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    /* Path 1: Understanding section */
+    .diagnosis-content {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #374151;
+    }
+
+    .diagnosis-section {
+      margin-bottom: 24px;
+    }
+
+    .diagnosis-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .safety-warning {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    .safety-warning-title {
+      font-weight: 600;
+      color: #991b1b;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .safety-warning-text {
+      color: #7f1d1d;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .contractor-tips {
+      background: #f0f9ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    .contractor-tips-title {
+      font-weight: 600;
+      color: #1e40af;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .contractor-tips-text {
+      color: #1e3a8a;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Path 2: Hire a Pro */
+    .path-features {
+      margin: 20px 0;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .feature-icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .cta-button {
+      width: 100%;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      margin-top: 20px;
+    }
+
+    .cta-button-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .cta-button-primary:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .cta-button-secondary {
+      background: #10b981;
+      color: white;
+    }
+
+    .cta-button-secondary:hover {
+      background: #059669;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .microcopy {
+      font-size: 13px;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 12px;
+      font-style: italic;
+    }
+
+    /* Path 3: Ask an Expert */
+    .price-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 18px;
+      margin: 16px 0;
+    }
+
+    .expert-benefits {
+      background: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+
+    .expert-benefit {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .expert-benefit:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-container"></div>
+
+  <div class="diagnosis-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Your Home Analysis is Complete</h1>
+      <p class="page-subtitle">
+        We've analyzed your situation. Below are three distinct paths forward—choose the one that fits your needs best.
+      </p>
+    </div>
+
+    <!-- Three Paths Grid -->
+    <div class="three-paths-grid">
+
+      <!-- PATH 1: UNDERSTAND (Thinking Space) -->
+      <div class="path-card">
+        <div class="path-header">
+          <span class="path-icon">🔍</span>
+          <h2 class="path-title">Understand</h2>
+          <p class="path-description">Review the diagnosis and learn what's happening with your home</p>
+        </div>
+
+        <div class="diagnosis-content">
+          <!-- AI Diagnosis -->
+          <div class="diagnosis-section">
+            <div class="diagnosis-section-title">
+              <span>📋</span>
+              <span>Diagnosis</span>
+            </div>
+            <div id="diagnosisText"></div>
+          </div>
+
+          <!-- Safety Warnings (if any) -->
+          <div id="safetyWarningsContainer"></div>
+
+          <!-- What to Tell a Contractor -->
+          <div class="contractor-tips">
+            <div class="contractor-tips-title">💡 What to tell a contractor:</div>
+            <div class="contractor-tips-text" id="contractorTips"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATH 2: HIRE A PRO (Free Connection) -->
+      <div class="path-card">
+        <div class="path-header">
+          <span class="path-icon">🏗️</span>
+          <h2 class="path-title">Hire a Pro</h2>
+          <p class="path-description">Connect with vetted, licensed contractors near you</p>
+        </div>
+
+        <div class="path-features">
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <span>Browse verified contractors scored A–F</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <span>Post your project and receive competitive bids</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <span>Licensed, insured, and background-checked</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✓</span>
+            <span>Free to post—no hidden fees</span>
+          </div>
+        </div>
+
+        <button class="cta-button cta-button-primary" onclick="window.location.href='contractor-directory.html'">
+          Browse Verified Contractors
+        </button>
+
+        <button class="cta-button cta-button-secondary" onclick="postJobFromDiagnosis()" style="margin-top: 12px;">
+          Post This Project & Get Bids
+        </button>
+
+        <p class="microcopy">
+          No obligation • Free to post • Cancel anytime
+        </p>
+      </div>
+
+      <!-- PATH 3: ASK AN EXPERT (Paid) -->
+      <div class="path-card">
+        <div class="path-header">
+          <span class="path-icon">👨‍🔧</span>
+          <h2 class="path-title">Ask an Expert</h2>
+          <p class="path-description">Want a straight answer right now?</p>
+        </div>
+
+        <div class="price-indicator">
+          <span>💵</span>
+          <span id="expertPrice">$50</span>
+          <span style="font-size: 14px; font-weight: 400;">/ session</span>
+        </div>
+
+        <div class="expert-benefits">
+          <div class="expert-benefit">
+            <span>📞</span>
+            <span>Live video or phone consultation</span>
+          </div>
+          <div class="expert-benefit">
+            <span>⏱️</span>
+            <span>Get answers in 15-30 minutes</span>
+          </div>
+          <div class="expert-benefit">
+            <span>🎓</span>
+            <span>Licensed professionals with 10+ years experience</span>
+          </div>
+          <div class="expert-benefit">
+            <span>📝</span>
+            <span>Receive written summary after call</span>
+          </div>
+        </div>
+
+        <button class="cta-button cta-button-primary" onclick="bookExpertConsultation()" id="expertButton">
+          Talk to an Expert Now
+        </button>
+
+        <p class="microcopy" id="expertMicrocopy">
+          Pay per session • No subscription required
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="components/navigation.js"></script>
+
+  <script>
+    (async function() {
+      'use strict';
+
+      // Get diagnosis data from sessionStorage
+      const diagnosisData = sessionStorage.getItem('aiDiagnosis');
+
+      if (!diagnosisData) {
+        // No diagnosis data - redirect back to home
+        window.location.href = 'home.html';
+        return;
+      }
+
+      const data = JSON.parse(diagnosisData);
+      const { question, answer, intent, budgetLow, budgetHigh } = data;
+
+      // Populate Path 1: Understand section
+      document.getElementById('diagnosisText').textContent = answer;
+
+      // Extract safety warnings if present in AI response
+      const safetyKeywords = ['danger', 'urgent', 'immediate', 'safety', 'hazard', 'emergency', 'risk'];
+      const hasSafety = safetyKeywords.some(keyword => answer.toLowerCase().includes(keyword));
+
+      if (hasSafety) {
+        const safetyContainer = document.getElementById('safetyWarningsContainer');
+        safetyContainer.innerHTML = `
+          <div class="safety-warning">
+            <div class="safety-warning-title">⚠️ Safety Notice</div>
+            <div class="safety-warning-text">
+              This issue may require immediate professional attention. Consider consulting a licensed contractor as soon as possible.
+            </div>
+          </div>
+        `;
+      }
+
+      // Generate contractor tips
+      const contractorTips = generateContractorTips(question, answer);
+      document.getElementById('contractorTips').textContent = contractorTips;
+
+      // Check user's subscription tier for Expert pricing
+      await checkSubscriptionTier();
+
+      // Store job posting data for Path 2
+      window.jobPostingData = {
+        originalQuestion: question,
+        aiAnalysis: answer,
+        budgetLow: budgetLow || 500,
+        budgetHigh: budgetHigh || 2000,
+        fromAI: true,
+        intent: intent
+      };
+    })();
+
+    function generateContractorTips(question, diagnosis) {
+      // Generate helpful tips based on the diagnosis
+      return `When speaking with a contractor, mention: "${question.substring(0, 150)}..." and ask them to verify the AI's assessment. Request a detailed written estimate and timeline before any work begins.`;
+    }
+
+    async function checkSubscriptionTier() {
+      try {
+        // Wait for authService
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) return;
+
+        // Check user's subscription tier
+        const response = await window.authService.authenticatedFetch('/api/subscription/status', {
+          method: 'GET'
+        });
+
+        if (response.ok) {
+          const subscription = await response.json();
+
+          // Update pricing based on tier
+          const expertButton = document.getElementById('expertButton');
+          const expertPrice = document.getElementById('expertPrice');
+          const expertMicrocopy = document.getElementById('expertMicrocopy');
+
+          if (subscription.tier === 'pro' || subscription.tier === 'premium') {
+            // Pro/Premium get expert calls included
+            expertPrice.textContent = 'Included';
+            expertMicrocopy.textContent = 'Included in your subscription • Unlimited sessions';
+            expertButton.innerHTML = '📞 Schedule Expert Call (Included)';
+          } else if (subscription.tier === 'basic') {
+            // Basic tier gets discount
+            expertPrice.textContent = '$35';
+            expertMicrocopy.textContent = 'Basic subscriber discount • Pay per session';
+          } else {
+            // Free tier - full price
+            expertPrice.textContent = '$50';
+          }
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        // Default to full price
+      }
+    }
+
+    function postJobFromDiagnosis() {
+      // Store job data and redirect to dashboard
+      sessionStorage.setItem('pendingJob', JSON.stringify(window.jobPostingData));
+      window.location.href = 'homeowner-dashboard.html';
+    }
+
+    function bookExpertConsultation() {
+      // Redirect to expert booking/payment page
+      // Store diagnosis data for expert reference
+      sessionStorage.setItem('expertConsultationContext', JSON.stringify(window.jobPostingData));
+
+      // TODO: Create expert booking page
+      alert('Expert consultation booking coming soon! This will connect you with a licensed professional via video or phone.');
+
+      // For now, redirect to upgrade page
+      // window.location.href = 'upgrade-options.html';
+    }
+  </script>
+</body>
+</html>
