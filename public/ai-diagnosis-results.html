@@ -20,7 +20,7 @@
   <style>
     body {
       background: #f3f4f6;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     }
 
     .page-container {
@@ -98,6 +98,7 @@
       font-size: 16px;
       line-height: 1.8;
       color: #374151;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     }
 
     .diagnosis-content h1,
@@ -109,6 +110,7 @@
       margin-top: 32px;
       margin-bottom: 16px;
       letter-spacing: -0.02em;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     }
 
     .diagnosis-content h1 {
@@ -155,9 +157,22 @@
       line-height: 1.7;
     }
 
+    /* Bold headers within paragraphs - make them stand out */
+    .diagnosis-content p strong,
     .diagnosis-content strong {
       font-weight: 700;
       color: #111827;
+      font-size: 1.05em;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    /* Special styling for bold headers that start a paragraph */
+    .diagnosis-content p strong:first-child {
+      display: block;
+      font-size: 1.15em;
+      margin-bottom: 4px;
+      color: #1f2937;
     }
 
     .diagnosis-content em {
@@ -621,17 +636,41 @@
       const data = JSON.parse(diagnosisData);
       const { question, answer, intent, budgetLow, budgetHigh } = data;
 
+      // Extract and clean INTENT TYPE from AI response
+      const { cleanedAnswer, intentType, isProject } = extractIntent(answer);
+
       // Render AI response with markdown parser
       const diagnosisContent = document.getElementById('diagnosisContent');
+      const reportHeader = document.querySelector('.report-header-content h2');
+      const reportHeaderDesc = document.querySelector('.report-header-content p');
+
+      // Conditional logic based on intent type
+      if (isProject) {
+        // Change headers for PROJECT intent
+        reportHeader.textContent = 'Project Scoping & Estimates';
+        reportHeaderDesc.textContent = 'AI-generated project breakdown and cost estimates';
+
+        // Update "Hire a Pro" button text
+        const hirePrButton = document.querySelector('.next-steps-grid .path-card:first-child .cta-button-primary');
+        const hireSecondaryBtn = document.querySelector('.next-steps-grid .path-card:first-child .cta-button-secondary');
+        if (hirePrButton) {
+          hirePrButton.textContent = 'Browse Contractors for This Project';
+        }
+        if (hireSecondaryBtn) {
+          hireSecondaryBtn.textContent = 'Post This Project for Bids';
+        }
+      }
 
       // Enhance the AI response with better formatting
-      const enhancedAnswer = enhanceAIResponse(answer);
+      const enhancedAnswer = enhanceAIResponse(cleanedAnswer);
 
       // Parse markdown and render
       diagnosisContent.innerHTML = marked.parse(enhancedAnswer);
 
-      // Add safety warnings if detected
-      addSafetyWarningsIfNeeded(diagnosisContent, answer);
+      // Add safety warnings ONLY if it's an ISSUE (not a project)
+      if (!isProject) {
+        addSafetyWarningsIfNeeded(diagnosisContent, cleanedAnswer);
+      }
 
       // Check user's subscription tier for Expert pricing
       await checkSubscriptionTier();
@@ -646,6 +685,36 @@
         intent: intent
       };
     })();
+
+    /**
+     * Extract INTENT TYPE from AI response and remove it from the text
+     * Returns: { cleanedAnswer, intentType, isProject }
+     */
+    function extractIntent(text) {
+      // Match patterns like "INTENT TYPE: PROJECT" or "INTENT TYPE: ISSUE"
+      const intentPattern = /^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim;
+      const match = text.match(intentPattern);
+
+      let intentType = 'ISSUE'; // Default to ISSUE
+      let cleanedAnswer = text;
+
+      if (match && match[0]) {
+        // Extract the type
+        const extractedType = match[0].match(/(PROJECT|ISSUE)/i);
+        if (extractedType && extractedType[1]) {
+          intentType = extractedType[1].toUpperCase();
+        }
+
+        // Remove the INTENT TYPE line from the text
+        cleanedAnswer = text.replace(intentPattern, '').trim();
+      }
+
+      return {
+        cleanedAnswer,
+        intentType,
+        isProject: intentType === 'PROJECT'
+      };
+    }
 
     /**
      * Enhance AI response for better markdown formatting

@@ -10,6 +10,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
   <style>
+    body {
+      background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
     /* Welcome section */
     .welcome-hero {
       max-width: 1100px;
@@ -276,10 +281,31 @@
       color: #1e3a8a;
     }
 
+    /* Section header for Explore & Do */
+    .section-header {
+      max-width: 1100px;
+      margin: 64px auto 32px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .section-header h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .section-header p {
+      font-size: 16px;
+      color: #6b7280;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
     /* Two-column grid for secondary features */
     .secondary-grid {
       max-width: 1100px;
-      margin: 0 auto 48px;
+      margin: 0 auto 64px;
       padding: 0 24px;
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -292,18 +318,21 @@
       }
     }
 
-    /* Contractor Directory Card */
-    .directory-card {
+    /* Contractor Directory Card & Advocate Card - Unified White Style */
+    .directory-card,
+    .advocate-card {
       background: white;
       border-radius: 16px;
       padding: 32px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 2px solid #e5e7eb;
       transition: all 0.3s;
     }
-    .directory-card:hover {
+    .directory-card:hover,
+    .advocate-card:hover {
       box-shadow: 0 8px 24px rgba(0,0,0,0.12);
       transform: translateY(-2px);
+      border-color: #3b82f6;
     }
     .card-header {
       display: flex;
@@ -346,26 +375,7 @@
       flex-shrink: 0;
     }
 
-    /* Owner's Advocate Card */
-    .advocate-card {
-      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-      border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      border: 2px solid #e5e7eb;
-      position: relative;
-      overflow: hidden;
-    }
-    .advocate-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -20%;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
-    }
+    /* Premium Badge for Advocate Card */
     .premium-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -581,6 +591,12 @@
         </div>
       </div>
     </section>
+
+    <!-- Section Header: Explore & Do -->
+    <div class="section-header">
+      <h2>Explore & Do</h2>
+      <p>Browse contractors, get expert advice, or explore resources to help with your home projects.</p>
+    </div>
 
     <!-- Secondary Features Grid -->
     <section class="secondary-grid">
