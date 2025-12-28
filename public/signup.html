@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up – HomeProHub</title>
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 540px;
+      width: 100%;
+      padding: 48px 40px;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo a {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .role-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .role-option {
+      padding: 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .role-option:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .role-option.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .role-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .role-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 15px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px 24px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .status-message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .status-message.error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      display: block;
+    }
+
+    .status-message.success {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      display: block;
+    }
+
+    .signin-link {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 15px;
+      color: #6b7280;
+    }
+
+    .signin-link a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .signin-link a:hover {
+      text-decoration: underline;
+    }
+
+    .back-home {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .back-home a {
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .back-home a:hover {
+      color: #374151;
+    }
+
+    .role-specific-fields {
+      display: none;
+    }
+
+    .role-specific-fields.active {
+      display: block;
+    }
+
+    @media (max-width: 600px) {
+      .role-selector {
+        grid-template-columns: 1fr;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="logo">
+      <a href="/">HomeProHub</a>
+    </div>
+
+    <h1 id="pageTitle">Create Account</h1>
+    <p class="subtitle" id="pageSubtitle">Join HomeProHub to get started</p>
+
+    <div class="role-selector" id="roleSelector">
+      <div class="role-option" data-role="homeowner">
+        <div class="role-icon">🏠</div>
+        <div class="role-title">Homeowner</div>
+      </div>
+      <div class="role-option" data-role="contractor">
+        <div class="role-icon">🔧</div>
+        <div class="role-title">Contractor</div>
+      </div>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <form id="signupForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="new-password" minlength="6">
+      </div>
+
+      <div class="form-group">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="name" required autocomplete="name">
+      </div>
+
+      <!-- Homeowner Fields -->
+      <div id="homeownerFields" class="role-specific-fields">
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" name="phone" autocomplete="tel">
+        </div>
+
+        <div class="form-group">
+          <label for="address">Address</label>
+          <input type="text" id="address" name="address" autocomplete="street-address">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="city">City</label>
+            <input type="text" id="city" name="city" autocomplete="address-level2">
+          </div>
+
+          <div class="form-group">
+            <label for="state">State</label>
+            <input type="text" id="state" name="state" autocomplete="address-level1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="zipCode">Zip Code</label>
+          <input type="text" id="zipCode" name="zipCode" autocomplete="postal-code">
+        </div>
+      </div>
+
+      <!-- Contractor Fields -->
+      <div id="contractorFields" class="role-specific-fields">
+        <div class="form-group">
+          <label for="businessName">Business Name</label>
+          <input type="text" id="businessName" name="businessName">
+        </div>
+
+        <div class="form-group">
+          <label for="licenseNumber">License Number (if applicable)</label>
+          <input type="text" id="licenseNumber" name="licenseNumber">
+        </div>
+
+        <div class="form-group">
+          <label for="trade">Primary Trade</label>
+          <select id="trade" name="trade">
+            <option value="">Select trade...</option>
+            <option value="general">General Contractor</option>
+            <option value="electrician">Electrician</option>
+            <option value="plumber">Plumber</option>
+            <option value="hvac">HVAC</option>
+            <option value="carpenter">Carpenter</option>
+            <option value="painter">Painter</option>
+            <option value="roofer">Roofer</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="yearsExperience">Years of Experience</label>
+          <input type="number" id="yearsExperience" name="yearsExperience" min="0" max="50">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitButton">
+        Create Account
+      </button>
+    </form>
+
+    <div class="signin-link">
+      Already have an account? <a href="signin.html">Sign in</a>
+    </div>
+
+    <div class="back-home">
+      <a href="/">← Back to Home</a>
+    </div>
+  </div>
+
+  <script>
+    let selectedRole = null;
+    let isLoading = false;
+
+    // Display messages
+    function displayError(message) {
+      const status = document.getElementById('statusMessage');
+      status.textContent = message;
+      status.className = 'status-message error';
+    }
+
+    function displaySuccess(message) {
+      const status = document.getElementById('statusMessage');
+      status.textContent = message;
+      status.className = 'status-message success';
+    }
+
+    function clearStatus() {
+      const status = document.getElementById('statusMessage');
+      status.className = 'status-message';
+      status.textContent = '';
+    }
+
+    // Loading state
+    function setLoading(loading) {
+      isLoading = loading;
+      const button = document.getElementById('submitButton');
+      const inputs = document.querySelectorAll('#signupForm input, #signupForm select');
+
+      button.disabled = loading;
+      inputs.forEach(input => input.disabled = loading);
+
+      if (loading) {
+        button.textContent = 'Creating Account...';
+      } else {
+        button.textContent = 'Create Account';
+      }
+    }
+
+    // Role selection
+    document.querySelectorAll('.role-option').forEach(option => {
+      option.addEventListener('click', function() {
+        // Remove active from all
+        document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('active'));
+        document.querySelectorAll('.role-specific-fields').forEach(field => field.classList.remove('active'));
+
+        // Set active
+        this.classList.add('active');
+        selectedRole = this.dataset.role;
+
+        // Show appropriate fields
+        const fields = document.getElementById(selectedRole + 'Fields');
+        if (fields) {
+          fields.classList.add('active');
+        }
+
+        // Update title
+        const title = document.getElementById('pageTitle');
+        const subtitle = document.getElementById('pageSubtitle');
+
+        if (selectedRole === 'homeowner') {
+          title.textContent = 'Create Homeowner Account';
+          subtitle.textContent = 'Join as a homeowner to get AI guidance and find contractors';
+        } else {
+          title.textContent = 'Create Contractor Account';
+          subtitle.textContent = 'Join as a contractor to access AI tools and qualified leads';
+        }
+      });
+    });
+
+    // Check for pre-selected role from sessionStorage
+    const preSelectedRole = sessionStorage.getItem('signup_role');
+    if (preSelectedRole) {
+      const roleOption = document.querySelector(`.role-option[data-role="${preSelectedRole}"]`);
+      if (roleOption) {
+        roleOption.click();
+      }
+    }
+
+    // Handle form submission
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (isLoading) return;
+
+      if (!selectedRole) {
+        displayError('Please select whether you\'re a homeowner or contractor.');
+        return;
+      }
+
+      clearStatus();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const name = document.getElementById('name').value.trim();
+
+      if (!email || !password || !name) {
+        displayError('Please fill in all required fields.');
+        return;
+      }
+
+      if (password.length < 6) {
+        displayError('Password must be at least 6 characters.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        // Wait for auth service to be ready
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        // Collect role-specific data
+        let profileData = {
+          role: selectedRole,
+          name: name
+        };
+
+        if (selectedRole === 'homeowner') {
+          profileData.phone = document.getElementById('phone').value.trim();
+          profileData.address = document.getElementById('address').value.trim();
+          profileData.city = document.getElementById('city').value.trim();
+          profileData.state = document.getElementById('state').value.trim();
+          profileData.zip_code = document.getElementById('zipCode').value.trim();
+        } else {
+          profileData.business_name = document.getElementById('businessName').value.trim();
+          profileData.license_number = document.getElementById('licenseNumber').value.trim();
+          profileData.trade = document.getElementById('trade').value;
+          profileData.years_experience = document.getElementById('yearsExperience').value;
+        }
+
+        const result = await window.authService.signUp(email, password, profileData);
+
+        if (result.success) {
+          displaySuccess('Account created successfully! Redirecting...');
+
+          // Clear signup role from sessionStorage
+          sessionStorage.removeItem('signup_role');
+
+          setTimeout(() => {
+            if (selectedRole === 'contractor') {
+              window.location.href = 'contractor-dashboard.html';
+            } else {
+              window.location.href = 'home.html';
+            }
+          }, 1500);
+        } else {
+          displayError(result.error || 'Sign up failed. Please try again.');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Sign up error:', error);
+        displayError('An error occurred. Please try again.');
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>
