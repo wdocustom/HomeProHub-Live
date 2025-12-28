@@ -36,8 +36,8 @@
       margin: 0;
     }
 
-    /* Stale Job Alert */
-    .stale-job-alert {
+    /* Stale Project Alert */
+    .stale-project-alert {
       background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
       border: 2px solid #f59e0b;
       border-radius: 12px;
@@ -46,32 +46,32 @@
       display: none;
     }
 
-    .stale-job-alert.show {
+    .stale-project-alert.show {
       display: flex;
       align-items: center;
       gap: 16px;
     }
 
-    .stale-job-alert-icon {
+    .stale-project-alert-icon {
       font-size: 32px;
       flex-shrink: 0;
     }
 
-    .stale-job-alert-content h3 {
+    .stale-project-alert-content h3 {
       margin: 0 0 4px 0;
       font-size: 18px;
       font-weight: 700;
       color: #92400e;
     }
 
-    .stale-job-alert-content p {
+    .stale-project-alert-content p {
       margin: 0 0 12px 0;
       font-size: 14px;
       color: #78350f;
       line-height: 1.5;
     }
 
-    .stale-job-alert-actions {
+    .stale-project-alert-actions {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
@@ -195,7 +195,7 @@
       border-color: #3b82f6;
     }
 
-    .btn-post-job {
+    .btn-post-project {
       padding: 10px 24px;
       border-radius: 8px;
       background: #2563eb;
@@ -207,7 +207,7 @@
       transition: all 0.2s;
     }
 
-    .btn-post-job:hover {
+    .btn-post-project:hover {
       background: #1d4ed8;
       transform: translateY(-1px);
     }
@@ -223,6 +223,23 @@
     @media (max-width: 900px) {
       .projects-grid {
         grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .project-card-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+
+      .manage-dropdown {
+        width: 100%;
+      }
+
+      .btn-manage {
+        width: 100%;
+        justify-content: center;
       }
     }
 
@@ -828,17 +845,17 @@
         <p>Track your projects, review bids, and manage contractor work</p>
       </div>
 
-      <!-- Stale Job Alert -->
-      <div class="stale-job-alert" id="staleJobAlert">
-        <div class="stale-job-alert-icon">⏰</div>
-        <div class="stale-job-alert-content" style="flex: 1;">
-          <h3 id="staleJobTitle">Is the Bathroom Remodel finished?</h3>
-          <p id="staleJobMessage">This project has been in progress for over 30 days. Mark it complete to boost your homeowner grade.</p>
-          <div class="stale-job-alert-actions">
-            <button class="btn-alert btn-alert-primary" id="staleJobCompleteBtn">
+      <!-- Stale Project Alert -->
+      <div class="stale-project-alert" id="staleProjectAlert">
+        <div class="stale-project-alert-icon">⏰</div>
+        <div class="stale-project-alert-content" style="flex: 1;">
+          <h3 id="staleProjectTitle">Is the Bathroom Remodel finished?</h3>
+          <p id="staleProjectMessage">This project has been in progress for over 30 days. Mark it complete to boost your homeowner grade.</p>
+          <div class="stale-project-alert-actions">
+            <button class="btn-alert btn-alert-primary" id="staleProjectCompleteBtn">
               ✅ Mark Complete
             </button>
-            <button class="btn-alert btn-alert-secondary" id="staleJobDismissBtn">
+            <button class="btn-alert btn-alert-secondary" id="staleProjectDismissBtn">
               Later
             </button>
           </div>
@@ -876,7 +893,7 @@
       <div class="section-header">
         <h2>Your Projects</h2>
         <div class="section-actions">
-          <button class="btn-post-job" id="newJobBtn">
+          <button class="btn-post-project" id="newProjectBtn">
             ➕ Post New Project
           </button>
           <div class="filter-tabs">
@@ -901,7 +918,7 @@
       <button class="modal-close" onclick="closeReviewModal()">×</button>
 
       <div class="modal-header">
-        <h2 class="modal-title">Job Done! How did <span id="contractorNameReview">the contractor</span> do?</h2>
+        <h2 class="modal-title">Project Done! How did <span id="contractorNameReview">the contractor</span> do?</h2>
         <p class="modal-subtitle">Help other homeowners make informed decisions</p>
       </div>
 
@@ -929,7 +946,7 @@
         <label class="tap-tags-label">What went well? (Tap all that apply)</label>
         <div class="tap-tags" id="positiveTags">
           <div class="tap-tag positive" data-tag="Punctual">👍 Punctual</div>
-          <div class="tap-tag positive" data-tag="Clean Job Site">✨ Clean Job Site</div>
+          <div class="tap-tag positive" data-tag="Clean Project Site">✨ Clean Project Site</div>
           <div class="tap-tag positive" data-tag="Stayed on Budget">💰 Stayed on Budget</div>
           <div class="tap-tag positive" data-tag="Great Communication">💬 Great Communication</div>
           <div class="tap-tag positive" data-tag="Quality Work">⭐ Quality Work</div>
@@ -1043,7 +1060,7 @@
     async function loadProjects() {
       try {
         const response = await window.authService.authenticatedFetch(
-          `/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}`
+          `/api/homeowner/projects?email=${encodeURIComponent(userEmail)}`
         );
 
         if (!response.ok) {
@@ -1051,10 +1068,10 @@
         }
 
         const data = await response.json();
-        allProjects = data.jobs || [];
+        allProjects = data.projects || [];
 
         updateStats();
-        checkStaleJobs();
+        checkStaleProjects();
         renderProjects();
 
       } catch (error) {
@@ -1077,9 +1094,9 @@
       document.getElementById('completedProjectsStat').textContent = completedCount;
     }
 
-    // Check for stale jobs (>30 days in progress)
-    function checkStaleJobs() {
-      const staleJob = allProjects.find(project => {
+    // Check for stale projects (>30 days in progress)
+    function checkStaleProjects() {
+      const staleProject = allProjects.find(project => {
         if (project.status !== 'in_progress') return false;
 
         const startDate = new Date(project.posted_at);
@@ -1088,11 +1105,11 @@
         return daysSince > 30;
       });
 
-      if (staleJob) {
-        const alert = document.getElementById('staleJobAlert');
-        document.getElementById('staleJobTitle').textContent = `Is the ${staleJob.title} finished?`;
-        document.getElementById('staleJobCompleteBtn').onclick = () => openReviewModal(staleJob);
-        document.getElementById('staleJobDismissBtn').onclick = () => alert.classList.remove('show');
+      if (staleProject) {
+        const alert = document.getElementById('staleProjectAlert');
+        document.getElementById('staleProjectTitle').textContent = `Is the ${staleProject.title} finished?`;
+        document.getElementById('staleProjectCompleteBtn').onclick = () => openReviewModal(staleProject);
+        document.getElementById('staleProjectDismissBtn').onclick = () => alert.classList.remove('show');
         alert.classList.add('show');
       }
     }
@@ -1233,7 +1250,7 @@
 
     // View bids (placeholder)
     function viewBids(projectId) {
-      alert('Bids view coming soon! For now, check the full job details.');
+      alert('Bids view coming soon! For now, check the full project details.');
     }
 
     // Edit project (placeholder)
@@ -1428,8 +1445,8 @@
       });
     });
 
-    // New job button
-    document.getElementById('newJobBtn').addEventListener('click', () => {
+    // New project button
+    document.getElementById('newProjectBtn').addEventListener('click', () => {
       window.location.href = 'home.html';
     });
 

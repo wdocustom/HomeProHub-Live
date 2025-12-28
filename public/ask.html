@@ -7,8 +7,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
   <style>
+    body {
+      background: #f9fafb;
+    }
+
     .hero {
-      max-width: 900px;
+      max-width: 768px;
       margin: 48px auto 24px;
       padding: 0 24px;
       text-align: center;
@@ -21,29 +25,253 @@
       margin-bottom: 8px;
     }
     .hero-title {
-      font-size: 28px;
+      font-size: 32px;
       font-weight: 700;
       letter-spacing: -0.03em;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       color: #111827;
     }
     .hero-subtitle {
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1.6;
       color: #6b7280;
       max-width: 640px;
       margin: 0 auto;
     }
 
-    .ask-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
-      gap: 20px;
+    .input-container {
+      max-width: 768px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
     }
-    @media (max-width: 860px) {
-      .ask-layout {
-        grid-template-columns: minmax(0, 1fr);
-      }
+
+    .input-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 2px solid #e5e7eb;
+    }
+
+    .input-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .input-textarea {
+      width: 100%;
+      min-height: 140px;
+      padding: 16px;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      font-size: 15px;
+      line-height: 1.6;
+      resize: vertical;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .input-textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .input-hint {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .photo-upload-section {
+      margin-top: 20px;
+    }
+
+    .btn-analyze {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-analyze:hover:not(:disabled) {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-analyze:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Answer Output Section */
+    .answer-container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+      display: none;
+    }
+
+    .answer-container.show {
+      display: block;
+    }
+
+    .answer-header {
+      margin-bottom: 16px;
+    }
+
+    .answer-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 4px 0;
+    }
+
+    .answer-header p {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .answer-card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 2px solid #e5e7eb;
+    }
+
+    /* Prose styling for markdown content */
+    .prose {
+      color: #374151;
+      font-size: 15px;
+      line-height: 1.7;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .prose h1, .prose h2, .prose h3 {
+      color: #111827;
+      font-weight: 700;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    .prose h1 { font-size: 28px; }
+    .prose h2 { font-size: 22px; }
+    .prose h3 { font-size: 18px; }
+
+    .prose p {
+      margin: 16px 0;
+    }
+
+    .prose strong {
+      font-weight: 700;
+      color: #111827;
+      font-size: 1.05em;
+    }
+
+    .prose ul, .prose ol {
+      margin: 16px 0;
+      padding-left: 24px;
+    }
+
+    .prose li {
+      margin: 8px 0;
+    }
+
+    .prose code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    /* Next Steps CTA */
+    .next-steps-cta {
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 24px;
+      display: none;
+    }
+
+    .next-steps-cta.show {
+      display: block;
+    }
+
+    .next-steps-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 2px solid #93c5fd;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .next-steps-card h3 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e40af;
+      margin: 0 0 8px 0;
+    }
+
+    .next-steps-card p {
+      font-size: 15px;
+      color: #1e3a8a;
+      margin: 0 0 20px 0;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .btn-post-project {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-post-project:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .microcopy {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 12px;
+    }
+
+    /* Clarify Section */
+    .clarify-section {
+      max-width: 900px;
+      margin: 24px auto;
+      padding: 0 24px;
+      display: none;
+    }
+
+    .clarify-section.show {
+      display: block;
     }
 
     .small-hint {
@@ -114,107 +342,124 @@
     </p>
   </section>
 
-  <section style="max-width: 900px; margin: 0 auto 60px; padding: 0 24px;">
-    <div class="card">
-      <div class="ask-layout">
-        <section>
-          <label for="question" style="font-size:13px; color:#374151;">Describe the issue in detail</label>
-          <textarea
-            id="question"
-            placeholder="Example: There is a brown stain on my living room ceiling under the upstairs bathroom. It seems to grow slowly after showers, slight musty smell, and the drywall feels a little soft to the touch..."
-          ></textarea>
+  <!-- Input Section -->
+  <div class="input-container">
+    <div class="input-card">
+      <label for="question" class="input-label">Describe the issue in detail</label>
+      <textarea
+        id="question"
+        class="input-textarea"
+        placeholder="Example: There is a brown stain on my living room ceiling under the upstairs bathroom. It seems to grow slowly after showers, slight musty smell, and the drywall feels a little soft to the touch..."
+      ></textarea>
 
-          <div class="small-hint">
-            Be specific: location, when it happens, smells, sounds, age of the home,
-            any recent work, and how long it’s been going on.
-          </div>
-
-          <label for="photoInput" class="small-hint" style="display:block; margin-top:12px;">
-            Optional photo (helps the AI see stains, cracks, etc.):
-          </label>
-          <input type="file" id="photoInput" accept="image/*" />
-
-          <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <button type="button" id="askBtn" class="btn-primary">💬 Ask HomeProHub AI</button>
-            <div id="status" class="status"></div>
-          </div>
-        </section>
-
-        <aside>
-          <div class="history-box">
-            <h3 style="margin-top:0; margin-bottom:6px; font-size:15px;">What you’ll get back</h3>
-            <ul style="margin: 0 0 0 18px; padding: 0; font-size:13px; color:#4b5563;">
-              <li>Summary of what might be happening (plain language)</li>
-              <li><strong>Severity</strong> (High / Medium / Low) and <strong>urgency</strong> (Fix now / Fix soon / Monitor)</li>
-              <li>DIY-friendly checks you can safely try</li>
-              <li>Materials & tools you may need for light DIY work, with example product types and brands</li>
-              <li>Clear safety warnings & when to stop</li>
-              <li>When to call a pro and what type</li>
-              <li>A short script to read or send to a contractor</li>
-            </ul>
-          </div>
-        </aside>
+      <div class="input-hint">
+        Be specific: location, when it happens, smells, sounds, age of the home, any recent work, and how long it's been going on.
       </div>
 
-      <div id="answer" class="answer-box" style="margin-top:20px;"></div>
-
-      <div style="margin-top:16px;">
-        <div class="clarify-label">
-          Need to clarify or add something you forgot? Add more detail and get an updated answer:
-        </div>
-        <textarea
-          id="clarify"
-          class="clarify-box"
-          placeholder="Example: The house was built in 2005, this only happens after long showers, and the stain looks slightly yellow around the edges..."
-        ></textarea>
-        <div style="margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <button id="clarifyBtn" class="btn-muted">🔁 Clarify & update answer</button>
-          <div id="clarifyStatus" class="status"></div>
-        </div>
-      </div>
-      
-      <div id="jobPostArea" style="margin-top:25px; padding: 20px; border: 1px solid #c7d2fe; border-radius: 12px; background: #f0f7ff; text-align: center; display:none;">
-        <h3 style="margin-top: 0; font-size: 18px; color: #2563eb;">Ready to Hire a Pro?</h3>
-        <p style="font-size: 14px; color: #4b5563; max-width: 500px; margin: 0 auto 15px;">
-          Convert the AI's diagnosis and suggested next steps into a structured job posting. This will instantly push the details out to qualified contractors in your local area (filtered by ZIP code) for them to review and bid.
-        </p>
-        <button id="postJobBtn" class="btn-primary" style="padding: 10px 20px;">✅ Post This Project to the Contractor Board</button>
+      <div class="photo-upload-section">
+        <label for="photoInput" class="input-label">Optional photo (helps the AI see stains, cracks, etc.):</label>
+        <input type="file" id="photoInput" accept="image/*" />
       </div>
 
-      <!-- Job Submission Modal -->
-      <div id="jobSubmissionModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 24px; overflow-y: auto;">
+      <div style="margin-top:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <button type="button" id="askBtn" class="btn-analyze">
+          <span>✨</span>
+          <span>Analyze My Issue</span>
+        </button>
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Answer Output Section -->
+  <div class="answer-container" id="answerContainer">
+    <div class="answer-header">
+      <h2>Preliminary Analysis</h2>
+      <p>AI-powered diagnosis and recommended next steps</p>
+    </div>
+    <div class="answer-card">
+      <div id="answer" class="prose"></div>
+    </div>
+  </div>
+
+  <!-- Clarify Section -->
+  <div class="clarify-section" id="clarifySection">
+    <div class="input-card">
+      <label for="clarify" class="input-label">Need to add more details?</label>
+      <textarea
+        id="clarify"
+        class="input-textarea"
+        style="min-height: 100px;"
+        placeholder="Example: The house was built in 2005, this only happens after long showers, and the stain looks slightly yellow around the edges..."
+      ></textarea>
+      <div style="margin-top:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <button id="clarifyBtn" class="btn-analyze">
+          <span>🔄</span>
+          <span>Clarify & Update Answer</span>
+        </button>
+        <div id="clarifyStatus" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next Steps CTA -->
+  <div class="next-steps-cta" id="nextStepsCta">
+    <div class="next-steps-card">
+      <h3>Ready to get quotes?</h3>
+      <p>Turn this analysis into a structured project for verified contractors</p>
+      <button id="postProjectBtn" class="btn-post-project">Post to Project Board</button>
+      <div class="microcopy">Free • No Obligation • You Control the Bids</div>
+    </div>
+  </div>
+
+  <!-- History Section (moved to bottom) -->
+  <div style="max-width: 768px; margin: 40px auto 80px; padding: 0 24px;">
+    <div class="input-card" style="padding: 24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="font-size:15px; font-weight:600; color:#111827;">Previous questions</div>
+        <button class="clear-btn" id="clearHistoryBtn">Clear history</button>
+      </div>
+      <div id="historyEmpty" class="history-empty">
+        No questions yet. Ask something to start a history.
+      </div>
+      <ul id="historyList" class="history-list"></ul>
+    </div>
+  </div>
+
+  <!-- Project Submission Modal (kept for form functionality) -->
+      <div id="projectSubmissionModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 24px; overflow-y: auto;">
         <div style="background: white; border-radius: 16px; padding: 32px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; margin: auto;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <h2 style="margin: 0; font-size: 24px; color: #1f2937;">Submit Job to Contractors</h2>
-            <button onclick="closeJobModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #9ca3af;">&times;</button>
+            <h2 style="margin: 0; font-size: 24px; color: #1f2937;">Submit Project to Contractors</h2>
+            <button onclick="closeProjectModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #9ca3af;">&times;</button>
           </div>
 
-          <form id="jobSubmissionForm">
+          <form id="projectSubmissionForm">
             <div class="form-group">
-              <label>Job Title <span style="color: #ef4444;">*</span></label>
-              <input id="jobTitle" type="text" placeholder="e.g., Shower Pan Leak Repair" required maxlength="100" />
+              <label>Project Title <span style="color: #ef4444;">*</span></label>
+              <input id="projectTitle" type="text" placeholder="e.g., Shower Pan Leak Repair" required maxlength="100" />
             </div>
 
             <div class="form-group">
-              <label>Job Description (AI-Generated) <span style="color: #ef4444;">*</span></label>
-              <textarea id="jobDescription" rows="8" readonly style="background: #f9fafb;"></textarea>
+              <label>Project Description (AI-Generated) <span style="color: #ef4444;">*</span></label>
+              <textarea id="projectDescription" rows="8" readonly style="background: #f9fafb;"></textarea>
               <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">This was generated by AI based on your conversation. Contractors will see this.</p>
             </div>
 
             <div class="form-group">
               <label>Your Address <span style="color: #ef4444;">*</span></label>
-              <input id="jobAddress" type="text" placeholder="123 Main St, City, State" required maxlength="200" />
+              <input id="projectAddress" type="text" placeholder="123 Main St, City, State" required maxlength="200" />
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
               <div class="form-group">
                 <label>ZIP Code <span style="color: #ef4444;">*</span></label>
-                <input id="jobZip" type="text" pattern="[0-9]{5}" placeholder="12345" required maxlength="5" />
+                <input id="projectZip" type="text" pattern="[0-9]{5}" placeholder="12345" required maxlength="5" />
               </div>
 
               <div class="form-group">
                 <label>Urgency</label>
-                <select id="jobUrgency">
+                <select id="projectUrgency">
                   <option value="flexible">Flexible timing</option>
                   <option value="soon">Within 2 weeks</option>
                   <option value="urgent">Urgent (ASAP)</option>
@@ -243,10 +488,10 @@
             </div>
 
             <div style="display: flex; gap: 12px; margin-top: 24px;">
-              <button type="submit" class="btn-primary" id="submitJobBtn">Submit Job Posting</button>
-              <button type="button" class="btn-secondary" onclick="closeJobModal()">Cancel</button>
+              <button type="submit" class="btn-primary" id="submitProjectBtn">Submit Project Posting</button>
+              <button type="button" class="btn-secondary" onclick="closeProjectModal()">Cancel</button>
             </div>
-            <div id="jobSubmissionStatus" style="margin-top: 12px; font-size: 14px;"></div>
+            <div id="projectSubmissionStatus" style="margin-top: 12px; font-size: 14px;"></div>
           </form>
         </div>
       </div>
@@ -272,6 +517,9 @@
   const textarea = document.getElementById("question");
   const statusText = document.getElementById("status");
   const answerBox = document.getElementById("answer");
+  const answerContainer = document.getElementById("answerContainer");
+  const clarifySection = document.getElementById("clarifySection");
+  const nextStepsCta = document.getElementById("nextStepsCta");
   const photoInput = document.getElementById("photoInput");
   const historyList = document.getElementById("historyList");
   const historyEmpty = document.getElementById("historyEmpty");
@@ -279,9 +527,31 @@
   const clarifyButton = document.getElementById("clarifyBtn");
   const clarifyStatus = document.getElementById("clarifyStatus");
   const clarifyBox = document.getElementById("clarify");
-  const jobPostArea = document.getElementById("jobPostArea");
-  const postJobBtn = document.getElementById("postJobBtn");
+  const postProjectBtn = document.getElementById("postProjectBtn");
   const profileLinkEl = document.getElementById("profileLink");
+
+  // Extract INTENT TYPE utility (from ai-diagnosis-results.html)
+  function extractIntent(text) {
+    const intentPattern = /^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim;
+    const match = text.match(intentPattern);
+
+    let intentType = 'ISSUE'; // Default to ISSUE
+    let cleanedAnswer = text;
+
+    if (match && match[0]) {
+      const extractedType = match[0].match(/(PROJECT|ISSUE)/i);
+      if (extractedType && extractedType[1]) {
+        intentType = extractedType[1].toUpperCase();
+      }
+      cleanedAnswer = text.replace(intentPattern, '').trim();
+    }
+
+    return {
+      cleanedAnswer,
+      intentType,
+      isProject: intentType === 'PROJECT'
+    };
+  }
 
   // Constants
   const HISTORY_KEY = "homeprohub_history_v1";
@@ -495,8 +765,10 @@
 
       if (statusText) statusText.textContent = "Analyzing your issue...";
       if (clarifyStatus) clarifyStatus.textContent = "";
-      if (answerBox) answerBox.textContent = "";
-      if (jobPostArea) jobPostArea.style.display = 'none';
+      if (answerBox) answerBox.innerHTML = "";
+      if (answerContainer) answerContainer.classList.remove('show');
+      if (clarifySection) clarifySection.classList.remove('show');
+      if (nextStepsCta) nextStepsCta.classList.remove('show');
 
       try {
         let imageBase64 = null;
@@ -510,16 +782,23 @@
 
         const reply = await askBackend(q, imageBase64, imageType);
 
-        if (answerBox) answerBox.textContent = reply;
+        // Extract intent and clean the answer
+        const { cleanedAnswer, intentType, isProject } = extractIntent(reply);
+
+        // Display cleaned answer
+        if (answerBox) answerBox.textContent = cleanedAnswer;
         if (statusText) statusText.textContent = "Analysis complete.";
+
+        // Show answer container, clarify section, and next steps CTA
+        if (answerContainer) answerContainer.classList.add('show');
+        if (clarifySection) clarifySection.classList.add('show');
+        if (nextStepsCta) nextStepsCta.classList.add('show');
 
         addToHistory(q, reply);
 
-        if (jobPostArea) jobPostArea.style.display = 'block';
-
-        // Save context for clarifications and job posting
+        // Save context for clarifications and project posting
         lastQuestion = q;
-        lastAIAnswer = reply;
+        lastAIAnswer = cleanedAnswer; // Save cleaned version
         lastImageBase64 = imageBase64;
         lastImageType = imageType;
 
@@ -528,7 +807,9 @@
           answerBox.textContent = err.message || "Unable to process your request. Please try again.";
         }
         if (statusText) statusText.textContent = "";
-        if (jobPostArea) jobPostArea.style.display = 'none';
+        if (answerContainer) answerContainer.classList.remove('show');
+        if (clarifySection) clarifySection.classList.remove('show');
+        if (nextStepsCta) nextStepsCta.classList.remove('show');
       } finally {
         button.disabled = false;
         if (clarifyButton) clarifyButton.disabled = false;
@@ -604,17 +885,18 @@
     });
   }
 
-  // Post job handler
+  // Post project handler
   let lastAIAnswer = '';
 
-  window.closeJobModal = function() {
-    document.getElementById('jobSubmissionModal').style.display = 'none';
-    document.getElementById('jobSubmissionForm').reset();
-    document.getElementById('jobSubmissionStatus').textContent = '';
+  window.closeProjectModal = function() {
+    document.getElementById('projectSubmissionModal').style.display = 'none';
+    document.getElementById('projectSubmissionForm').reset();
+    document.getElementById('projectSubmissionStatus').textContent = '';
   };
 
-  if (postJobBtn) {
-    postJobBtn.addEventListener('click', async () => {
+  const postProjectBtn = document.getElementById('postProjectBtn');
+  if (postProjectBtn) {
+    postProjectBtn.addEventListener('click', async () => {
       if (!lastQuestion || !lastAIAnswer) {
         alert("Please generate a project analysis first.");
         return;
@@ -624,9 +906,9 @@
       const userProfile = await window.authService.getUserProfile();
 
       // Pre-fill the form
-      document.getElementById('jobDescription').value = lastQuestion + '\n\nAI Analysis:\n' + lastAIAnswer;
-      document.getElementById('jobZip').value = userProfile?.zip_code || '';
-      document.getElementById('jobAddress').value = userProfile?.address || '';
+      document.getElementById('projectDescription').value = lastQuestion + '\n\nAI Analysis:\n' + lastAIAnswer;
+      document.getElementById('projectZip').value = userProfile?.zip_code || '';
+      document.getElementById('projectAddress').value = userProfile?.address || '';
 
       // Try to extract budget from AI response (simple approach - look for dollar amounts)
       const dollarMatches = lastAIAnswer.match(/\$[\d,]+/g);
@@ -637,18 +919,18 @@
       }
 
       // Show modal
-      document.getElementById('jobSubmissionModal').style.display = 'flex';
+      document.getElementById('projectSubmissionModal').style.display = 'flex';
     });
   }
 
-  // Handle job submission form
-  const jobForm = document.getElementById('jobSubmissionForm');
-  if (jobForm) {
-    jobForm.addEventListener('submit', async (e) => {
+  // Handle project submission form
+  const projectForm = document.getElementById('projectSubmissionForm');
+  if (projectForm) {
+    projectForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const submitBtn = document.getElementById('submitJobBtn');
-      const statusEl = document.getElementById('jobSubmissionStatus');
+      const submitBtn = document.getElementById('submitProjectBtn');
+      const statusEl = document.getElementById('projectSubmissionStatus');
 
       const user = await window.authService.getCurrentUser();
       if (!user) {
@@ -657,12 +939,12 @@
         return;
       }
 
-      const jobData = {
-        title: document.getElementById('jobTitle').value.trim(),
-        description: document.getElementById('jobDescription').value.trim(),
-        address: document.getElementById('jobAddress').value.trim(),
-        zipCode: document.getElementById('jobZip').value.trim(),
-        urgency: document.getElementById('jobUrgency').value,
+      const projectData = {
+        title: document.getElementById('projectTitle').value.trim(),
+        description: document.getElementById('projectDescription').value.trim(),
+        address: document.getElementById('projectAddress').value.trim(),
+        zipCode: document.getElementById('projectZip').value.trim(),
+        urgency: document.getElementById('projectUrgency').value,
         budgetLow: parseInt(document.getElementById('budgetLow').value),
         budgetHigh: parseInt(document.getElementById('budgetHigh').value),
         homeownerEmail: user.email,
@@ -674,36 +956,36 @@
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting...';
-      statusEl.textContent = 'Submitting your job to contractors...';
+      statusEl.textContent = 'Submitting your project to contractors...';
       statusEl.style.color = '#6b7280';
 
       try {
-        const response = await window.authService.authenticatedFetch('/api/submit-job', {
+        const response = await window.authService.authenticatedFetch('/api/submit-project', {
           method: 'POST',
-          body: JSON.stringify(jobData)
+          body: JSON.stringify(projectData)
         });
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || 'Failed to submit job');
+          throw new Error(error.error || 'Failed to submit project');
         }
 
         const result = await response.json();
 
-        statusEl.textContent = '✅ Job posted successfully! Contractors can now view and bid on your project.';
+        statusEl.textContent = '✅ Project posted successfully! Contractors can now view and bid on your project.';
         statusEl.style.color = '#10b981';
 
         setTimeout(() => {
-          closeJobModal();
-          // Optionally redirect to a "My Jobs" page
+          closeProjectModal();
+          // Optionally redirect to a "My Projects" page
         }, 2000);
 
       } catch (err) {
-        statusEl.textContent = 'Error: ' + (err.message || 'Failed to submit job');
+        statusEl.textContent = 'Error: ' + (err.message || 'Failed to submit project');
         statusEl.style.color = '#ef4444';
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Job Posting';
+        submitBtn.textContent = 'Submit Project Posting';
       }
     });
   }
