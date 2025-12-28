@@ -12,7 +12,7 @@
     }
 
     .hero {
-      max-width: 768px;
+      max-width: 896px;
       margin: 48px auto 24px;
       padding: 0 24px;
       text-align: center;
@@ -40,7 +40,7 @@
     }
 
     .input-container {
-      max-width: 768px;
+      max-width: 896px;
       margin: 0 auto 60px;
       padding: 0 24px;
     }
@@ -48,8 +48,8 @@
     .input-card {
       background: white;
       border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 40px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
       border: 2px solid #e5e7eb;
     }
 
@@ -95,16 +95,19 @@
       background: #2563eb;
       color: white;
       border: none;
-      padding: 14px 28px;
+      padding: 16px 32px;
       border-radius: 10px;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
       transition: all 0.2s;
       box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+      width: 100%;
+      max-width: 320px;
     }
 
     .btn-analyze:hover:not(:disabled) {
@@ -120,7 +123,7 @@
 
     /* Answer Output Section */
     .answer-container {
-      max-width: 900px;
+      max-width: 896px;
       margin: 40px auto;
       padding: 0 24px;
       display: none;
@@ -150,8 +153,8 @@
     .answer-card {
       background: white;
       border-radius: 16px;
-      padding: 40px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 48px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
       border: 2px solid #e5e7eb;
     }
 
@@ -203,7 +206,7 @@
 
     /* Next Steps CTA */
     .next-steps-cta {
-      max-width: 900px;
+      max-width: 896px;
       margin: 32px auto;
       padding: 0 24px;
       display: none;
@@ -264,7 +267,7 @@
 
     /* Clarify Section */
     .clarify-section {
-      max-width: 900px;
+      max-width: 896px;
       margin: 24px auto;
       padding: 0 24px;
       display: none;
@@ -333,12 +336,9 @@
 
   <main>
   <section class="hero">
-    <div class="hero-kicker">Home issue assistant</div>
-    <h1 class="hero-title">Describe what’s going on at home.</h1>
+    <h1 class="hero-title">AI Home Assistant</h1>
     <p class="hero-subtitle">
-      Type what you’re seeing, hearing, or smelling. Add a photo if you can.
-      You’ll get a clear summary, severity, urgency, DIY checks, materials you may need,
-      safety warnings, and what to tell a contractor.
+      Describe what you see, hear, or smell. We'll analyze it instantly.
     </p>
   </section>
 
@@ -413,8 +413,8 @@
   </div>
 
   <!-- History Section (moved to bottom) -->
-  <div style="max-width: 768px; margin: 40px auto 80px; padding: 0 24px;">
-    <div class="input-card" style="padding: 24px;">
+  <div style="max-width: 896px; margin: 40px auto 80px; padding: 0 24px;">
+    <div class="input-card" style="padding: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div style="font-size:15px; font-weight:600; color:#111827;">Previous questions</div>
         <button class="clear-btn" id="clearHistoryBtn">Clear history</button>
@@ -960,7 +960,7 @@
       statusEl.style.color = '#6b7280';
 
       try {
-        const response = await window.authService.authenticatedFetch('/api/submit-project', {
+        const response = await window.authService.authenticatedFetch('/api/submit-job', {
           method: 'POST',
           body: JSON.stringify(projectData)
         });

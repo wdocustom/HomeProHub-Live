@@ -675,8 +675,8 @@
       // Check user's subscription tier for Expert pricing
       await checkSubscriptionTier();
 
-      // Store project posting data for Path 1
-      window.projectPostingData = {
+      // Store job posting data for Path 1
+      window.jobPostingData = {
         originalQuestion: question,
         aiAnalysis: answer,
         budgetLow: budgetLow || 500,
@@ -818,11 +818,11 @@
     }
 
     /**
-     * Post project from diagnosis
+     * Post job from diagnosis
      */
-    function postProjectFromDiagnosis() {
-      // Store project data and redirect to dashboard
-      sessionStorage.setItem('pendingProject', JSON.stringify(window.projectPostingData));
+    function postJobFromDiagnosis() {
+      // Store job data and redirect to dashboard
+      sessionStorage.setItem('pendingJob', JSON.stringify(window.jobPostingData));
       window.location.href = 'homeowner-dashboard.html';
     }
 

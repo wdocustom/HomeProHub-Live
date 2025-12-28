@@ -1060,7 +1060,7 @@
     async function loadProjects() {
       try {
         const response = await window.authService.authenticatedFetch(
-          `/api/homeowner/projects?email=${encodeURIComponent(userEmail)}`
+          `/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}`
         );
 
         if (!response.ok) {
@@ -1068,7 +1068,7 @@
         }
 
         const data = await response.json();
-        allProjects = data.projects || [];
+        allProjects = data.jobs || [];
 
         updateStats();
         checkStaleProjects();
