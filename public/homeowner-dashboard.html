@@ -3,15 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Homeowner Dashboard – HomeProHub</title>
+  <title>My Projects – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
-  <link rel="stylesheet" href="components/license-badge.css" />
   <style>
+    body {
+      background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
     .dashboard-container {
-      max-width: 1400px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 40px 24px;
+      padding: 40px 24px 80px;
     }
 
     .dashboard-header {
@@ -23,6 +27,7 @@
       font-weight: 700;
       color: #111827;
       margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
     }
 
     .dashboard-header p {
@@ -31,6 +36,77 @@
       margin: 0;
     }
 
+    /* Stale Job Alert */
+    .stale-job-alert {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: none;
+    }
+
+    .stale-job-alert.show {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stale-job-alert-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+
+    .stale-job-alert-content h3 {
+      margin: 0 0 4px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #92400e;
+    }
+
+    .stale-job-alert-content p {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #78350f;
+      line-height: 1.5;
+    }
+
+    .stale-job-alert-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-alert {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-alert-primary {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn-alert-primary:hover {
+      background: #d97706;
+    }
+
+    .btn-alert-secondary {
+      background: white;
+      color: #92400e;
+      border: 2px solid #fbbf24;
+    }
+
+    .btn-alert-secondary:hover {
+      background: #fffbeb;
+    }
+
+    /* Stats Grid */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -40,9 +116,10 @@
 
     .stat-card {
       background: white;
-      border: 1px solid #e5e7eb;
+      border: 2px solid #e5e7eb;
       border-radius: 12px;
       padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
     .stat-card .stat-label {
@@ -65,15 +142,14 @@
       color: #10b981;
     }
 
-    .jobs-section {
-      margin-bottom: 40px;
-    }
-
+    /* Section Header */
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
     }
 
     .section-header h2 {
@@ -81,6 +157,14 @@
       font-weight: 700;
       color: #111827;
       margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .filter-tabs {
@@ -91,63 +175,93 @@
     .filter-tab {
       padding: 8px 16px;
       border-radius: 8px;
-      border: 1px solid #e5e7eb;
+      border: 2px solid #e5e7eb;
       background: white;
       color: #6b7280;
       font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
     }
 
     .filter-tab:hover {
-      border-color: #2563eb;
-      color: #2563eb;
+      border-color: #3b82f6;
+      color: #3b82f6;
     }
 
     .filter-tab.active {
-      background: #2563eb;
+      background: #3b82f6;
       color: white;
-      border-color: #2563eb;
+      border-color: #3b82f6;
     }
 
-    .job-card {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 16px;
+    .btn-post-job {
+      padding: 10px 24px;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
       transition: all 0.2s;
     }
 
-    .job-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    .btn-post-job:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
     }
 
-    .job-card-header {
+    /* Portfolio Card Grid */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 900px) {
+      .projects-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Project Card - Portfolio Style */
+    .project-card {
+      background: white;
+      border-radius: 16px;
+      border: 2px solid #e5e7eb;
+      overflow: hidden;
+      transition: all 0.3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .project-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+    }
+
+    .project-card-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .project-title-row {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 16px;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 12px;
     }
 
-    .job-title {
+    .project-title {
       font-size: 20px;
       font-weight: 700;
       color: #111827;
-      margin: 0 0 8px 0;
-    }
-
-    .job-meta {
-      display: flex;
-      gap: 16px;
-      font-size: 14px;
-      color: #6b7280;
-    }
-
-    .job-meta span {
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      margin: 0;
+      line-height: 1.3;
+      flex: 1;
     }
 
     .status-badge {
@@ -157,9 +271,11 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
-    .status-badge.open {
+    .status-badge.active {
       background: #dbeafe;
       color: #1e40af;
     }
@@ -174,206 +290,147 @@
       color: #065f46;
     }
 
-    .job-description {
-      color: #4b5563;
+    .project-summary {
       font-size: 14px;
       line-height: 1.6;
+      color: #6b7280;
+      margin: 0;
+      /* Limit to 2 lines */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .project-card-body {
+      padding: 16px 24px;
+    }
+
+    .project-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #6b7280;
       margin-bottom: 16px;
     }
 
-    .job-budget {
+    .project-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .project-budget {
       font-size: 18px;
       font-weight: 700;
       color: #2563eb;
       margin-bottom: 16px;
     }
 
-    .bids-section {
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-    }
-
-    .bids-header {
-      font-size: 16px;
-      font-weight: 600;
-      color: #111827;
-      margin-bottom: 16px;
-    }
-
-    .bid-card {
+    .project-card-footer {
+      padding: 16px 24px;
       background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-
-    .bid-card.accepted {
-      background: #d1fae5;
-      border-color: #10b981;
-    }
-
-    .bid-header {
+      border-top: 1px solid #e5e7eb;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      gap: 12px;
     }
 
-    .contractor-name {
-      font-size: 16px;
+    .bids-count {
+      font-size: 14px;
+      color: #4b5563;
       font-weight: 600;
-      color: #111827;
+      cursor: pointer;
+      transition: color 0.2s;
     }
 
-    .bid-amount {
-      font-size: 18px;
-      font-weight: 700;
+    .bids-count:hover {
       color: #2563eb;
     }
 
-    .bid-details {
-      font-size: 14px;
-      color: #6b7280;
-      margin-bottom: 12px;
+    .bids-count.has-bids {
+      color: #10b981;
     }
 
-    .bid-message {
-      font-size: 14px;
-      color: #4b5563;
-      background: white;
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 12px;
-      line-height: 1.6;
+    /* Manage Dropdown */
+    .manage-dropdown {
+      position: relative;
+      display: inline-block;
     }
 
-    .bid-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-accept {
+    .btn-manage {
       padding: 8px 16px;
-      border-radius: 6px;
-      background: #10b981;
-      color: white;
-      border: none;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-accept:hover {
-      background: #059669;
-    }
-
-    .btn-message {
-      padding: 8px 16px;
-      border-radius: 6px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-message:hover {
-      background: #1d4ed8;
-    }
-
-    .btn-decline {
-      padding: 8px 16px;
-      border-radius: 6px;
-      background: white;
-      color: #ef4444;
-      border: 1px solid #e5e7eb;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-decline:hover {
-      background: #fef2f2;
-      border-color: #ef4444;
-    }
-
-    .no-jobs {
-      text-align: center;
-      padding: 60px 20px;
-      color: #9ca3af;
-    }
-
-    .no-jobs h3 {
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
-
-    /* Contractor Grade Badges */
-    .grade-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 700;
-      margin-left: 8px;
-      border: 2px solid;
-    }
-
-    .grade-A {
-      background: #d1fae5;
-      color: #065f46;
-      border-color: #10b981;
-    }
-
-    .grade-B {
-      background: #dbeafe;
-      color: #1e40af;
-      border-color: #3b82f6;
-    }
-
-    .grade-C {
-      background: #fef3c7;
-      color: #92400e;
-      border-color: #f59e0b;
-    }
-
-    .grade-D {
-      background: #fed7aa;
-      color: #9a3412;
-      border-color: #ea580c;
-    }
-
-    .grade-F {
-      background: #fecaca;
-      color: #991b1b;
-      border-color: #ef4444;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 60px 20px;
-      color: #6b7280;
-    }
-
-    .error-message {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #991b1b;
-      padding: 16px;
       border-radius: 8px;
-      margin-bottom: 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
     }
 
-    /* Job Posting Modal */
+    .btn-manage:hover {
+      background: #2563eb;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      min-width: 200px;
+      z-index: 100;
+      display: none;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+      background: #f3f4f6;
+    }
+
+    .dropdown-item.primary {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .dropdown-item.destructive {
+      color: #ef4444;
+    }
+
+    .dropdown-item.destructive:hover {
+      background: #fef2f2;
+    }
+
+    /* Review Modal */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -388,19 +445,22 @@
       padding: 24px;
       overflow-y: auto;
     }
+
     .modal-overlay.show {
       display: flex;
     }
+
     .modal-content {
       background: white;
       border-radius: 20px;
       padding: 40px;
-      max-width: 700px;
+      max-width: 600px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
       position: relative;
     }
+
     .modal-close {
       position: absolute;
       top: 20px;
@@ -412,229 +472,541 @@
       color: #9ca3af;
       line-height: 1;
     }
+
     .modal-close:hover {
       color: #1f2937;
     }
+
+    .modal-header {
+      margin-bottom: 24px;
+    }
+
     .modal-title {
       font-size: 28px;
       font-weight: 700;
       color: #111827;
       margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
     }
+
     .modal-subtitle {
       font-size: 15px;
       color: #6b7280;
-      margin: 0 0 32px 0;
+      margin: 0;
     }
-    .btn-post-job {
-      padding: 10px 24px;
-      border-radius: 8px;
-      background: #2563eb;
-      color: white;
-      border: none;
+
+    /* Incentive Banner */
+    .incentive-banner {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 2px solid #d97706;
+    }
+
+    .incentive-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+
+    .incentive-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: #78350f;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Star Rating */
+    .star-rating-section {
+      margin-bottom: 32px;
+    }
+
+    .star-rating-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .star-rating {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .star {
+      font-size: 48px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #d1d5db;
+    }
+
+    .star:hover,
+    .star.active {
+      color: #fbbf24;
+      transform: scale(1.1);
+    }
+
+    .star-rating-text {
+      text-align: center;
+      font-size: 14px;
+      color: #6b7280;
+      height: 20px;
+    }
+
+    /* Tap Tags */
+    .tap-tags-section {
+      margin-bottom: 32px;
+    }
+
+    .tap-tags-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .tap-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tap-tag {
+      padding: 10px 16px;
+      border-radius: 999px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      border: 2px solid;
+      user-select: none;
     }
-    .btn-post-job:hover {
-      background: #1d4ed8;
+
+    .tap-tag.positive {
+      border-color: #d1fae5;
+      background: #f0fdf4;
+      color: #065f46;
     }
-    .ai-badge-indicator {
-      display: inline-block;
-      padding: 4px 12px;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      color: white;
+
+    .tap-tag.positive:hover,
+    .tap-tag.positive.selected {
+      border-color: #10b981;
+      background: #d1fae5;
+    }
+
+    .tap-tag.negative {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .tap-tag.negative:hover,
+    .tap-tag.negative.selected {
+      border-color: #ef4444;
+      background: #fecaca;
+    }
+
+    /* Photo Upload */
+    .photo-upload-section {
+      margin-bottom: 32px;
+    }
+
+    .photo-upload-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .photo-dropzone {
+      border: 2px dashed #d1d5db;
       border-radius: 12px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-left: 8px;
+      padding: 32px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #f9fafb;
+    }
+
+    .photo-dropzone:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .photo-dropzone-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .photo-dropzone-text {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .photo-input {
+      display: none;
+    }
+
+    .photo-preview {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .photo-preview-item {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid #e5e7eb;
+    }
+
+    .photo-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    /* Optional Text */
+    .optional-text-section {
+      margin-bottom: 32px;
+    }
+
+    .optional-text-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .optional-text-label span {
+      font-size: 13px;
+      font-weight: 400;
+      color: #9ca3af;
+    }
+
+    .optional-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 2px solid #e5e7eb;
+      font-size: 14px;
+      resize: vertical;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .optional-textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: white;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: white;
+      color: #6b7280;
+      border: 2px solid #e5e7eb;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    .no-projects {
+      text-align: center;
+      padding: 80px 20px;
+      color: #9ca3af;
+    }
+
+    .no-projects h3 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: #6b7280;
+    }
+
+    .no-projects p {
+      margin-bottom: 24px;
+    }
+
+    .error-message {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      color: #991b1b;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: #6b7280;
     }
   </style>
 </head>
 <body>
-  <!-- Navigation component will be injected here by navigation.js -->
+  <!-- Navigation will be injected here -->
 
   <main>
     <div class="dashboard-container">
       <div class="dashboard-header">
-        <h1>My Jobs & Projects</h1>
-        <p>Track your job postings, review bids, and manage your home projects</p>
+        <h1>My Projects</h1>
+        <p>Track your projects, review bids, and manage contractor work</p>
+      </div>
+
+      <!-- Stale Job Alert -->
+      <div class="stale-job-alert" id="staleJobAlert">
+        <div class="stale-job-alert-icon">⏰</div>
+        <div class="stale-job-alert-content" style="flex: 1;">
+          <h3 id="staleJobTitle">Is the Bathroom Remodel finished?</h3>
+          <p id="staleJobMessage">This project has been in progress for over 30 days. Mark it complete to boost your homeowner grade.</p>
+          <div class="stale-job-alert-actions">
+            <button class="btn-alert btn-alert-primary" id="staleJobCompleteBtn">
+              ✅ Mark Complete
+            </button>
+            <button class="btn-alert btn-alert-secondary" id="staleJobDismissBtn">
+              Later
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Stats Grid -->
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-label">Total Jobs Posted</div>
-          <div class="stat-value" id="totalJobsStat">0</div>
+          <div class="stat-label">Total Projects</div>
+          <div class="stat-value" id="totalProjectsStat">0</div>
           <div class="stat-change">All time</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Open Jobs</div>
-          <div class="stat-value" id="openJobsStat">0</div>
-          <div class="stat-change">Accepting bids</div>
+          <div class="stat-label">Active Projects</div>
+          <div class="stat-value" id="activeProjectsStat">0</div>
+          <div class="stat-change">Open & in progress</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Total Bids Received</div>
+          <div class="stat-label">Total Bids</div>
           <div class="stat-value" id="totalBidsStat">0</div>
           <div class="stat-change">From contractors</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">In Progress</div>
-          <div class="stat-value" id="inProgressStat">0</div>
-          <div class="stat-change">Active projects</div>
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="completedProjectsStat">0</div>
+          <div class="stat-change">Finished projects</div>
         </div>
       </div>
 
       <!-- Error Message -->
-      <div id="errorMessage" class="error-message" style="display: none;"></div>
+      <div id="errorMessage" class="error-message"></div>
 
-      <!-- Jobs Section -->
-      <div class="jobs-section">
-        <div class="section-header">
-          <div>
-            <h2>Your Posted Jobs</h2>
-          </div>
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <button class="btn-post-job" id="newJobBtn">
-              ➕ Post New Job
-            </button>
-            <div class="filter-tabs">
-              <button class="filter-tab active" data-filter="all">All</button>
-              <button class="filter-tab" data-filter="open">Open</button>
-              <button class="filter-tab" data-filter="in_progress">In Progress</button>
-              <button class="filter-tab" data-filter="completed">Completed</button>
-            </div>
+      <!-- Section Header -->
+      <div class="section-header">
+        <h2>Your Projects</h2>
+        <div class="section-actions">
+          <button class="btn-post-job" id="newJobBtn">
+            ➕ Post New Project
+          </button>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="active">Active</button>
+            <button class="filter-tab" data-filter="in_progress">In Progress</button>
+            <button class="filter-tab" data-filter="completed">Completed</button>
           </div>
         </div>
+      </div>
 
-        <div id="jobsContainer">
-          <div class="loading">Loading your jobs...</div>
-        </div>
+      <!-- Projects Grid -->
+      <div id="projectsContainer">
+        <div class="loading">Loading your projects...</div>
       </div>
     </div>
   </main>
 
-  <!-- Job Posting Modal -->
-  <div class="modal-overlay" id="jobModal">
+  <!-- Complete Project / Review Modal -->
+  <div class="modal-overlay" id="reviewModal">
     <div class="modal-content">
-      <button class="modal-close" onclick="closeJobModal()">×</button>
-      <h2 class="modal-title">Post a New Job</h2>
-      <p class="modal-subtitle">Get competitive bids from verified contractors in your area</p>
+      <button class="modal-close" onclick="closeReviewModal()">×</button>
 
-      <form id="jobPostingForm">
-        <div class="form-group">
-          <label for="jobTitle">Job Title <span style="color: #ef4444;">*</span></label>
-          <input type="text" id="jobTitle" placeholder="e.g., Fix leaking ceiling in bathroom" required maxlength="100" />
+      <div class="modal-header">
+        <h2 class="modal-title">Job Done! How did <span id="contractorNameReview">the contractor</span> do?</h2>
+        <p class="modal-subtitle">Help other homeowners make informed decisions</p>
+      </div>
+
+      <!-- Incentive Banner -->
+      <div class="incentive-banner">
+        <span class="incentive-icon">🎯</span>
+        <p class="incentive-text">Complete this feedback to earn +10 Points for your Homeowner Grade!</p>
+      </div>
+
+      <!-- Star Rating -->
+      <div class="star-rating-section">
+        <label class="star-rating-label">How was your overall experience?</label>
+        <div class="star-rating" id="starRating">
+          <span class="star" data-rating="1">★</span>
+          <span class="star" data-rating="2">★</span>
+          <span class="star" data-rating="3">★</span>
+          <span class="star" data-rating="4">★</span>
+          <span class="star" data-rating="5">★</span>
         </div>
+        <div class="star-rating-text" id="starRatingText"></div>
+      </div>
 
-        <div class="form-group">
-          <label for="jobDescription">Description <span style="color: #ef4444;">*</span></label>
-          <textarea id="jobDescription" rows="6" placeholder="Describe the issue, what needs to be done, and any relevant details..." required></textarea>
+      <!-- Tap Tags - Positive -->
+      <div class="tap-tags-section">
+        <label class="tap-tags-label">What went well? (Tap all that apply)</label>
+        <div class="tap-tags" id="positiveTags">
+          <div class="tap-tag positive" data-tag="Punctual">👍 Punctual</div>
+          <div class="tap-tag positive" data-tag="Clean Job Site">✨ Clean Job Site</div>
+          <div class="tap-tag positive" data-tag="Stayed on Budget">💰 Stayed on Budget</div>
+          <div class="tap-tag positive" data-tag="Great Communication">💬 Great Communication</div>
+          <div class="tap-tag positive" data-tag="Quality Work">⭐ Quality Work</div>
+          <div class="tap-tag positive" data-tag="Professional">🎯 Professional</div>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label for="jobCategory">Category <span style="color: #ef4444;">*</span></label>
-          <select id="jobCategory" required>
-            <option value="">Select a category...</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="hvac">HVAC</option>
-            <option value="roofing">Roofing</option>
-            <option value="painting">Painting</option>
-            <option value="flooring">Flooring</option>
-            <option value="carpentry">Carpentry</option>
-            <option value="landscaping">Landscaping</option>
-            <option value="general">General Contracting</option>
-            <option value="other">Other</option>
-          </select>
+      <!-- Tap Tags - Negative -->
+      <div class="tap-tags-section">
+        <label class="tap-tags-label">Any issues? (Tap all that apply)</label>
+        <div class="tap-tags" id="negativeTags">
+          <div class="tap-tag negative" data-tag="Late">⏰ Late</div>
+          <div class="tap-tag negative" data-tag="Messy">🗑️ Messy</div>
+          <div class="tap-tag negative" data-tag="Over Budget">💸 Over Budget</div>
+          <div class="tap-tag negative" data-tag="Poor Communication">📵 Poor Communication</div>
+          <div class="tap-tag negative" data-tag="Ghosted">👻 Ghosted</div>
+          <div class="tap-tag negative" data-tag="Incomplete Work">⚠️ Incomplete Work</div>
         </div>
+      </div>
 
-        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div class="form-group">
-            <label for="budgetLow">Budget (Low) <span style="color: #ef4444;">*</span></label>
-            <input type="number" id="budgetLow" placeholder="500" required min="0" step="50" />
-          </div>
-
-          <div class="form-group">
-            <label for="budgetHigh">Budget (High) <span style="color: #ef4444;">*</span></label>
-            <input type="number" id="budgetHigh" placeholder="2000" required min="0" step="50" />
-          </div>
+      <!-- Photo Upload -->
+      <div class="photo-upload-section">
+        <label class="photo-upload-label">Add Final Photos (Optional)</label>
+        <div class="photo-dropzone" id="photoDropzone">
+          <div class="photo-dropzone-icon">📸</div>
+          <p class="photo-dropzone-text">Click to upload or drag & drop<br>Show the completed work</p>
         </div>
+        <input type="file" id="photoInput" class="photo-input" accept="image/*" multiple />
+        <div class="photo-preview" id="photoPreview"></div>
+      </div>
 
-        <div class="form-group">
-          <label for="zipCode">ZIP Code <span style="color: #ef4444;">*</span></label>
-          <input type="text" id="zipCode" placeholder="62701" pattern="[0-9]{5}" maxlength="5" required />
-        </div>
+      <!-- Optional Text -->
+      <div class="optional-text-section">
+        <label class="optional-text-label">Any specific details? <span>(Optional)</span></label>
+        <textarea class="optional-textarea" id="reviewText" placeholder="Share any additional thoughts about working with this contractor..."></textarea>
+      </div>
 
-        <div class="form-group">
-          <label for="urgency">Urgency <span style="color: #ef4444;">*</span></label>
-          <select id="urgency" required>
-            <option value="flexible">Flexible - No rush</option>
-            <option value="soon">Soon - Within 2 weeks</option>
-            <option value="urgent">Urgent - Within days</option>
-            <option value="emergency">Emergency - Immediate</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>
-            <input type="checkbox" id="aiAssisted" disabled />
-            AI-Assisted Post
-            <span class="ai-badge-indicator" id="aiBadge" style="display: none;">AI GENERATED</span>
-          </label>
-          <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">
-            This job post was created from your AI assistant analysis
-          </p>
-        </div>
-
-        <div style="display: flex; gap: 12px; margin-top: 32px;">
-          <button type="submit" class="btn-primary" id="submitJobBtn">
-            Post Job
-          </button>
-          <button type="button" class="btn-secondary" onclick="closeJobModal()">
-            Cancel
-          </button>
-          <div id="jobFormStatus" style="margin-left: auto; align-self: center; font-size: 14px;"></div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Estimate Viewer Modal -->
-  <div class="modal-overlay" id="estimateModal">
-    <div class="modal-content" style="max-width: 900px;">
-      <button class="modal-close" onclick="closeEstimateModal()">×</button>
-      <h2 class="modal-title" id="estimateModalTitle">Professional Estimate</h2>
-      <p class="modal-subtitle" id="estimateModalSubtitle">AI-Generated Detailed Breakdown</p>
-
-      <div id="estimateContent" style="margin-top: 24px;">
-        <!-- Estimate content will be dynamically inserted here -->
+      <!-- Actions -->
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeReviewModal()">Cancel</button>
+        <button class="btn-primary" id="submitReviewBtn">Submit Review</button>
       </div>
     </div>
   </div>
 
-  <script>
-    // Constants
-    const STORAGE_KEYS = {
-      USERNAME: 'homeprohub_username',
-      AUTH_TOKEN: 'homeprohub_auth_token',
-      USER_ROLE: 'homeprohub_user_role',
-      USER: 'homeprohub_user'
-    };
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <script src="components/navigation.js"></script>
 
+  <script>
     // State
-    let allJobs = [];
+    let allProjects = [];
     let currentFilter = 'all';
     let userEmail = '';
+    let currentReviewProject = null;
+    let selectedStarRating = 0;
+    let selectedPositiveTags = [];
+    let selectedNegativeTags = [];
+    let uploadedPhotos = [];
 
-    // Auth - Wait for authService to be ready
-    // Note: Auth redirects are handled by navigation.js
+    // Text cleaning utility (from AI results page)
+    function cleanAIArtifacts(text) {
+      if (!text) return '';
+
+      // Remove INTENT TYPE lines
+      let cleaned = text.replace(/^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim, '').trim();
+
+      // Remove other common AI artifacts
+      cleaned = cleaned.replace(/^[\s]*AI ANALYSIS:[\s]*/gim, '').trim();
+
+      return cleaned;
+    }
+
+    // Auth check
     async function checkAuth() {
       try {
-        // Wait for authService to initialize
         if (!window.authService || !window.authService.initialized) {
           await new Promise(resolve => {
             const checkInterval = setInterval(() => {
@@ -646,29 +1018,13 @@
           });
         }
 
-        // Check if user is authenticated
         const user = await window.authService.getCurrentUser();
-        if (!user) {
-          console.log('No user found - navigation will handle redirect');
-          return false;
-        }
+        if (!user) return false;
 
-        // Get profile to check role
         const profile = await window.authService.getUserProfile();
-        if (!profile || profile.role !== 'homeowner') {
-          console.log('Not a homeowner - navigation will handle redirect');
-          return false;
-        }
+        if (!profile || profile.role !== 'homeowner') return false;
 
-        // Set user email for API calls
         userEmail = user.email;
-
-        // Update profile link if it exists
-        const profileLink = document.getElementById('profileLink');
-        if (profileLink) {
-          profileLink.textContent = profile.full_name || user.email;
-        }
-
         return true;
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -676,14 +1032,408 @@
       }
     }
 
-    // Initialize after auth check
+    // Initialize
     checkAuth().then(isAuthenticated => {
       if (isAuthenticated) {
-        loadJobs();
+        loadProjects();
       }
     });
 
-    // Format currency
+    // Load projects
+    async function loadProjects() {
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to load projects');
+        }
+
+        const data = await response.json();
+        allProjects = data.jobs || [];
+
+        updateStats();
+        checkStaleJobs();
+        renderProjects();
+
+      } catch (error) {
+        console.error('Error loading projects:', error);
+        showError('Failed to load your projects. Please try again.');
+      }
+    }
+
+    // Update stats
+    function updateStats() {
+      document.getElementById('totalProjectsStat').textContent = allProjects.length;
+
+      const activeCount = allProjects.filter(p => p.status === 'active' || p.status === 'in_progress').length;
+      document.getElementById('activeProjectsStat').textContent = activeCount;
+
+      const totalBids = allProjects.reduce((sum, p) => sum + (p.bids?.length || 0), 0);
+      document.getElementById('totalBidsStat').textContent = totalBids;
+
+      const completedCount = allProjects.filter(p => p.status === 'completed').length;
+      document.getElementById('completedProjectsStat').textContent = completedCount;
+    }
+
+    // Check for stale jobs (>30 days in progress)
+    function checkStaleJobs() {
+      const staleJob = allProjects.find(project => {
+        if (project.status !== 'in_progress') return false;
+
+        const startDate = new Date(project.posted_at);
+        const daysSince = Math.floor((new Date() - startDate) / (1000 * 60 * 60 * 24));
+
+        return daysSince > 30;
+      });
+
+      if (staleJob) {
+        const alert = document.getElementById('staleJobAlert');
+        document.getElementById('staleJobTitle').textContent = `Is the ${staleJob.title} finished?`;
+        document.getElementById('staleJobCompleteBtn').onclick = () => openReviewModal(staleJob);
+        document.getElementById('staleJobDismissBtn').onclick = () => alert.classList.remove('show');
+        alert.classList.add('show');
+      }
+    }
+
+    // Render projects
+    function renderProjects() {
+      const container = document.getElementById('projectsContainer');
+
+      let filteredProjects = allProjects;
+      if (currentFilter === 'active') {
+        filteredProjects = allProjects.filter(p => p.status === 'active' || p.status === 'in_progress');
+      } else if (currentFilter !== 'all') {
+        filteredProjects = allProjects.filter(p => p.status === currentFilter);
+      }
+
+      if (filteredProjects.length === 0) {
+        container.innerHTML = `
+          <div class="no-projects">
+            <h3>No projects found</h3>
+            <p>Get started by asking our AI assistant about your home issue!</p>
+            <button class="btn-primary" onclick="window.location.href='home.html'">Ask AI Assistant</button>
+          </div>
+        `;
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'projects-grid';
+
+      filteredProjects.forEach(project => {
+        const card = createProjectCard(project);
+        grid.appendChild(card);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(grid);
+    }
+
+    // Create project card
+    function createProjectCard(project) {
+      const card = document.createElement('div');
+      card.className = 'project-card';
+
+      const cleanDescription = cleanAIArtifacts(project.description || '');
+      const summary = cleanDescription.substring(0, 120) + (cleanDescription.length > 120 ? '...' : '');
+
+      const bidsCount = project.bids?.length || 0;
+      const statusClass = project.status === 'active' ? 'active' : project.status;
+      const statusText = project.status === 'active' ? 'Open' :
+                        project.status === 'in_progress' ? 'In Progress' : 'Completed';
+
+      card.innerHTML = `
+        <div class="project-card-header">
+          <div class="project-title-row">
+            <h3 class="project-title">${escapeHtml(project.title)}</h3>
+            <span class="status-badge ${statusClass}">${statusText}</span>
+          </div>
+          <p class="project-summary">${escapeHtml(summary)}</p>
+        </div>
+
+        <div class="project-card-body">
+          <div class="project-meta">
+            <div class="project-meta-item">
+              <span>📅</span>
+              <span>${formatDate(project.posted_at)}</span>
+            </div>
+            <div class="project-meta-item">
+              <span>📍</span>
+              <span>${escapeHtml(project.city || 'Local')}, ${escapeHtml(project.state || '')}</span>
+            </div>
+          </div>
+
+          ${project.budget_low && project.budget_high ? `
+            <div class="project-budget">
+              ${formatCurrency(project.budget_low)} - ${formatCurrency(project.budget_high)}
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="project-card-footer">
+          <div class="bids-count ${bidsCount > 0 ? 'has-bids' : ''}" onclick="viewBids('${project.id}')">
+            ${bidsCount} Bid${bidsCount !== 1 ? 's' : ''} Received
+          </div>
+
+          <div class="manage-dropdown">
+            <button class="btn-manage" onclick="toggleDropdown(event, '${project.id}')">
+              Manage ▼
+            </button>
+            <div class="dropdown-menu" id="dropdown-${project.id}">
+              <div class="dropdown-item" onclick="viewBids('${project.id}')">
+                <span>📋</span>
+                <span>View Proposals</span>
+              </div>
+              <div class="dropdown-item" onclick="editProject('${project.id}')">
+                <span>✏️</span>
+                <span>Edit Details</span>
+              </div>
+              ${project.status !== 'completed' ? `
+                <div class="dropdown-item primary" onclick="openReviewModal(${JSON.stringify(project).replace(/"/g, '&quot;')})">
+                  <span>✅</span>
+                  <span>Mark as Completed</span>
+                </div>
+              ` : ''}
+              <div class="dropdown-item destructive" onclick="cancelProject('${project.id}')">
+                <span>🗑️</span>
+                <span>Cancel Project</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Toggle dropdown
+    function toggleDropdown(event, projectId) {
+      event.stopPropagation();
+
+      // Close all other dropdowns
+      document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        if (menu.id !== `dropdown-${projectId}`) {
+          menu.classList.remove('show');
+        }
+      });
+
+      // Toggle this dropdown
+      const dropdown = document.getElementById(`dropdown-${projectId}`);
+      dropdown.classList.toggle('show');
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.classList.remove('show');
+      });
+    });
+
+    // View bids (placeholder)
+    function viewBids(projectId) {
+      alert('Bids view coming soon! For now, check the full job details.');
+    }
+
+    // Edit project (placeholder)
+    function editProject(projectId) {
+      alert('Edit functionality coming soon!');
+    }
+
+    // Cancel project
+    async function cancelProject(projectId) {
+      if (!confirm('Are you sure you want to cancel this project? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        // Archive project logic would go here
+        alert('Project canceled. (Archive logic not yet implemented)');
+      } catch (error) {
+        console.error('Error canceling project:', error);
+        alert('Failed to cancel project. Please try again.');
+      }
+    }
+
+    // Open review modal
+    function openReviewModal(project) {
+      if (typeof project === 'string') {
+        // If called from dropdown, parse the JSON
+        project = JSON.parse(project.replace(/&quot;/g, '"'));
+      }
+
+      currentReviewProject = project;
+
+      // Find contractor name from accepted bid
+      const acceptedBid = project.bids?.find(b => b.status === 'accepted');
+      const contractorName = acceptedBid?.contractor?.business_name || acceptedBid?.contractor_business_name || 'the contractor';
+
+      document.getElementById('contractorNameReview').textContent = contractorName;
+      document.getElementById('reviewModal').classList.add('show');
+
+      // Reset form
+      selectedStarRating = 0;
+      selectedPositiveTags = [];
+      selectedNegativeTags = [];
+      uploadedPhotos = [];
+      document.getElementById('reviewText').value = '';
+      document.getElementById('photoPreview').innerHTML = '';
+      updateStarRating();
+    }
+
+    // Close review modal
+    function closeReviewModal() {
+      document.getElementById('reviewModal').classList.remove('show');
+      currentReviewProject = null;
+    }
+
+    // Star rating interaction
+    document.getElementById('starRating').addEventListener('click', (e) => {
+      if (e.target.classList.contains('star')) {
+        selectedStarRating = parseInt(e.target.dataset.rating);
+        updateStarRating();
+      }
+    });
+
+    function updateStarRating() {
+      const stars = document.querySelectorAll('.star');
+      const text = document.getElementById('starRatingText');
+
+      stars.forEach((star, index) => {
+        if (index < selectedStarRating) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      });
+
+      const ratingTexts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+      text.textContent = selectedStarRating > 0 ? ratingTexts[selectedStarRating] : '';
+    }
+
+    // Tap tags interaction
+    document.getElementById('positiveTags').addEventListener('click', (e) => {
+      const tag = e.target.closest('.tap-tag');
+      if (tag) {
+        tag.classList.toggle('selected');
+        const tagText = tag.dataset.tag;
+
+        if (selectedPositiveTags.includes(tagText)) {
+          selectedPositiveTags = selectedPositiveTags.filter(t => t !== tagText);
+        } else {
+          selectedPositiveTags.push(tagText);
+        }
+      }
+    });
+
+    document.getElementById('negativeTags').addEventListener('click', (e) => {
+      const tag = e.target.closest('.tap-tag');
+      if (tag) {
+        tag.classList.toggle('selected');
+        const tagText = tag.dataset.tag;
+
+        if (selectedNegativeTags.includes(tagText)) {
+          selectedNegativeTags = selectedNegativeTags.filter(t => t !== tagText);
+        } else {
+          selectedNegativeTags.push(tagText);
+        }
+      }
+    });
+
+    // Photo upload
+    document.getElementById('photoDropzone').addEventListener('click', () => {
+      document.getElementById('photoInput').click();
+    });
+
+    document.getElementById('photoInput').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          uploadedPhotos.push(e.target.result);
+          renderPhotoPreview();
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    function renderPhotoPreview() {
+      const preview = document.getElementById('photoPreview');
+      preview.innerHTML = uploadedPhotos.map((photo, index) => `
+        <div class="photo-preview-item">
+          <img src="${photo}" alt="Upload ${index + 1}" />
+          <button class="photo-remove" onclick="removePhoto(${index})">×</button>
+        </div>
+      `).join('');
+    }
+
+    function removePhoto(index) {
+      uploadedPhotos.splice(index, 1);
+      renderPhotoPreview();
+    }
+
+    // Submit review
+    document.getElementById('submitReviewBtn').addEventListener('click', async () => {
+      if (selectedStarRating === 0) {
+        alert('Please select a star rating');
+        return;
+      }
+
+      const btn = document.getElementById('submitReviewBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const reviewData = {
+          projectId: currentReviewProject.id,
+          rating: selectedStarRating,
+          positiveTags: selectedPositiveTags,
+          negativeTags: selectedNegativeTags,
+          photos: uploadedPhotos,
+          reviewText: document.getElementById('reviewText').value.trim(),
+          homeownerEmail: userEmail
+        };
+
+        // API call to submit review and mark project complete
+        const response = await window.authService.authenticatedFetch('/api/project/complete', {
+          method: 'POST',
+          body: JSON.stringify(reviewData)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to submit review');
+        }
+
+        alert('Review submitted! +10 points added to your Homeowner Grade. The contractor will be notified.');
+
+        closeReviewModal();
+        await loadProjects(); // Reload to show updated status
+
+      } catch (error) {
+        console.error('Error submitting review:', error);
+        alert('Failed to submit review. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Submit Review';
+      }
+    });
+
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        currentFilter = this.dataset.filter;
+        renderProjects();
+      });
+    });
+
+    // New job button
+    document.getElementById('newJobBtn').addEventListener('click', () => {
+      window.location.href = 'home.html';
+    });
+
+    // Utility functions
     function formatCurrency(amount) {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -693,7 +1443,6 @@
       }).format(amount);
     }
 
-    // Format date
     function formatDate(dateString) {
       const date = new Date(dateString);
       const now = new Date();
@@ -707,459 +1456,6 @@
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
-    // Load jobs
-    async function loadJobs() {
-      try {
-        const response = await window.authService.authenticatedFetch(
-          `/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}`
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to load jobs');
-        }
-
-        const data = await response.json();
-        allJobs = data.jobs || [];
-
-        updateStats();
-        renderJobs();
-
-      } catch (error) {
-        console.error('Error loading jobs:', error);
-        showError('Failed to load your jobs. Please try again.');
-      }
-    }
-
-    // Update stats
-    function updateStats() {
-      document.getElementById('totalJobsStat').textContent = allJobs.length;
-      document.getElementById('openJobsStat').textContent = allJobs.filter(j => j.status === 'open').length;
-
-      const totalBids = allJobs.reduce((sum, job) => sum + (job.bids?.length || 0), 0);
-      document.getElementById('totalBidsStat').textContent = totalBids;
-
-      document.getElementById('inProgressStat').textContent = allJobs.filter(j => j.status === 'in_progress').length;
-    }
-
-    // Render jobs
-    function renderJobs() {
-      const container = document.getElementById('jobsContainer');
-
-      let filteredJobs = allJobs;
-      if (currentFilter !== 'all') {
-        filteredJobs = allJobs.filter(job => job.status === currentFilter);
-      }
-
-      if (filteredJobs.length === 0) {
-        container.innerHTML = `
-          <div class="no-jobs">
-            <h3>No jobs found</h3>
-            <p>You haven't posted any jobs yet. Start by asking our AI assistant about your home issue!</p>
-            <a href="ask.html" class="btn-primary" style="display: inline-block; margin-top: 16px;">Ask AI Assistant</a>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = filteredJobs.map(job => `
-        <div class="job-card">
-          <div class="job-card-header">
-            <div>
-              <h3 class="job-title">${escapeHtml(job.title)}</h3>
-              <div class="job-meta">
-                <span>📍 ${escapeHtml(job.address)}</span>
-                <span>📅 Posted ${formatDate(job.posted_at)}</span>
-                <span>💼 ${job.bids?.length || 0} bid${(job.bids?.length || 0) !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
-            <span class="status-badge ${job.status}">${job.status.replace('_', ' ')}</span>
-          </div>
-
-          <p class="job-description">${escapeHtml(job.description.substring(0, 200))}${job.description.length > 200 ? '...' : ''}</p>
-
-          ${job.budget_low && job.budget_high ? `
-            <div class="job-budget">
-              Budget: ${formatCurrency(job.budget_low)} - ${formatCurrency(job.budget_high)}
-            </div>
-          ` : ''}
-
-          ${job.bids && job.bids.length > 0 ? `
-            <div class="bids-section">
-              <div class="bids-header">${job.bids.length} Bid${job.bids.length !== 1 ? 's' : ''} Received</div>
-              ${job.bids.map(bid => renderBid(bid, job)).join('')}
-            </div>
-          ` : '<p style="color: #9ca3af; font-size: 14px;">No bids received yet</p>'}
-        </div>
-      `).join('');
-
-      // Add event listeners to bid action buttons
-      attachBidActionListeners();
-    }
-
-    // Calculate contractor grade (A-F) based on profile data
-    // TODO: Replace with actual backend grading when available
-    function getContractorGrade(contractor) {
-      if (!contractor) return 'C';
-
-      let score = 0;
-
-      // Years in business (0-40 points)
-      const years = contractor.years_in_business || 0;
-      score += Math.min(years * 4, 40);
-
-      // Has license (20 points)
-      if (contractor.license_number) score += 20;
-
-      // Has insurance (20 points)
-      if (contractor.insurance_info) score += 20;
-
-      // Rating if available (0-20 points)
-      if (contractor.rating) {
-        score += (contractor.rating / 5) * 20;
-      } else {
-        score += 10; // Default middle score if no ratings yet
-      }
-
-      // Convert score to grade
-      if (score >= 90) return 'A';
-      if (score >= 80) return 'B';
-      if (score >= 70) return 'C';
-      if (score >= 60) return 'D';
-      return 'F';
-    }
-
-    // Render single bid
-    function renderBid(bid, job) {
-      const isAccepted = bid.status === 'accepted';
-      const isPending = bid.status === 'pending';
-      const contractorGrade = getContractorGrade(bid.contractor);
-
-      // Generate license badge for contractor
-      const licenseBadge = bid.contractor ? generateLicenseBadge(bid.contractor, { size: 'compact', showGetLicensed: false }) : '';
-
-      // Check if bid has professional estimate attached
-      const hasEstimate = bid.has_estimate && bid.estimate;
-
-      // Check if bid was updated (submitted_at and updated_at are different)
-      const isUpdated = bid.updated_at && bid.submitted_at &&
-                        new Date(bid.updated_at).getTime() > new Date(bid.submitted_at).getTime();
-
-      return `
-        <div class="bid-card ${isAccepted ? 'accepted' : ''}">
-          <div class="bid-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="contractor-name">${escapeHtml(bid.contractor?.business_name || bid.contractor_business_name || 'Contractor')}</div>
-              <span class="grade-badge grade-${contractorGrade}" title="Contractor Grade: ${contractorGrade}">${contractorGrade}</span>
-              ${licenseBadge}
-              ${hasEstimate ? `
-                <span style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                  <span>💰</span> Professional Estimate
-                </span>
-              ` : ''}
-              ${isUpdated ? `
-                <span style="background: #f59e0b; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                  <span>🔄</span> Updated
-                </span>
-              ` : ''}
-            </div>
-            <div class="bid-amount">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</div>
-          </div>
-
-          <div class="bid-details">
-            ${bid.contractor?.years_in_business ? `⏱️ ${bid.contractor.years_in_business} years in business • ` : ''}
-            ${bid.estimated_duration ? `📅 Duration: ${escapeHtml(bid.estimated_duration)}` : ''}
-            ${isUpdated ? `<br>🔄 Bid updated ${formatDate(bid.updated_at)}` : `<br>📅 Bid submitted ${formatDate(bid.submitted_at)}`}
-          </div>
-
-          ${bid.message ? `
-            <div class="bid-message">${escapeHtml(bid.message)}</div>
-          ` : ''}
-
-          <div class="bid-actions">
-            ${isAccepted ? `
-              <span style="color: #10b981; font-weight: 600;">✓ Accepted</span>
-              ${hasEstimate ? `<button class="btn-view-estimate" data-bid-id="${bid.id}" style="background: #059669; margin-left: 8px;">📊 View Detailed Estimate</button>` : ''}
-              <button class="btn-message" data-contractor-email="${bid.contractor_email}" data-job-id="${job.id}">💬 Message Contractor</button>
-            ` : isPending ? `
-              <button class="btn-accept" data-bid-id="${bid.id}" data-job-id="${job.id}">Accept Bid</button>
-              ${hasEstimate ? `<button class="btn-view-estimate" data-bid-id="${bid.id}" style="background: #059669;">📊 View Detailed Estimate</button>` : ''}
-              <button class="btn-message" data-contractor-email="${bid.contractor_email}" data-job-id="${job.id}">Message Contractor</button>
-              <button class="btn-decline" data-bid-id="${bid.id}" data-job-id="${job.id}">Decline</button>
-            ` : `
-              <span style="color: #6b7280;">Status: ${bid.status}</span>
-            `}
-          </div>
-        </div>
-      `;
-    }
-
-    // Attach event listeners to bid action buttons
-    function attachBidActionListeners() {
-      // Accept bid buttons
-      document.querySelectorAll('.btn-accept').forEach(btn => {
-        btn.addEventListener('click', async function() {
-          const bidId = this.dataset.bidId;
-          const jobId = this.dataset.jobId;
-
-          if (!confirm('Are you sure you want to accept this bid? This will reject all other bids for this job.')) {
-            return;
-          }
-
-          try {
-            this.disabled = true;
-            this.textContent = 'Accepting...';
-
-            const response = await window.authService.authenticatedFetch('/api/bid/accept', {
-              method: 'POST',
-              body: JSON.stringify({
-                bidId,
-                jobId,
-                homeownerEmail: userEmail
-              })
-            });
-
-            if (!response.ok) {
-              throw new Error('Failed to accept bid');
-            }
-
-            alert('Bid accepted successfully! The contractor has been notified.');
-            await loadJobs(); // Reload jobs to show updated status
-
-          } catch (error) {
-            console.error('Error accepting bid:', error);
-            alert('Failed to accept bid. Please try again.');
-            this.disabled = false;
-            this.textContent = 'Accept Bid';
-          }
-        });
-      });
-
-      // Message contractor buttons
-      document.querySelectorAll('.btn-message').forEach(btn => {
-        btn.addEventListener('click', async function() {
-          const contractorEmail = this.dataset.contractorEmail;
-          const jobId = this.dataset.jobId;
-
-          // Create or find conversation and redirect to messages
-          try {
-            const response = await window.authService.authenticatedFetch('/api/conversations/create', {
-              method: 'POST',
-              body: JSON.stringify({
-                job_id: jobId,
-                homeowner_email: userEmail,
-                contractor_email: contractorEmail
-              })
-            });
-
-            if (response.ok) {
-              window.location.href = 'messages.html';
-            } else {
-              // Fallback: just go to messages page
-              window.location.href = 'messages.html';
-            }
-          } catch (error) {
-            console.error('Error creating conversation:', error);
-            // Fallback: just go to messages page
-            window.location.href = 'messages.html';
-          }
-        });
-      });
-
-      // Decline bid buttons
-      document.querySelectorAll('.btn-decline').forEach(btn => {
-        btn.addEventListener('click', async function() {
-          const bidId = this.dataset.bidId;
-          const jobId = this.dataset.jobId;
-
-          if (!confirm('Are you sure you want to decline this bid? The contractor will be notified.')) {
-            return;
-          }
-
-          try {
-            this.disabled = true;
-            this.textContent = 'Declining...';
-
-            const response = await window.authService.authenticatedFetch('/api/bid/decline', {
-              method: 'POST',
-              body: JSON.stringify({
-                bidId,
-                jobId,
-                homeownerEmail: userEmail
-              })
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({}));
-              const errorMsg = errorData.error || `Server error: ${response.status}`;
-              console.error('Decline bid failed:', errorMsg, errorData);
-              throw new Error(errorMsg);
-            }
-
-            alert('Bid declined successfully. The contractor has been notified.');
-            await loadJobs(); // Reload jobs to show updated status
-
-          } catch (error) {
-            console.error('Error declining bid:', error);
-            alert(`Failed to decline bid: ${error.message}`);
-            this.disabled = false;
-            this.textContent = 'Decline';
-          }
-        });
-      });
-
-      // View Estimate buttons
-      document.querySelectorAll('.btn-view-estimate').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const bidId = this.dataset.bidId;
-          openEstimateModal(bidId);
-        });
-      });
-    }
-
-    // Open estimate modal
-    function openEstimateModal(bidId) {
-      // Find the bid with this ID from all jobs
-      let targetBid = null;
-      for (const job of allJobs) {
-        if (job.bids) {
-          targetBid = job.bids.find(bid => bid.id === bidId);
-          if (targetBid) break;
-        }
-      }
-
-      if (!targetBid || !targetBid.estimate) {
-        alert('Estimate data not found');
-        return;
-      }
-
-      const estimate = targetBid.estimate;
-      const contractorName = targetBid.contractor?.business_name || targetBid.contractor_business_name || 'Contractor';
-
-      // Update modal title
-      document.getElementById('estimateModalTitle').textContent = `Professional Estimate from ${contractorName}`;
-      document.getElementById('estimateModalSubtitle').textContent = estimate.project_title || 'AI-Generated Detailed Breakdown';
-
-      // Render estimate content
-      renderEstimateContent(estimate);
-
-      // Show modal
-      document.getElementById('estimateModal').classList.add('show');
-    }
-
-    // Close estimate modal
-    function closeEstimateModal() {
-      document.getElementById('estimateModal').classList.remove('show');
-    }
-
-    // Render estimate content
-    function renderEstimateContent(estimate) {
-      const container = document.getElementById('estimateContent');
-
-      const lineItems = estimate.line_items || [];
-      const subtotalLow = estimate.subtotal_low || 0;
-      const subtotalHigh = estimate.subtotal_high || 0;
-      const overheadPercent = estimate.overhead_profit_percent || 20;
-      const contingencyPercent = estimate.contingency_percent || 10;
-      const totalLow = estimate.total_projected_low || estimate.total_low || 0;
-      const totalHigh = estimate.total_projected_high || estimate.total_high || 0;
-
-      const overheadLow = (subtotalLow * overheadPercent / 100);
-      const overheadHigh = (subtotalHigh * overheadPercent / 100);
-      const contingencyLow = (subtotalLow * contingencyPercent / 100);
-      const contingencyHigh = (subtotalHigh * contingencyPercent / 100);
-
-      container.innerHTML = `
-        <div style="background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
-          <!-- Total Summary -->
-          <div style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); padding: 24px; color: white; text-align: center;">
-            <div style="font-size: 16px; opacity: 0.9; margin-bottom: 8px;">Estimated Total Cost</div>
-            <div style="font-size: 36px; font-weight: 700;">
-              ${formatCurrency(totalLow)} - ${formatCurrency(totalHigh)}
-            </div>
-            <div style="font-size: 14px; opacity: 0.8; margin-top: 8px;">Professional AI-Generated Estimate</div>
-          </div>
-
-          <!-- Line Items -->
-          <div style="padding: 24px;">
-            <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 18px;">Detailed Breakdown</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr style="border-bottom: 2px solid #e5e7eb;">
-                  <th style="text-align: left; padding: 12px 8px; color: #6b7280; font-weight: 600; font-size: 14px;">Item</th>
-                  <th style="text-align: right; padding: 12px 8px; color: #6b7280; font-weight: 600; font-size: 14px;">Low</th>
-                  <th style="text-align: right; padding: 12px 8px; color: #6b7280; font-weight: 600; font-size: 14px;">High</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${lineItems.map((item, index) => `
-                  <tr style="border-bottom: 1px solid #f3f4f6; ${index % 2 === 0 ? 'background: #f9fafb;' : ''}">
-                    <td style="padding: 12px 8px; font-size: 14px; color: #1f2937;">${escapeHtml(item.item)}</td>
-                    <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(item.low_estimate)}</td>
-                    <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(item.high_estimate)}</td>
-                  </tr>
-                `).join('')}
-                <tr style="border-top: 2px solid #e5e7eb; font-weight: 600; background: #f9fafb;">
-                  <td style="padding: 12px 8px; font-size: 14px; color: #1f2937;">Subtotal (Materials & Labor)</td>
-                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(subtotalLow)}</td>
-                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #1f2937;">${formatCurrency(subtotalHigh)}</td>
-                </tr>
-                <tr style="background: #fffbeb;">
-                  <td style="padding: 12px 8px; font-size: 14px; color: #78350f;">Overhead & Profit (${overheadPercent}%)</td>
-                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(overheadLow)}</td>
-                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(overheadHigh)}</td>
-                </tr>
-                <tr style="background: #fffbeb;">
-                  <td style="padding: 12px 8px; font-size: 14px; color: #78350f;">Contingency (${contingencyPercent}%)</td>
-                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(contingencyLow)}</td>
-                  <td style="padding: 12px 8px; text-align: right; font-size: 14px; color: #78350f;">${formatCurrency(contingencyHigh)}</td>
-                </tr>
-                <tr style="border-top: 3px solid #2563eb; background: #eff6ff; font-weight: 700;">
-                  <td style="padding: 16px 8px; font-size: 16px; color: #1e40af;">Total Project Cost</td>
-                  <td style="padding: 16px 8px; text-align: right; font-size: 16px; color: #1e40af;">${formatCurrency(totalLow)}</td>
-                  <td style="padding: 16px 8px; text-align: right; font-size: 16px; color: #1e40af;">${formatCurrency(totalHigh)}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div style="margin-top: 24px; padding: 16px; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 4px;">
-              <div style="font-weight: 600; color: #065f46; margin-bottom: 8px;">✓ Professional Estimate Included</div>
-              <p style="margin: 0; font-size: 14px; color: #047857; line-height: 1.6;">
-                This detailed estimate was generated using AI and includes materials, labor, overhead, and contingency.
-                Actual costs may vary based on final specifications and unforeseen conditions.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top: 24px; text-align: right;">
-          <button onclick="closeEstimateModal()" style="padding: 12px 32px; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-            Close
-          </button>
-        </div>
-      `;
-    }
-
-    // Filter tabs
-    document.querySelectorAll('.filter-tab').forEach(tab => {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-        currentFilter = this.dataset.filter;
-        renderJobs();
-      });
-    });
-
-    // Show error
-    function showError(message) {
-      const errorEl = document.getElementById('errorMessage');
-      errorEl.textContent = message;
-      errorEl.style.display = 'block';
-      setTimeout(() => {
-        errorEl.style.display = 'none';
-      }, 5000);
-    }
-
-    // Escape HTML
     function escapeHtml(unsafe) {
       if (!unsafe) return '';
       return unsafe
@@ -1171,165 +1467,14 @@
         .replace(/'/g, "&#039;");
     }
 
-    // Job Posting Modal Functions
-    function openJobModal() {
-      document.getElementById('jobModal').classList.add('show');
-
-      // Check for pending AI data
-      const pendingJobData = sessionStorage.getItem('pendingJob');
-      if (pendingJobData) {
-        try {
-          const data = JSON.parse(pendingJobData);
-          autoPopulateFromAI(data);
-          sessionStorage.removeItem('pendingJob'); // Clear after use
-        } catch (e) {
-          console.error('Error parsing pending job data:', e);
-        }
-      }
-    }
-
-    function closeJobModal() {
-      document.getElementById('jobModal').classList.remove('show');
-      document.getElementById('jobPostingForm').reset();
-      document.getElementById('aiAssisted').checked = false;
-      document.getElementById('aiBadge').style.display = 'none';
-      document.getElementById('jobFormStatus').textContent = '';
-    }
-
-    window.closeJobModal = closeJobModal; // Make globally accessible
-
-    function autoPopulateFromAI(data) {
-      if (!data) return;
-
-      // Populate title from question
-      if (data.originalQuestion) {
-        const titleField = document.getElementById('jobTitle');
-        // Create a short title from the question (first 80 chars)
-        const shortTitle = data.originalQuestion.substring(0, 80).trim();
-        titleField.value = shortTitle + (data.originalQuestion.length > 80 ? '...' : '');
-      }
-
-      // Populate description with both question and AI analysis
-      if (data.originalQuestion || data.aiAnalysis) {
-        const descField = document.getElementById('jobDescription');
-        let description = '';
-
-        if (data.originalQuestion) {
-          description += `ISSUE DESCRIPTION:\n${data.originalQuestion}\n\n`;
-        }
-
-        if (data.aiAnalysis) {
-          description += `AI ANALYSIS:\n${data.aiAnalysis}`;
-        }
-
-        descField.value = description.trim();
-      }
-
-      // Populate budget if available
-      if (data.budgetLow) {
-        document.getElementById('budgetLow').value = data.budgetLow;
-      }
-      if (data.budgetHigh) {
-        document.getElementById('budgetHigh').value = data.budgetHigh;
-      }
-
-      // Mark as AI-assisted
-      if (data.fromAI) {
-        document.getElementById('aiAssisted').checked = true;
-        document.getElementById('aiBadge').style.display = 'inline-block';
-      }
-
-      // Try to guess category from the question
-      if (data.originalQuestion) {
-        const question = data.originalQuestion.toLowerCase();
-        const categoryField = document.getElementById('jobCategory');
-
-        if (question.includes('leak') || question.includes('pipe') || question.includes('drain') || question.includes('toilet') || question.includes('faucet')) {
-          categoryField.value = 'plumbing';
-        } else if (question.includes('electric') || question.includes('outlet') || question.includes('wire') || question.includes('breaker')) {
-          categoryField.value = 'electrical';
-        } else if (question.includes('hvac') || question.includes('heat') || question.includes('ac') || question.includes('furnace') || question.includes('air condition')) {
-          categoryField.value = 'hvac';
-        } else if (question.includes('roof') || question.includes('shingle') || question.includes('gutter')) {
-          categoryField.value = 'roofing';
-        } else if (question.includes('paint') || question.includes('wall')) {
-          categoryField.value = 'painting';
-        } else if (question.includes('floor') || question.includes('carpet') || question.includes('tile')) {
-          categoryField.value = 'flooring';
-        }
-      }
-    }
-
-    // Handle job posting form submission
-    document.getElementById('jobPostingForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const submitBtn = document.getElementById('submitJobBtn');
-      const statusEl = document.getElementById('jobFormStatus');
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Posting...';
-      statusEl.textContent = 'Creating job post...';
-      statusEl.style.color = '#6b7280';
-
-      try {
-        const formData = {
-          title: document.getElementById('jobTitle').value.trim(),
-          description: document.getElementById('jobDescription').value.trim(),
-          category: document.getElementById('jobCategory').value,
-          budget_low: parseInt(document.getElementById('budgetLow').value),
-          budget_high: parseInt(document.getElementById('budgetHigh').value),
-          zip_code: document.getElementById('zipCode').value.trim(),
-          urgency: document.getElementById('urgency').value,
-          ai_assisted: document.getElementById('aiAssisted').checked,
-          homeowner_email: userEmail
-        };
-
-        const response = await window.authService.authenticatedFetch('/api/jobs', {
-          method: 'POST',
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.message || 'Failed to create job');
-        }
-
-        statusEl.textContent = 'Job posted successfully! ✅';
-        statusEl.style.color = '#10b981';
-
-        // Close modal and reload jobs
-        setTimeout(() => {
-          closeJobModal();
-          loadJobs();
-        }, 1500);
-
-      } catch (error) {
-        console.error('Error posting job:', error);
-        statusEl.textContent = 'Error: ' + error.message;
-        statusEl.style.color = '#ef4444';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Post Job';
-      }
-    });
-
-    // New Job button click handler
-    document.getElementById('newJobBtn').addEventListener('click', openJobModal);
-
-    // Auto-open modal if coming from AI assistant
-    if (sessionStorage.getItem('pendingJob')) {
-      setTimeout(() => openJobModal(), 500);
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+      setTimeout(() => {
+        errorEl.classList.remove('show');
+      }, 5000);
     }
   </script>
-
-  <!-- Supabase Auth -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/services/auth.js"></script>
-
-  <!-- License Badge Component -->
-  <script src="components/license-badge.js"></script>
-
-  <!-- Unified Navigation Component -->
-  <script src="components/navigation.js"></script>
 </body>
 </html>
