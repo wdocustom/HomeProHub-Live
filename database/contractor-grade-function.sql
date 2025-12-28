@@ -2,8 +2,8 @@
 -- Fix for "Error" and 0/100 scores on My Grade page
 -- Handles NULL values to prevent division by zero errors
 
--- Drop existing function if it exists
-DROP FUNCTION IF EXISTS calculate_contractor_grade(TEXT);
+-- Drop existing function if it exists (CASCADE removes dependent views)
+DROP FUNCTION IF EXISTS calculate_contractor_grade(TEXT) CASCADE;
 
 CREATE OR REPLACE FUNCTION calculate_contractor_grade(p_contractor_email TEXT)
 RETURNS JSON AS $$
