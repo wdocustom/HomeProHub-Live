@@ -1,62 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HomeProHub – AI-Powered Home Services Marketplace</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Understand Your Home Issues, Connect with Verified Contractors</title>
+  <meta name="description" content="Free AI-powered home issue guidance. Connect with vetted, licensed contractors. Optional on-demand expert access. Trust, clarity, no hidden fees.">
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
   <style>
-    /* ========================================
-       MODERN DESIGN SYSTEM
-       ======================================== */
-
-    :root {
-      /* Brand Colors - Modern & Professional */
-      --primary: #2563eb;
-      --primary-dark: #1e40af;
-      --primary-light: #3b82f6;
-      --secondary: #10b981;
-      --secondary-dark: #059669;
-
-      /* Neutrals - Clean Palette */
-      --gray-50: #f9fafb;
-      --gray-100: #f3f4f6;
-      --gray-200: #e5e7eb;
-      --gray-300: #d1d5db;
-      --gray-400: #9ca3af;
-      --gray-500: #6b7280;
-      --gray-600: #4b5563;
-      --gray-700: #374151;
-      --gray-800: #1f2937;
-      --gray-900: #111827;
-
-      /* Accents */
-      --accent-blue: #0ea5e9;
-      --accent-purple: #8b5cf6;
-      --accent-orange: #f59e0b;
-
-      /* Gradients */
-      --gradient-hero: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-      --gradient-feature: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      --gradient-cta: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
-
-      /* Shadows */
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-      --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-
-      /* Spacing Scale */
-      --space-xs: 0.5rem;
-      --space-sm: 1rem;
-      --space-md: 1.5rem;
-      --space-lg: 2rem;
-      --space-xl: 3rem;
-      --space-2xl: 4rem;
-      --space-3xl: 6rem;
-    }
-
     * {
       margin: 0;
       padding: 0;
@@ -64,735 +18,530 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      color: var(--gray-900);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
-      overflow-x: hidden;
+      color: #1f2937;
+      background: #ffffff;
     }
 
-    /* ========================================
-       NAVIGATION - Floating Glass Morphism
-       ======================================== */
-
-    .nav-wrapper {
-      position: fixed;
+    /* SECTION A: TOP NAV */
+    .top-nav {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 16px 0;
+      position: sticky;
       top: 0;
-      left: 0;
-      right: 0;
       z-index: 1000;
-      padding: var(--space-sm) 0;
     }
 
-    .navbar {
+    .nav-container {
       max-width: 1280px;
       margin: 0 auto;
-      padding: 0 var(--space-lg);
-    }
-
-    .nav-glass {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 100px;
-      padding: var(--space-sm) var(--space-lg);
+      padding: 0 24px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
     }
 
-    .nav-glass:hover {
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-      font-size: 1.5rem;
+    .logo {
+      font-size: 22px;
       font-weight: 700;
-      color: var(--primary);
+      color: #1f2937;
       text-decoration: none;
-    }
-
-    .brand-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--gradient-hero);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 700;
-      font-size: 1.25rem;
+      letter-spacing: -0.02em;
     }
 
     .nav-links {
       display: flex;
-      gap: var(--space-lg);
+      gap: 32px;
       align-items: center;
     }
 
-    .nav-link {
-      color: var(--gray-700);
+    .nav-links a {
+      color: #6b7280;
       text-decoration: none;
+      font-size: 15px;
       font-weight: 500;
-      font-size: 0.95rem;
       transition: color 0.2s;
-      position: relative;
     }
 
-    .nav-link::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      width: 0;
-      height: 2px;
-      background: var(--primary);
-      transition: width 0.3s;
+    .nav-links a:hover {
+      color: #1f2937;
     }
 
-    .nav-link:hover {
-      color: var(--primary);
+    .nav-cta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }
 
-    .nav-link:hover::after {
-      width: 100%;
-    }
-
-    .btn-nav {
-      padding: 0.65rem 1.5rem;
-      border-radius: 50px;
-      border: none;
+    .btn-secondary {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      color: #374151;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
-      font-size: 0.95rem;
+      transition: all 0.2s;
     }
 
-    .btn-nav.primary {
-      background: var(--gradient-cta);
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .btn-primary {
+      padding: 10px 20px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 6px;
       color: white;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-    }
-
-    .btn-nav.primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-    }
-
-    /* ========================================
-       HERO SECTION - Split Design with Animation
-       ======================================== */
-
-    .hero {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      align-items: center;
-      gap: var(--space-3xl);
-      padding: var(--space-3xl) var(--space-lg);
-      max-width: 1400px;
-      margin: 0 auto;
-      padding-top: 120px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    /* Animated Background Blobs */
-    .hero::before {
-      content: '';
-      position: absolute;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
-      top: -200px;
-      right: -100px;
-      animation: float 20s ease-in-out infinite;
-      z-index: -1;
-    }
-
-    .hero::after {
-      content: '';
-      position: absolute;
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
-      bottom: -100px;
-      left: -50px;
-      animation: float 15s ease-in-out infinite reverse;
-      z-index: -1;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(30px, -30px) scale(1.1); }
-      66% { transform: translate(-20px, 20px) scale(0.9); }
-    }
-
-    .hero-content {
-      z-index: 1;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-xs);
-      padding: 0.5rem 1rem;
-      background: rgba(37, 99, 235, 0.1);
-      border: 1px solid rgba(37, 99, 235, 0.2);
-      border-radius: 50px;
-      color: var(--primary);
-      font-size: 0.85rem;
+      font-size: 14px;
       font-weight: 600;
-      margin-bottom: var(--space-lg);
-      animation: slideDown 0.6s ease-out;
+      cursor: pointer;
+      transition: all 0.2s;
     }
 
-    .hero-badge .badge-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--secondary);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
+    .btn-primary:hover {
+      background: #2563eb;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(1.2); }
-    }
-
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* SECTION B: HERO (Homeowner-first sandbox) */
+    .hero {
+      max-width: 900px;
+      margin: 80px auto 120px;
+      padding: 0 24px;
+      text-align: center;
     }
 
     .hero h1 {
-      font-size: clamp(2.5rem, 6vw, 4rem);
-      font-weight: 800;
+      font-size: 52px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.03em;
       line-height: 1.1;
-      margin-bottom: var(--space-lg);
-      background: linear-gradient(135deg, var(--gray-900) 0%, var(--primary) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: slideUp 0.8s ease-out 0.2s both;
+      margin-bottom: 24px;
     }
 
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .hero-subtitle {
-      font-size: 1.25rem;
-      color: var(--gray-600);
+    .hero-subhead {
+      font-size: 20px;
+      color: #6b7280;
       line-height: 1.6;
-      margin-bottom: var(--space-xl);
-      animation: slideUp 0.8s ease-out 0.4s both;
+      margin-bottom: 16px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
-    .hero-cta {
-      display: flex;
-      gap: var(--space-md);
-      margin-bottom: var(--space-xl);
-      animation: slideUp 0.8s ease-out 0.6s both;
+    .hero-helper {
+      font-size: 15px;
+      color: #9ca3af;
+      font-style: italic;
+      margin-bottom: 40px;
     }
 
-    .btn-hero {
-      padding: 1rem 2rem;
-      border-radius: 12px;
-      border: none;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s;
+    .hero-actions {
       display: flex;
+      flex-direction: column;
+      gap: 16px;
       align-items: center;
-      gap: var(--space-xs);
-      text-decoration: none;
+      margin-bottom: 32px;
     }
 
-    .btn-hero.primary {
-      background: var(--gradient-cta);
+    .hero-input-group {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .hero-input {
+      flex: 1;
+      padding: 16px 20px;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .hero-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .btn-large {
+      padding: 16px 32px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
       color: white;
-      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
     }
 
-    .btn-hero.primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.4);
+    .btn-large:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
 
-    .btn-hero.secondary {
-      background: white;
-      color: var(--gray-700);
-      border: 2px solid var(--gray-200);
+    .hero-secondary-link {
+      color: #6b7280;
+      font-size: 15px;
+      text-decoration: underline;
+      cursor: pointer;
     }
 
-    .btn-hero.secondary:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      transform: translateY(-3px);
+    .hero-trust-line {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-top: 24px;
     }
 
-    .hero-stats {
+    /* SECTION C: HOW IT WORKS */
+    .how-it-works {
+      background: #f9fafb;
+      padding: 80px 24px;
+    }
+
+    .section-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 56px;
+      letter-spacing: -0.02em;
+    }
+
+    .steps-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-lg);
-      animation: slideUp 0.8s ease-out 0.8s both;
+      gap: 48px;
     }
 
-    .stat {
-      text-align: left;
+    .step-card {
+      text-align: center;
     }
 
-    .stat-value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--primary);
-      display: block;
-      margin-bottom: 0.25rem;
-    }
-
-    .stat-label {
-      font-size: 0.9rem;
-      color: var(--gray-600);
-    }
-
-    /* Hero Visual */
-    .hero-visual {
-      position: relative;
-      animation: fadeIn 1s ease-out 0.4s both;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    .visual-cards {
-      position: relative;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-md);
-    }
-
-    .visual-card {
-      background: white;
-      border-radius: 20px;
-      padding: var(--space-lg);
-      box-shadow: var(--shadow-xl);
-      border: 1px solid var(--gray-100);
-      animation: floatCard 6s ease-in-out infinite;
-    }
-
-    .visual-card:nth-child(1) { animation-delay: 0s; }
-    .visual-card:nth-child(2) { animation-delay: 1s; }
-    .visual-card:nth-child(3) { animation-delay: 2s; }
-    .visual-card:nth-child(4) { animation-delay: 3s; }
-
-    @keyframes floatCard {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-
-    .visual-card-icon {
+    .step-number {
+      display: inline-block;
       width: 48px;
       height: 48px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 48px;
+      margin-bottom: 20px;
+    }
+
+    .step-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .step-description {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    /* SECTION D: THREE-PATH EXPLAINER */
+    .three-paths {
+      padding: 80px 24px;
+    }
+
+    .paths-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .path-card {
+      background: white;
+      border: 2px solid #e5e7eb;
       border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      margin-bottom: var(--space-sm);
+      padding: 32px;
+      transition: all 0.2s;
     }
 
-    .visual-card-icon.blue { background: rgba(37, 99, 235, 0.1); }
-    .visual-card-icon.green { background: rgba(16, 185, 129, 0.1); }
-    .visual-card-icon.orange { background: rgba(245, 158, 11, 0.1); }
-    .visual-card-icon.purple { background: rgba(139, 92, 246, 0.1); }
-
-    .visual-card h3 {
-      font-size: 1rem;
-      margin-bottom: 0.5rem;
-      color: var(--gray-900);
+    .path-card:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
-    .visual-card p {
-      font-size: 0.85rem;
-      color: var(--gray-600);
+    .path-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .path-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .path-subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      margin-bottom: 20px;
       line-height: 1.5;
     }
 
-    /* ========================================
-       FEATURES SECTION - Bento Grid
-       ======================================== */
-
-    .features {
-      padding: var(--space-3xl) var(--space-lg);
-      background: var(--gray-50);
+    .path-features {
+      margin: 20px 0;
     }
 
-    .features-container {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: var(--space-3xl);
-    }
-
-    .section-badge {
-      display: inline-block;
-      padding: 0.5rem 1rem;
-      background: rgba(16, 185, 129, 0.1);
-      color: var(--secondary);
-      border-radius: 50px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: var(--space-md);
-    }
-
-    .section-header h2 {
-      font-size: clamp(2rem, 4vw, 3rem);
-      font-weight: 700;
-      margin-bottom: var(--space-md);
-      color: var(--gray-900);
-    }
-
-    .section-header p {
-      font-size: 1.125rem;
-      color: var(--gray-600);
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    .bento-grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: var(--space-lg);
-    }
-
-    .bento-item {
-      background: white;
-      border-radius: 24px;
-      padding: var(--space-xl);
-      box-shadow: var(--shadow-md);
-      border: 1px solid var(--gray-100);
-      transition: all 0.3s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .bento-item:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .bento-item.large {
-      grid-column: span 7;
-      background: var(--gradient-hero);
-      color: white;
-    }
-
-    .bento-item.medium {
-      grid-column: span 5;
-    }
-
-    .bento-item.small {
-      grid-column: span 4;
-    }
-
-    .bento-icon {
-      width: 64px;
-      height: 64px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
+    .path-feature {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      margin-bottom: var(--space-lg);
+      align-items: start;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #374151;
     }
 
-    .bento-item:not(.large) .bento-icon {
-      background: var(--gray-50);
+    .path-card .btn-primary {
+      width: 100%;
+      margin-top: 20px;
     }
 
-    .bento-item h3 {
-      font-size: 1.5rem;
-      margin-bottom: var(--space-md);
-      font-weight: 700;
+    .path-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #9ca3af;
+      font-style: italic;
+      text-align: center;
     }
 
-    .bento-item p {
-      opacity: 0.9;
-      line-height: 1.6;
-      margin-bottom: var(--space-lg);
+    .path-card.no-button .btn-primary {
+      display: none;
     }
 
-    .bento-item:not(.large) h3 {
-      color: var(--gray-900);
-    }
-
-    .bento-item:not(.large) p {
-      color: var(--gray-600);
-    }
-
-    .bento-link {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-xs);
-      font-weight: 600;
-      color: inherit;
-      text-decoration: none;
-      transition: gap 0.3s;
-    }
-
-    .bento-link:hover {
-      gap: var(--space-sm);
-    }
-
-    /* ========================================
-       HOW IT WORKS - Timeline
-       ======================================== */
-
-    .how-it-works {
-      padding: var(--space-3xl) var(--space-lg);
-      background: white;
-    }
-
-    .timeline {
-      max-width: 1000px;
-      margin: 0 auto;
-      position: relative;
-    }
-
-    .timeline::before {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--gray-200);
-      transform: translateX(-50%);
-    }
-
-    .timeline-item {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-2xl);
-      margin-bottom: var(--space-3xl);
-      position: relative;
-    }
-
-    .timeline-item:nth-child(even) .timeline-content {
-      grid-column: 2;
-    }
-
-    .timeline-item:nth-child(even) .timeline-visual {
-      grid-column: 1;
-      grid-row: 1;
-    }
-
-    .timeline-dot {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 16px;
-      height: 16px;
-      background: var(--primary);
-      border-radius: 50%;
-      border: 4px solid white;
-      box-shadow: 0 0 0 4px var(--gray-200);
-      z-index: 1;
-    }
-
-    .timeline-content {
-      background: var(--gray-50);
-      padding: var(--space-xl);
-      border-radius: 20px;
-      border: 1px solid var(--gray-100);
-    }
-
-    .timeline-number {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      background: var(--primary);
+    /* SECTION E: CONTRACTOR SECTION */
+    .contractor-section {
+      background: #1f2937;
       color: white;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 1.25rem;
-      margin-bottom: var(--space-md);
+      padding: 80px 24px;
     }
 
-    .timeline-content h3 {
-      font-size: 1.5rem;
-      margin-bottom: var(--space-sm);
-      color: var(--gray-900);
+    .contractor-section .section-title {
+      color: white;
     }
 
-    .timeline-content p {
-      color: var(--gray-600);
+    .contractor-content {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .contractor-benefits {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin: 40px 0;
+      text-align: left;
+    }
+
+    .benefit-item {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+    }
+
+    .benefit-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .benefit-text {
+      font-size: 15px;
+      color: #d1d5db;
       line-height: 1.6;
     }
 
-    .timeline-visual {
+    .contractor-section .btn-primary {
       background: white;
-      border-radius: 20px;
-      padding: var(--space-lg);
-      box-shadow: var(--shadow-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
+      color: #1f2937;
+      padding: 16px 32px;
+      font-size: 16px;
+      margin-top: 32px;
     }
 
-    /* ========================================
-       CTA SECTION - Gradient Card
-       ======================================== */
-
-    .cta-section {
-      padding: var(--space-3xl) var(--space-lg);
-      background: var(--gray-50);
+    .contractor-section .btn-primary:hover {
+      background: #f3f4f6;
     }
 
-    .cta-card {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: var(--gradient-hero);
-      border-radius: 32px;
-      padding: var(--space-3xl);
-      text-align: center;
-      color: white;
-      position: relative;
-      overflow: hidden;
+    /* SECTION F: PRICING */
+    .pricing {
+      padding: 80px 24px;
+      background: #f9fafb;
     }
 
-    .cta-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -10%;
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-
-    .cta-card h2 {
-      font-size: clamp(2rem, 4vw, 3rem);
-      font-weight: 700;
-      margin-bottom: var(--space-md);
-      position: relative;
-    }
-
-    .cta-card p {
-      font-size: 1.125rem;
-      opacity: 0.9;
-      margin-bottom: var(--space-xl);
-      max-width: 600px;
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+      max-width: 1100px;
       margin-left: auto;
       margin-right: auto;
-      position: relative;
     }
 
-    .cta-buttons {
-      display: flex;
-      gap: var(--space-md);
-      justify-content: center;
-      position: relative;
-    }
-
-    .btn-cta {
-      padding: 1rem 2rem;
-      border-radius: 12px;
-      border: none;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    .btn-cta.white {
+    .pricing-card {
       background: white;
-      color: var(--primary);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 40px 32px;
+      text-align: center;
     }
 
-    .btn-cta.white:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    .pricing-card.featured {
+      border-color: #3b82f6;
+      position: relative;
     }
 
-    .btn-cta.outline {
-      background: transparent;
+    .pricing-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3b82f6;
       color: white;
-      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 4px 16px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    .btn-cta.outline:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: white;
+    .pricing-role {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
     }
 
-    /* ========================================
-       FOOTER - Minimal & Clean
-       ======================================== */
+    .pricing-price {
+      font-size: 48px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
 
-    footer {
-      background: var(--gray-900);
-      color: var(--gray-400);
-      padding: var(--space-2xl) var(--space-lg);
+    .pricing-note {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+
+    .pricing-features {
+      text-align: left;
+      margin: 24px 0;
+    }
+
+    .pricing-features li {
+      padding: 8px 0;
+      color: #374151;
+      font-size: 14px;
+      list-style: none;
+      padding-left: 24px;
+      position: relative;
+    }
+
+    .pricing-features li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    /* SECTION G: FAQ */
+    .faq {
+      padding: 80px 24px;
+    }
+
+    .faq-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 24px 0;
+    }
+
+    .faq-question {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .faq-answer {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.7;
+    }
+
+    /* SECTION H: FOOTER */
+    .footer {
+      background: #1f2937;
+      color: #9ca3af;
+      padding: 48px 24px 32px;
     }
 
     .footer-container {
-      max-width: 1400px;
+      max-width: 1100px;
       margin: 0 auto;
+    }
+
+    .footer-grid {
       display: grid;
       grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: var(--space-2xl);
-      padding-bottom: var(--space-2xl);
-      border-bottom: 1px solid var(--gray-800);
+      gap: 48px;
+      margin-bottom: 40px;
     }
 
     .footer-brand {
       color: white;
-      font-size: 1.5rem;
+      font-size: 20px;
       font-weight: 700;
-      margin-bottom: var(--space-md);
+      margin-bottom: 16px;
     }
 
-    .footer-brand-text {
-      color: var(--gray-400);
-      font-size: 0.95rem;
+    .footer-disclaimer {
+      font-size: 13px;
       line-height: 1.6;
-      margin-bottom: var(--space-md);
+      margin-bottom: 16px;
     }
 
-    .footer-section h4 {
+    .footer-section-title {
       color: white;
-      font-size: 1rem;
+      font-size: 14px;
       font-weight: 600;
-      margin-bottom: var(--space-md);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .footer-links {
@@ -800,13 +549,13 @@
     }
 
     .footer-links li {
-      margin-bottom: var(--space-sm);
+      margin-bottom: 12px;
     }
 
     .footer-links a {
-      color: var(--gray-400);
+      color: #9ca3af;
       text-decoration: none;
-      font-size: 0.95rem;
+      font-size: 14px;
       transition: color 0.2s;
     }
 
@@ -815,696 +564,638 @@
     }
 
     .footer-bottom {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding-top: var(--space-lg);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.9rem;
+      border-top: 1px solid #374151;
+      padding-top: 24px;
+      text-align: center;
+      font-size: 13px;
     }
 
-    /* ========================================
-       RESPONSIVE
-       ======================================== */
-
-    @media (max-width: 1024px) {
-      .hero {
-        grid-template-columns: 1fr;
-        text-align: center;
-        gap: var(--space-2xl);
-      }
-
-      .hero-visual {
-        order: -1;
-      }
-
-      .hero-cta,
-      .hero-stats {
-        justify-content: center;
-      }
-
-      .bento-item.large,
-      .bento-item.medium,
-      .bento-item.small {
-        grid-column: span 12;
-      }
-
-      .timeline::before {
-        left: 0;
-      }
-
-      .timeline-item {
-        grid-template-columns: 1fr;
-        gap: var(--space-lg);
-      }
-
-      .timeline-item:nth-child(even) .timeline-content,
-      .timeline-item:nth-child(even) .timeline-visual {
-        grid-column: 1;
-      }
-
-      .timeline-dot {
-        left: 0;
-      }
-
-      .footer-container {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    @media (max-width: 640px) {
+    /* MOBILE RESPONSIVE */
+    @media (max-width: 768px) {
       .nav-links {
         display: none;
       }
 
-      .hero-stats {
-        grid-template-columns: 1fr;
+      .hero h1 {
+        font-size: 36px;
       }
 
-      .visual-cards {
-        grid-template-columns: 1fr;
+      .hero-subhead {
+        font-size: 18px;
       }
 
-      .cta-buttons {
+      .hero-input-group {
         flex-direction: column;
       }
 
-      .footer-container {
+      .steps-grid,
+      .paths-grid,
+      .pricing-grid,
+      .contractor-benefits,
+      .footer-grid {
         grid-template-columns: 1fr;
       }
     }
 
-    /* ========================================
-       AUTH MODAL
-       ======================================== */
-
-    .auth-modal-overlay {
+    /* Role Selection Modal */
+    .modal {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(4px);
+      background: rgba(0,0,0,0.5);
       z-index: 2000;
       align-items: center;
       justify-content: center;
-      animation: fadeIn 0.2s;
     }
 
-    .auth-modal-overlay.active {
+    .modal.active {
       display: flex;
     }
 
-    .auth-modal {
+    .modal-content {
       background: white;
-      border-radius: 24px;
-      padding: var(--space-2xl);
-      max-width: 480px;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 500px;
       width: 90%;
-      box-shadow: var(--shadow-2xl);
-      animation: slideUp 0.3s;
-      position: relative;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .role-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .role-option {
+      padding: 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .role-option:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .role-option-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .role-option-description {
+      font-size: 14px;
+      color: #6b7280;
     }
 
     .modal-close {
-      position: absolute;
-      top: var(--space-lg);
-      right: var(--space-lg);
-      background: var(--gray-100);
-      border: none;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 1.2rem;
-      color: var(--gray-600);
-      transition: all 0.2s;
-    }
-
-    .modal-close:hover {
-      background: var(--gray-200);
-      transform: rotate(90deg);
-    }
-
-    .modal-header {
       text-align: center;
-      margin-bottom: var(--space-xl);
+      margin-top: 24px;
     }
 
-    .modal-header h2 {
-      font-size: 1.75rem;
-      margin-bottom: var(--space-sm);
-      color: var(--gray-900);
-    }
-
-    .modal-header p {
-      color: var(--gray-600);
-      font-size: 0.95rem;
-    }
-
-    .auth-tabs {
-      display: flex;
-      gap: var(--space-sm);
-      background: var(--gray-100);
-      padding: 4px;
-      border-radius: 12px;
-      margin-bottom: var(--space-xl);
-    }
-
-    .auth-tab {
-      flex: 1;
-      padding: 0.75rem;
-      border: none;
+    .modal-close button {
       background: transparent;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: var(--gray-600);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .auth-tab.active {
-      background: white;
-      color: var(--primary);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .auth-form {
-      display: none;
-    }
-
-    .auth-form.active {
-      display: block;
-    }
-
-    .form-group {
-      margin-bottom: var(--space-lg);
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: var(--space-xs);
-      font-weight: 500;
-      color: var(--gray-700);
-      font-size: 0.9rem;
-    }
-
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 2px solid var(--gray-200);
-      border-radius: 8px;
-      font-size: 1rem;
-      transition: all 0.2s;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .btn-auth {
-      width: 100%;
-      padding: 1rem;
-      background: var(--gradient-cta);
-      color: white;
       border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 1rem;
+      color: #6b7280;
       cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .btn-auth:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
-    }
-
-    .auth-divider {
-      text-align: center;
-      margin: var(--space-lg) 0;
-      color: var(--gray-500);
-      font-size: 0.85rem;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <!-- Navigation -->
-  <div class="nav-wrapper">
-    <nav class="navbar">
-      <div class="nav-glass">
-        <a href="/" class="brand">
-          <div class="brand-icon">HH</div>
-          <span>HomeProHub</span>
-        </a>
 
-        <div class="nav-links">
-          <a href="#features" class="nav-link">Features</a>
-          <a href="#how-it-works" class="nav-link">How It Works</a>
-          <a href="pricing-estimator.html" class="nav-link">Pricing</a>
-          <button class="btn-nav primary" onclick="showAuthModal('signup')">Get Started</button>
+  <!-- SECTION A: TOP NAV -->
+  <nav class="top-nav">
+    <div class="nav-container">
+      <a href="/" class="logo">HomeProHub</a>
+
+      <div class="nav-links">
+        <a href="#homeowners">Homeowners</a>
+        <a href="#contractors">Contractors</a>
+        <a href="#how-it-works">How it Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+      </div>
+
+      <div class="nav-cta">
+        <button class="btn-secondary" onclick="showSignIn()">Sign in</button>
+        <button class="btn-primary" onclick="showRoleSelection()">Get started</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- SECTION B: HERO (Homeowner-first sandbox) -->
+  <section class="hero" id="homeowners">
+    <h1>What's going on with your home?</h1>
+
+    <p class="hero-subhead">
+      Describe what you're seeing or upload a photo. Our AI helps you understand what might be happening,
+      how serious it could be, and what your options are — completely free.
+    </p>
+
+    <p class="hero-helper">
+      Many homeowners use this just to understand the issue before deciding what to do.
+    </p>
+
+    <div class="hero-actions">
+      <div class="hero-input-group">
+        <input
+          type="text"
+          class="hero-input"
+          placeholder="Describe your issue (e.g., 'Water stain on ceiling after rain')"
+          id="heroIssueInput"
+        />
+        <button class="btn-large" onclick="startFreeAICheck()">Try Free AI Check</button>
+      </div>
+
+      <a href="#" class="hero-secondary-link" onclick="event.preventDefault(); redirectToDirectory();">
+        Free to connect with verified contractors when you're ready
+      </a>
+    </div>
+
+    <p class="hero-trust-line">
+      Homeowner use is free. Contractors pay for lead access. Optional paid on-demand expert access.
+    </p>
+  </section>
+
+  <!-- SECTION C: HOW IT WORKS -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-container">
+      <h2 class="section-title">How It Works</h2>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3 class="step-title">Free AI Clarity</h3>
+          <p class="step-description">
+            Upload a photo or describe your issue. Get plain-English guidance on what might be happening.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3 class="step-title">Understand Your Options</h3>
+          <p class="step-description">
+            Get safety guidance, urgency assessment, and "what to tell a contractor" summaries — all free.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3 class="step-title">Connect When Ready</h3>
+          <p class="step-description">
+            Post your job and connect with vetted, licensed contractors. Free to post. No obligation.
+          </p>
         </div>
       </div>
-    </nav>
-  </div>
+    </div>
+  </section>
 
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="hero-content">
-      <div class="hero-badge">
-        <span class="badge-dot"></span>
-        AI-Powered Home Services
-      </div>
-
-      <h1>Your Home's Smartest Connection to Trusted Contractors</h1>
-
-      <p class="hero-subtitle">
-        Get instant AI diagnosis for home issues, receive transparent bids from verified contractors,
-        and manage projects—all in one intelligent platform.
+  <!-- SECTION D: THREE-PATH EXPLAINER -->
+  <section class="three-paths">
+    <div class="section-container">
+      <h2 class="section-title">Three Paths Forward</h2>
+      <p style="text-align: center; color: #6b7280; max-width: 700px; margin: 0 auto 0; font-size: 16px;">
+        After your AI analysis, you choose what happens next. No pressure, no funnel.
       </p>
 
-      <div class="hero-cta">
-        <button class="btn-hero primary" onclick="showAuthModal('signup')">
-          Get Started Free
-          <span>→</span>
-        </button>
-        <button class="btn-hero secondary" onclick="showAuthModal('login')">
-          Sign In
-          <span>→</span>
-        </button>
-      </div>
+      <div class="paths-grid">
+        <!-- PATH 1: UNDERSTAND (No button) -->
+        <div class="path-card no-button">
+          <span class="path-icon">🔍</span>
+          <h3 class="path-title">Understand</h3>
+          <p class="path-subtitle">
+            Review the AI diagnosis, safety warnings, and what to tell a contractor.
+          </p>
 
-      <div class="hero-stats">
-        <div class="stat">
-          <span class="stat-value">10k+</span>
-          <span class="stat-label">Projects Completed</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value">5k+</span>
-          <span class="stat-label">Verified Contractors</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value">98%</span>
-          <span class="stat-label">Satisfaction Rate</span>
-        </div>
-      </div>
-    </div>
+          <div class="path-features">
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Educational guidance</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Safety & urgency assessment</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>DIY context when relevant</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Completely free</span>
+            </div>
+          </div>
 
-    <div class="hero-visual">
-      <div class="visual-cards">
-        <div class="visual-card">
-          <div class="visual-card-icon blue">🤖</div>
-          <h3>AI Diagnosis</h3>
-          <p>Instant analysis of your home issues with photo recognition</p>
-        </div>
-        <div class="visual-card">
-          <div class="visual-card-icon green">💰</div>
-          <h3>Smart Bidding</h3>
-          <p>Compare transparent bids from verified professionals</p>
-        </div>
-        <div class="visual-card">
-          <div class="visual-card-icon orange">⭐</div>
-          <h3>Verified Ratings</h3>
-          <p>Two-way ratings ensure quality on both sides</p>
-        </div>
-        <div class="visual-card">
-          <div class="visual-card-icon purple">📊</div>
-          <h3>Project Hub</h3>
-          <p>Track everything from quote to completion</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section class="features" id="features">
-    <div class="features-container">
-      <div class="section-header">
-        <span class="section-badge">Features That Matter</span>
-        <h2>Everything You Need, Nothing You Don't</h2>
-        <p>Built for homeowners and contractors with intelligent automation and transparency at every step</p>
-      </div>
-
-      <div class="bento-grid">
-        <div class="bento-item large">
-          <div class="bento-icon">🧠</div>
-          <h3>AI-Powered Diagnosis</h3>
-          <p>Snap a photo, describe the issue, and get instant professional analysis. Our AI understands home problems like a seasoned contractor—identifying severity, urgency, and estimated costs in seconds.</p>
-          <a href="ask.html" class="bento-link">Try AI Assistant →</a>
+          <p class="path-note">This is your thinking space. No buttons, no pressure.</p>
         </div>
 
-        <div class="bento-item medium">
-          <div class="bento-icon">🏆</div>
-          <h3>Contractor Marketplace</h3>
-          <p>Browse verified contractors, compare bids side-by-side, and read real reviews from homeowners in your area.</p>
-          <a href="contractor-dashboard.html" class="bento-link">Find Contractors →</a>
+        <!-- PATH 2: HIRE A PRO (Free) -->
+        <div class="path-card">
+          <span class="path-icon">🏗️</span>
+          <h3 class="path-title">Hire a Pro</h3>
+          <p class="path-subtitle">
+            Connect with vetted, licensed contractors. Graded on performance, not ads.
+          </p>
+
+          <div class="path-features">
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Free to post your job</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>No obligation to hire</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>You choose who to contact</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Licensed & background-checked</span>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="redirectToDirectory()">Browse Verified Contractors</button>
         </div>
 
-        <div class="bento-item small">
-          <div class="bento-icon">💬</div>
-          <h3>Built-In Messaging</h3>
-          <p>Communicate directly with contractors without sharing your phone number or email.</p>
-        </div>
+        <!-- PATH 3: ASK AN EXPERT (Paid) -->
+        <div class="path-card">
+          <span class="path-icon">👨‍🔧</span>
+          <h3 class="path-title">Ask an Expert</h3>
+          <p class="path-subtitle">
+            Want a straight answer right now? On-demand video or phone consultation.
+          </p>
 
-        <div class="bento-item small">
-          <div class="bento-icon">📱</div>
-          <h3>Mobile Ready</h3>
-          <p>Access from anywhere on any device with our responsive design.</p>
-        </div>
+          <div class="path-features">
+            <div class="path-feature">
+              <span>📞</span>
+              <span>Live expert by phone/video</span>
+            </div>
+            <div class="path-feature">
+              <span>⏱️</span>
+              <span>15-30 minute sessions</span>
+            </div>
+            <div class="path-feature">
+              <span>💵</span>
+              <span>$50 per session (paid)</span>
+            </div>
+            <div class="path-feature">
+              <span>📝</span>
+              <span>Written summary provided</span>
+            </div>
+          </div>
 
-        <div class="bento-item small">
-          <div class="bento-icon">🔒</div>
-          <h3>Secure Payments</h3>
-          <p>Safe, encrypted payment processing with milestone-based releases.</p>
+          <button class="btn-primary" onclick="showExpertAccess()">Talk to an Expert (Paid)</button>
+          <p class="path-note">Optional paid service. No subscription required.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- How It Works -->
-  <section class="how-it-works" id="how-it-works">
-    <div class="section-header">
-      <span class="section-badge">Simple Process</span>
-      <h2>How It Works</h2>
-      <p>From problem to solution in four simple steps</p>
-    </div>
+  <!-- SECTION E: CONTRACTOR SECTION -->
+  <section class="contractor-section" id="contractors">
+    <div class="section-container">
+      <h2 class="section-title">Better homeowners. Better jobs. Less chaos.</h2>
 
-    <div class="timeline">
-      <div class="timeline-item">
-        <div class="timeline-dot"></div>
-        <div class="timeline-content">
-          <div class="timeline-number">1</div>
-          <h3>Describe Your Issue</h3>
-          <p>Tell our AI assistant what's wrong. Upload photos, describe symptoms, and get instant professional insights about severity, urgency, and typical costs.</p>
-        </div>
-        <div class="timeline-visual">🏠</div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-dot"></div>
-        <div class="timeline-content">
-          <div class="timeline-number">2</div>
-          <h3>Post to Contractors</h3>
-          <p>With one click, your analyzed job posting goes out to verified contractors in your area. They can see your AI-generated diagnosis and budget estimates.</p>
-        </div>
-        <div class="timeline-visual">📢</div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-dot"></div>
-        <div class="timeline-content">
-          <div class="timeline-number">3</div>
-          <h3>Compare Bids</h3>
-          <p>Receive transparent bids with detailed breakdowns. See contractor ratings, reviews, license info, and years of experience—all in one dashboard.</p>
-        </div>
-        <div class="timeline-visual">⚖️</div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-dot"></div>
-        <div class="timeline-content">
-          <div class="timeline-number">4</div>
-          <h3>Get It Done</h3>
-          <p>Accept a bid, communicate through our secure messaging, track progress, and pay safely. Rate your experience to help the community.</p>
-        </div>
-        <div class="timeline-visual">✅</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA Section -->
-  <section class="cta-section">
-    <div class="cta-card">
-      <h2>Ready to Find Your Perfect Contractor?</h2>
-      <p>Join thousands of homeowners who've simplified their home improvement projects with AI-powered assistance</p>
-      <div class="cta-buttons">
-        <button class="btn-cta white" onclick="showAuthModal('signup', 'homeowner')">Start Your First Project</button>
-        <button class="btn-cta outline" onclick="showAuthModal('signup', 'contractor')">I'm a Contractor</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <div class="footer-container">
-      <div>
-        <div class="footer-brand">HomeProHub</div>
-        <p class="footer-brand-text">
-          The intelligent marketplace connecting homeowners with trusted contractors through AI-powered diagnostics and transparent bidding.
+      <div class="contractor-content">
+        <p style="font-size: 18px; color: #d1d5db; margin-bottom: 40px;">
+          HomeProHub gives contractors higher-quality leads with structured intake,
+          AI-drafted scope language you approve, and homeowner behavior grades.
         </p>
-      </div>
 
-      <div class="footer-section">
-        <h4>Platform</h4>
-        <ul class="footer-links">
-          <li><a href="for-homeowners.html">For Homeowners</a></li>
-          <li><a href="for-contractors.html">For Contractors</a></li>
-          <li><a href="ask.html">AI Assistant</a></li>
-          <li><a href="pricing-estimator.html">Pricing</a></li>
-        </ul>
-      </div>
+        <div class="contractor-benefits">
+          <div class="benefit-item">
+            <span class="benefit-icon">📋</span>
+            <div class="benefit-text">
+              <strong style="color: white;">Structured Intake</strong><br>
+              Every job includes photos, AI summaries, and homeowner context.
+            </div>
+          </div>
 
-      <div class="footer-section">
-        <h4>Company</h4>
-        <ul class="footer-links">
-          <li><a href="about.html">About Us</a></li>
-          <li><a href="debug-api.html">API Status</a></li>
-          <li><a href="homeowner-grading-directory.html">Homeowner Directory</a></li>
-          <li><a href="contractor-directory.html">Contractor Directory</a></li>
-        </ul>
-      </div>
+          <div class="benefit-item">
+            <span class="benefit-icon">🎓</span>
+            <div class="benefit-text">
+              <strong style="color: white;">Licenses Rewarded</strong><br>
+              Your certifications and education are front and center.
+            </div>
+          </div>
 
-      <div class="footer-section">
-        <h4>Support</h4>
-        <ul class="footer-links">
-          <li><a href="help.html">Help Center</a></li>
-          <li><a href="contact-pro.html">Contact Support</a></li>
-          <li><a href="privacy.html">Privacy</a></li>
-          <li><a href="terms.html">Terms</a></li>
-        </ul>
+          <div class="benefit-item">
+            <span class="benefit-icon">📊</span>
+            <div class="benefit-text">
+              <strong style="color: white;">Performance Grading</strong><br>
+              Graded A–F based on transparent criteria, not paid placement.
+            </div>
+          </div>
+
+          <div class="benefit-item">
+            <span class="benefit-icon">🎯</span>
+            <div class="benefit-text">
+              <strong style="color: white;">Fewer Wasted Visits</strong><br>
+              Homeowners come prepared with AI guidance and realistic expectations.
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary" onclick="showRoleSelection('contractor')">Get Lead Access</button>
       </div>
     </div>
+  </section>
 
-    <div class="footer-bottom">
-      <p>© 2025 HomeProHub. All rights reserved.</p>
-      <p>Made with care for homeowners and contractors</p>
+  <!-- SECTION F: PRICING -->
+  <section class="pricing" id="pricing">
+    <div class="section-container">
+      <h2 class="section-title">Honest, Simple Pricing</h2>
+      <p style="text-align: center; color: #6b7280; max-width: 600px; margin: 0 auto 0; font-size: 16px;">
+        No tricks. No "starting at $0" nonsense. Here's exactly what costs money.
+      </p>
+
+      <div class="pricing-grid">
+        <!-- HOMEOWNER PRICING -->
+        <div class="pricing-card featured">
+          <div class="pricing-badge">Most Popular</div>
+          <div class="pricing-role">Homeowner</div>
+          <div class="pricing-price">Free</div>
+          <div class="pricing-note">Always free to use</div>
+
+          <ul class="pricing-features">
+            <li>AI issue exploration & photo upload</li>
+            <li>Safety & urgency guidance</li>
+            <li>"What to tell a contractor" summaries</li>
+            <li>Post unlimited jobs</li>
+            <li>Browse verified contractors</li>
+            <li>Receive & review bids</li>
+          </ul>
+        </div>
+
+        <!-- EXPERT ACCESS PRICING -->
+        <div class="pricing-card">
+          <div class="pricing-role">Expert Access</div>
+          <div class="pricing-price">$50</div>
+          <div class="pricing-note">Per session (optional)</div>
+
+          <ul class="pricing-features">
+            <li>15-30 minute video/phone call</li>
+            <li>On-demand scheduling</li>
+            <li>Licensed professionals</li>
+            <li>Written summary provided</li>
+            <li>One-time or subscription available</li>
+          </ul>
+        </div>
+
+        <!-- CONTRACTOR PRICING -->
+        <div class="pricing-card">
+          <div class="pricing-role">Contractor</div>
+          <div class="pricing-price">Varies</div>
+          <div class="pricing-note">Pay for lead access</div>
+
+          <ul class="pricing-features">
+            <li>Access to homeowner job leads</li>
+            <li>Structured intake data</li>
+            <li>AI-drafted scope summaries</li>
+            <li>Homeowner behavior grades</li>
+            <li>Performance-based ranking</li>
+            <li>Pricing varies by market</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION G: FAQ -->
+  <section class="faq" id="faq">
+    <div class="faq-container">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+
+      <div class="faq-item">
+        <div class="faq-question">Is HomeProHub free for homeowners?</div>
+        <div class="faq-answer">
+          Yes. AI exploration, job posting, and contractor connection are completely free.
+          The only paid option is on-demand expert access ($50/session), which is entirely optional.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's paid, and when?</div>
+        <div class="faq-answer">
+          Homeowners only pay for on-demand expert access (video/phone consultations).
+          Everything else is free. Contractors pay for access to homeowner job leads.
+          Pricing is shown clearly before you confirm any paid service.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What does "free to connect" mean?</div>
+        <div class="faq-answer">
+          You can post jobs, browse contractors, and receive bids without paying anything.
+          There's no obligation to hire anyone. You control the entire process.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How are contractors vetted and licensed?</div>
+        <div class="faq-answer">
+          All contractors are verified for active licenses, insurance, and background checks.
+          They're graded A–F based on performance, licensing, education, and homeowner feedback
+          — not paid placement or advertising.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How do homeowner grades work?</div>
+        <div class="faq-answer">
+          Homeowners are graded on communication, project preparedness, and follow-through.
+          This helps contractors identify serious, respectful clients and reduces wasted visits.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Is AI diagnosis guaranteed?</div>
+        <div class="faq-answer">
+          No. Our AI provides educational guidance to help you understand your issue,
+          but it does not replace an in-person inspection by a licensed professional.
+          Always consult a qualified contractor for accurate diagnosis and repair.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do I have to hire through HomeProHub?</div>
+        <div class="faq-answer">
+          No. You can use our free AI analysis and never hire anyone. You can also
+          browse contractors just to compare, or take our AI insights to any contractor you choose.
+          There's no lock-in.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION H: FOOTER -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">HomeProHub</div>
+          <p class="footer-disclaimer">
+            AI guidance provided by HomeProHub is educational and does not constitute
+            professional inspection, diagnosis, or repair advice. Always consult licensed
+            professionals for accurate assessment and work.
+          </p>
+        </div>
+
+        <div>
+          <div class="footer-section-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="#homeowners">For Homeowners</a></li>
+            <li><a href="#contractors">For Contractors</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-section-title">Company</div>
+          <ul class="footer-links">
+            <li><a href="#">About Us</a></li>
+            <li><a href="#">Contact</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-section-title">Legal</div>
+          <ul class="footer-links">
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Contractor Agreement</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        © 2025 HomeProHub. Trust is the feature.
+      </div>
     </div>
   </footer>
 
-  <!-- Auth Modal -->
-  <div class="auth-modal-overlay" id="authModal">
-    <div class="auth-modal">
-      <button class="modal-close" onclick="closeAuthModal()">×</button>
+  <!-- Role Selection Modal -->
+  <div class="modal" id="roleModal">
+    <div class="modal-content">
+      <h2 class="modal-title">I am a...</h2>
 
-      <div class="modal-header">
-        <h2>Welcome to HomeProHub</h2>
-        <p>Join thousands using AI to find trusted contractors</p>
+      <div class="role-options">
+        <div class="role-option" onclick="selectRole('homeowner')">
+          <div class="role-option-title">🏠 Homeowner</div>
+          <div class="role-option-description">
+            Free AI guidance, free contractor connection
+          </div>
+        </div>
+
+        <div class="role-option" onclick="selectRole('contractor')">
+          <div class="role-option-title">🔧 Contractor</div>
+          <div class="role-option-description">
+            Access quality leads, get graded on performance
+          </div>
+        </div>
       </div>
 
-      <div class="auth-tabs">
-        <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
-        <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+      <div class="modal-close">
+        <button onclick="closeModal()">Cancel</button>
       </div>
-
-      <!-- Login Form -->
-      <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label for="loginEmail">Email</label>
-          <input type="email" id="loginEmail" required placeholder="your@email.com">
-        </div>
-
-        <div class="form-group">
-          <label for="loginPassword">Password</label>
-          <input type="password" id="loginPassword" required placeholder="Enter your password">
-        </div>
-
-        <button type="submit" class="btn-auth">Sign In</button>
-
-        <div class="auth-divider">
-          New to HomeProHub? <a href="#" onclick="switchAuthTab('signup'); return false;" style="color: var(--primary); font-weight: 600;">Create an account</a>
-        </div>
-      </form>
-
-      <!-- Signup Form -->
-      <form id="signupForm" class="auth-form" onsubmit="handleSignup(event)">
-        <div class="form-group">
-          <label for="signupRole">I am a...</label>
-          <select id="signupRole" required>
-            <option value="">Choose your role</option>
-            <option value="homeowner">Homeowner - I need services</option>
-            <option value="contractor">Contractor - I provide services</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="signupEmail">Email</label>
-          <input type="email" id="signupEmail" required placeholder="your@email.com">
-        </div>
-
-        <div class="form-group">
-          <label for="signupPassword">Password</label>
-          <input type="password" id="signupPassword" required placeholder="Create a password" minlength="6">
-        </div>
-
-        <div class="form-group">
-          <label for="signupName">Full Name</label>
-          <input type="text" id="signupName" required placeholder="John Doe">
-        </div>
-
-        <button type="submit" class="btn-auth">Create Account</button>
-
-        <div class="auth-divider">
-          Already have an account? <a href="#" onclick="switchAuthTab('login'); return false;" style="color: var(--primary); font-weight: 600;">Sign in</a>
-        </div>
-      </form>
     </div>
   </div>
 
-  <!-- Supabase Auth -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/services/auth.js"></script>
-
   <script>
-    // Auth Modal Functions
-    function showAuthModal(tab = 'signup', role = null) {
-      const modal = document.getElementById('authModal');
-      modal.classList.add('active');
-      document.body.style.overflow = 'hidden';
-
-      switchAuthTab(tab);
-
-      if (role) {
-        document.getElementById('signupRole').value = role;
-      }
-    }
-
-    function closeAuthModal() {
-      const modal = document.getElementById('authModal');
-      modal.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-
-    function switchAuthTab(tab) {
-      // Update tabs
-      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.auth-tab').forEach(t => {
-        if ((t.textContent.toLowerCase().includes('sign in') && tab === 'login') ||
-            (t.textContent.toLowerCase().includes('sign up') && tab === 'signup')) {
-          t.classList.add('active');
-        }
-      });
-
-      // Update forms
-      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-      if (tab === 'login') {
-        document.getElementById('loginForm').classList.add('active');
+    // Role selection modal
+    function showRoleSelection(defaultRole) {
+      if (defaultRole) {
+        selectRole(defaultRole);
       } else {
-        document.getElementById('signupForm').classList.add('active');
+        document.getElementById('roleModal').classList.add('active');
       }
     }
 
-    // Handle Login
-    async function handleLogin(event) {
-      event.preventDefault();
+    function closeModal() {
+      document.getElementById('roleModal').classList.remove('active');
+    }
 
-      const email = document.getElementById('loginEmail').value;
-      const password = document.getElementById('loginPassword').value;
-      const submitBtn = event.target.querySelector('button[type="submit"]');
+    async function selectRole(role) {
+      closeModal();
 
-      try {
-        // Disable button and show loading state
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Signing In...';
-
-        // Use authService for authentication
-        const result = await window.authService.signIn(email, password);
-
-        if (result.success) {
-          // Redirect based on role
-          const role = result.profile?.role;
-          if (role === 'contractor') {
-            window.location.href = 'contractor-dashboard.html';
+      // Check if user is already signed in
+      if (window.authService && window.authService.initialized) {
+        const user = await window.authService.getCurrentUser();
+        if (user) {
+          // User is signed in, redirect based on role
+          if (role === 'homeowner') {
+            window.location.href = 'home.html';
           } else {
-            window.location.href = 'homeowner-dashboard.html';
+            window.location.href = 'contractor.html';
           }
-        } else {
-          alert(result.error || 'Invalid email or password. Please try again.');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Sign In';
+          return;
         }
-      } catch (error) {
-        console.error('Login error:', error);
-        alert('Login failed. Please try again.');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sign In';
       }
+
+      // Not signed in, redirect to sign up with role
+      sessionStorage.setItem('signup_role', role);
+      window.location.href = 'signup.html';
     }
 
-    // Handle Signup
-    async function handleSignup(event) {
-      event.preventDefault();
+    function showSignIn() {
+      window.location.href = 'signin.html';
+    }
 
-      const email = document.getElementById('signupEmail').value;
-      const password = document.getElementById('signupPassword').value;
-      const name = document.getElementById('signupName').value;
-      const role = document.getElementById('signupRole').value;
-      const submitBtn = event.target.querySelector('button[type="submit"]');
+    function startFreeAICheck() {
+      const input = document.getElementById('heroIssueInput');
+      const question = input.value.trim();
 
-      if (!role) {
-        alert('Please select whether you are a homeowner or contractor');
+      if (question.length < 10) {
+        alert('Please describe your issue in more detail (at least 10 characters)');
         return;
       }
 
-      try {
-        // Disable button and show loading state
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating Account...';
-
-        // Use authService for registration
-        const result = await window.authService.signUp(email, password, {
-          role: role,
-          full_name: name
-        });
-
-        if (result.success) {
-          // Redirect based on role
-          if (role === 'contractor') {
-            window.location.href = 'contractor-dashboard.html';
-          } else {
-            window.location.href = 'homeowner-dashboard.html';
-          }
-        } else {
-          alert(result.error || 'Signup failed. Please try again.');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Create Account';
-        }
-      } catch (error) {
-        console.error('Signup error:', error);
-        alert('Signup failed. Please try again.');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Create Account';
-      }
+      // Store question and redirect to home page (requires auth)
+      sessionStorage.setItem('pendingQuestion', question);
+      window.location.href = 'home.html';
     }
 
-    // Close modal on outside click
-    document.getElementById('authModal').addEventListener('click', function(e) {
-      if (e.target === this) {
-        closeAuthModal();
-      }
-    });
+    function redirectToDirectory() {
+      window.location.href = 'contractor-directory.html';
+    }
 
-    // Close modal on Escape key
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        closeAuthModal();
-      }
+    function showExpertAccess() {
+      alert('Expert consultation booking coming soon! This will connect you with a licensed professional via video or phone for $50/session.');
+      // TODO: Redirect to expert booking page when built
+      // window.location.href = 'expert-booking.html';
+    }
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href !== '#' && href.length > 1) {
+          e.preventDefault();
+          const target = document.querySelector(href);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      });
     });
   </script>
 </body>
