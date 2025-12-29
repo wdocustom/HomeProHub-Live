@@ -927,6 +927,173 @@ Be specific with budget estimates based on typical market rates. Consider the pr
 });
 
 /**
+ * POST /api/ai/preview
+ * Unauthenticated AI preview - allows ONE free AI check for landing page users
+ * Shows value before requiring signup
+ */
+app.post("/api/ai/preview", async (req, res) => {
+  try {
+    const { question, imageBase64, imageType } = req.body;
+
+    // Input validation
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({
+        error: "Question is required and must be a string.",
+        field: 'question'
+      });
+    }
+
+    const sanitizedQuestion = sanitizeInput(question, 3000);
+
+    if (sanitizedQuestion.length === 0) {
+      return res.status(400).json({
+        error: "Question cannot be empty after sanitization.",
+        field: 'question'
+      });
+    }
+
+    // Validate image data if provided
+    if (imageBase64) {
+      if (!imageType || typeof imageType !== 'string') {
+        return res.status(400).json({
+          error: "imageType is required when imageBase64 is provided.",
+          field: 'imageType'
+        });
+      }
+
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(imageType)) {
+        return res.status(400).json({
+          error: `Invalid imageType. Must be one of: ${validImageTypes.join(', ')}`,
+          field: 'imageType'
+        });
+      }
+    }
+
+    // Check if API key is configured
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // Build content blocks for Claude (same as /ask endpoint)
+    const contentBlocks = [];
+
+    contentBlocks.push({
+      type: "text",
+      text: `You are an experienced home contractor and home inspector helping homeowners.
+
+The homeowner said:
+${sanitizedQuestion}
+
+FIRST, determine the intent:
+- Is this about an EXISTING PROBLEM/ISSUE that needs fixing? (leak, crack, noise, smell, malfunction, damage, etc.)
+- OR is this about a NEW PROJECT/REMODEL they want to do? (addition, remodel, renovation, upgrade, installation of something new, etc.)
+
+INTENT TYPE: [Write either "ISSUE" or "PROJECT"]
+
+If ISSUE (something broken/wrong that needs repair):
+Respond using this structure:
+1. Summary, Severity & Urgency: [1-2 sentence summary, Severity: High/Medium/Low, Urgency: Fix now/soon/monitor]
+2. Estimated Budget Range: $[LOW] - $[HIGH] (provide realistic cost estimate for professional repair)
+3. Likely Causes: [2-5 bullet points]
+4. Step-by-Step Checks (DIY-friendly): [Numbered steps they can do to diagnose]
+5. Materials & Tools You May Need: [Short bullet list if DIY-able]
+6. Safety Warnings: [Clear bullet points, be specific about dangers]
+7. When to Call a Pro: [Explain when and what type of contractor - plumber, electrician, etc.]
+8. What to Tell a Contractor: [Short script they can use]
+
+If PROJECT (new work they want done):
+Respond using this structure:
+1. Project Summary: [2-3 sentence overview of what they're asking for]
+2. Estimated Budget Range: $[LOW] - $[HIGH] (realistic range for this type of project in their area)
+3. Scope Considerations: [Bullet points of what this typically includes]
+4. Permits & Requirements: [What permits or approvals they'll likely need]
+5. Timeline Estimate: [Typical duration for this project]
+6. Contractor Type Needed: [What type of contractor - general contractor, specialist, etc.]
+7. Key Questions for Contractors: [5-7 questions they should ask when getting bids]
+8. Next Steps: [Clear action items - "Post this project to get bids from contractors"]
+
+Be specific with budget estimates based on typical market rates. Consider the project scope described.`
+    });
+
+    // Optional image
+    if (imageBase64 && imageType) {
+      contentBlocks.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: imageType,
+          data: imageBase64
+        }
+      });
+    }
+
+    // Call Anthropic API
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 1200,
+        messages: [
+          {
+            role: "user",
+            content: contentBlocks
+          }
+        ]
+      })
+    });
+
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (${apiResponse.status}):`, errorText);
+
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
+    }
+
+    const data = await apiResponse.json();
+
+    const answer = data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "No response generated.";
+
+    // Detect intent from response
+    const isProject = answer.includes('INTENT TYPE: PROJECT') ||
+                      answer.includes('Project Summary:') ||
+                      answer.includes('Next Steps:');
+    const isIssue = answer.includes('INTENT TYPE: ISSUE') ||
+                    answer.includes('Likely Causes:') ||
+                    !isProject;
+
+    console.log(`✓ PREVIEW: Unauthenticated AI analysis (${answer.length} chars, type: ${isProject ? 'PROJECT' : 'ISSUE'})`);
+
+    res.json({
+      answer,
+      intent: isProject ? 'project' : 'issue',
+      preview: true // Signal this is a preview response
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/ai/preview:", err);
+    res.status(500).json({
+      error: "Internal server error processing your question.",
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+/**
  * POST /contractor-ask
  * Contractor coach AI with RAG (Retrieval-Augmented Generation) for pricing
  */

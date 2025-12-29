@@ -914,9 +914,10 @@
         return;
       }
 
-      // Store question and redirect to home page (requires auth)
+      // Store question and redirect to preview page (NO AUTH REQUIRED!)
+      // This allows users to see AI value BEFORE signing up
       sessionStorage.setItem('pendingQuestion', question);
-      window.location.href = 'home.html';
+      window.location.href = 'preview.html';
     }
 
     function redirectToDirectory() {

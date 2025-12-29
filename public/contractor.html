@@ -879,6 +879,24 @@
 
         document.getElementById('subscriptionTier').textContent = tierDisplay;
 
+        // Fetch and display contractor grade
+        try {
+          const gradeResponse = await window.authService.authenticatedFetch('/api/contractor/my-grade');
+          if (gradeResponse.ok) {
+            const gradeData = await gradeResponse.json();
+            const grade = gradeData.grade || 'B';
+            document.getElementById('myGrade').textContent = grade;
+
+            // Update color based on grade
+            const gradeElement = document.getElementById('myGrade');
+            const gradeColor = gradeData.color || '#3b82f6';
+            gradeElement.style.color = gradeColor;
+          }
+        } catch (gradeError) {
+          console.error('Error loading contractor grade:', gradeError);
+          // Keep default "A" if fetch fails
+        }
+
         // You could also fetch and display profile views here if available
         // const profileViews = profile.profile_views || 0;
         // document.getElementById('profileViews').textContent = profileViews;
