@@ -1548,9 +1548,20 @@
                           bid.status === 'rejected' ? 'Declined' :
                           'Pending Review';
 
-        // Check if estimate exists
-        const hasEstimate = bid.estimate || bid.ai_estimate || bid.line_item_estimate;
-        const estimateText = bid.estimate || bid.ai_estimate || bid.line_item_estimate || '';
+        // Check if estimate exists and convert to string if it's an object
+        const estimateData = bid.estimate || bid.ai_estimate || bid.line_item_estimate;
+        const hasEstimate = !!estimateData;
+
+        // Handle both string and object formats
+        let estimateText = '';
+        if (estimateData) {
+          if (typeof estimateData === 'string') {
+            estimateText = estimateData;
+          } else if (typeof estimateData === 'object') {
+            // Convert object to formatted string
+            estimateText = JSON.stringify(estimateData, null, 2);
+          }
+        }
 
         return `
           <div class="proposal-item">
