@@ -612,11 +612,12 @@
   <script src="components/navigation.js"></script>
 
   <script>
+    // Global scope variables
+    let projectData = null;
+    let editing = null;
+
     (async function() {
       'use strict';
-
-      let projectData = null;
-      let editing = null;
 
       // Wait for auth to initialize
       await waitForAuth();
@@ -818,33 +819,33 @@
       btn.textContent = 'Posting...';
 
       try {
-        // Rebuild projectData from current UI state (in case user edited fields)
-        const currentProjectData = {
-          title: projectData.title,
-          description: projectData.description,
+        // Validate projectData exists
+        if (!projectData) {
+          throw new Error('Project data not found. Please refresh and try again.');
+        }
+
+        // Build submission data from current projectData (which is updated on edits)
+        const submissionData = {
+          title: projectData.title || 'Home Renovation Project',
+          description: projectData.description || '',
           category: projectData.category || 'general',
-          budgetMin: projectData.budgetMin || 5000,
-          budgetMax: projectData.budgetMax || 15000,
+          budgetLow: projectData.budgetMin || 5000,
+          budgetHigh: projectData.budgetMax || 15000,
           urgency: projectData.urgency || 'flexible',
-          aiAnalysis: projectData.aiAnalysis || null
+          ai_analysis: projectData.aiAnalysis || null
         };
+
+        console.log('📤 Submitting project:', submissionData);
 
         // POST to create job
         const response = await window.authService.authenticatedFetch('/api/homeowner/job', {
           method: 'POST',
-          body: JSON.stringify({
-            title: currentProjectData.title,
-            description: currentProjectData.description,
-            category: currentProjectData.category,
-            budgetLow: currentProjectData.budgetMin,
-            budgetHigh: currentProjectData.budgetMax,
-            urgency: currentProjectData.urgency,
-            ai_analysis: currentProjectData.aiAnalysis
-          })
+          body: JSON.stringify(submissionData)
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create project');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to create project');
         }
 
         const result = await response.json();
@@ -859,7 +860,7 @@
 
       } catch (error) {
         console.error('Error posting project:', error);
-        alert('Failed to post project. Please try again.');
+        alert(`Failed to post project: ${error.message}\n\nPlease try again or contact support.`);
         btn.disabled = false;
         btn.textContent = '✅ Confirm & Post to Job Board';
       }

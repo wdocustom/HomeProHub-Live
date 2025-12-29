@@ -638,17 +638,28 @@
       // STEP 1: Extract structured data from Blueprint
       const parsed = window.blueprintData.parsed;
 
-      // Clean the title - remove AI artifacts
+      // Extract clean title with better logic
       let projectTitle = 'Home Renovation Project';
+
       if (parsed.summary) {
         // Clean any remaining artifacts
         let cleanSummary = cleanAIArtifacts(parsed.summary);
 
-        // Extract first sentence
-        const firstSentence = cleanSummary.split('.')[0].trim();
+        // Remove "Project Summary:" prefix if present
+        cleanSummary = cleanSummary.replace(/^Project\s+Summary:\s*/i, '').trim();
 
-        // Validate it's not empty or garbage
-        if (firstSentence && firstSentence.length > 5 && !firstSentence.toLowerCase().includes('intent')) {
+        // Extract first sentence
+        let firstSentence = cleanSummary.split('.')[0].trim();
+
+        // Validate it's a good title (not too long, not garbage)
+        const isValidTitle = firstSentence &&
+                            firstSentence.length > 5 &&
+                            firstSentence.length < 80 && // Sentences > 80 chars are likely paragraphs
+                            !firstSentence.toLowerCase().includes('intent') &&
+                            !firstSentence.toLowerCase().startsWith('based on');
+
+        if (isValidTitle) {
+          // Use extracted sentence as title
           projectTitle = firstSentence.length > 60
             ? firstSentence.substring(0, 57) + '...'
             : firstSentence;
@@ -656,11 +667,22 @@
           // Fallback: Use user's original question as title
           const userQuestion = window.blueprintData.question || '';
           const questionFirstPart = userQuestion.split('.')[0].trim();
+
           if (questionFirstPart.length > 10) {
             projectTitle = questionFirstPart.length > 60
               ? questionFirstPart.substring(0, 57) + '...'
               : questionFirstPart;
           }
+        }
+      } else {
+        // No summary found - use user's question as title
+        const userQuestion = window.blueprintData.question || '';
+        const questionFirstPart = userQuestion.split('.')[0].trim();
+
+        if (questionFirstPart.length > 10) {
+          projectTitle = questionFirstPart.length > 60
+            ? questionFirstPart.substring(0, 57) + '...'
+            : questionFirstPart;
         }
       }
 
