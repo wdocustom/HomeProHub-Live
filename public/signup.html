@@ -496,7 +496,18 @@
             if (selectedRole === 'contractor') {
               window.location.href = 'contractor.html';
             } else {
-              window.location.href = 'home.html';
+              // HOMEOWNER: Check for intent parameter
+              const urlParams = new URLSearchParams(window.location.search);
+              const intent = urlParams.get('intent');
+
+              if (intent === 'post_project') {
+                // NEW FLOW: Redirect to Review & Post page (not home)
+                console.log('✓ Intent detected: Redirecting to post-project.html');
+                window.location.href = 'post-project.html';
+              } else {
+                // Default: Go to home page
+                window.location.href = 'home.html';
+              }
             }
           }, 1500);
         } else {

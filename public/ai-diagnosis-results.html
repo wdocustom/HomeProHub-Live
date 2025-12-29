@@ -707,26 +707,46 @@
     }
 
     /**
-     * Approve and Post - Trigger Deferred Auth Flow
+     * Approve and Post - NEW "Click-Click-Boom" Flow
+     * Saves detailed draft → Signup with intent → Review & Post confirmation page
      */
     async function approveAndPost() {
-      // CRITICAL: Save AI data to localStorage BEFORE redirect
-      const draftProject = {
-        title: 'Home Renovation Project', // Could extract from summary
-        description: window.blueprintData.question,
-        aiAnalysis: window.blueprintData.answer,
-        budgetLow: window.blueprintData.budgetLow || 5000,
-        budgetHigh: window.blueprintData.budgetHigh || 15000,
-        category: 'general', // Could be extracted from AI response
+      // STEP 1: Extract structured data from Blueprint
+      const parsed = window.blueprintData.parsed;
+
+      // Try to extract better title from summary or use default
+      let projectTitle = 'Home Renovation Project';
+      if (parsed.summary) {
+        // Take first sentence or first 60 chars as title
+        const firstSentence = parsed.summary.split('.')[0].trim();
+        projectTitle = firstSentence.length > 60
+          ? firstSentence.substring(0, 57) + '...'
+          : firstSentence;
+      }
+
+      // Extract trade type from AI response (basic heuristic)
+      const tradeType = extractTradeType(window.blueprintData.answer);
+
+      // STEP 2: Create "hot_lead_draft" with all extracted data
+      const hotLeadDraft = {
+        title: projectTitle,
+        description: window.blueprintData.question, // Original user question
+        aiAnalysis: window.blueprintData.answer, // Full AI response
+        budgetMin: parsed.budgetLow || window.blueprintData.budgetLow || 5000,
+        budgetMax: parsed.budgetHigh || window.blueprintData.budgetHigh || 15000,
+        timeline: parsed.timeline || '2-4 weeks',
+        tradeType: tradeType,
+        category: tradeType || 'general',
         urgency: 'flexible',
+        scopeItems: parsed.scopeItems || [],
         fromBlueprint: true,
         timestamp: new Date().toISOString()
       };
 
-      localStorage.setItem('draft_project', JSON.stringify(draftProject));
-      console.log('✓ Draft project saved to localStorage:', draftProject);
+      localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
+      console.log('✓ Hot lead draft saved to localStorage:', hotLeadDraft);
 
-      // Check if user is authenticated
+      // STEP 3: Check authentication and route accordingly
       try {
         if (!window.authService || !window.authService.initialized) {
           await new Promise(resolve => {
@@ -742,20 +762,47 @@
         const user = await window.authService.getCurrentUser();
 
         if (user) {
-          // User is logged in - redirect to dashboard
-          window.location.href = 'homeowner-dashboard.html';
+          // User IS logged in - go directly to Review & Post page
+          window.location.href = 'post-project.html';
         } else {
-          // User is NOT logged in - redirect to signup with role
+          // User NOT logged in - redirect to signup WITH INTENT parameter
           sessionStorage.setItem('signup_role', 'homeowner');
-          sessionStorage.setItem('post_signup_action', 'create_project');
-          window.location.href = 'signup.html';
+          window.location.href = 'signup.html?intent=post_project';
         }
       } catch (error) {
         console.error('Auth check error:', error);
-        // Fallback: redirect to signup
+        // Fallback: redirect to signup with intent
         sessionStorage.setItem('signup_role', 'homeowner');
-        window.location.href = 'signup.html';
+        window.location.href = 'signup.html?intent=post_project';
       }
+    }
+
+    /**
+     * Extract trade type from AI response (simple keyword matching)
+     */
+    function extractTradeType(aiText) {
+      const text = aiText.toLowerCase();
+
+      // Trade type keywords
+      const tradeMap = {
+        'plumbing': ['plumber', 'plumbing', 'pipe', 'leak', 'faucet', 'drain', 'toilet', 'shower'],
+        'electrical': ['electrician', 'electrical', 'wiring', 'outlet', 'breaker', 'circuit', 'light'],
+        'hvac': ['hvac', 'heating', 'cooling', 'furnace', 'air conditioning', 'ac unit', 'thermostat'],
+        'roofing': ['roof', 'roofing', 'shingle', 'gutter', 'flashing'],
+        'flooring': ['flooring', 'floor', 'tile', 'hardwood', 'carpet', 'laminate'],
+        'painting': ['paint', 'painting', 'drywall', 'wall'],
+        'carpentry': ['carpenter', 'carpentry', 'cabinet', 'door', 'window', 'trim'],
+        'landscaping': ['landscape', 'landscaping', 'yard', 'lawn', 'garden', 'fence']
+      };
+
+      // Check each trade type
+      for (const [trade, keywords] of Object.entries(tradeMap)) {
+        if (keywords.some(keyword => text.includes(keyword))) {
+          return trade;
+        }
+      }
+
+      return 'general'; // Default if no match
     }
 
     function escapeHtml(text) {
