@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>API Debug - HomeProHub</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #0f0;
+    }
+    .section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+    }
+    h2 {
+      color: #0ff;
+      margin-top: 0;
+    }
+    button {
+      background: #0f0;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      margin: 5px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0ff;
+    }
+    pre {
+      background: #000;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #0f0;
+    }
+    .error {
+      color: #f00;
+    }
+    .success {
+      color: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 HomeProHub API Debug Console</h1>
+
+  <div class="section">
+    <h2>1. Test Job Listings API</h2>
+    <button onclick="testAllJobs()">GET /api/jobs</button>
+    <button onclick="testOpenJobs()">GET /api/jobs?status=open</button>
+    <pre id="jobs-result">Click a button to test...</pre>
+  </div>
+
+  <div class="section">
+    <h2>2. Test Homeowner Jobs API</h2>
+    <input type="text" id="homeowner-email" placeholder="homeowner@email.com" style="padding: 8px; width: 300px;">
+    <button onclick="testHomeownerJobs()">GET /api/homeowner/jobs</button>
+    <pre id="homeowner-result">Enter email and click test...</pre>
+  </div>
+
+  <div class="section">
+    <h2>3. Test Contractor Bids API</h2>
+    <input type="text" id="contractor-email" placeholder="contractor@email.com" style="padding: 8px; width: 300px;">
+    <button onclick="testContractorBids()">GET /api/contractor/bids</button>
+    <pre id="contractor-result">Enter email and click test...</pre>
+  </div>
+
+  <div class="section">
+    <h2>4. Check Current User</h2>
+    <button onclick="checkUser()">Check LocalStorage User</button>
+    <pre id="user-result">Click to check...</pre>
+  </div>
+
+  <div class="section">
+    <h2>5. Database Connection Test</h2>
+    <button onclick="testConnection()">Test Server Connection</button>
+    <pre id="connection-result">Click to test...</pre>
+  </div>
+
+  <script>
+    async function testAllJobs() {
+      const result = document.getElementById('jobs-result');
+      result.textContent = 'Loading...';
+
+      try {
+        const response = await fetch('/api/jobs');
+        const data = await response.json();
+
+        if (response.ok) {
+          result.className = 'success';
+          result.textContent = `SUCCESS (${response.status})\n\n` + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'error';
+          result.textContent = `ERROR (${response.status})\n\n` + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'error';
+        result.textContent = `FETCH ERROR:\n${error.message}\n${error.stack}`;
+      }
+    }
+
+    async function testOpenJobs() {
+      const result = document.getElementById('jobs-result');
+      result.textContent = 'Loading...';
+
+      try {
+        const response = await fetch('/api/jobs?status=open&limit=50');
+        const data = await response.json();
+
+        if (response.ok) {
+          result.className = 'success';
+          result.textContent = `SUCCESS (${response.status}) - Found ${data.jobs?.length || 0} jobs\n\n` + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'error';
+          result.textContent = `ERROR (${response.status})\n\n` + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'error';
+        result.textContent = `FETCH ERROR:\n${error.message}`;
+      }
+    }
+
+    async function testHomeownerJobs() {
+      const email = document.getElementById('homeowner-email').value.trim();
+      const result = document.getElementById('homeowner-result');
+
+      if (!email) {
+        result.className = 'error';
+        result.textContent = 'Please enter an email address';
+        return;
+      }
+
+      result.textContent = 'Loading...';
+
+      try {
+        const response = await fetch(`/api/homeowner/jobs?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          result.className = 'success';
+          result.textContent = `SUCCESS (${response.status}) - Found ${data.jobs?.length || 0} jobs\n\n` + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'error';
+          result.textContent = `ERROR (${response.status})\n\n` + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'error';
+        result.textContent = `FETCH ERROR:\n${error.message}`;
+      }
+    }
+
+    async function testContractorBids() {
+      const email = document.getElementById('contractor-email').value.trim();
+      const result = document.getElementById('contractor-result');
+
+      if (!email) {
+        result.className = 'error';
+        result.textContent = 'Please enter an email address';
+        return;
+      }
+
+      result.textContent = 'Loading...';
+
+      try {
+        const response = await fetch(`/api/contractor/bids?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          result.className = 'success';
+          result.textContent = `SUCCESS (${response.status}) - Found ${data.bids?.length || 0} bids\n\n` + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'error';
+          result.textContent = `ERROR (${response.status})\n\n` + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'error';
+        result.textContent = `FETCH ERROR:\n${error.message}`;
+      }
+    }
+
+    function checkUser() {
+      const result = document.getElementById('user-result');
+
+      const username = localStorage.getItem('homeprohub_username');
+      const token = localStorage.getItem('homeprohub_auth_token');
+      const role = localStorage.getItem('homeprohub_user_role');
+      const user = localStorage.getItem('homeprohub_user');
+
+      const info = {
+        username: username,
+        token: token ? token.substring(0, 20) + '...' : null,
+        role: role,
+        user: user ? JSON.parse(user) : null,
+        all_keys: Object.keys(localStorage).filter(k => k.includes('homeprohub'))
+      };
+
+      result.className = 'success';
+      result.textContent = 'CURRENT USER DATA:\n\n' + JSON.stringify(info, null, 2);
+    }
+
+    async function testConnection() {
+      const result = document.getElementById('connection-result');
+      result.textContent = 'Testing...';
+
+      try {
+        const response = await fetch('/api/jobs?limit=1');
+        const data = await response.json();
+
+        if (response.ok) {
+          result.className = 'success';
+          result.textContent = `✓ SERVER IS ONLINE\n✓ DATABASE IS CONNECTED\n\nResponse:\n` + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'error';
+          result.textContent = `✗ SERVER ERROR (${response.status})\n\n` + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'error';
+        result.textContent = `✗ CONNECTION FAILED\n\nError: ${error.message}`;
+      }
+    }
+
+    // Auto-fill current user email if available
+    window.addEventListener('load', () => {
+      const username = localStorage.getItem('homeprohub_username');
+      if (username) {
+        document.getElementById('homeowner-email').value = username;
+        document.getElementById('contractor-email').value = username;
+      }
+    });
+  </script>
+</body>
+</html>

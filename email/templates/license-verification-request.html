@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>License Verification Request - HomeProHub Admin</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .admin-badge {
+      background-color: #fef3c7;
+      color: #92400e;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-block;
+      margin-top: 10px;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .alert-box {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-left: 4px solid #f59e0b;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .alert-box h3 {
+      color: #92400e;
+      margin: 0 0 8px 0;
+      font-size: 18px;
+    }
+    .alert-box p {
+      color: #78350f;
+      margin: 0;
+      font-size: 15px;
+    }
+    .contractor-card {
+      background-color: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .contractor-card h3 {
+      margin: 0 0 16px 0;
+      color: #1f2937;
+      font-size: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .info-value {
+      color: #1f2937;
+      font-weight: 600;
+      font-size: 14px;
+      text-align: right;
+    }
+    .license-number {
+      color: #2563eb;
+      font-size: 16px;
+      font-family: monospace;
+    }
+    .verification-steps {
+      background-color: #eff6ff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid #bfdbfe;
+    }
+    .verification-steps h4 {
+      color: #1e40af;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+    }
+    .verification-steps ol {
+      margin: 8px 0;
+      padding-left: 20px;
+      color: #1e3a8a;
+    }
+    .verification-steps li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+    .verification-steps a {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+    .action-buttons {
+      text-align: center;
+      margin: 40px 0;
+      padding: 30px;
+      background-color: #f9fafb;
+      border-radius: 12px;
+    }
+    .action-buttons h3 {
+      color: #1f2937;
+      margin: 0 0 20px 0;
+      font-size: 20px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 16px 40px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      margin: 8px;
+      text-align: center;
+      min-width: 180px;
+    }
+    .btn-approve {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white !important;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn-approve:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+    .btn-reject {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white !important;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    .btn-reject:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .insurance-info {
+      background-color: #ecfdf5;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid #a7f3d0;
+    }
+    .insurance-info h4 {
+      color: #065f46;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+    }
+    .insurance-info p {
+      color: #047857;
+      margin: 6px 0;
+      font-size: 14px;
+    }
+    .warning-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .warning-box p {
+      color: #991b1b;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .footer {
+      background-color: #1f2937;
+      padding: 30px;
+      text-align: center;
+      color: #9ca3af;
+    }
+    .footer p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+    @media only screen and (max-width: 600px) {
+      .content {
+        padding: 20px 15px;
+      }
+      .info-row {
+        flex-direction: column;
+      }
+      .info-value {
+        margin-top: 4px;
+        text-align: left;
+      }
+      .btn {
+        display: block;
+        margin: 12px auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon">🔍</div>
+      <h1>License Verification Request</h1>
+      <div class="admin-badge">⚡ ADMIN ACTION REQUIRED</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <!-- Alert -->
+      <div class="alert-box">
+        <h3>⏰ New Verification Pending</h3>
+        <p>A contractor has submitted their license information for verification. Please review and approve or reject within 24-48 hours.</p>
+      </div>
+
+      <!-- Contractor Information -->
+      <div class="contractor-card">
+        <h3>👤 Contractor Information</h3>
+        <div class="info-row">
+          <div class="info-label">Business Name:</div>
+          <div class="info-value">{{contractorName}}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Email:</div>
+          <div class="info-value">{{contractorEmail}}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Verification ID:</div>
+          <div class="info-value" style="font-family: monospace; font-size: 12px;">{{verificationId}}</div>
+        </div>
+      </div>
+
+      <!-- License Details -->
+      <div class="contractor-card">
+        <h3>📜 License Details</h3>
+        <div class="info-row">
+          <div class="info-label">State:</div>
+          <div class="info-value">{{licenseState}}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">License Number:</div>
+          <div class="info-value license-number">{{licenseNumber}}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">License Type:</div>
+          <div class="info-value">{{licenseType}}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Expiration Date:</div>
+          <div class="info-value">{{licenseExpiration}}</div>
+        </div>
+      </div>
+
+      <!-- Insurance Information (if provided) -->
+      <div class="insurance-info">
+        <h4>🛡️ Insurance Information</h4>
+        <p><strong>Provider:</strong> {{insuranceProvider}}</p>
+        <p><strong>Policy Number:</strong> {{insurancePolicyNumber}}</p>
+        <p><strong>Coverage Amount:</strong> {{insuranceCoverage}}</p>
+        <p><strong>Expiration:</strong> {{insuranceExpiration}}</p>
+      </div>
+
+      <!-- Verification Steps -->
+      <div class="verification-steps">
+        <h4>✅ Verification Checklist</h4>
+        <ol>
+          <li>Visit your state's contractor licensing board website</li>
+          <li>Search for the license number: <strong>{{licenseNumber}}</strong></li>
+          <li>Verify the license is <strong>active</strong> and not expired</li>
+          <li>Confirm the name matches: <strong>{{contractorName}}</strong></li>
+          <li>Check for any disciplinary actions or complaints</li>
+          <li>If insurance info provided, verify coverage is current</li>
+        </ol>
+      </div>
+
+      <!-- Warning -->
+      <div class="warning-box">
+        <p><strong>⚠️ Important:</strong> Only approve licenses that are currently active and in good standing. If anything seems suspicious or cannot be verified, reject the application and we can follow up with the contractor for clarification.</p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <h3>Take Action:</h3>
+        <a href="{{approveUrl}}" class="btn btn-approve">
+          ✓ Approve License
+        </a>
+        <a href="{{rejectUrl}}" class="btn btn-reject">
+          ✗ Reject License
+        </a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center; margin-top: 20px;">
+        When you click a button above, the system will automatically update the contractor's status and send them a notification email.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>HomeProHub Admin System</strong></p>
+      <p>License Verification Management</p>
+      <p style="margin-top: 20px; font-size: 12px;">
+        This is an automated admin notification. Do not reply to this email.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

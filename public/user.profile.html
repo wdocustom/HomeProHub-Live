@@ -1,7 +1,10 @@
 <!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8" />
   <title>HomeProHub – Profile</title>
-  <link rel="stylesheet" href="styles.css" /></head><body><header class="navbar">
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script></head><body><header class="navbar">
   <div class="nav-inner">
     <div class="brand-area">
       <div class="brand-logo">H</div>
@@ -38,48 +41,163 @@
   </div></main>
   
   <script>
+(function() {
+    'use strict';
+
+    // Standardized localStorage keys
+    const STORAGE_KEYS = {
+        USER_PROFILE: 'homeprohub_user',
+        USER_ROLE: 'homeprohub_user_role',
+        AUTH_TOKEN: 'homeprohub_auth_token',
+        USERNAME: 'homeprohub_username',
+        PROFILE_COMPLETE: 'homeprohub_profile_complete',
+        CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
+        HISTORY: 'homeprohub_history_v1'
+    };
+
+    // DOM Elements
     const userRoleEl = document.getElementById('userRole');
     const userNameEl = document.getElementById('userName');
     const userEmailEl = document.getElementById('userEmail');
     const userLocationEl = document.getElementById('userLocation');
     const userTradeRowEl = document.getElementById('userTradeRow');
     const userTradeEl = document.getElementById('userTrade');
-    const dashboardLinkEl = document.getElementById('dashboardLink'); // New element
+    const dashboardLinkEl = document.getElementById('dashboardLink');
 
-    // 1. Load user data from local storage
-    let user = null;
-    try {
-      const raw = localStorage.getItem("homeprohub_user");
-      user = raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      console.error("Error parsing user data:", e);
+    /**
+     * Sanitize text for display (prevent XSS)
+     */
+    function sanitizeText(text) {
+        if (!text) return 'N/A';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
     }
 
-    // 2. Display user data & set dashboard link
-    if (user && user.name) {
-      userNameEl.textContent = user.name;
-      userRoleEl.textContent = user.role;
-      userEmailEl.textContent = user.email;
-      userLocationEl.textContent = user.location;
-      
-      // Set the Dashboard Link based on role
-      if (user.role === 'contractor') {
-        userTradeEl.textContent = user.trade;
-        dashboardLinkEl.href = "contractor.html"; // Contractor Dashboard
-      } else {
-        userTradeRowEl.style.display = 'none'; // Hide trade for homeowners
-        dashboardLinkEl.href = "home.html"; // Homeowner Dashboard
-      }
+    /**
+     * Load and display user profile data
+     */
+    async function loadUserProfile() {
+        try {
+            // Wait for authService to be ready
+            if (!window.authService || !window.authService.initialized) {
+                await new Promise(resolve => {
+                    const checkInterval = setInterval(() => {
+                        if (window.authService && window.authService.initialized) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                });
+            }
+
+            // Get current user
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
+                redirectToLogin();
+                return;
+            }
+
+            // Get profile
+            const profile = await window.authService.getUserProfile();
+            if (!profile || !profile.role) {
+                redirectToLogin();
+                return;
+            }
+
+            // Display user information (sanitized)
+            userRoleEl.textContent = sanitizeText(profile.role);
+            userNameEl.textContent = sanitizeText(profile.full_name || profile.company_name || profile.business_name || 'N/A');
+            userEmailEl.textContent = sanitizeText(user.email || 'N/A');
+            userLocationEl.textContent = sanitizeText(profile.city && profile.state ? `${profile.city}, ${profile.state}` : 'Not specified');
+
+            // Set dashboard link and handle role-specific fields
+            if (profile.role === 'contractor') {
+                // Show trade information for contractors
+                const trade = profile.trade || 'General Contractor';
+                userTradeEl.textContent = sanitizeText(trade);
+                userTradeRowEl.style.display = '';
+                dashboardLinkEl.href = 'contractor.html';
+            } else {
+                // Hide trade row for homeowners
+                userTradeRowEl.style.display = 'none';
+                dashboardLinkEl.href = 'home.html';
+            }
+
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            // Error loading profile
+            redirectToLogin();
+        }
+    }
+
+    /**
+     * Redirect to login page
+     */
+    function redirectToLogin() {
+        // Clear potentially corrupted data
+        clearAllData();
+        window.location.href = 'index.html';
+    }
+
+    /**
+     * Clear all user data from localStorage
+     */
+    function clearAllData() {
+        Object.values(STORAGE_KEYS).forEach(key => {
+            try {
+                localStorage.removeItem(key);
+            } catch (e) {
+                // Silent fail for localStorage issues
+            }
+        });
+    }
+
+    /**
+     * Handle logout
+     */
+    window.logout = async function() {
+        try {
+            // Use authService to sign out
+            await window.authService.signOut();
+            // authService.signOut() will handle the redirect
+        } catch (e) {
+            console.error('Error during logout:', e);
+            // Fallback: redirect to home
+            try {
+                // Try legacy logout
+                clearAllData();
+                const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+                if (authToken) {
+                    fetch('/api/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    }).catch(() => {
+                        // Silent fail - we're logging out anyway
+                });
+            }
+        } catch (e) {
+            // Silent fail - we're logging out anyway
+        }
+
+        // Redirect to login
+        window.location.href = 'index.html';
+    };
+
+    /**
+     * Initialize the profile page
+     */
+    function initialize() {
+        loadUserProfile();
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
     } else {
-      // If no user data, redirect to index/login
-      alert("You must be signed in to view your profile.");
-      window.location.href = "index.html";
+        initialize();
     }
-
-    // 3. Logout function
-    function logout() {
-      localStorage.removeItem("homeprohub_user");
-      localStorage.removeItem("homeprohub_history_v1"); 
-      window.location.href = "index.html";
-    }
+})();
   </script></body></html>

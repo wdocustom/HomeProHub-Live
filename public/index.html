@@ -1,54 +1,945 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>HomeProHub</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Understand Your Home Issues, Connect with Verified Contractors</title>
+  <meta name="description" content="Free AI-powered home issue guidance. Connect with vetted, licensed contractors. Optional on-demand expert access. Trust, clarity, no hidden fees.">
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #ffffff;
+    }
+
+    /* SECTION A: TOP NAV */
+    .top-nav {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1f2937;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #1f2937;
+    }
+
+    .nav-cta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-secondary {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .btn-primary {
+      padding: 10px 20px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    /* SECTION B: HERO (Homeowner-first sandbox) */
+    .hero {
+      max-width: 900px;
+      margin: 80px auto 120px;
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 52px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+
+    .hero-subhead {
+      font-size: 20px;
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-helper {
+      font-size: 15px;
+      color: #9ca3af;
+      font-style: italic;
+      margin-bottom: 40px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .hero-input-group {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .hero-input {
+      flex: 1;
+      padding: 16px 20px;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .hero-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .btn-large {
+      padding: 16px 32px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-large:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .hero-secondary-link {
+      color: #6b7280;
+      font-size: 15px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .hero-trust-line {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-top: 24px;
+    }
+
+    /* SECTION C: HOW IT WORKS */
+    .how-it-works {
+      background: #f9fafb;
+      padding: 80px 24px;
+    }
+
+    .section-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 56px;
+      letter-spacing: -0.02em;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+
+    .step-card {
+      text-align: center;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 48px;
+      height: 48px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 48px;
+      margin-bottom: 20px;
+    }
+
+    .step-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .step-description {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    /* SECTION D: THREE-PATH EXPLAINER */
+    .three-paths {
+      padding: 80px 24px;
+    }
+
+    .paths-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .path-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 32px;
+      transition: all 0.2s;
+    }
+
+    .path-card:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .path-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .path-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .path-subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .path-features {
+      margin: 20px 0;
+    }
+
+    .path-feature {
+      display: flex;
+      align-items: start;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .path-card .btn-primary {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .path-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #9ca3af;
+      font-style: italic;
+      text-align: center;
+    }
+
+    .path-card.no-button .btn-primary {
+      display: none;
+    }
+
+    /* SECTION E: FAQ */
+    .faq {
+      padding: 80px 24px;
+    }
+
+    .faq-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 24px 0;
+    }
+
+    .faq-question {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .faq-answer {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.7;
+    }
+
+    /* SECTION H: FOOTER */
+    .footer {
+      background: #1f2937;
+      color: #9ca3af;
+      padding: 48px 24px 32px;
+    }
+
+    .footer-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 40px;
+    }
+
+    .footer-brand {
+      color: white;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .footer-disclaimer {
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .footer-section-title {
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .footer-links {
+      list-style: none;
+    }
+
+    .footer-links li {
+      margin-bottom: 12px;
+    }
+
+    .footer-links a {
+      color: #9ca3af;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: white;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid #374151;
+      padding-top: 24px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    /* MOBILE RESPONSIVE */
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero-subhead {
+        font-size: 18px;
+      }
+
+      .hero-input-group {
+        flex-direction: column;
+      }
+
+      .steps-grid,
+      .paths-grid,
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Role Selection Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .role-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .role-option {
+      padding: 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .role-option:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .role-option-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .role-option-description {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .modal-close {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .modal-close button {
+      background: transparent;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-<div class="login-container">
-    <h1>Welcome to HomeProHub!</h1>
-    <form id="loginForm">
-        <input type="email" id="loginUsername" placeholder="Email" required />
-        <input type="password" id="loginPassword" placeholder="Password" required />
-        <button type="submit" class="btn-login">LOGIN</button>
-        <p id="loginStatus"></p>
-    </form>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    const SUPABASE_URL = 'https://artcgqykrmliskbkzunz.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_93uN7DNKNFnNQ2ZH9fMuvA_jGCWHifP';
+  <!-- SECTION A: TOP NAV -->
+  <nav class="top-nav">
+    <div class="nav-container">
+      <a href="/" class="logo">HomeProHub</a>
 
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      <div class="nav-links">
+        <a href="#homeowners">Homeowners</a>
+        <a href="/contractors.html">Contractors</a>
+        <a href="#how-it-works">How it Works</a>
+        <a href="#faq">FAQ</a>
+      </div>
 
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const username = document.getElementById("loginUsername").value;
-        const password = document.getElementById("loginPassword").value;
+      <div class="nav-cta">
+        <button class="btn-secondary" onclick="showSignIn()">Sign in</button>
+        <button class="btn-primary" onclick="showRoleSelection()">Get started</button>
+      </div>
+    </div>
+  </nav>
 
-        try {
-            const { data, error } = await client.auth.signInWithPassword({ email: username, password });
-            if (error) {
-                document.getElementById("loginStatus").textContent = "Login failed: " + error.message;
-                return;
-            }
+  <!-- SECTION B: HERO (Homeowner-first sandbox) -->
+  <section class="hero" id="homeowners">
+    <h1>What's going on with your home?</h1>
 
-            if (data.user) {
-                const statusResponse = await fetch(`/api/get-user-status?username=${data.user.email}`);
-                if (!statusResponse.ok) throw new Error("Failed to fetch profile data.");
+    <p class="hero-subhead">
+      Describe what you're seeing or upload a photo. Our AI helps you understand what might be happening,
+      how serious it could be, and what your options are — completely free.
+    </p>
 
-                const userProfile = await statusResponse.json();
-                localStorage.setItem("profileComplete", userProfile.profileComplete);
-                localStorage.setItem("role", userProfile.role);
+    <p class="hero-helper">
+      Many homeowners use this just to understand the issue before deciding what to do.
+    </p>
 
-                const redirectPage = userProfile.profileComplete ? "dashboard.html" : "contractor-profile.html";
-                window.location.href = redirectPage;
-            }
-        } catch (err) {
-            document.getElementById("loginStatus").textContent = "Error: " + err.message;
+    <div class="hero-actions">
+      <div class="hero-input-group">
+        <input
+          type="text"
+          class="hero-input"
+          placeholder="Describe your issue (e.g., 'Water stain on ceiling after rain')"
+          id="heroIssueInput"
+        />
+        <button class="btn-large" onclick="startFreeAICheck()">Try Free AI Check</button>
+      </div>
+
+      <a href="#" class="hero-secondary-link" onclick="event.preventDefault(); redirectToDirectory();">
+        Free to browse verified contractors when you're ready
+      </a>
+    </div>
+
+    <p class="hero-trust-line">
+      Homeowner use is free. Contractors pay for lead access. Optional paid on-demand expert access.
+    </p>
+  </section>
+
+  <!-- SECTION C: HOW IT WORKS -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-container">
+      <h2 class="section-title">How It Works</h2>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3 class="step-title">Free AI Clarity</h3>
+          <p class="step-description">
+            Upload a photo or describe your issue. Get plain-English guidance on what might be happening.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3 class="step-title">Understand Your Options</h3>
+          <p class="step-description">
+            Get safety guidance, urgency assessment, and "what to tell a contractor" summaries — all free.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3 class="step-title">Connect When Ready</h3>
+          <p class="step-description">
+            Post your job and connect with vetted, licensed contractors. Free to post. No obligation.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION D: THREE-PATH EXPLAINER -->
+  <section class="three-paths">
+    <div class="section-container">
+      <h2 class="section-title">Three Paths Forward</h2>
+      <p style="text-align: center; color: #6b7280; max-width: 700px; margin: 0 auto 0; font-size: 16px;">
+        After your AI analysis, you choose what happens next. No pressure, no funnel.
+      </p>
+
+      <div class="paths-grid">
+        <!-- PATH 1: UNDERSTAND (No button) -->
+        <div class="path-card no-button">
+          <span class="path-icon">🔍</span>
+          <h3 class="path-title">Understand</h3>
+          <p class="path-subtitle">
+            Review the AI diagnosis, safety warnings, and what to tell a contractor.
+          </p>
+
+          <div class="path-features">
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Educational guidance</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Safety & urgency assessment</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>DIY context when relevant</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Completely free</span>
+            </div>
+          </div>
+
+          <p class="path-note">This is your thinking space. No buttons, no pressure.</p>
+        </div>
+
+        <!-- PATH 2: HIRE A PRO (Free) -->
+        <div class="path-card">
+          <span class="path-icon">🏗️</span>
+          <h3 class="path-title">Hire a Pro</h3>
+          <p class="path-subtitle">
+            Connect with vetted, licensed contractors. Graded on performance, not ads.
+          </p>
+
+          <div class="path-features">
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Free to post your job</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>No obligation to hire</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>You choose who to contact</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Licensed & background-checked</span>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="redirectToDirectory()">Browse Verified Contractors</button>
+        </div>
+
+        <!-- PATH 3: ASK AN EXPERT (Paid) -->
+        <div class="path-card">
+          <span class="path-icon">👨‍🔧</span>
+          <h3 class="path-title">Ask an Expert</h3>
+          <p class="path-subtitle">
+            Want a straight answer right now? On-demand video or phone consultation.
+          </p>
+
+          <div class="path-features">
+            <div class="path-feature">
+              <span>📞</span>
+              <span>Live expert by phone/video</span>
+            </div>
+            <div class="path-feature">
+              <span>⏱️</span>
+              <span>15-30 minute sessions</span>
+            </div>
+            <div class="path-feature">
+              <span>🎓</span>
+              <span>Licensed professionals with 10+ years</span>
+            </div>
+            <div class="path-feature">
+              <span>📝</span>
+              <span>Written summary provided</span>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="showExpertAccess()">Talk to an Expert (Paid)</button>
+          <p class="path-note">Optional paid service. Pricing shown before confirmation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION E: FAQ -->
+  <section class="faq" id="faq">
+    <div class="faq-container">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+
+      <div class="faq-item">
+        <div class="faq-question">Is HomeProHub free for homeowners?</div>
+        <div class="faq-answer">
+          Yes. AI exploration, job posting, and contractor connection are completely free.
+          The only paid option is on-demand expert access ($50/session), which is entirely optional.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's paid, and when?</div>
+        <div class="faq-answer">
+          Homeowners only pay for on-demand expert access (video/phone consultations).
+          Everything else is free. Contractors pay for access to homeowner job leads.
+          Pricing is shown clearly before you confirm any paid service.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What does "free to connect" mean?</div>
+        <div class="faq-answer">
+          You can post jobs, browse contractors, and receive bids without paying anything.
+          There's no obligation to hire anyone. You control the entire process.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How are contractors vetted and licensed?</div>
+        <div class="faq-answer">
+          All contractors are verified for active licenses, insurance, and background checks.
+          They're graded A–F based on performance, licensing, education, and homeowner feedback
+          — not paid placement or advertising.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How do homeowner grades work?</div>
+        <div class="faq-answer">
+          Homeowners are graded on communication, project preparedness, and follow-through.
+          This helps contractors identify serious, respectful clients and reduces wasted visits.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Is AI diagnosis guaranteed?</div>
+        <div class="faq-answer">
+          No. Our AI provides educational guidance to help you understand your issue,
+          but it does not replace an in-person inspection by a licensed professional.
+          Always consult a qualified contractor for accurate diagnosis and repair.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do I have to hire through HomeProHub?</div>
+        <div class="faq-answer">
+          No. You can use our free AI analysis and never hire anyone. You can also
+          browse contractors just to compare, or take our AI insights to any contractor you choose.
+          There's no lock-in.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION H: FOOTER -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">HomeProHub</div>
+          <p class="footer-disclaimer">
+            AI guidance provided by HomeProHub is educational and does not constitute
+            professional inspection, diagnosis, or repair advice. Always consult licensed
+            professionals for accurate assessment and work.
+          </p>
+        </div>
+
+        <div>
+          <div class="footer-section-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="#homeowners">For Homeowners</a></li>
+            <li><a href="#contractors">For Contractors</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-section-title">Company</div>
+          <ul class="footer-links">
+            <li><a href="#">About Us</a></li>
+            <li><a href="#">Contact</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-section-title">Legal</div>
+          <ul class="footer-links">
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Contractor Agreement</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        © 2025 HomeProHub. Trust is the feature.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Role Selection Modal -->
+  <div class="modal" id="roleModal">
+    <div class="modal-content">
+      <h2 class="modal-title">I am a...</h2>
+
+      <div class="role-options">
+        <div class="role-option" onclick="selectRole('homeowner')">
+          <div class="role-option-title">🏠 Homeowner</div>
+          <div class="role-option-description">
+            Free AI guidance, free contractor connection
+          </div>
+        </div>
+
+        <div class="role-option" onclick="selectRole('contractor')">
+          <div class="role-option-title">🔧 Contractor</div>
+          <div class="role-option-description">
+            Access quality leads, get graded on performance
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-close">
+        <button onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Role selection modal
+    function showRoleSelection(defaultRole) {
+      if (defaultRole) {
+        selectRole(defaultRole);
+      } else {
+        document.getElementById('roleModal').classList.add('active');
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('roleModal').classList.remove('active');
+    }
+
+    async function selectRole(role) {
+      closeModal();
+
+      // Check if user is already signed in
+      if (window.authService && window.authService.initialized) {
+        const user = await window.authService.getCurrentUser();
+        if (user) {
+          // User is signed in, redirect based on role
+          if (role === 'homeowner') {
+            window.location.href = 'home.html';
+          } else {
+            window.location.href = 'contractor.html';
+          }
+          return;
         }
+      }
+
+      // Not signed in, redirect to sign up with role
+      sessionStorage.setItem('signup_role', role);
+      window.location.href = 'signup.html';
+    }
+
+    function showSignIn() {
+      window.location.href = 'signin.html';
+    }
+
+    function startFreeAICheck() {
+      const input = document.getElementById('heroIssueInput');
+      const question = input.value.trim();
+
+      if (question.length < 10) {
+        alert('Please describe your issue in more detail (at least 10 characters)');
+        return;
+      }
+
+      // Store question and redirect to home page (requires auth)
+      sessionStorage.setItem('pendingQuestion', question);
+      window.location.href = 'home.html';
+    }
+
+    function redirectToDirectory() {
+      window.location.href = 'contractor-directory.html';
+    }
+
+    function showExpertAccess() {
+      window.location.href = 'expert-booking.html';
+    }
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href !== '#' && href.length > 1) {
+          e.preventDefault();
+          const target = document.querySelector(href);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      });
     });
-</script>
+  </script>
 </body>
 </html>

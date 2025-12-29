@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Progress Check-in – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <style>
+    .checkin-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .header-section {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .header-section h1 {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 12px 0;
+    }
+
+    .header-section .subtitle {
+      font-size: 18px;
+      color: #6b7280;
+      margin: 0 0 8px 0;
+    }
+
+    .header-section .trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #3b82f6;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e40af;
+      margin-top: 16px;
+    }
+
+    .upload-section {
+      background: white;
+      border: 2px dashed #d1d5db;
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 24px;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .upload-section:hover {
+      border-color: #2563eb;
+      background: #f9fafb;
+    }
+
+    .upload-section.active {
+      border-color: #2563eb;
+      border-style: solid;
+      background: #eff6ff;
+    }
+
+    .upload-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .upload-section h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 8px 0;
+    }
+
+    .upload-section p {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .photo-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f3f4f6;
+    }
+
+    .photo-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-item .remove-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #ef4444;
+      color: white;
+      border: 2px solid white;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .photo-item .remove-btn:hover {
+      background: #dc2626;
+      transform: scale(1.1);
+    }
+
+    .form-section {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .form-section h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 20px 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 16px 32px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .submit-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .submit-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .analysis-section {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 32px;
+      margin-top: 32px;
+      display: none;
+    }
+
+    .analysis-section.show {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .analysis-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .analysis-header .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .analysis-header h3 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+    }
+
+    .alert-box {
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .alert-box.warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .alert-box.danger {
+      background: #fee2e2;
+      border-left: 4px solid #ef4444;
+    }
+
+    .alert-box.success {
+      background: #d1fae5;
+      border-left: 4px solid #10b981;
+    }
+
+    .alert-box .icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .alert-box .content {
+      flex: 1;
+    }
+
+    .alert-box .title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+
+    .alert-box .message {
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .recommendations {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .recommendations h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 16px 0;
+    }
+
+    .recommendations ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .recommendations li {
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.8;
+      margin-bottom: 8px;
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .action-btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .action-btn.primary {
+      background: #2563eb;
+      color: white;
+      border: none;
+    }
+
+    .action-btn.primary:hover {
+      background: #1d4ed8;
+    }
+
+    .action-btn.secondary {
+      background: white;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+    }
+
+    .action-btn.secondary:hover {
+      background: #eff6ff;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation component will be injected here -->
+
+  <main>
+    <div class="checkin-container">
+      <div class="header-section">
+        <h1>🏗️ Project Progress Check-in</h1>
+        <p class="subtitle">Upload photos of your project and get instant expert guidance</p>
+        <div class="trust-badge">
+          <span>🛡️</span>
+          <span>Your Personal Project Representative</span>
+        </div>
+      </div>
+
+      <!-- Photo Upload Section -->
+      <div class="upload-section" id="uploadSection" onclick="document.getElementById('photoInput').click()">
+        <div class="upload-icon">📸</div>
+        <h3>Upload Project Photos</h3>
+        <p>Click to select photos or drag and drop them here</p>
+        <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">Maximum 10 photos, 10MB each</p>
+        <input type="file" id="photoInput" multiple accept="image/*" style="display: none;" />
+      </div>
+
+      <!-- Photo Grid -->
+      <div class="photo-grid" id="photoGrid"></div>
+
+      <!-- Description Form -->
+      <div class="form-section">
+        <h3>📝 Describe What You're Seeing</h3>
+        <div class="form-group">
+          <label for="projectDescription">What stage is your project at? Any concerns or questions?</label>
+          <textarea
+            id="projectDescription"
+            placeholder="Example: My contractor just finished framing and is about to start drywall, but I noticed they haven't run the electrical wiring yet. Is this normal? Should the electrical rough-in be done before drywall?"></textarea>
+        </div>
+        <button class="submit-btn" id="analyzeBtn" disabled>
+          🔍 Get Expert Analysis
+        </button>
+      </div>
+
+      <!-- Analysis Results -->
+      <div class="analysis-section" id="analysisSection">
+        <div class="analysis-header">
+          <div class="icon">🤖</div>
+          <h3>Expert Analysis</h3>
+        </div>
+        <div id="analysisContent"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Constants
+    const STORAGE_KEYS = {
+      USERNAME: 'homeprohub_username',
+      AUTH_TOKEN: 'homeprohub_auth_token',
+      USER_ROLE: 'homeprohub_user_role'
+    };
+
+    // State
+    let uploadedPhotos = [];
+    let currentUser = null;
+
+    // Check auth
+    async function checkAuth() {
+      try {
+        // Wait for authService to be ready
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          console.log('Project Check-in: No user found - navigation will handle redirect');
+          return false;
+        }
+
+        const profile = await window.authService.getUserProfile();
+        currentUser = {
+          username: user.email,
+          email: user.email,
+          role: profile?.role
+        };
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        console.log('Project Check-in: Auth error - navigation will handle redirect');
+        return false;
+      }
+    }
+
+    // Handle photo selection
+    document.getElementById('photoInput').addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+
+      files.forEach(file => {
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`Photo "${file.name}" is too large. Maximum size is 10MB.`);
+          return;
+        }
+
+        if (uploadedPhotos.length >= 10) {
+          alert('Maximum 10 photos allowed');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          uploadedPhotos.push({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data: event.target.result
+          });
+          renderPhotoGrid();
+          updateAnalyzeButton();
+        };
+        reader.readAsDataURL(file);
+      });
+
+      e.target.value = ''; // Reset input
+    });
+
+    // Render photo grid
+    function renderPhotoGrid() {
+      const grid = document.getElementById('photoGrid');
+      const uploadSection = document.getElementById('uploadSection');
+
+      if (uploadedPhotos.length === 0) {
+        grid.innerHTML = '';
+        uploadSection.classList.remove('active');
+        return;
+      }
+
+      uploadSection.classList.add('active');
+
+      grid.innerHTML = uploadedPhotos.map((photo, index) => `
+        <div class="photo-item">
+          <img src="${photo.data}" alt="${photo.name}" />
+          <button class="remove-btn" onclick="removePhoto(${index})">×</button>
+        </div>
+      `).join('');
+    }
+
+    // Remove photo
+    window.removePhoto = function(index) {
+      uploadedPhotos.splice(index, 1);
+      renderPhotoGrid();
+      updateAnalyzeButton();
+    };
+
+    // Update analyze button state
+    function updateAnalyzeButton() {
+      const btn = document.getElementById('analyzeBtn');
+      const description = document.getElementById('projectDescription').value.trim();
+
+      btn.disabled = uploadedPhotos.length === 0 && !description;
+    }
+
+    // Listen to description changes
+    document.getElementById('projectDescription').addEventListener('input', updateAnalyzeButton);
+
+    // Analyze project
+    document.getElementById('analyzeBtn').addEventListener('click', async function() {
+      const description = document.getElementById('projectDescription').value.trim();
+      const btn = this;
+
+      if (uploadedPhotos.length === 0 && !description) {
+        alert('Please upload at least one photo or provide a description');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Analyzing...';
+
+      // Show loading
+      const analysisSection = document.getElementById('analysisSection');
+      const analysisContent = document.getElementById('analysisContent');
+      analysisSection.classList.add('show');
+      analysisContent.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p style="color: #6b7280; font-size: 14px;">Our AI is analyzing your project photos...</p>
+        </div>
+      `;
+
+      try {
+        const response = await fetch('/api/project-checkin/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentUser.token}`
+          },
+          body: JSON.stringify({
+            photos: uploadedPhotos,
+            description: description,
+            userEmail: currentUser.username
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Analysis failed');
+        }
+
+        const data = await response.json();
+        displayAnalysis(data);
+
+      } catch (error) {
+        console.error('Error analyzing project:', error);
+        analysisContent.innerHTML = `
+          <div class="alert-box danger">
+            <div class="icon">⚠️</div>
+            <div class="content">
+              <div class="title">Analysis Failed</div>
+              <div class="message">We couldn't analyze your project right now. Please try again or contact support.</div>
+            </div>
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 Get Expert Analysis';
+      }
+    });
+
+    // Display analysis results
+    function displayAnalysis(data) {
+      const analysisContent = document.getElementById('analysisContent');
+
+      // Determine alert type based on red flags
+      const alertType = data.redFlags && data.redFlags.length > 0 ? 'warning' : 'success';
+      const alertIcon = alertType === 'warning' ? '⚠️' : '✅';
+      const alertTitle = alertType === 'warning' ? 'Potential Issues Detected' : 'Looking Good!';
+
+      let html = `
+        <div class="alert-box ${alertType}">
+          <div class="icon">${alertIcon}</div>
+          <div class="content">
+            <div class="title">${alertTitle}</div>
+            <div class="message">${data.summary || 'Analysis complete'}</div>
+          </div>
+        </div>
+      `;
+
+      // Red flags
+      if (data.redFlags && data.redFlags.length > 0) {
+        html += `
+          <div class="recommendations">
+            <h4>🚩 Red Flags Detected:</h4>
+            <ul>
+              ${data.redFlags.map(flag => `<li>${flag}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+
+      // Recommendations
+      if (data.recommendations && data.recommendations.length > 0) {
+        html += `
+          <div class="recommendations">
+            <h4>💡 Expert Recommendations:</h4>
+            <ul>
+              ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+
+      // Action buttons
+      html += `
+        <div class="action-buttons">
+          <a href="messages.html" class="action-btn primary">
+            💬 Message Your Contractor
+          </a>
+          <button class="action-btn secondary" onclick="requestExpertHelp()">
+            👨‍🏫 Talk to an Expert
+          </button>
+        </div>
+      `;
+
+      analysisContent.innerHTML = html;
+    }
+
+    // Request expert help
+    window.requestExpertHelp = function() {
+      alert('Expert consultation feature coming soon! For now, please use our messaging system to reach out.');
+    };
+
+    // Initialize
+    checkAuth().then(isAuthenticated => {
+      if (!isAuthenticated) {
+        // Redirect is already handled in checkAuth
+      }
+    });
+  </script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Update Check-in - HomeProHub</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      padding: 40px 30px;
+      line-height: 1.6;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .intro {
+      font-size: 16px;
+      color: #4b5563;
+      margin-bottom: 24px;
+    }
+    .checkin-box {
+      background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #5eead4;
+    }
+    .checkin-box h3 {
+      color: #115e59;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .checkin-box p {
+      color: #134e4a;
+      margin: 0;
+    }
+    .questions-section {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .questions-section h3 {
+      color: #1f2937;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+    }
+    .question-card {
+      background-color: white;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 16px 0;
+      border-left: 4px solid #14b8a6;
+    }
+    .question-card h4 {
+      color: #1f2937;
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+    .question-card p {
+      color: #6b7280;
+      margin: 0;
+      font-size: 14px;
+    }
+    .question-card .indicator {
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    .indicator.good {
+      color: #059669;
+      font-weight: 600;
+    }
+    .indicator.warning {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+    .indicator.bad {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    .warning-signs {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .warning-signs h3 {
+      color: #991b1b;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .warning-signs ul {
+      margin: 8px 0;
+      padding-left: 20px;
+      color: #991b1b;
+    }
+    .warning-signs li {
+      margin: 8px 0;
+    }
+    .ai-tool-box {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #93c5fd;
+    }
+    .ai-tool-box h3 {
+      color: #1e40af;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .ai-tool-box p {
+      color: #1e3a8a;
+      margin: 8px 0;
+    }
+    .ai-tool-box .feature-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .ai-tool-box .feature-item {
+      background-color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      color: #1e40af;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .support-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .support-box h3 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .support-box p {
+      color: #78350f;
+      margin: 8px 0;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+      color: white !important;
+      padding: 16px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 12px 8px;
+      text-align: center;
+    }
+    .cta-button.secondary {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #14b8a6;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon">🏗️</div>
+      <h1>How's Your Project Going?</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <p class="greeting">Hi {{homeownerName}},</p>
+
+      <p class="intro">
+        As your owner's representative, we wanted to check in on how <strong>{{jobTitle}}</strong> is progressing. We're here to help ensure everything stays on track and you're satisfied with the work.
+      </p>
+
+      <!-- Check-in Box -->
+      <div class="checkin-box">
+        <h3>📊 Quick Mid-Project Assessment</h3>
+        <p>Take a moment to evaluate how things are going. This helps you spot potential issues early when they're easier to address.</p>
+      </div>
+
+      <!-- Questions to Ask Yourself -->
+      <div class="questions-section">
+        <h3>🤔 Ask Yourself These Questions</h3>
+
+        <div class="question-card">
+          <h4>Is the project staying on schedule?</h4>
+          <p>Compare current progress to the original timeline in your contract.</p>
+          <div class="indicator good">✓ On track or slightly ahead = Great!</div>
+          <div class="indicator warning">⚠ A few days behind = Ask why, get updated timeline</div>
+          <div class="indicator bad">✗ Significantly delayed = Time for a serious conversation</div>
+        </div>
+
+        <div class="question-card">
+          <h4>Is the quality meeting your expectations?</h4>
+          <p>Look at completed sections with a critical eye. Does it match what you discussed?</p>
+          <div class="indicator good">✓ Looks professional and clean = Excellent</div>
+          <div class="indicator warning">⚠ Some concerns about quality = Document with photos, discuss with contractor</div>
+          <div class="indicator bad">✗ Poor workmanship = Stop payment, request corrections</div>
+        </div>
+
+        <div class="question-card">
+          <h4>Is communication still good?</h4>
+          <p>Can you easily reach your contractor and get straight answers to questions?</p>
+          <div class="indicator good">✓ Regular updates, responsive = Perfect</div>
+          <div class="indicator warning">⚠ Sometimes hard to reach = Set expectations for communication frequency</div>
+          <div class="indicator bad">✗ Avoiding you or dodging questions = Red flag, contact us</div>
+        </div>
+
+        <div class="question-card">
+          <h4>Are change orders being handled properly?</h4>
+          <p>If the scope has changed, is everything documented and agreed upon in writing?</p>
+          <div class="indicator good">✓ All changes written and signed = Proper process</div>
+          <div class="indicator warning">⚠ Verbal agreements on changes = Get it in writing ASAP</div>
+          <div class="indicator bad">✗ Surprise costs or undocumented work = Stop and document everything</div>
+        </div>
+
+        <div class="question-card">
+          <h4>Is the work site being managed well?</h4>
+          <p>Is the site clean, safe, and materials stored properly?</p>
+          <div class="indicator good">✓ Clean, organized, safe = Professional crew</div>
+          <div class="indicator warning">⚠ Messy but functional = Request better cleanup</div>
+          <div class="indicator bad">✗ Unsafe conditions or major mess = Safety issue, address immediately</div>
+        </div>
+      </div>
+
+      <!-- Warning Signs -->
+      <div class="warning-signs">
+        <h3>🚨 Mid-Project Warning Signs</h3>
+        <ul>
+          <li><strong>Scope creep:</strong> Project keeps expanding without proper documentation</li>
+          <li><strong>Payment pressure:</strong> Requests for more money before milestones are complete</li>
+          <li><strong>Quality decline:</strong> Work quality getting worse as project progresses</li>
+          <li><strong>Abandoned site:</strong> Crew stops showing up regularly</li>
+          <li><strong>Permit issues:</strong> Inspector flags problems or work fails inspection</li>
+          <li><strong>Material substitutions:</strong> Different materials without your approval</li>
+        </ul>
+      </div>
+
+      <!-- AI Tool -->
+      <div class="ai-tool-box">
+        <h3>🤖 Get AI-Powered Expert Analysis</h3>
+        <p>Upload photos of your project progress and get instant expert feedback. Our AI construction inspector will review your photos and alert you to:</p>
+        <div class="feature-list">
+          <div class="feature-item">🔍 Work sequence errors</div>
+          <div class="feature-item">⚠️ Missing critical steps</div>
+          <div class="feature-item">🏗️ Poor workmanship</div>
+          <div class="feature-item">📋 Potential code violations</div>
+          <div class="feature-item">💡 Recommendations</div>
+        </div>
+        <p style="margin-top: 16px;"><strong>This is your safety net.</strong> If something seems off, get it analyzed before it becomes a bigger problem.</p>
+      </div>
+
+      <!-- Support -->
+      <div class="support-box">
+        <h3>👨‍💼 We're Your Advocate</h3>
+        <p>Remember, HomeProHub is your owner's representative—we're on YOUR side. If you're experiencing any issues with your contractor, we can:</p>
+        <ul style="margin: 12px 0; padding-left: 20px;">
+          <li>Review your contract and advise on next steps</li>
+          <li>Help you communicate concerns professionally</li>
+          <li>Mediate disputes if needed</li>
+          <li>Connect you with inspectors or other experts</li>
+          <li>Provide documentation templates for change orders</li>
+        </ul>
+      </div>
+
+      <!-- CTA Buttons -->
+      <div class="cta-container">
+        <a href="{{checkinLink}}" class="cta-button">
+          📸 Upload Progress Photos
+        </a>
+        <a href="{{messagesLink}}" class="cta-button secondary">
+          💬 Contact Your Contractor
+        </a>
+      </div>
+
+      <p style="color: #6b7280; line-height: 1.6; margin-top: 30px;">
+        <strong>Everything going smoothly? That's great!</strong> But if you have ANY concerns—even small ones—reach out. Reply to this email or contact us via text, phone, or video call. As your owner's representative, catching issues early is exactly what we're here for.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>HomeProHub</strong> - Your Owner's Representative</p>
+      <p>Protecting your interests throughout your project</p>
+      <p style="margin-top: 20px;">
+        <a href="https://www.homeprohub.today">www.homeprohub.today</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

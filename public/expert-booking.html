@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Expert Consultation – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    body {
+      background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .booking-container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 32px;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 900px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left: Booking Form */
+    .booking-form-card {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .form-section {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .form-section:last-of-type {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .form-section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .form-section-description {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .form-input,
+    .form-textarea,
+    .form-select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      padding: 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .radio-option:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .radio-option input[type="radio"] {
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .radio-option-content {
+      flex: 1;
+    }
+
+    .radio-option-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .radio-option-description {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .radio-option-price {
+      font-size: 20px;
+      font-weight: 700;
+      color: #3b82f6;
+      flex-shrink: 0;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .checkbox-text {
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    .disclaimer-box {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .disclaimer-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 8px;
+    }
+
+    .disclaimer-text {
+      font-size: 13px;
+      color: #78350f;
+      line-height: 1.6;
+    }
+
+    .btn-book {
+      width: 100%;
+      padding: 16px 24px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-book:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-book:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Right: Summary & Context */
+    .booking-summary {
+      position: sticky;
+      top: 24px;
+    }
+
+    .summary-card {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+    }
+
+    .summary-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .summary-item-label {
+      color: #6b7280;
+    }
+
+    .summary-item-value {
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .summary-total {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-total-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .summary-total-price {
+      font-size: 28px;
+      font-weight: 700;
+      color: #3b82f6;
+    }
+
+    .context-card {
+      background: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .context-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .context-content {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    .what-to-expect {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 24px;
+    }
+
+    .what-to-expect-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+      margin-bottom: 12px;
+    }
+
+    .what-to-expect ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .what-to-expect li {
+      padding: 6px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .what-to-expect li:before {
+      content: "✓";
+      color: #3b82f6;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-container"></div>
+
+  <div class="booking-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Book Expert Consultation</h1>
+      <p class="page-subtitle">
+        Get on-demand guidance from a licensed professional. This is advisory only and does not replace an in-person inspection.
+      </p>
+    </div>
+
+    <div class="booking-grid">
+      <!-- LEFT: Booking Form -->
+      <div class="booking-form-card">
+        <form id="bookingForm">
+
+          <!-- Section 1: Consultation Type -->
+          <div class="form-section">
+            <h2 class="form-section-title">Choose Consultation Type</h2>
+            <p class="form-section-description">
+              Select whether you'd like a one-time session or ongoing access.
+            </p>
+
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="consultationType" value="single" checked>
+                <div class="radio-option-content">
+                  <div class="radio-option-title">Single Session</div>
+                  <div class="radio-option-description">
+                    One 15-30 minute video or phone consultation. Pay once, no commitment.
+                  </div>
+                </div>
+                <div class="radio-option-price">$50</div>
+              </label>
+
+              <label class="radio-option">
+                <input type="radio" name="consultationType" value="subscription">
+                <div class="radio-option-content">
+                  <div class="radio-option-title">Monthly Subscription</div>
+                  <div class="radio-option-description">
+                    Unlimited consultations for one month. Cancel anytime. Best for multiple projects.
+                  </div>
+                </div>
+                <div class="radio-option-price">$99/mo</div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 2: Contact Method -->
+          <div class="form-section">
+            <h2 class="form-section-title">How Would You Like to Connect?</h2>
+
+            <div class="form-group">
+              <label class="form-label">Preferred Method</label>
+              <select class="form-select" id="contactMethod" required>
+                <option value="">Select your preference</option>
+                <option value="video">Video Call (Zoom)</option>
+                <option value="phone">Phone Call</option>
+                <option value="chat">Text Chat (for follow-up questions)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Your Phone Number</label>
+              <input type="tel" class="form-input" id="phoneNumber" placeholder="(555) 123-4567" required>
+            </div>
+          </div>
+
+          <!-- Section 3: Scheduling -->
+          <div class="form-section">
+            <h2 class="form-section-title">When Would You Like to Talk?</h2>
+
+            <div class="form-group">
+              <label class="form-label">Preferred Date</label>
+              <input type="date" class="form-input" id="preferredDate" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Preferred Time</label>
+              <select class="form-select" id="preferredTime" required>
+                <option value="">Select a time</option>
+                <option value="morning">Morning (8am - 12pm)</option>
+                <option value="afternoon">Afternoon (12pm - 5pm)</option>
+                <option value="evening">Evening (5pm - 8pm)</option>
+                <option value="asap">As soon as possible</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section 4: Your Question -->
+          <div class="form-section">
+            <h2 class="form-section-title">What Do You Want to Discuss?</h2>
+            <p class="form-section-description">
+              Give the expert context about your situation. This helps them prepare.
+            </p>
+
+            <div class="form-group">
+              <label class="form-label">Your Question or Situation</label>
+              <textarea class="form-textarea" id="consultationQuestion" placeholder="Example: I got an AI diagnosis about a possible plumbing leak. I want to understand if this is urgent and whether the repair estimate I received ($2,500) sounds reasonable." required></textarea>
+            </div>
+
+            <div id="diagnosisContextDisplay"></div>
+          </div>
+
+          <!-- Disclaimer -->
+          <div class="disclaimer-box">
+            <div class="disclaimer-title">⚠️ Important: Advisory Only</div>
+            <div class="disclaimer-text">
+              Experts provide educational guidance and help you think through your situation.
+              They are <strong>not</strong> conducting inspections, making diagnoses, or replacing in-person contractor visits.
+              Their advice may be uncertain. They will not casually contradict contractors.
+              <strong>Default guidance: "This still may need an in-person look, but here's how to think about it."</strong>
+            </div>
+          </div>
+
+          <!-- Agreement Checkbox -->
+          <label class="checkbox-label">
+            <input type="checkbox" id="agreeTerms" required>
+            <span class="checkbox-text">
+              I understand that expert consultations are advisory only and do not replace professional inspection or diagnosis.
+              I agree to the <a href="#" style="color: #3b82f6; text-decoration: underline;">Terms of Service</a>.
+            </span>
+          </label>
+
+          <!-- Auto-renew for subscription (hidden unless subscription selected) -->
+          <div id="autoRenewSection" style="display: none; margin-top: 16px;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="autoRenew">
+              <span class="checkbox-text">
+                <strong>Optional:</strong> Auto-renew monthly subscription ($99/month charged automatically). You can cancel anytime from your account settings.
+              </span>
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="btn-book" id="bookButton">
+            Proceed to Payment
+          </button>
+        </form>
+      </div>
+
+      <!-- RIGHT: Summary & Context -->
+      <div class="booking-summary">
+        <!-- Price Summary -->
+        <div class="summary-card">
+          <h3 class="summary-title">Order Summary</h3>
+
+          <div class="summary-item">
+            <span class="summary-item-label">Consultation Type</span>
+            <span class="summary-item-value" id="summaryType">Single Session</span>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-item-label">Duration</span>
+            <span class="summary-item-value">15-30 minutes</span>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-item-label">Method</span>
+            <span class="summary-item-value" id="summaryMethod">Not selected</span>
+          </div>
+
+          <div class="summary-total">
+            <span class="summary-total-label">Total</span>
+            <span class="summary-total-price" id="summaryPrice">$50</span>
+          </div>
+        </div>
+
+        <!-- Diagnosis Context (if available) -->
+        <div class="context-card" id="contextCard" style="display: none;">
+          <div class="context-title">Your AI Diagnosis Context</div>
+          <div class="context-content" id="contextText"></div>
+        </div>
+
+        <!-- What to Expect -->
+        <div class="what-to-expect">
+          <div class="what-to-expect-title">What to Expect</div>
+          <ul>
+            <li>Expert will review your question before the call</li>
+            <li>15-30 minute focused conversation</li>
+            <li>Licensed professional with 10+ years experience</li>
+            <li>Written summary sent after the session</li>
+            <li>Educational guidance, not authoritative diagnosis</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="components/navigation.js"></script>
+
+  <script>
+    (async function() {
+      'use strict';
+
+      // Check authentication
+      if (!window.authService || !window.authService.initialized) {
+        await new Promise(resolve => {
+          const checkAuth = setInterval(() => {
+            if (window.authService && window.authService.initialized) {
+              clearInterval(checkAuth);
+              resolve();
+            }
+          }, 100);
+        });
+      }
+
+      const user = await window.authService.getCurrentUser();
+      if (!user) {
+        alert('Please sign in to book an expert consultation');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Load diagnosis context if available
+      const diagnosisData = sessionStorage.getItem('expertConsultationContext');
+      if (diagnosisData) {
+        try {
+          const data = JSON.parse(diagnosisData);
+          const contextCard = document.getElementById('contextCard');
+          const contextText = document.getElementById('contextText');
+
+          contextText.textContent = `AI analyzed your issue: "${data.originalQuestion.substring(0, 100)}..." - The expert will have access to this context.`;
+          contextCard.style.display = 'block';
+
+          // Pre-fill question textarea
+          const questionField = document.getElementById('consultationQuestion');
+          questionField.value = `I received an AI diagnosis about: ${data.originalQuestion}\n\nI'd like to discuss: `;
+        } catch (e) {
+          console.error('Error loading diagnosis context:', e);
+        }
+      }
+
+      // Set minimum date to tomorrow
+      const dateInput = document.getElementById('preferredDate');
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      dateInput.min = tomorrow.toISOString().split('T')[0];
+
+      // Update summary when form changes
+      document.querySelectorAll('input[name="consultationType"]').forEach(radio => {
+        radio.addEventListener('change', updateSummary);
+      });
+
+      document.getElementById('contactMethod').addEventListener('change', updateSummary);
+
+      function updateSummary() {
+        const consultationType = document.querySelector('input[name="consultationType"]:checked').value;
+        const contactMethod = document.getElementById('contactMethod').value;
+
+        // Update type
+        const summaryType = document.getElementById('summaryType');
+        const summaryPrice = document.getElementById('summaryPrice');
+        const autoRenewSection = document.getElementById('autoRenewSection');
+
+        if (consultationType === 'single') {
+          summaryType.textContent = 'Single Session';
+          summaryPrice.textContent = '$50';
+          autoRenewSection.style.display = 'none';
+        } else {
+          summaryType.textContent = 'Monthly Subscription';
+          summaryPrice.textContent = '$99/mo';
+          autoRenewSection.style.display = 'block';
+        }
+
+        // Update method
+        const summaryMethod = document.getElementById('summaryMethod');
+        if (contactMethod) {
+          const methodLabels = {
+            'video': 'Video Call',
+            'phone': 'Phone Call',
+            'chat': 'Text Chat'
+          };
+          summaryMethod.textContent = methodLabels[contactMethod] || 'Not selected';
+        } else {
+          summaryMethod.textContent = 'Not selected';
+        }
+      }
+
+      // Form submission
+      document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const consultationType = document.querySelector('input[name="consultationType"]:checked').value;
+        const contactMethod = document.getElementById('contactMethod').value;
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        const preferredDate = document.getElementById('preferredDate').value;
+        const preferredTime = document.getElementById('preferredTime').value;
+        const question = document.getElementById('consultationQuestion').value;
+        const agreeTerms = document.getElementById('agreeTerms').checked;
+
+        if (!agreeTerms) {
+          alert('Please agree to the terms to continue');
+          return;
+        }
+
+        // For subscription, check auto-renew
+        let autoRenew = false;
+        if (consultationType === 'subscription') {
+          autoRenew = document.getElementById('autoRenew').checked;
+        }
+
+        const bookButton = document.getElementById('bookButton');
+        bookButton.disabled = true;
+        bookButton.textContent = 'Processing...';
+
+        try {
+          // Store booking data
+          const bookingData = {
+            consultationType,
+            contactMethod,
+            phoneNumber,
+            preferredDate,
+            preferredTime,
+            question,
+            autoRenew,
+            userEmail: user.email,
+            diagnosisContext: diagnosisData,
+            timestamp: new Date().toISOString()
+          };
+
+          sessionStorage.setItem('expertBookingData', JSON.stringify(bookingData));
+
+          // TODO: Integrate with Stripe payment
+          // For now, show alert
+          alert(`Expert booking submitted!\n\nType: ${consultationType}\nPrice: ${consultationType === 'single' ? '$50' : '$99/mo'}\n\nNext: Payment integration with Stripe will be implemented here.`);
+
+          // TODO: Redirect to payment page
+          // window.location.href = 'expert-payment.html';
+
+        } catch (error) {
+          console.error('Booking error:', error);
+          alert('Failed to process booking. Please try again.');
+          bookButton.disabled = false;
+          bookButton.textContent = 'Proceed to Payment';
+        }
+      });
+
+      // Initialize summary
+      updateSummary();
+    })();
+  </script>
+</body>
+</html>

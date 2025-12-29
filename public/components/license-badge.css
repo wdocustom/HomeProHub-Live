@@ -1,0 +1,157 @@
+/**
+ * HomeProHub License Badge Component
+ * Displays contractor verification status with visual badges
+ */
+
+.license-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.license-badge-verified {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  color: #065f46;
+  border: 1.5px solid #10b981;
+}
+
+.license-badge-pending {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1.5px solid #f59e0b;
+}
+
+.license-badge-unverified {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  color: #6b7280;
+  border: 1.5px solid #d1d5db;
+}
+
+.license-badge-get-licensed {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #1e40af;
+  border: 1.5px solid #3b82f6;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.license-badge-get-licensed:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+
+.license-badge-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.license-badge-text {
+  line-height: 1;
+}
+
+/* Compact version for small spaces */
+.license-badge-compact {
+  padding: 4px 8px;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.license-badge-compact .license-badge-icon {
+  font-size: 14px;
+}
+
+/* Large version for profiles */
+.license-badge-large {
+  padding: 10px 16px;
+  font-size: 15px;
+  gap: 8px;
+}
+
+.license-badge-large .license-badge-icon {
+  font-size: 20px;
+}
+
+/* License details tooltip (optional) */
+.license-badge-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.license-badge-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.license-badge-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+}
+
+.license-badge-wrapper:hover .license-badge-tooltip {
+  opacity: 1;
+}
+
+/* License info card (for detailed display) */
+.license-info-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.license-info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.license-info-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.license-info-card-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.license-info-card-label {
+  color: #6b7280;
+}
+
+.license-info-card-value {
+  color: #1f2937;
+  font-weight: 500;
+}

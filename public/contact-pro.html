@@ -111,55 +111,140 @@
         </p>
         <a href="upgrade-options.html" class="btn-primary cta-button">View Upgrade Options</a>
     </div></main><script>
-  // --- AUTH/NAV SCRIPT START ---
+(function() {
+  'use strict';
+
+  // Standardized localStorage keys
+  const STORAGE_KEYS = {
+    USER_PROFILE: 'homeprohub_user',
+    USER_ROLE: 'homeprohub_user_role',
+    AUTH_TOKEN: 'homeprohub_auth_token',
+    USERNAME: 'homeprohub_username',
+    PROFILE_COMPLETE: 'homeprohub_profile_complete',
+    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
+    HISTORY: 'homeprohub_history_v1',
+    USER_PLAN: 'homeprohub_user_plan'
+  };
+
+  // DOM Elements
+  const profileLinkEl = document.getElementById('profileLink');
+  const featureContentEl = document.getElementById('featureContent');
+  const lockMessageEl = document.getElementById('lockMessage');
+
+  // Mock Plan - in production, this would come from the backend
+  const MOCK_USER_PLAN = 'basic'; // Can be: 'basic', 'guided', 'concierge', 'elite'
+
+  /**
+   * Sanitize text for display (prevent XSS)
+   */
+  function sanitizeText(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  /**
+   * Get user data from localStorage
+   */
   function getUserData() {
     try {
-      const role = localStorage.getItem("homeprohub_user_role");
-      return role ? { role: role, name: "User" } : null; 
+      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+
+      if (!role || !authToken) {
+        return null;
+      }
+
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      return {
+        role: role,
+        name: profile.name || 'User',
+        email: profile.email || ''
+      };
     } catch (e) {
       return null;
     }
   }
 
-  const profileLinkEl = document.getElementById("profileLink");
-  const featureContentEl = document.getElementById("featureContent");
-  const lockMessageEl = document.getElementById("lockMessage");
+  /**
+   * Clear all user data from localStorage
+   */
+  function clearAllData() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Silent fail
+      }
+    });
+  }
 
-  // Mock Plan Check (For Demo Purposes)
-  // **If you change this, you must change it on the saved file, not here in chat.**
-  const MOCK_USER_PLAN = 'basic'; // Change to 'guided' or 'concierge' in the file to test UNLOCKED state
+  /**
+   * Logout function
+   */
+  window.logout = function() {
+    clearAllData();
 
+    try {
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      if (authToken) {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    window.location.href = 'index.html';
+  };
+
+  /**
+   * Check access and render appropriate content
+   */
   function checkAccessAndRender() {
     const user = getUserData();
-    
-    // **CRITICAL FIX:** Ensure user is logged in AND is a homeowner before proceeding
-    if (!user || user.role !== 'homeowner') { 
-        window.location.href = "role-selection.html";
-        return;
+
+    // Ensure user is logged in and is a homeowner
+    if (!user || user.role !== 'homeowner') {
+      clearAllData();
+      window.location.href = 'index.html';
+      return;
     }
-    
-    // Check if the user is on a paid plan (Guided or Concierge)
-    const hasPaidAccess = MOCK_USER_PLAN === 'guided' || MOCK_USER_PLAN === 'concierge';
+
+    // Set profile link
+    if (profileLinkEl) {
+      profileLinkEl.textContent = 'Profile';
+    }
+
+    // Check user plan (in production, fetch from backend)
+    const userPlan = localStorage.getItem(STORAGE_KEYS.USER_PLAN) || MOCK_USER_PLAN;
+    const hasPaidAccess = userPlan === 'guided' || userPlan === 'concierge' || userPlan === 'elite';
 
     if (hasPaidAccess) {
-        // UNLOCKED: Show the feature and hide the lock message
-        featureContentEl.style.display = 'block';
-        lockMessageEl.style.display = 'none';
+      // User has access - show feature
+      if (featureContentEl) featureContentEl.style.display = 'block';
+      if (lockMessageEl) lockMessageEl.style.display = 'none';
     } else {
-        // LOCKED: Hide the feature and show the lock message
-        featureContentEl.style.display = 'none';
-        lockMessageEl.style.display = 'block';
+      // User doesn't have access - show upgrade message
+      if (featureContentEl) featureContentEl.style.display = 'none';
+      if (lockMessageEl) lockMessageEl.style.display = 'block';
     }
-    
-    profileLinkEl.textContent = 'Profile'; // Set simple nav link
   }
 
-  function logout() {
-    localStorage.removeItem("homeprohub_user_role");
-    localStorage.removeItem("homeprohub_history_v1");
-    window.location.href = "index.html"; 
+  /**
+   * Initialize the page
+   */
+  function initialize() {
+    checkAccessAndRender();
   }
 
-  document.addEventListener('DOMContentLoaded', checkAccessAndRender);
-  // --- AUTH/NAV SCRIPT END ---
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
+  }
+})();
 </script></body></html>

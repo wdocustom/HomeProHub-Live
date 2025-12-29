@@ -1,206 +1,698 @@
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="UTF-8" />
-  <title>HomeScope AI – Homeowner Tools</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Your Home Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
   <style>
-    /* Match landing-page hero look, but homeowner-focused */
-    .hero {
-      max-width: 900px;
+    body {
+      background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* Welcome section */
+    .welcome-hero {
+      max-width: 1100px;
+      margin: 48px auto 40px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .welcome-title {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      color: #111827;
+      line-height: 1.2;
+    }
+    .welcome-subtitle {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #6b7280;
+      max-width: 680px;
+      margin: 0 auto 8px;
+    }
+
+    /* STAR FEATURE: AI Assistant Section */
+    .ai-assistant-section {
+      max-width: 1100px;
+      margin: 0 auto 48px;
+      padding: 0 24px;
+    }
+    .ai-assistant-card {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+      border-radius: 20px;
+      padding: 48px 40px;
+      color: white;
+      box-shadow: 0 20px 40px rgba(37, 99, 235, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .ai-assistant-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .ai-assistant-header {
+      text-align: center;
+      margin-bottom: 32px;
+      position: relative;
+      z-index: 1;
+    }
+    .ai-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .ai-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+      color: white;
+    }
+    .ai-subtitle {
+      font-size: 16px;
+      opacity: 0.95;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    .ai-input-area {
+      position: relative;
+      z-index: 1;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .ai-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 18px 20px;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.95);
+      font-size: 15px;
+      color: #1f2937;
+      resize: vertical;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: all 0.2s;
+    }
+    .ai-textarea:focus {
+      outline: none;
+      border-color: white;
+      background: white;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    .ai-textarea::placeholder {
+      color: #9ca3af;
+    }
+    .ai-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn-ai-primary {
+      padding: 14px 32px;
+      background: white;
+      color: #2563eb;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-ai-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .btn-ai-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-ai-secondary {
+      padding: 14px 28px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+    }
+    .btn-ai-secondary:hover {
+      background: rgba(255,255,255,0.3);
+      border-color: rgba(255,255,255,0.6);
+    }
+    .photo-input {
+      display: none;
+    }
+    .ai-free-tag {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    .status-message {
+      margin-top: 12px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    /* AI Response Area */
+    .ai-response-section {
+      max-width: 1100px;
+      margin: 0 auto 48px;
+      padding: 0 24px;
+      display: none;
+    }
+    .ai-response-section.show {
+      display: block;
+    }
+    .ai-response-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      border-left: 4px solid #10b981;
+    }
+    .response-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .response-icon {
+      font-size: 32px;
+    }
+    .response-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 0;
+    }
+    .response-content {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #374151;
+      white-space: pre-wrap;
+    }
+
+    /* Clarify Section */
+    .clarify-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 2px solid #e5e7eb;
+    }
+    .clarify-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .clarify-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 2px solid #d1d5db;
+      background: #f9fafb;
+      font-size: 14px;
+      resize: vertical;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .clarify-textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: white;
+    }
+    .clarify-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    /* Project Post CTA */
+    .project-post-cta {
+      margin-top: 24px;
+      padding: 24px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-radius: 12px;
+      border: 2px solid #bae6fd;
+      text-align: center;
+      display: none;
+    }
+    .project-post-cta.show {
+      display: block;
+    }
+    .project-post-cta h3 {
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      color: #1e40af;
+    }
+    .project-post-cta p {
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      color: #1e3a8a;
+    }
+
+    /* Section header for Explore & Do */
+    .section-header {
+      max-width: 1100px;
       margin: 64px auto 32px;
       padding: 0 24px;
       text-align: center;
     }
-    .hero-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #9ca3af;
-      margin-bottom: 8px;
-    }
-    .hero-title {
-      font-size: 32px;
+    .section-header h2 {
+      font-size: 28px;
       font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 10px;
       color: #111827;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
     }
-    .hero-subtitle {
-      font-size: 14px;
-      line-height: 1.6;
+    .section-header p {
+      font-size: 16px;
       color: #6b7280;
-      max-width: 620px;
+      max-width: 600px;
       margin: 0 auto;
     }
 
-    /* Plan badges (same style idea as before) */
-    .tier-pill {
-      display: inline-block;
-      margin-left: 6px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      border: 1px solid #e5e7eb;
-      background: #f3f4f6;
-      color: #4b5563;
-      white-space: nowrap;
-    }
-    .tier-pill--free {
-      border-color: #4ade80;
-      background: #ecfdf5;
-      color: #166534;
-    }
-    .tier-pill--guided {
-      border-color: #60a5fa;
-      background: #eff6ff;
-      color: #1d4ed8;
-    }
-    .tier-pill--concierge {
-      border-color: #c4b5fd;
-      background: #f5f3ff;
-      color: #5b21b6;
-    }
-    
-    /* Layout for the main content grid */
-    .grid-2 {
+    /* Two-column grid for secondary features */
+    .secondary-grid {
+      max-width: 1100px;
+      margin: 0 auto 64px;
+      padding: 0 24px;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
     }
-    @media (max-width: 800px) {
-      .grid-2 {
+
+    @media (max-width: 900px) {
+      .secondary-grid {
         grid-template-columns: 1fr;
       }
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeScope AI</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Dashboard</a>
-      <a href="ask.html">Assistant</a>
-      <div class="profile-area">
-        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div></header><main>
-  <section class="hero">
-    <div class="hero-kicker">For homeowners</div>
-    <h1 class="hero-title">Understand your home and choose the right pros.</h1>
-    <p class="hero-subtitle">
-      Use AI, education, and access to vetted contractors to make better decisions
-      about leaks, cracks, remodels, and bigger projects.
-    </p><a href="upgrade-options.html" class="btn-primary" style="font-size:14px; padding: 10px 20px; margin-top:15px;">View Upgrade Options</a>
-  </section>
 
-  <section style="max-width: 900px; margin: 0 auto 60px; padding: 0 24px;">
-    <div class="grid-2">
-      <div class="card">
-        <h2 style="margin-top:0; margin-bottom:8px;">What you can do here</h2>
-        <p style="margin:0 0 10px; font-size:14px; color:#4b5563;">
-          Plans: <strong>Basic (Free)</strong>, <strong>Guided</strong>, <strong>Concierge</strong>
-        </p>
-
-        <ul style="margin: 8px 0 6px 20px; padding: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
-        <li>
-          <a href="contractor-directory.html" style="color: #2563eb; text-decoration: none;">
-            <strong>Contractor Directory with Grades:</strong>
-            See verified pros scored A–F with transparent notes.
-          </a>
-          <span class="tier-pill tier-pill--free">Free</span>
-        </li>
-        <li>
-          <a href="contact-pro.html" style="color: #2563eb; text-decoration: none;">
-            <strong>Contact a Pro:</strong>
-            Send details, photos, and questions to vetted contractors and request a callback.
-          </a>
-          <span class="tier-pill tier-pill--guided">Guided & Concierge</span>
-        </li>
-        <li>
-          <a href="contact-pro.html" style="color: #2563eb; text-decoration: none;">
-            <strong>Live video with a pro:</strong>
-            Walk through your home or project live with a contractor or specialist.
-          </a>
-          <span class="tier-pill tier-pill--concierge">Concierge</span>
-        </li>
-        <li>
-          <a href="contact-pro.html" style="color: #2563eb; text-decoration: none;">
-            <strong>Advocate / Owner’s Rep:</strong>
-            Get neutral support reviewing bids, scope, and expectations so you’re not alone.
-          </a>
-          <span class="tier-pill tier-pill--guided">Guided & Concierge</span>
-        </li>
-        <li>
-          <strong>Red flags when hiring:</strong>
-          Learn what to ask, what to avoid, and how to spot risky contractors before you sign.
-          <span class="tier-pill tier-pill--free">Free</span>
-        </li>
-      </ul>
-        
-        <p class="small-text" style="margin-top: 15px;">
-          Learn more about the grading criteria: <a href="grading-details.html" style="color: #2563eb;">View Grading Logic</a>
-        </p>
-      </div>
-
-      <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; gap:20px;">
-        <div>
-          <h2 style="margin-top:0; margin-bottom:8px;">Home Issue Assistant</h2>
-          <p style="margin:0 0 8px; font-size:14px; color:#4b5563;">
-            Describe leaks, cracks, noises, or smells. Get a structured breakdown, DIY checks, and safety notes.
-          </p>
-          <p class="small-text" style="margin-top:0; margin-bottom:14px;">
-            Included in all plans: <strong>Basic</strong>, <strong>Guided</strong>, and <strong>Concierge</strong>.
-          </p>
-          <a href="ask.html" class="btn-primary">Open Home Issue Assistant</a>
-        </div>
-        
-        <div style="border-top:1px solid #e5e7eb; padding-top:20px;">
-          <h2 style="margin-top:0; margin-bottom:8px;">AI Project Planner</h2>
-          <p style="margin:0 0 8px; font-size:14px; color:#4b5563;">
-            Input your remodel idea (e.g., bathroom renovation) and get a phased plan, required trades, rough timeline, and placeholder budget.
-          </p>
-          <p class="small-text" style="margin-top:0; margin-bottom:14px;">
-            Included in all plans: <strong>Basic</strong>, <strong>Guided</strong>, and <strong>Concierge</strong>.
-          </p>
-          <a href="project-planner.html" class="btn-secondary" style="background:#f0f4ff; color:#2563eb; border-color:#2563eb80;">Open Project Planner</a>
-        </div>
-      </div>
-    </div>
-  </section></main><script>
-  // Function to read user data
-  function getUserData() {
-    try {
-      // Check for user role key (set during role selection)
-      const role = localStorage.getItem("homeprohub_user_role");
-      
-      // If role exists, try to get the full profile name for the nav bar
-      const rawProfile = localStorage.getItem("homeprohub_user");
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
-
-      return role ? { role: role, name: profile.name || "Profile" } : null; 
-    } catch (e) {
-      return null;
+    /* Contractor Directory Card & Advocate Card - Unified White Style */
+    .directory-card,
+    .advocate-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s;
     }
-  }
+    .directory-card:hover,
+    .advocate-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+      border-color: #3b82f6;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .card-icon {
+      font-size: 32px;
+    }
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+      color: #111827;
+    }
+    .card-description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      margin-bottom: 20px;
+    }
+    .card-features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px 0;
+    }
+    .card-features li {
+      padding: 8px 0;
+      font-size: 14px;
+      color: #4b5563;
+      display: flex;
+      align-items: start;
+      gap: 8px;
+    }
+    .card-features li::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
 
-  // Check if user is logged in and set name
-  const user = getUserData();
-  const profileLinkEl = document.getElementById('profileLink');
-  
-  if (user && user.role) {
-    profileLinkEl.textContent = user.name.split(' ')[0]; // Show first name in nav
-  } else {
-    // If not logged in, redirect them back to choose role
-    window.location.href = "role-selection.html";
-  }
+    /* Premium Badge for Advocate Card */
+    .premium-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
 
-  // Logout function (also in user-profile.html)
-  function logout() {
-    localStorage.removeItem("homeprohub_user_role"); // Clear the role
-    localStorage.removeItem("homeprohub_user");      // Clear the user profile (if stored)
-    localStorage.removeItem("homeprohub_history_v1"); // Clear history
-    window.location.href = "index.html";
-  }
-</script></body></html>
+    /* Special Remodel Section */
+    .remodel-section {
+      max-width: 1100px;
+      margin: 0 auto 48px;
+      padding: 0 24px;
+    }
+    .remodel-card {
+      background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+      border-radius: 20px;
+      padding: 48px 40px;
+      color: white;
+      box-shadow: 0 20px 40px rgba(16, 185, 129, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .remodel-card::before {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .remodel-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .remodel-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .remodel-title {
+      font-size: 30px;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      line-height: 1.3;
+    }
+    .remodel-description {
+      font-size: 16px;
+      line-height: 1.7;
+      margin-bottom: 28px;
+      opacity: 0.95;
+    }
+    .remodel-highlights {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .highlight-item {
+      background: rgba(255,255,255,0.15);
+      padding: 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .highlight-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .highlight-desc {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* General button styles */
+    .btn-card {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-card-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .btn-card-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    }
+    .btn-card-white {
+      background: white;
+      color: #10b981;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-card-white:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    /* Free tier badge */
+    .tier-free {
+      display: inline-block;
+      padding: 3px 10px;
+      background: #ecfdf5;
+      color: #166534;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid #10b981;
+      margin-left: 8px;
+    }
+  </style>
+  <link rel="stylesheet" href="components/footer.css" />
+</head>
+<body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <main>
+    <!-- Welcome Hero -->
+    <section class="welcome-hero">
+      <h1 class="welcome-title">Welcome to Your Home Dashboard</h1>
+      <p class="welcome-subtitle">
+        Get expert help understanding home issues, find verified contractors, and manage your projects—all in one place.
+      </p>
+    </section>
+
+    <!-- ⭐ STAR FEATURE: AI Assistant Section -->
+    <section class="ai-assistant-section">
+      <div class="ai-assistant-card">
+        <div class="ai-assistant-header">
+          <div class="ai-badge">✨ FREE — AI-Powered</div>
+          <h2 class="ai-title">What's going on with your home?</h2>
+          <p class="ai-subtitle">
+            Leaks, cracks, strange noises, or weird smells? Describe what you're seeing (or upload a photo), and our AI Assistant will help you understand the issue, check for safety concerns, and guide your next steps.
+          </p>
+        </div>
+
+        <div class="ai-input-area">
+          <textarea
+            class="ai-textarea"
+            placeholder="Example: There's a wet spot on my ceiling near the bathroom. It's about 12 inches across and the paint is bubbling..."
+            id="homeIssueInput"
+          ></textarea>
+
+          <div class="ai-actions">
+            <button class="btn-ai-primary" id="askAiBtn">
+              🤖 Get AI Help Now
+            </button>
+            <label for="photoInput" class="btn-ai-secondary" style="cursor: pointer; display: inline-block; line-height: 1;">
+              📸 Upload a Photo
+            </label>
+            <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" />
+          </div>
+
+          <div class="status-message" id="aiStatus"></div>
+
+          <div class="ai-free-tag">
+            <strong>100% Free</strong> — Available on all plans. No credit card needed.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Response Section (Hidden until response) -->
+    <section class="ai-response-section" id="aiResponseSection">
+      <div class="ai-response-card">
+        <div class="response-header">
+          <span class="response-icon">✅</span>
+          <h3 class="response-title">AI Analysis</h3>
+        </div>
+        <div class="response-content" id="aiResponseContent"></div>
+
+        <!-- Clarify Section -->
+        <div class="clarify-section">
+          <label class="clarify-label">
+            Need to clarify or add something? Provide more details for an updated analysis:
+          </label>
+          <textarea
+            class="clarify-textarea"
+            id="clarifyInput"
+            placeholder="Example: The house was built in 2005, this only happens after long showers..."
+          ></textarea>
+          <div class="clarify-actions">
+            <button class="btn-card btn-card-primary" id="clarifyBtn">
+              🔁 Update Analysis
+            </button>
+            <div class="status-message" id="clarifyStatus"></div>
+          </div>
+        </div>
+
+        <!-- Project Post CTA -->
+        <div class="project-post-cta" id="projectPostCta">
+          <h3>✅ Ready to Hire a Pro?</h3>
+          <p>Convert this AI diagnosis into a project posting. Get competitive bids from verified contractors in your area.</p>
+          <button class="btn-card btn-card-primary" id="postProjectBtn">
+            Post This Project & Get Bids
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Header: Explore & Do -->
+    <div class="section-header">
+      <h2>Explore & Do</h2>
+      <p>Browse contractors, get expert advice, or explore resources to help with your home projects.</p>
+    </div>
+
+    <!-- Secondary Features Grid -->
+    <section class="secondary-grid">
+      <!-- Contractor Directory -->
+      <div class="directory-card">
+        <div class="card-header">
+          <span class="card-icon">🏅</span>
+          <h3 class="card-title">Contractor Directory</h3>
+        </div>
+        <p class="card-description">
+          Search verified pros scored A–F based on transparent criteria—not just reviews. Find the right contractor for your project with confidence.
+        </p>
+        <ul class="card-features">
+          <li>Transparent grading system (A-F ratings)</li>
+          <li>Licensed & insured verification</li>
+          <li>Specialty & trade filtering</li>
+          <li>Distance & availability search</li>
+        </ul>
+        <a href="contractor-directory.html" class="btn-card btn-card-primary">
+          Browse Contractors
+        </a>
+        <span class="tier-free">FREE</span>
+      </div>
+
+      <!-- Owner's Advocate / Rep -->
+      <div class="advocate-card">
+        <span class="premium-badge">Premium Feature</span>
+        <div class="card-header">
+          <span class="card-icon">🤝</span>
+          <h3 class="card-title">Your Owner's Advocate</h3>
+        </div>
+        <p class="card-description">
+          Already started your project? Need help reviewing bids, understanding contractor jargon, or making tough decisions? We're your partner through every step.
+        </p>
+        <ul class="card-features">
+          <li>Review & compare contractor bids</li>
+          <li>Translate technical language into plain English</li>
+          <li>Video calls with construction experts</li>
+          <li>Designer & architect connections</li>
+          <li>Budget & timeline guidance</li>
+        </ul>
+        <a href="access-experts.html" class="btn-card btn-card-primary">
+          Get Expert Support
+        </a>
+      </div>
+    </section>
+
+    <!-- Special Remodel/Project Section -->
+    <section class="remodel-section">
+      <div class="remodel-card">
+        <div class="remodel-content">
+          <div class="remodel-icon">🏡✨</div>
+          <h2 class="remodel-title">
+            Dreaming of a Remodel or Special Project?
+          </h2>
+          <p class="remodel-description">
+            Whether you're refreshing your kitchen for a growing family, adding a home office, building a deck for summer gatherings, or planning a full renovation—we make it easy to turn your vision into reality.
+          </p>
+
+          <div class="remodel-highlights">
+            <div class="highlight-item">
+              <div class="highlight-title">All Budgets Welcome</div>
+              <div class="highlight-desc">From $5K updates to full renovations</div>
+            </div>
+            <div class="highlight-item">
+              <div class="highlight-title">Competitive Bidding</div>
+              <div class="highlight-desc">Get multiple quotes from verified GCs</div>
+            </div>
+            <div class="highlight-item">
+              <div class="highlight-title">Expert Guidance</div>
+              <div class="highlight-desc">AI planning + human expertise</div>
+            </div>
+          </div>
+
+          <a href="homeowner-dashboard.html" class="btn-card btn-card-white">
+            ✏️ Post Your Project & Get Bids
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Note: Auth check is handled by navigation.js component
+    // No need for redundant inline auth check that causes race conditions
+  </script>
+
+  <!-- AI Assistant Component -->
+  <script src="components/ai-assistant.js"></script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
+
+  <!-- Global Footer -->
+  <script src="components/footer.js"></script>
+</body>
+</html>

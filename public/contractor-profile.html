@@ -1,50 +1,1337 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>HomeProHub – Profile Setup</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeProHub – Contractor Profile</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components/navigation.css">
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <style>
+    .profile-container { max-width: 900px; margin: 40px auto; padding: 0 24px; }
+    .profile-header { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+    .tab { padding: 12px 24px; cursor: pointer; border: none; background: none; font-size: 15px; color: #6b7280; transition: all 0.2s; }
+    .tab.active { color: #2563eb; border-bottom: 2px solid #2563eb; margin-bottom: -2px; font-weight: 600; }
+    .tab:hover { color: #2563eb; }
+    .tab-content { display: none; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .tab-content.active { display: block; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .form-group-full { grid-column: 1 / -1; }
+    @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
+
+    /* Toggle Switch Styling */
+    .toggle-switch { position: relative; display: inline-block; width: 56px; height: 30px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      transition: .3s;
+      border-radius: 30px;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: #10b981;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(26px);
+    }
+    .toggle-switch input:disabled + .toggle-slider {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Range Slider Styling */
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      background: #2563eb;
+      cursor: pointer;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      background: #2563eb;
+      cursor: pointer;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+  </style>
 </head>
 <body>
-  <div class="form-container">
-    <h1>Complete Your Profile</h1>
-    <form id="profileForm">
-      <label for="userRole">Role:</label>
-      <select id="userRole" required>
-        <option value="contractor">Contractor</option>
-        <option value="homeowner">Homeowner</option>
-      </select>
-      <label for="companyName">Company Name:</label>
-      <input id="companyName" type="text" required />
-      <button type="submit">Save</button>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+<div class="profile-container">
+  <div class="profile-header">
+    <h1 style="margin: 0 0 8px 0; font-size: 28px;">Contractor Profile</h1>
+    <p style="margin: 0; color: #6b7280;">Manage your business information and settings</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('basic')">Basic Info</button>
+    <button class="tab" onclick="switchTab('licensing')">Licensing & Verification</button>
+    <button class="tab" onclick="switchTab('social')">Social Media</button>
+    <button class="tab" onclick="switchTab('notifications')">Notifications & Service Area</button>
+  </div>
+
+  <div id="basicTab" class="tab-content active">
+    <h2 style="margin-top: 0;">Business Information</h2>
+    <form id="profileForm" novalidate>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input id="firstName" type="text" placeholder="John" maxlength="50" />
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name</label>
+          <input id="lastName" type="text" placeholder="Doe" maxlength="50" />
+        </div>
+        <div class="form-group">
+          <label for="businessName">Business Name</label>
+          <input id="businessName" type="text" placeholder="ABC Construction Inc." maxlength="100" />
+        </div>
+        <div class="form-group">
+          <label for="yearsInBusiness">Years in Business</label>
+          <input id="yearsInBusiness" type="number" placeholder="5" min="0" max="100" />
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input id="phone" type="tel" placeholder="(555) 123-4567" maxlength="14" />
+        </div>
+        <div class="form-group">
+          <label for="licenseNumber">License Number</label>
+          <input id="licenseNumber" type="text" placeholder="ABC-123456" maxlength="50" />
+        </div>
+        <div class="form-group">
+          <label for="trade">Primary Trade</label>
+          <select id="trade">
+            <option value="">Select trade...</option>
+            <option value="General Contractor">General Contractor</option>
+            <option value="Mechanical Contractor">Mechanical Contractor</option>
+            <option value="Plumber">Plumber</option>
+            <option value="Electrician">Electrician</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group form-group-full">
+          <label for="street">Street Address</label>
+          <input id="street" type="text" placeholder="123 Main St" maxlength="200" />
+        </div>
+        <div class="form-group">
+          <label for="city">City</label>
+          <input id="city" type="text" placeholder="Springfield" maxlength="100" />
+        </div>
+        <div class="form-group">
+          <label for="state">State</label>
+          <input id="state" type="text" placeholder="IL" maxlength="2" />
+        </div>
+        <div class="form-group">
+          <label for="zipCode">ZIP Code</label>
+          <input id="zipCode" type="text" placeholder="62701" pattern="[0-9]{5}" maxlength="5" />
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="saveButton">Save Profile</button>
+      <p id="statusMessage" style="margin-top: 12px; font-size: 14px;"></p>
     </form>
   </div>
 
-<script>
-    const username = localStorage.getItem("username");
-    if (!username) window.location.href = "index.html";
+  <div id="licensingTab" class="tab-content">
+    <h2 style="margin-top: 0;">Professional Licensing & Verification</h2>
 
-    document.addEventListener("DOMContentLoaded", async () => {
+    <!-- License Status Banner -->
+    <div id="licenseStatusBanner" style="margin-bottom: 24px; padding: 20px; border-radius: 8px; display: none;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="licenseStatusIcon" style="font-size: 28px;"></span>
+        <div style="flex: 1;">
+          <div id="licenseStatusTitle" style="font-weight: 600; font-size: 16px; margin-bottom: 4px;"></div>
+          <div id="licenseStatusMessage" style="font-size: 14px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Get Licensed Prompt (for unlicensed contractors) -->
+    <div id="getLicensedPrompt" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #fbbf24; display: none;">
+      <div style="display: flex; align-items: start; gap: 16px;">
+        <span style="font-size: 48px;">📜</span>
+        <div style="flex: 1;">
+          <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 20px;">Get Your Contractor License</h3>
+          <p style="margin: 0 0 16px 0; color: #78350f; line-height: 1.6;">
+            Want to bid on more jobs and build trust with homeowners? Getting licensed is easier than you think.
+            We've partnered with <strong>ContractorTrainingCenter.com</strong> to help you get licensed fast.
+          </p>
+          <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; color: #1f2937; font-size: 16px;">✅ Why Get Licensed?</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li><strong>Win More Bids</strong> - Homeowners prefer licensed contractors</li>
+              <li><strong>Higher Pay</strong> - Licensed contractors can charge premium rates</li>
+              <li><strong>Legal Protection</strong> - Work legally in your jurisdiction</li>
+              <li><strong>Verified Badge</strong> - Stand out with our ✓ Verified badge on your profile</li>
+              <li><strong>Priority Placement</strong> - Licensed contractors appear first in job matches</li>
+            </ul>
+          </div>
+          <a href="https://www.contractortrainingcenter.com/?ref=homeprohub" target="_blank" rel="noopener"
+             style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; transition: transform 0.2s;"
+             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            🎓 Start Your Licensing Journey →
+          </a>
+          <p style="margin: 12px 0 0 0; font-size: 13px; color: #9ca3af;">
+            Special HomeProHub discount available through our partner link
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- License Upload Form -->
+    <form id="licenseForm" novalidate>
+      <div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px;">License Information</h3>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="licState">License State *</label>
+            <input id="licState" type="text" placeholder="e.g., CA, TX, FL" maxlength="2" style="text-transform: uppercase;" required />
+          </div>
+          <div class="form-group">
+            <label for="licNumber">License Number *</label>
+            <input id="licNumber" type="text" placeholder="ABC-123456" maxlength="50" required />
+          </div>
+          <div class="form-group">
+            <label for="licType">License Type *</label>
+            <select id="licType" required>
+              <option value="">Select license type...</option>
+              <option value="General Contractor">General Contractor (Class A/B)</option>
+              <option value="Specialty Contractor">Specialty Contractor (Class C)</option>
+              <option value="Electrical">Electrical Contractor</option>
+              <option value="Plumbing">Plumbing Contractor</option>
+              <option value="HVAC">HVAC Contractor</option>
+              <option value="Roofing">Roofing Contractor</option>
+              <option value="Other">Other Specialty</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="licExpiration">Expiration Date</label>
+            <input id="licExpiration" type="date" />
+          </div>
+        </div>
+
+        <div class="form-group form-group-full" style="margin-top: 20px;">
+          <label for="licenseUpload" style="display: block; margin-bottom: 8px; font-weight: 600;">Upload License Document</label>
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280;">
+            Upload a clear photo or PDF of your contractor license. Accepted formats: JPG, PNG, PDF (max 5MB)
+          </p>
+          <div style="position: relative;">
+            <input type="file" id="licenseUpload" accept="image/*,.pdf" style="display: none;" />
+            <button type="button" onclick="document.getElementById('licenseUpload').click()"
+                    style="background: white; border: 2px dashed #d1d5db; padding: 40px 20px; width: 100%; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 8px;"
+                    onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff'"
+                    onmouseout="this.style.borderColor='#d1d5db'; this.style.background='white'">
+              <span style="font-size: 48px;">📄</span>
+              <span style="font-weight: 600; color: #2563eb;">Click to Upload License Document</span>
+              <span style="font-size: 14px; color: #6b7280;">or drag and drop file here</span>
+            </button>
+          </div>
+          <div id="licensePreview" style="margin-top: 16px; display: none;">
+            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 32px;" id="licenseFileIcon">📄</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #1f2937;" id="licenseFileName">filename.pdf</div>
+                <div style="font-size: 14px; color: #6b7280;" id="licenseFileSize">1.2 MB</div>
+              </div>
+              <button type="button" onclick="clearLicenseUpload()"
+                      style="background: #fee2e2; color: #991b1b; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insurance Information -->
+      <div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 18px;">Insurance Verification</h3>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="insuranceProvider">Insurance Provider</label>
+            <input id="insuranceProvider" type="text" placeholder="e.g., State Farm, Nationwide" maxlength="100" />
+          </div>
+          <div class="form-group">
+            <label for="insurancePolicyNumber">Policy Number</label>
+            <input id="insurancePolicyNumber" type="text" placeholder="POL-123456789" maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label for="insuranceExpiration">Expiration Date</label>
+            <input id="insuranceExpiration" type="date" />
+          </div>
+          <div class="form-group">
+            <label for="insuranceCoverage">Coverage Amount</label>
+            <select id="insuranceCoverage">
+              <option value="">Select coverage...</option>
+              <option value="500000">$500,000</option>
+              <option value="1000000">$1,000,000</option>
+              <option value="2000000">$2,000,000</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group form-group-full" style="margin-top: 20px;">
+          <label for="insuranceUpload" style="display: block; margin-bottom: 8px; font-weight: 600;">Upload Insurance Certificate</label>
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280;">
+            Upload your Certificate of Insurance (COI). Accepted formats: JPG, PNG, PDF (max 5MB)
+          </p>
+          <div style="position: relative;">
+            <input type="file" id="insuranceUpload" accept="image/*,.pdf" style="display: none;" />
+            <button type="button" onclick="document.getElementById('insuranceUpload').click()"
+                    style="background: white; border: 2px dashed #d1d5db; padding: 40px 20px; width: 100%; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 8px;"
+                    onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff'"
+                    onmouseout="this.style.borderColor='#d1d5db'; this.style.background='white'">
+              <span style="font-size: 48px;">🛡️</span>
+              <span style="font-weight: 600; color: #2563eb;">Click to Upload Insurance Certificate</span>
+              <span style="font-size: 14px; color: #6b7280;">or drag and drop file here</span>
+            </button>
+          </div>
+          <div id="insurancePreview" style="margin-top: 16px; display: none;">
+            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 32px;">🛡️</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #1f2937;" id="insuranceFileName">filename.pdf</div>
+                <div style="font-size: 14px; color: #6b7280;" id="insuranceFileSize">1.2 MB</div>
+              </div>
+              <button type="button" onclick="clearInsuranceUpload()"
+                      style="background: #fee2e2; color: #991b1b; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="saveLicenseButton">Save & Submit for Verification</button>
+      <p id="licenseStatusMessage" style="margin-top: 12px; font-size: 14px;"></p>
+    </form>
+
+    <!-- Verification Info -->
+    <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 20px; border-radius: 8px; margin-top: 24px;">
+      <h4 style="margin: 0 0 12px 0; color: #1e40af; font-size: 16px;">📋 Verification Process</h4>
+      <p style="margin: 0 0 12px 0; color: #1e3a8a; font-size: 14px; line-height: 1.6;">
+        Once you submit your license information, our team will verify it against state licensing boards.
+        This typically takes 1-3 business days. You'll receive an email when verification is complete.
+      </p>
+      <p style="margin: 0; color: #1e3a8a; font-size: 14px; line-height: 1.6;">
+        <strong>Verified contractors get:</strong> ✓ Verified badge, priority job placement, and higher homeowner trust.
+      </p>
+    </div>
+  </div>
+
+  <div id="socialTab" class="tab-content">
+    <h2 style="margin-top: 0;">Social Media Links</h2>
+    <form id="socialForm" novalidate>
+      <div class="form-grid">
+        <div class="form-group form-group-full">
+          <label for="instagram">Instagram</label>
+          <input id="instagram" type="url" placeholder="https://instagram.com/yourprofile" maxlength="200" />
+        </div>
+        <div class="form-group form-group-full">
+          <label for="facebook">Facebook</label>
+          <input id="facebook" type="url" placeholder="https://facebook.com/yourpage" maxlength="200" />
+        </div>
+        <div class="form-group form-group-full">
+          <label for="tiktok">TikTok</label>
+          <input id="tiktok" type="url" placeholder="https://tiktok.com/@yourprofile" maxlength="200" />
+        </div>
+        <div class="form-group form-group-full">
+          <label for="youtube">YouTube</label>
+          <input id="youtube" type="url" placeholder="https://youtube.com/c/yourchannel" maxlength="200" />
+        </div>
+        <div class="form-group form-group-full">
+          <label for="reddit">Reddit</label>
+          <input id="reddit" type="url" placeholder="https://reddit.com/u/yourusername" maxlength="200" />
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="saveSocialButton">Save Social Links</button>
+      <p id="socialStatusMessage" style="margin-top: 12px; font-size: 14px;"></p>
+    </form>
+  </div>
+
+  <div id="notificationsTab" class="tab-content">
+    <h2 style="margin-top: 0;">Notifications & Service Area</h2>
+    <p style="margin: 0 0 24px 0; color: #6b7280; line-height: 1.6;">
+      Configure your service area and get instant notifications when new jobs are posted near you.
+    </p>
+
+    <!-- Service Area Configuration -->
+    <div style="background: #f9fafb; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 24px;">📍</span>
+        Service Area
+      </h3>
+      <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Set how far you're willing to travel for jobs. You'll receive notifications for jobs posted within this radius from your ZIP code.
+      </p>
+
+      <div style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <label style="font-weight: 600; color: #1f2937;">Service Radius</label>
+          <div style="background: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 18px; color: #2563eb; border: 2px solid #2563eb;">
+            <span id="radiusValue">25</span> miles
+          </div>
+        </div>
+        <input
+          type="range"
+          id="serviceRadius"
+          min="5"
+          max="100"
+          value="25"
+          step="5"
+          style="width: 100%; height: 8px; border-radius: 5px; background: linear-gradient(to right, #2563eb 0%, #2563eb 20%, #e5e7eb 20%, #e5e7eb 100%); outline: none; -webkit-appearance: none; appearance: none; cursor: pointer;"
+          oninput="updateRadiusDisplay(this.value)"
+        />
+        <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #9ca3af;">
+          <span>5 mi</span>
+          <span>25 mi</span>
+          <span>50 mi</span>
+          <span>75 mi</span>
+          <span>100 mi</span>
+        </div>
+      </div>
+
+      <div style="background: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
+        <p style="margin: 0; font-size: 14px; color: #1e3a8a; line-height: 1.6;">
+          💡 <strong>Tip:</strong> Contractors who service larger areas typically get 3-5x more job opportunities. Consider expanding your radius during slower seasons.
+        </p>
+      </div>
+    </div>
+
+    <!-- Phone Verification -->
+    <div style="background: #f9fafb; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 24px;">📱</span>
+        Phone Number Verification
+      </h3>
+      <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Verify your phone number to receive SMS notifications for new job opportunities.
+      </p>
+
+      <div id="phoneVerifiedBanner" style="display: none; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #10b981;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 28px;">✅</span>
+          <div>
+            <div style="font-weight: 600; color: #065f46;">Phone Number Verified</div>
+            <div style="font-size: 14px; color: #047857;" id="verifiedPhoneDisplay"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="phoneVerificationForm">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="phoneNumber">Phone Number</label>
+          <input
+            id="phoneNumber"
+            type="tel"
+            placeholder="(555) 123-4567"
+            maxlength="14"
+            style="font-size: 16px;"
+            readonly
+          />
+          <p style="margin: 8px 0 0 0; font-size: 13px; color: #6b7280;">
+            This is the phone number from your profile. Update it in the Basic Info tab if needed.
+          </p>
+        </div>
+        <button
+          type="button"
+          id="verifyPhoneButton"
+          class="btn-primary"
+          onclick="sendVerificationCode()"
+          style="width: 100%;"
+        >
+          Send Verification Code
+        </button>
+      </div>
+
+      <div id="codeVerificationForm" style="display: none; margin-top: 20px;">
+        <div style="background: #fffbeb; padding: 16px; border-radius: 8px; border: 2px solid #fbbf24; margin-bottom: 16px;">
+          <p style="margin: 0; font-size: 14px; color: #78350f; line-height: 1.6;">
+            📲 We've sent a 6-digit verification code to your phone. Enter it below:
+          </p>
+        </div>
+        <div class="form-group">
+          <label for="verificationCode">Verification Code</label>
+          <input
+            id="verificationCode"
+            type="text"
+            placeholder="123456"
+            maxlength="6"
+            style="font-size: 24px; letter-spacing: 8px; text-align: center; font-weight: 700;"
+          />
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <button
+            type="button"
+            id="confirmCodeButton"
+            class="btn-primary"
+            onclick="confirmVerificationCode()"
+            style="flex: 1;"
+          >
+            Verify Code
+          </button>
+          <button
+            type="button"
+            onclick="cancelVerification()"
+            style="flex: 1; background: #f3f4f6; color: #1f2937; border: 1px solid #d1d5db; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;"
+            onmouseover="this.style.background='#e5e7eb'"
+            onmouseout="this.style.background='#f3f4f6'"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Preferences -->
+    <div style="background: #f9fafb; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 24px;">🔔</span>
+        Notification Preferences
+      </h3>
+      <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Choose how you want to receive notifications about new job opportunities.
+      </p>
+
+      <!-- SMS Notifications Toggle -->
+      <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 16px; border: 2px solid #e5e7eb;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">💬</span>
+              SMS Text Notifications
+            </div>
+            <div style="font-size: 14px; color: #6b7280; line-height: 1.5;">
+              Get instant text alerts when jobs are posted in your service area
+            </div>
+            <div id="smsDisabledWarning" style="display: none; margin-top: 8px; padding: 8px 12px; background: #fef3c7; border-radius: 6px; font-size: 13px; color: #92400e;">
+              ⚠️ Please verify your phone number first to enable SMS notifications
+            </div>
+          </div>
+          <label class="toggle-switch" style="margin-left: 16px;">
+            <input type="checkbox" id="smsNotifications" onchange="updateNotificationPreferences()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Email Notifications Toggle -->
+      <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 16px; border: 2px solid #e5e7eb;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">📧</span>
+              Email Notifications
+            </div>
+            <div style="font-size: 14px; color: #6b7280; line-height: 1.5;">
+              Receive detailed job information via email with direct links to bid
+            </div>
+          </div>
+          <label class="toggle-switch" style="margin-left: 16px;">
+            <input type="checkbox" id="emailNotifications" onchange="updateNotificationPreferences()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div style="background: #ecfdf5; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981;">
+        <p style="margin: 0; font-size: 14px; color: #065f46; line-height: 1.6;">
+          ✨ <strong>Pro Tip:</strong> Enable both SMS and email for best results. SMS gives you instant alerts, while email provides complete job details.
+        </p>
+      </div>
+    </div>
+
+    <p id="notificationsStatusMessage" style="margin-top: 12px; font-size: 14px;"></p>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEYS = {
+  USER_PROFILE: 'homeprohub_user',
+  USER_ROLE: 'homeprohub_user_role',
+  AUTH_TOKEN: 'homeprohub_auth_token',
+  USERNAME: 'homeprohub_username',
+  PROFILE_COMPLETE: 'homeprohub_profile_complete',
+  CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
+};
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  if (tabName === 'basic') {
+    document.querySelector('.tab:nth-child(1)').classList.add('active');
+    document.getElementById('basicTab').classList.add('active');
+  } else if (tabName === 'licensing') {
+    document.querySelector('.tab:nth-child(2)').classList.add('active');
+    document.getElementById('licensingTab').classList.add('active');
+    checkLicenseStatus();
+  } else if (tabName === 'social') {
+    document.querySelector('.tab:nth-child(3)').classList.add('active');
+    document.getElementById('socialTab').classList.add('active');
+  } else if (tabName === 'notifications') {
+    document.querySelector('.tab:nth-child(4)').classList.add('active');
+    document.getElementById('notificationsTab').classList.add('active');
+    loadNotificationPreferences();
+  }
+}
+
+let licenseFile = null;
+let insuranceFile = null;
+
+function clearLicenseUpload() {
+  licenseFile = null;
+  document.getElementById('licenseUpload').value = '';
+  document.getElementById('licensePreview').style.display = 'none';
+}
+
+function clearInsuranceUpload() {
+  insuranceFile = null;
+  document.getElementById('insuranceUpload').value = '';
+  document.getElementById('insurancePreview').style.display = 'none';
+}
+
+async function checkLicenseStatus() {
+  const statusBanner = document.getElementById('licenseStatusBanner');
+  const getLicensedPrompt = document.getElementById('getLicensedPrompt');
+
+  // Get user email from authService
+  const user = await window.authService.getCurrentUser();
+  if (!user || !user.email) return;
+  const userEmail = user.email;
+
+  try {
+    // Fetch fresh status from API
+    const response = await window.authService.authenticatedFetch(`/api/license/status?email=${encodeURIComponent(userEmail)}`);
+    if (response.ok) {
+      const data = await response.json();
+
+      // Update localStorage with fresh data
+      const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+      profile.licenseVerified = data.license_verified;
+      profile.license_verified = data.license_verified; // Both formats for compatibility
+      profile.licState = data.license_state;
+      profile.licNumber = data.license_number;
+      profile.licenseNumber = data.license_number;
+      profile.licType = data.license_type;
+      profile.licExpiration = data.license_expiration;
+      profile.verificationId = data.verification_id;
+      profile.verifiedAt = data.verified_at;
+      localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
+
+      // Display status based on API response
+      displayLicenseStatus(data.license_verified, data.license_number, data.license_state);
+    } else {
+      // Fallback to localStorage if API fails
+      const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+      displayLicenseStatus(profile.licenseVerified || profile.license_verified, profile.licNumber || profile.license_number, profile.licState || profile.license_state);
+    }
+  } catch (err) {
+    console.error('Error fetching license status:', err);
+    // Fallback to localStorage
+    const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE) || '{}');
+    displayLicenseStatus(profile.licenseVerified || profile.license_verified, profile.licNumber || profile.license_number, profile.licState || profile.license_state);
+  }
+}
+
+function displayLicenseStatus(status, licenseNumber, licenseState) {
+  const statusBanner = document.getElementById('licenseStatusBanner');
+  const getLicensedPrompt = document.getElementById('getLicensedPrompt');
+
+  if (!licenseNumber || !licenseState) {
+    // No license info - show Get Licensed prompt
+    getLicensedPrompt.style.display = 'block';
+    statusBanner.style.display = 'none';
+  } else if (status === 'verified') {
+    // Verified license - CELEBRATION MODE! 🎉
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
+    statusBanner.style.border = '2px solid #10b981';
+    statusBanner.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
+    document.getElementById('licenseStatusIcon').textContent = '🎉';
+    document.getElementById('licenseStatusTitle').textContent = 'Congratulations! License Verified!';
+    document.getElementById('licenseStatusTitle').style.color = '#065f46';
+    document.getElementById('licenseStatusMessage').innerHTML = '<strong>✓ Verified Badge Activated!</strong> You now have priority placement in job matches and increased homeowner trust. Start bidding on premium jobs!';
+    document.getElementById('licenseStatusMessage').style.color = '#047857';
+    getLicensedPrompt.style.display = 'none';
+  } else if (status === 'pending') {
+    // Pending verification
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+    statusBanner.style.border = '2px solid #f59e0b';
+    document.getElementById('licenseStatusIcon').textContent = '⏳';
+    document.getElementById('licenseStatusTitle').textContent = 'Verification Pending';
+    document.getElementById('licenseStatusTitle').style.color = '#92400e';
+    document.getElementById('licenseStatusMessage').textContent = 'We\'re verifying your license information. This typically takes 1-2 business days. We\'ll email you when it\'s complete!';
+    document.getElementById('licenseStatusMessage').style.color = '#78350f';
+    getLicensedPrompt.style.display = 'none';
+  } else if (status === 'rejected') {
+    // Rejected verification
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+    statusBanner.style.border = '2px solid #ef4444';
+    document.getElementById('licenseStatusIcon').textContent = '⚠️';
+    document.getElementById('licenseStatusTitle').textContent = 'Verification Update Needed';
+    document.getElementById('licenseStatusTitle').style.color = '#991b1b';
+    document.getElementById('licenseStatusMessage').textContent = 'We couldn\'t verify your license information. Please check your email for details and resubmit with corrected information.';
+    document.getElementById('licenseStatusMessage').style.color = '#7f1d1d';
+    getLicensedPrompt.style.display = 'none';
+  } else {
+    // License info provided but not verified
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)';
+    statusBanner.style.border = '2px solid #3b82f6';
+    document.getElementById('licenseStatusIcon').textContent = '📋';
+    document.getElementById('licenseStatusTitle').textContent = 'License Info Saved';
+    document.getElementById('licenseStatusTitle').style.color = '#1e40af';
+    document.getElementById('licenseStatusMessage').textContent = 'Upload your license document to submit for verification and get your verified badge!';
+    document.getElementById('licenseStatusMessage').style.color = '#1e3a8a';
+    getLicensedPrompt.style.display = 'none';
+  }
+}
+
+// ========================================
+// Notification & Service Area Functions
+// ========================================
+
+function updateRadiusDisplay(value) {
+  const radiusValue = document.getElementById('radiusValue');
+  radiusValue.textContent = value;
+
+  // Update slider gradient
+  const slider = document.getElementById('serviceRadius');
+  const percentage = ((value - 5) / (100 - 5)) * 100;
+  slider.style.background = `linear-gradient(to right, #2563eb 0%, #2563eb ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
+
+  // Auto-save after 1 second of no changes
+  clearTimeout(window.radiusTimeout);
+  window.radiusTimeout = setTimeout(() => {
+    updateNotificationPreferences();
+  }, 1000);
+}
+
+async function loadNotificationPreferences() {
+  try {
+    const profile = await window.authService.getUserProfile();
+    if (!profile) return;
+
+    // Load phone number
+    const phoneInput = document.getElementById('phoneNumber');
+    if (profile.phone) {
+      phoneInput.value = profile.phone;
+    }
+
+    // Load service radius
+    const serviceRadius = profile.service_radius_miles || 25;
+    const radiusSlider = document.getElementById('serviceRadius');
+    radiusSlider.value = serviceRadius;
+    updateRadiusDisplay(serviceRadius);
+
+    // Load notification preferences
+    const smsCheckbox = document.getElementById('smsNotifications');
+    const emailCheckbox = document.getElementById('emailNotifications');
+
+    smsCheckbox.checked = profile.notifications_sms_enabled !== false;
+    emailCheckbox.checked = profile.notifications_email_enabled !== false;
+
+    // Check phone verification status
+    const phoneVerified = profile.phone_verified === true;
+    const phoneVerifiedBanner = document.getElementById('phoneVerifiedBanner');
+    const phoneVerificationForm = document.getElementById('phoneVerificationForm');
+    const smsDisabledWarning = document.getElementById('smsDisabledWarning');
+    const verifiedPhoneDisplay = document.getElementById('verifiedPhoneDisplay');
+
+    if (phoneVerified) {
+      phoneVerifiedBanner.style.display = 'block';
+      phoneVerificationForm.style.display = 'none';
+      verifiedPhoneDisplay.textContent = profile.phone || '';
+      smsDisabledWarning.style.display = 'none';
+      smsCheckbox.disabled = false;
+    } else {
+      phoneVerifiedBanner.style.display = 'none';
+      phoneVerificationForm.style.display = 'block';
+
+      // Disable SMS if phone not verified
+      if (!phoneVerified && smsCheckbox.checked) {
+        smsDisabledWarning.style.display = 'block';
+        smsCheckbox.disabled = true;
+      }
+    }
+
+  } catch (err) {
+    console.error('Error loading notification preferences:', err);
+  }
+}
+
+async function updateNotificationPreferences() {
+  const statusMessage = document.getElementById('notificationsStatusMessage');
+  statusMessage.textContent = 'Saving...';
+  statusMessage.style.color = '#6b7280';
+
+  try {
+    const profile = await window.authService.getUserProfile();
+    if (!profile) {
+      throw new Error('Not logged in');
+    }
+
+    const phoneVerified = profile.phone_verified === true;
+    const smsEnabled = document.getElementById('smsNotifications').checked;
+    const emailEnabled = document.getElementById('emailNotifications').checked;
+    const serviceRadius = parseInt(document.getElementById('serviceRadius').value);
+
+    // Prevent enabling SMS without verification
+    if (smsEnabled && !phoneVerified) {
+      document.getElementById('smsNotifications').checked = false;
+      document.getElementById('smsDisabledWarning').style.display = 'block';
+      statusMessage.textContent = '⚠️ Please verify your phone number first to enable SMS notifications';
+      statusMessage.style.color = '#f59e0b';
+      return;
+    }
+
+    const response = await window.authService.authenticatedFetch('/api/contractors/notification-preferences', {
+      method: 'PUT',
+      body: JSON.stringify({
+        notifications_sms_enabled: smsEnabled,
+        notifications_email_enabled: emailEnabled,
+        service_radius_miles: serviceRadius
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update preferences');
+    }
+
+    statusMessage.textContent = '✅ Preferences saved successfully!';
+    statusMessage.style.color = '#10b981';
+
+    setTimeout(() => {
+      statusMessage.textContent = '';
+    }, 3000);
+
+  } catch (err) {
+    console.error('Error updating notification preferences:', err);
+    statusMessage.textContent = `❌ Error: ${err.message}`;
+    statusMessage.style.color = '#ef4444';
+  }
+}
+
+async function sendVerificationCode() {
+  const verifyButton = document.getElementById('verifyPhoneButton');
+  const statusMessage = document.getElementById('notificationsStatusMessage');
+
+  verifyButton.disabled = true;
+  verifyButton.textContent = 'Sending...';
+  statusMessage.textContent = '';
+
+  try {
+    const profile = await window.authService.getUserProfile();
+    if (!profile || !profile.phone) {
+      throw new Error('Please add a phone number to your profile first (in the Basic Info tab)');
+    }
+
+    const response = await window.authService.authenticatedFetch('/api/contractors/verify-phone', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to send verification code');
+    }
+
+    // Show code input form
+    document.getElementById('phoneVerificationForm').style.display = 'none';
+    document.getElementById('codeVerificationForm').style.display = 'block';
+
+    // In development, show the code
+    if (data.code) {
+      statusMessage.textContent = `📱 Development Mode: Your verification code is ${data.code}`;
+      statusMessage.style.color = '#2563eb';
+    } else {
+      statusMessage.textContent = '📲 Verification code sent! Check your phone.';
+      statusMessage.style.color = '#10b981';
+    }
+
+  } catch (err) {
+    console.error('Error sending verification code:', err);
+    statusMessage.textContent = `❌ ${err.message}`;
+    statusMessage.style.color = '#ef4444';
+    verifyButton.disabled = false;
+    verifyButton.textContent = 'Send Verification Code';
+  }
+}
+
+async function confirmVerificationCode() {
+  const confirmButton = document.getElementById('confirmCodeButton');
+  const statusMessage = document.getElementById('notificationsStatusMessage');
+  const code = document.getElementById('verificationCode').value.trim();
+
+  if (!code || code.length !== 6) {
+    statusMessage.textContent = '❌ Please enter a 6-digit code';
+    statusMessage.style.color = '#ef4444';
+    return;
+  }
+
+  confirmButton.disabled = true;
+  confirmButton.textContent = 'Verifying...';
+
+  try {
+    const response = await window.authService.authenticatedFetch('/api/contractors/confirm-phone', {
+      method: 'POST',
+      body: JSON.stringify({ code })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Invalid verification code');
+    }
+
+    // Success! Phone is now verified
+    statusMessage.textContent = '✅ Phone verified successfully!';
+    statusMessage.style.color = '#10b981';
+
+    // Hide code form, show verified banner
+    document.getElementById('codeVerificationForm').style.display = 'none';
+    document.getElementById('phoneVerifiedBanner').style.display = 'block';
+
+    const profile = await window.authService.getUserProfile();
+    document.getElementById('verifiedPhoneDisplay').textContent = profile.phone || '';
+
+    // Enable SMS checkbox
+    document.getElementById('smsNotifications').disabled = false;
+    document.getElementById('smsDisabledWarning').style.display = 'none';
+
+    // Clear code input
+    document.getElementById('verificationCode').value = '';
+
+    // Reload profile to get updated verification status
+    setTimeout(() => {
+      loadNotificationPreferences();
+    }, 1000);
+
+  } catch (err) {
+    console.error('Error confirming verification code:', err);
+    statusMessage.textContent = `❌ ${err.message}`;
+    statusMessage.style.color = '#ef4444';
+    confirmButton.disabled = false;
+    confirmButton.textContent = 'Verify Code';
+  }
+}
+
+function cancelVerification() {
+  document.getElementById('codeVerificationForm').style.display = 'none';
+  document.getElementById('phoneVerificationForm').style.display = 'block';
+  document.getElementById('verificationCode').value = '';
+  document.getElementById('verifyPhoneButton').disabled = false;
+  document.getElementById('verifyPhoneButton').textContent = 'Send Verification Code';
+  document.getElementById('notificationsStatusMessage').textContent = '';
+}
+
+(function() {
+    'use strict';
+
+    const profileForm = document.getElementById('profileForm');
+    const socialForm = document.getElementById('socialForm');
+    const saveButton = document.getElementById('saveButton');
+    const saveSocialButton = document.getElementById('saveSocialButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const socialStatusMessage = document.getElementById('socialStatusMessage');
+
+    async function checkAuth() {
         try {
-            const profileData = localStorage.getItem("contractorProfile");
-            if (profileData) {
-                const profile = JSON.parse(profileData);
-                document.getElementById("userRole").value = profile.role || "contractor";
-                document.getElementById("companyName").value = profile.companyName || "";
+            // Wait for authService to be ready
+            if (!window.authService || !window.authService.initialized) {
+                await new Promise(resolve => {
+                    const checkInterval = setInterval(() => {
+                        if (window.authService && window.authService.initialized) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                });
+            }
+
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
+                window.location.href = "index.html";
+                return false;
+            }
+
+            const userProfile = await window.authService.getUserProfile();
+            if (!userProfile || userProfile.role !== 'contractor') {
+                window.location.href = "index.html";
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            window.location.href = "index.html";
+            return false;
+        }
+    }
+
+    async function loadProfile() {
+        try {
+            const profile = await window.authService.getUserProfile();
+            if (profile) {
+                if (profile.first_name) document.getElementById('firstName').value = profile.first_name;
+                if (profile.last_name) document.getElementById('lastName').value = profile.last_name;
+                if (profile.business_name) document.getElementById('businessName').value = profile.business_name;
+                if (profile.years_in_business) document.getElementById('yearsInBusiness').value = profile.years_in_business;
+                if (profile.phone) document.getElementById('phone').value = profile.phone;
+                if (profile.license_number) document.getElementById('licenseNumber').value = profile.license_number;
+                if (profile.trade) document.getElementById('trade').value = profile.trade;
+                if (profile.street) document.getElementById('street').value = profile.street;
+                if (profile.city) document.getElementById('city').value = profile.city;
+                if (profile.state) document.getElementById('state').value = profile.state;
+                if (profile.zip_code) document.getElementById('zipCode').value = profile.zip_code;
+                if (profile.instagram) document.getElementById('instagram').value = profile.instagram;
+                if (profile.facebook) document.getElementById('facebook').value = profile.facebook;
+                if (profile.tiktok) document.getElementById('tiktok').value = profile.tiktok;
+                if (profile.youtube) document.getElementById('youtube').value = profile.youtube;
+                if (profile.reddit) document.getElementById('reddit').value = profile.reddit;
             }
         } catch (err) {
-            console.error("Error loading profile data:", err);
+            console.error('Error loading profile:', err);
+        }
+    }
+
+    profileForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        saveButton.disabled = true;
+        saveButton.textContent = 'Saving...';
+        statusMessage.textContent = '';
+
+        try {
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
+                throw new Error('Not logged in');
+            }
+
+            const profileData = {
+                first_name: document.getElementById('firstName').value.trim(),
+                last_name: document.getElementById('lastName').value.trim(),
+                business_name: document.getElementById('businessName').value.trim(),
+                company_name: document.getElementById('businessName').value.trim(),
+                years_in_business: parseInt(document.getElementById('yearsInBusiness').value) || null,
+                phone: document.getElementById('phone').value.trim(),
+                license_number: document.getElementById('licenseNumber').value.trim(),
+                trade: document.getElementById('trade').value,
+                street: document.getElementById('street').value.trim(),
+                city: document.getElementById('city').value.trim(),
+                state: document.getElementById('state').value.trim(),
+                zip_code: document.getElementById('zipCode').value.trim(),
+                profile_complete: true
+            };
+
+            // Update Supabase database
+            const response = await window.authService.authenticatedFetch('/api/profile/update', {
+                method: 'PUT',
+                body: JSON.stringify(profileData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save profile');
+            }
+
+            // Also save to localStorage for backward compatibility
+            const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+            const profile = existing ? JSON.parse(existing) : {};
+            Object.assign(profile, {
+                firstName: profileData.first_name,
+                lastName: profileData.last_name,
+                businessName: profileData.business_name,
+                companyName: profileData.company_name,
+                yearsInBusiness: profileData.years_in_business,
+                licenseNumber: profileData.license_number,
+                license: profileData.license_number,
+                trade: profileData.trade,
+                street: profileData.street,
+                city: profileData.city,
+                state: profileData.state,
+                zipCode: profileData.zip_code,
+                profileComplete: true
+            });
+            localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
+            localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, 'true');
+
+            statusMessage.textContent = '✅ Profile saved successfully!';
+            statusMessage.style.color = '#10b981';
+
+            // Redirect to contractor dashboard after 1 second
+            setTimeout(() => {
+                window.location.href = 'contractor.html';
+            }, 1000);
+
+        } catch (err) {
+            console.error('Error saving profile:', err);
+            statusMessage.textContent = '❌ Error: ' + err.message;
+            statusMessage.style.color = '#ef4444';
+        } finally {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save Profile';
         }
     });
 
-    document.getElementById("profileForm").addEventListener("submit", (e) => {
+    socialForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const role = document.getElementById("userRole").value;
-        const companyName = document.getElementById("companyName").value;
+        saveSocialButton.disabled = true;
+        saveSocialButton.textContent = 'Saving...';
+        socialStatusMessage.textContent = '';
 
-        const profile = { role, companyName, profileComplete: true };
-        localStorage.setItem("contractorProfile", JSON.stringify(profile));
-        window.location.href = "dashboard.html";
+        try {
+            const user = await window.authService.getCurrentUser();
+            if (!user) {
+                throw new Error('Not logged in');
+            }
+
+            const socialData = {
+                instagram: document.getElementById('instagram').value.trim(),
+                facebook: document.getElementById('facebook').value.trim(),
+                tiktok: document.getElementById('tiktok').value.trim(),
+                youtube: document.getElementById('youtube').value.trim(),
+                reddit: document.getElementById('reddit').value.trim()
+            };
+
+            // Update Supabase database
+            const response = await window.authService.authenticatedFetch('/api/profile/update', {
+                method: 'PUT',
+                body: JSON.stringify(socialData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save social links');
+            }
+
+            // Also save to localStorage for backward compatibility
+            const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+            const profile = existing ? JSON.parse(existing) : {};
+            Object.assign(profile, socialData);
+            localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
+
+            socialStatusMessage.textContent = '✅ Social links saved successfully!';
+            socialStatusMessage.style.color = '#10b981';
+
+        } catch (err) {
+            console.error('Error saving social links:', err);
+            socialStatusMessage.textContent = '❌ Error: ' + err.message;
+            socialStatusMessage.style.color = '#ef4444';
+        } finally {
+            saveSocialButton.disabled = false;
+            saveSocialButton.textContent = 'Save Social Links';
+        }
     });
+
+    // License file upload handler
+    document.getElementById('licenseUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+
+        licenseFile = file;
+        document.getElementById('licenseFileName').textContent = file.name;
+        document.getElementById('licenseFileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        document.getElementById('licenseFileIcon').textContent = file.type.includes('pdf') ? '📄' : '🖼️';
+        document.getElementById('licensePreview').style.display = 'block';
+    });
+
+    // Insurance file upload handler
+    document.getElementById('insuranceUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+
+        insuranceFile = file;
+        document.getElementById('insuranceFileName').textContent = file.name;
+        document.getElementById('insuranceFileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        document.getElementById('insurancePreview').style.display = 'block';
+    });
+
+    // License form submission
+    const licenseForm = document.getElementById('licenseForm');
+    const saveLicenseButton = document.getElementById('saveLicenseButton');
+    const licenseStatusMsg = document.getElementById('licenseStatusMessage');
+
+    licenseForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        saveLicenseButton.disabled = true;
+        saveLicenseButton.textContent = 'Submitting...';
+
+        try {
+            // Get contractor email from authService
+            const user = await window.authService.getCurrentUser();
+            if (!user || !user.email) {
+                throw new Error('Not logged in');
+            }
+            const contractorEmail = user.email;
+
+            // Gather form data
+            const licState = document.getElementById('licState').value.trim().toUpperCase();
+            const licNumber = document.getElementById('licNumber').value.trim();
+            const licType = document.getElementById('licType').value;
+            const licExpiration = document.getElementById('licExpiration').value;
+            const insuranceProvider = document.getElementById('insuranceProvider').value.trim();
+            const insurancePolicyNumber = document.getElementById('insurancePolicyNumber').value.trim();
+            const insuranceExpiration = document.getElementById('insuranceExpiration').value;
+            const insuranceCoverage = document.getElementById('insuranceCoverage').value;
+
+            // Convert files to base64 if present
+            let licenseDocument = null;
+            let insuranceDocument = null;
+
+            if (licenseFile) {
+                licenseDocument = await fileToBase64(licenseFile);
+            }
+            if (insuranceFile) {
+                insuranceDocument = await fileToBase64(insuranceFile);
+            }
+
+            // Submit to API
+            const response = await window.authService.authenticatedFetch('/api/license/submit', {
+                method: 'POST',
+                body: JSON.stringify({
+                    contractorEmail,
+                    licState,
+                    licNumber,
+                    licType,
+                    licExpiration,
+                    licenseDocument,
+                    insuranceProvider,
+                    insurancePolicyNumber,
+                    insuranceExpiration,
+                    insuranceCoverage,
+                    insuranceDocument
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to submit license');
+            }
+
+            // Also save to localStorage for quick access
+            const existing = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+            const profile = existing ? JSON.parse(existing) : {};
+            profile.licState = licState;
+            profile.licNumber = licNumber;
+            profile.licenseNumber = licNumber;
+            profile.license = licNumber;
+            profile.licType = licType;
+            profile.licExpiration = licExpiration;
+            profile.insuranceProvider = insuranceProvider;
+            profile.insurancePolicyNumber = insurancePolicyNumber;
+            profile.insuranceExpiration = insuranceExpiration;
+            profile.insuranceCoverage = insuranceCoverage;
+            profile.licenseVerified = 'pending';
+            profile.verificationId = data.verificationId;
+            profile.licenseSubmittedDate = new Date().toISOString();
+            localStorage.setItem(STORAGE_KEYS.CONTRACTOR_PROFILE, JSON.stringify(profile));
+
+            licenseStatusMsg.textContent = '✅ License submitted for verification! We\'ll email you within 1-2 business days with the results.';
+            licenseStatusMsg.style.color = '#10b981';
+
+            // Update status banner
+            checkLicenseStatus();
+
+            // Clear file uploads after successful submission
+            clearLicenseUpload();
+            clearInsuranceUpload();
+
+        } catch (err) {
+            console.error('License submission error:', err);
+            licenseStatusMsg.textContent = `❌ Error: ${err.message}`;
+            licenseStatusMsg.style.color = '#ef4444';
+        } finally {
+            saveLicenseButton.disabled = false;
+            saveLicenseButton.textContent = 'Save & Submit for Verification';
+        }
+    });
+
+    // Helper function to convert file to base64
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Load license info into form
+    function loadLicenseInfo() {
+        try {
+            const profileData = localStorage.getItem(STORAGE_KEYS.CONTRACTOR_PROFILE);
+            if (profileData) {
+                const profile = JSON.parse(profileData);
+                if (profile.licState) document.getElementById('licState').value = profile.licState;
+                if (profile.licNumber) document.getElementById('licNumber').value = profile.licNumber;
+                if (profile.licType) document.getElementById('licType').value = profile.licType;
+                if (profile.licExpiration) document.getElementById('licExpiration').value = profile.licExpiration;
+                if (profile.insuranceProvider) document.getElementById('insuranceProvider').value = profile.insuranceProvider;
+                if (profile.insurancePolicyNumber) document.getElementById('insurancePolicyNumber').value = profile.insurancePolicyNumber;
+                if (profile.insuranceExpiration) document.getElementById('insuranceExpiration').value = profile.insuranceExpiration;
+                if (profile.insuranceCoverage) document.getElementById('insuranceCoverage').value = profile.insuranceCoverage;
+            }
+        } catch (err) {
+            console.error('Error loading license info:', err);
+        }
+    }
+
+    // Initialize with async auth check
+    checkAuth().then(isAuthenticated => {
+        if (isAuthenticated) {
+            loadProfile();
+            loadLicenseInfo();
+        }
+    });
+})();
 </script>
+
+<!-- Unified Navigation Component -->
+<script src="components/navigation.js"></script>
 </body>
 </html>

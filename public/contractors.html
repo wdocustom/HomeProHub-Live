@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>For Contractors – HomeProHub</title>
+  <meta name="description" content="Better clients. Faster estimates. Less chaos. The only platform that grades homeowners, helps you write veteran-level estimates in seconds, and rewards your license with priority placement.">
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #ffffff;
+    }
+
+    /* Top Nav */
+    .top-nav {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1f2937;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #1f2937;
+    }
+
+    .nav-cta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-secondary {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .btn-primary {
+      padding: 10px 20px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    /* Hero Section - High Energy */
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      padding: 100px 24px 140px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1" fill="white" opacity="0.1"/></svg>') repeat;
+      opacity: 0.1;
+    }
+
+    .hero-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 {
+      font-size: 60px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 28px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .hero-subhead {
+      font-size: 22px;
+      color: #e0e7ff;
+      line-height: 1.6;
+      margin-bottom: 48px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      font-weight: 500;
+    }
+
+    .btn-large {
+      padding: 18px 40px;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      color: #1e3a8a;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    .btn-large:hover {
+      background: #fef3c7;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+    }
+
+    /* THREE-PATH EXPLAINER - Matching Homepage */
+    .three-paths {
+      padding: 80px 24px;
+    }
+
+    .section-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .paths-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .path-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 32px;
+      transition: all 0.2s;
+    }
+
+    .path-card:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .path-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .path-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .path-subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .path-features {
+      margin: 20px 0;
+    }
+
+    .path-feature {
+      display: flex;
+      align-items: start;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .path-card .btn-primary {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .path-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #9ca3af;
+      font-style: italic;
+      text-align: center;
+    }
+
+    .path-highlight {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .path-highlight strong {
+      color: #92400e;
+      font-size: 14px;
+    }
+
+    /* Pricing Section - Persuasive */
+    .pricing {
+      padding: 100px 24px;
+      background: #1f2937;
+      color: white;
+    }
+
+    .pricing-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .pricing-header h2 {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .pricing-header p {
+      font-size: 20px;
+      color: #9ca3af;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    .pricing-card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px 32px;
+      color: #1f2937;
+      position: relative;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.3);
+    }
+
+    .pricing-card.featured {
+      border: 3px solid #3b82f6;
+      transform: scale(1.05);
+    }
+
+    .pricing-card.featured::before {
+      content: 'MOST POPULAR';
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3b82f6;
+      color: white;
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .pricing-tier {
+      font-size: 14px;
+      color: #6b7280;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .pricing-price {
+      font-size: 48px;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .pricing-price span {
+      font-size: 18px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .pricing-roi {
+      background: #ecfdf5;
+      color: #065f46;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .pricing-features {
+      list-style: none;
+      margin: 28px 0;
+    }
+
+    .pricing-features li {
+      padding: 10px 0;
+      color: #374151;
+      font-size: 15px;
+      padding-left: 28px;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .pricing-features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .pricing-cta {
+      width: 100%;
+      padding: 14px 24px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 24px;
+    }
+
+    .pricing-cta:hover {
+      background: #2563eb;
+    }
+
+    .pricing-card.featured .pricing-cta {
+      background: #1e3a8a;
+    }
+
+    .pricing-card.featured .pricing-cta:hover {
+      background: #1e40af;
+    }
+
+    .pay-per-lead-callout {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      border: 3px solid #d97706;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2), 0 8px 24px rgba(217, 119, 6, 0.3);
+    }
+
+    .pay-per-lead-callout h3 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #1f2937;
+    }
+
+    .pay-per-lead-callout p {
+      font-size: 16px;
+      color: #78350f;
+      margin-bottom: 20px;
+    }
+
+    .pay-per-lead-callout .pricing-cta {
+      background: #1f2937;
+      color: white;
+    }
+
+    .pay-per-lead-callout .pricing-cta:hover {
+      background: #111827;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      padding: 100px 24px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      text-align: center;
+    }
+
+    .cta-section h2 {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 24px;
+      color: #1f2937;
+    }
+
+    .cta-section p {
+      font-size: 20px;
+      color: #78350f;
+      margin-bottom: 40px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-section .btn-large {
+      background: #1f2937;
+      color: white;
+    }
+
+    .cta-section .btn-large:hover {
+      background: #111827;
+    }
+
+    /* Footer */
+    .footer {
+      background: #1f2937;
+      color: #9ca3af;
+      padding: 48px 24px 32px;
+    }
+
+    .footer-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero h1 {
+        font-size: 40px;
+      }
+
+      .hero-subhead {
+        font-size: 18px;
+      }
+
+      .paths-grid,
+      .pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .pricing-card.featured {
+        transform: scale(1);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="nav-container">
+      <a href="/" class="logo">HomeProHub</a>
+
+      <div class="nav-links">
+        <a href="/">Homeowners</a>
+        <a href="/contractors.html">Contractors</a>
+        <a href="/#how-it-works">How it Works</a>
+        <a href="/#faq">FAQ</a>
+      </div>
+
+      <div class="nav-cta">
+        <button class="btn-secondary" onclick="showSignIn()">Sign in</button>
+        <button class="btn-primary" onclick="signUpContractor()">Get Started</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-container">
+      <h1>Better Clients. Faster Estimates. Less Chaos.</h1>
+      <p class="hero-subhead">
+        The only platform that grades homeowners, helps you write veteran-level estimates in seconds,
+        and rewards your license with priority placement.
+      </p>
+      <button class="btn-large" onclick="signUpContractor()">Join Verified Network</button>
+    </div>
+  </section>
+
+  <!-- THREE-PATH EXPLAINER -->
+  <section class="three-paths">
+    <div class="section-container">
+      <h2 class="section-title">Why Contractors Choose HomeProHub</h2>
+      <p style="text-align: center; color: #6b7280; max-width: 700px; margin: 0 auto 0; font-size: 16px;">
+        Three game-changing tools that help you win better jobs faster. No ads, no bidding wars.
+      </p>
+
+      <div class="paths-grid">
+        <!-- PATH 1: AI Veteran Estimator -->
+        <div class="path-card">
+          <span class="path-icon">📋</span>
+          <h3 class="path-title">AI "Veteran" Estimator</h3>
+          <p class="path-subtitle">
+            Draft professional estimates in under 60 seconds. Send quotes before you leave the driveway.
+          </p>
+
+          <div class="path-features">
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Complete scope of work instantly</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Material lists & labor estimates</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Fully editable before sending</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Download as PDF</span>
+            </div>
+          </div>
+
+          <div class="path-highlight">
+            <strong>Real Talk:</strong> Finish your site visit, open the app in your truck, review the AI-drafted estimate, and send it before you start the engine.
+          </div>
+        </div>
+
+        <!-- PATH 2: Two-Way Grading -->
+        <div class="path-card">
+          <span class="path-icon">⭐</span>
+          <h3 class="path-title">Two-Way Grading</h3>
+          <p class="path-subtitle">
+            See homeowner behavior grades (A–F) before you bid. Avoid tire-kickers and problem clients.
+          </p>
+
+          <div class="path-features">
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Grade homeowners before bidding</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Based on real contractor feedback</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Track responsiveness & payment history</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Accountability on both sides</span>
+            </div>
+          </div>
+
+          <div class="path-highlight">
+            <strong>Restore Trust:</strong> For too long, contractors have dealt with homeowners who waste time or change scope mid-job. Now you see their track record first.
+          </div>
+        </div>
+
+        <!-- PATH 3: Pathway to Licensure -->
+        <div class="path-card">
+          <span class="path-icon">🎓</span>
+          <h3 class="path-title">Pathway to Licensure</h3>
+          <p class="path-subtitle">
+            Your credentials earn priority placement. Licensed pros get the Verified Badge and higher rankings.
+          </p>
+
+          <div class="path-features">
+            <div class="path-feature">
+              <span>✓</span>
+              <span><strong>Unlicensed:</strong> Licensing guidance</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span><strong>Licensed:</strong> Verified Badge & Priority</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Credentials front and center</span>
+            </div>
+            <div class="path-feature">
+              <span>✓</span>
+              <span>Education boosts visibility</span>
+            </div>
+          </div>
+
+          <div class="path-highlight">
+            <strong>Your Advantage:</strong> Other platforms charge you to advertise. We put your credentials to work—homeowners want pros, not just the cheapest bid.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section class="pricing">
+    <div class="pricing-container">
+      <div class="pricing-header">
+        <h2>Transparent Pricing. Real ROI.</h2>
+        <p>Choose the plan that fits your business. No hidden fees. No games.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Starter Tier -->
+        <div class="pricing-card">
+          <div class="pricing-tier">Starter</div>
+          <div class="pricing-price">FREE</div>
+          <p style="color: #6b7280; margin-bottom: 20px;">Get started with basic access</p>
+
+          <ul class="pricing-features">
+            <li>View job postings in your area</li>
+            <li>2 bids per month</li>
+            <li>See homeowner grades</li>
+            <li>Basic profile listing</li>
+            <li>Community forum access</li>
+          </ul>
+
+          <button class="pricing-cta" onclick="signUpContractor()">Get Started Free</button>
+        </div>
+
+        <!-- Pro Tier (Featured) -->
+        <div class="pricing-card featured">
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$49<span>/month</span></div>
+          <div class="pricing-roi">Avg member wins $15k/mo in projects</div>
+
+          <ul class="pricing-features">
+            <li><strong>Unlimited bids</strong></li>
+            <li>AI Estimate Tool access</li>
+            <li>Priority support</li>
+            <li>Advanced analytics dashboard</li>
+            <li>Download estimates as PDF</li>
+            <li>Verified Badge for licensed pros</li>
+            <li>Email & SMS notifications</li>
+          </ul>
+
+          <button class="pricing-cta" onclick="signUpContractor()">Start Pro Trial</button>
+        </div>
+
+        <!-- Premium Tier -->
+        <div class="pricing-card">
+          <div class="pricing-tier">Premium</div>
+          <div class="pricing-price">$149<span>/month</span></div>
+          <div class="pricing-roi">Avg member wins $40k/mo in projects</div>
+
+          <ul class="pricing-features">
+            <li><strong>Everything in Pro, plus:</strong></li>
+            <li>Priority ranking in search results</li>
+            <li>Owner's Advocate referrals</li>
+            <li>Project management tools</li>
+            <li>Branded estimate templates</li>
+            <li>Client communication hub</li>
+            <li>Dedicated account manager</li>
+            <li>Early access to new features</li>
+          </ul>
+
+          <button class="pricing-cta" onclick="signUpContractor()">Go Premium</button>
+        </div>
+      </div>
+
+      <!-- Pay-Per-Lead Option -->
+      <div class="pay-per-lead-callout">
+        <h3>Just Starting Out?</h3>
+        <p>Try our pay-per-lead option. No monthly fees. Only pay when you access a qualified lead.</p>
+        <p style="font-size: 18px; font-weight: 700; color: white; margin-bottom: 20px;">
+          $15–$30 per lead (varies by market and trade)
+        </p>
+        <button class="pricing-cta" onclick="signUpContractor()">Learn More</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="section-container">
+      <h2>Ready to Work Smarter?</h2>
+      <p>
+        Join thousands of contractors who are getting better leads, writing faster estimates,
+        and building their reputation with real performance—not paid ads.
+      </p>
+      <button class="btn-large" onclick="signUpContractor()">Apply for Access</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>© 2025 HomeProHub. Building trust through transparency.</p>
+    </div>
+  </footer>
+
+  <script>
+    function signUpContractor() {
+      sessionStorage.setItem('signup_role', 'contractor');
+      window.location.href = 'signup.html';
+    }
+
+    function showSignIn() {
+      window.location.href = 'signin.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Projects – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <style>
+    body {
+      background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .dashboard-header {
+      margin-bottom: 40px;
+    }
+
+    .dashboard-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .dashboard-header p {
+      color: #6b7280;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    /* Stale Project Alert */
+    .stale-project-alert {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: none;
+    }
+
+    .stale-project-alert.show {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stale-project-alert-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+
+    .stale-project-alert-content h3 {
+      margin: 0 0 4px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #92400e;
+    }
+
+    .stale-project-alert-content p {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #78350f;
+      line-height: 1.5;
+    }
+
+    .stale-project-alert-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-alert {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-alert-primary {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn-alert-primary:hover {
+      background: #d97706;
+    }
+
+    .btn-alert-secondary {
+      background: white;
+      color: #92400e;
+      border: 2px solid #fbbf24;
+    }
+
+    .btn-alert-secondary:hover {
+      background: #fffbeb;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .stat-change {
+      font-size: 13px;
+      color: #10b981;
+    }
+
+    /* Section Header */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .section-header h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-tab:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+    }
+
+    .filter-tab.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+
+    .btn-post-project {
+      padding: 10px 24px;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-post-project:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    /* Portfolio Card Grid */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 900px) {
+      .projects-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .project-card-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+
+      .manage-dropdown {
+        width: 100%;
+      }
+
+      .btn-manage {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* Project Card - Portfolio Style */
+    .project-card {
+      background: white;
+      border-radius: 16px;
+      border: 2px solid #e5e7eb;
+      overflow: visible;
+      transition: all 0.3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .project-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+    }
+
+    .project-card-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .project-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .project-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+      line-height: 1.3;
+      flex: 1;
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .status-badge.active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-badge.in_progress {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status-badge.completed {
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .project-summary {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      margin: 0;
+      /* Limit to 2 lines */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .project-card-body {
+      padding: 16px 24px;
+    }
+
+    .project-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 16px;
+    }
+
+    .project-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .project-budget {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2563eb;
+      margin-bottom: 16px;
+    }
+
+    .project-card-footer {
+      padding: 16px 24px;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bids-count {
+      font-size: 14px;
+      color: #4b5563;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .bids-count:hover {
+      color: #2563eb;
+    }
+
+    .bids-count.has-bids {
+      color: #10b981;
+    }
+
+    /* Manage Dropdown */
+    .manage-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .btn-manage {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-manage:hover {
+      background: #2563eb;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      min-width: 200px;
+      z-index: 50;
+      display: none;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+      background: #f3f4f6;
+    }
+
+    .dropdown-item.primary {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .dropdown-item.destructive {
+      color: #ef4444;
+    }
+
+    .dropdown-item.destructive:hover {
+      background: #fef2f2;
+    }
+
+    /* Review Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: #9ca3af;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: #1f2937;
+    }
+
+    .modal-header {
+      margin-bottom: 24px;
+    }
+
+    .modal-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .modal-subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    /* Incentive Banner */
+    .incentive-banner {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 2px solid #d97706;
+    }
+
+    .incentive-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+
+    .incentive-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: #78350f;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Star Rating */
+    .star-rating-section {
+      margin-bottom: 32px;
+    }
+
+    .star-rating-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .star-rating {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .star {
+      font-size: 48px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #d1d5db;
+    }
+
+    .star:hover,
+    .star.active {
+      color: #fbbf24;
+      transform: scale(1.1);
+    }
+
+    .star-rating-text {
+      text-align: center;
+      font-size: 14px;
+      color: #6b7280;
+      height: 20px;
+    }
+
+    /* Tap Tags */
+    .tap-tags-section {
+      margin-bottom: 32px;
+    }
+
+    .tap-tags-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .tap-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tap-tag {
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid;
+      user-select: none;
+    }
+
+    .tap-tag.positive {
+      border-color: #d1fae5;
+      background: #f0fdf4;
+      color: #065f46;
+    }
+
+    .tap-tag.positive:hover,
+    .tap-tag.positive.selected {
+      border-color: #10b981;
+      background: #d1fae5;
+    }
+
+    .tap-tag.negative {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .tap-tag.negative:hover,
+    .tap-tag.negative.selected {
+      border-color: #ef4444;
+      background: #fecaca;
+    }
+
+    /* Photo Upload */
+    .photo-upload-section {
+      margin-bottom: 32px;
+    }
+
+    .photo-upload-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .photo-dropzone {
+      border: 2px dashed #d1d5db;
+      border-radius: 12px;
+      padding: 32px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #f9fafb;
+    }
+
+    .photo-dropzone:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .photo-dropzone-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .photo-dropzone-text {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .photo-input {
+      display: none;
+    }
+
+    .photo-preview {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .photo-preview-item {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid #e5e7eb;
+    }
+
+    .photo-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    /* Optional Text */
+    .optional-text-section {
+      margin-bottom: 32px;
+    }
+
+    .optional-text-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .optional-text-label span {
+      font-size: 13px;
+      font-weight: 400;
+      color: #9ca3af;
+    }
+
+    .optional-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 2px solid #e5e7eb;
+      font-size: 14px;
+      resize: vertical;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .optional-textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: white;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: white;
+      color: #6b7280;
+      border: 2px solid #e5e7eb;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    .no-projects {
+      text-align: center;
+      padding: 80px 20px;
+      color: #9ca3af;
+    }
+
+    .no-projects h3 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: #6b7280;
+    }
+
+    .no-projects p {
+      margin-bottom: 24px;
+    }
+
+    .error-message {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      color: #991b1b;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: #6b7280;
+    }
+
+    /* Proposals Modal Styles */
+    .proposal-item {
+      background: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .proposal-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+
+    .proposal-contractor {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .proposal-contractor-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .proposal-contractor-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+
+    .proposal-amount {
+      text-align: right;
+    }
+
+    .proposal-amount-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .proposal-amount-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #2563eb;
+    }
+
+    .proposal-meta {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .proposal-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .proposal-message {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    .proposal-estimate {
+      background: white;
+      border: 2px solid #dbeafe;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .proposal-estimate-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+
+    .proposal-estimate-lines {
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+    }
+
+    .proposal-no-estimate {
+      background: #fef3c7;
+      border: 2px solid #fbbf24;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: #92400e;
+    }
+
+    .proposal-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .proposals-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+
+    .proposals-empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .proposals-empty-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 2px solid #e5e7eb;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: white;
+    }
+  </style>
+  <link rel="stylesheet" href="components/footer.css" />
+</head>
+<body>
+  <!-- Navigation will be injected here -->
+
+  <main>
+    <div class="dashboard-container">
+      <div class="dashboard-header">
+        <h1>My Projects</h1>
+        <p>Track your projects, review bids, and manage contractor work</p>
+      </div>
+
+      <!-- Stale Project Alert -->
+      <div class="stale-project-alert" id="staleProjectAlert">
+        <div class="stale-project-alert-icon">⏰</div>
+        <div class="stale-project-alert-content" style="flex: 1;">
+          <h3 id="staleProjectTitle">Is the Bathroom Remodel finished?</h3>
+          <p id="staleProjectMessage">This project has been in progress for over 30 days. Mark it complete to boost your homeowner grade.</p>
+          <div class="stale-project-alert-actions">
+            <button class="btn-alert btn-alert-primary" id="staleProjectCompleteBtn">
+              ✅ Mark Complete
+            </button>
+            <button class="btn-alert btn-alert-secondary" id="staleProjectDismissBtn">
+              Later
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Projects</div>
+          <div class="stat-value" id="totalProjectsStat">0</div>
+          <div class="stat-change">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Projects</div>
+          <div class="stat-value" id="activeProjectsStat">0</div>
+          <div class="stat-change">Open & in progress</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Bids</div>
+          <div class="stat-value" id="totalBidsStat">0</div>
+          <div class="stat-change">From contractors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="completedProjectsStat">0</div>
+          <div class="stat-change">Finished projects</div>
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      <div id="errorMessage" class="error-message"></div>
+
+      <!-- Section Header -->
+      <div class="section-header">
+        <h2>Your Projects</h2>
+        <div class="section-actions">
+          <button class="btn-post-project" id="newProjectBtn">
+            ➕ Post New Project
+          </button>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="active">Active</button>
+            <button class="filter-tab" data-filter="in_progress">In Progress</button>
+            <button class="filter-tab" data-filter="completed">Completed</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Projects Grid -->
+      <div id="projectsContainer">
+        <div class="loading">Loading your projects...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Complete Project / Review Modal -->
+  <div class="modal-overlay" id="reviewModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeReviewModal()">×</button>
+
+      <div class="modal-header">
+        <h2 class="modal-title">Project Done! How did <span id="contractorNameReview">the contractor</span> do?</h2>
+        <p class="modal-subtitle">Help other homeowners make informed decisions</p>
+      </div>
+
+      <!-- Incentive Banner -->
+      <div class="incentive-banner">
+        <span class="incentive-icon">🎯</span>
+        <p class="incentive-text">Complete this feedback to earn +10 Points for your Homeowner Grade!</p>
+      </div>
+
+      <!-- Star Rating -->
+      <div class="star-rating-section">
+        <label class="star-rating-label">How was your overall experience?</label>
+        <div class="star-rating" id="starRating">
+          <span class="star" data-rating="1">★</span>
+          <span class="star" data-rating="2">★</span>
+          <span class="star" data-rating="3">★</span>
+          <span class="star" data-rating="4">★</span>
+          <span class="star" data-rating="5">★</span>
+        </div>
+        <div class="star-rating-text" id="starRatingText"></div>
+      </div>
+
+      <!-- Tap Tags - Positive -->
+      <div class="tap-tags-section">
+        <label class="tap-tags-label">What went well? (Tap all that apply)</label>
+        <div class="tap-tags" id="positiveTags">
+          <div class="tap-tag positive" data-tag="Punctual">👍 Punctual</div>
+          <div class="tap-tag positive" data-tag="Clean Project Site">✨ Clean Project Site</div>
+          <div class="tap-tag positive" data-tag="Stayed on Budget">💰 Stayed on Budget</div>
+          <div class="tap-tag positive" data-tag="Great Communication">💬 Great Communication</div>
+          <div class="tap-tag positive" data-tag="Quality Work">⭐ Quality Work</div>
+          <div class="tap-tag positive" data-tag="Professional">🎯 Professional</div>
+        </div>
+      </div>
+
+      <!-- Tap Tags - Negative -->
+      <div class="tap-tags-section">
+        <label class="tap-tags-label">Any issues? (Tap all that apply)</label>
+        <div class="tap-tags" id="negativeTags">
+          <div class="tap-tag negative" data-tag="Late">⏰ Late</div>
+          <div class="tap-tag negative" data-tag="Messy">🗑️ Messy</div>
+          <div class="tap-tag negative" data-tag="Over Budget">💸 Over Budget</div>
+          <div class="tap-tag negative" data-tag="Poor Communication">📵 Poor Communication</div>
+          <div class="tap-tag negative" data-tag="Ghosted">👻 Ghosted</div>
+          <div class="tap-tag negative" data-tag="Incomplete Work">⚠️ Incomplete Work</div>
+        </div>
+      </div>
+
+      <!-- Photo Upload -->
+      <div class="photo-upload-section">
+        <label class="photo-upload-label">Add Final Photos (Optional)</label>
+        <div class="photo-dropzone" id="photoDropzone">
+          <div class="photo-dropzone-icon">📸</div>
+          <p class="photo-dropzone-text">Click to upload or drag & drop<br>Show the completed work</p>
+        </div>
+        <input type="file" id="photoInput" class="photo-input" accept="image/*" multiple />
+        <div class="photo-preview" id="photoPreview"></div>
+      </div>
+
+      <!-- Optional Text -->
+      <div class="optional-text-section">
+        <label class="optional-text-label">Any specific details? <span>(Optional)</span></label>
+        <textarea class="optional-textarea" id="reviewText" placeholder="Share any additional thoughts about working with this contractor..."></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeReviewModal()">Cancel</button>
+        <button class="btn-primary" id="submitReviewBtn">Submit Review</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Project Modal -->
+  <div class="modal-overlay" id="editProjectModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Project Details</h2>
+        <p class="modal-subtitle">Update your project information</p>
+      </div>
+
+      <form id="editProjectForm" onsubmit="event.preventDefault(); saveEditedProject();">
+        <input type="hidden" id="editProjectId" />
+
+        <div class="form-group">
+          <label>Project Title <span style="color: #ef4444;">*</span></label>
+          <input id="editProjectTitle" type="text" placeholder="e.g., Kitchen Remodel" required maxlength="100" />
+        </div>
+
+        <div class="form-group">
+          <label>Project Description <span style="color: #ef4444;">*</span></label>
+          <textarea id="editProjectDescription" rows="6" placeholder="Describe your project in detail..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Your Address <span style="color: #ef4444;">*</span></label>
+          <input id="editProjectAddress" type="text" placeholder="123 Main St, City, State" required maxlength="200" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label>ZIP Code <span style="color: #ef4444;">*</span></label>
+            <input id="editProjectZip" type="text" pattern="[0-9]{5}" placeholder="12345" required maxlength="5" />
+          </div>
+
+          <div class="form-group">
+            <label>Urgency</label>
+            <select id="editProjectUrgency">
+              <option value="flexible">Flexible timing</option>
+              <option value="soon">Within 2 weeks</option>
+              <option value="urgent">Urgent (ASAP)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Proposals Modal -->
+  <div class="modal-overlay" id="proposalsModal">
+    <div class="modal-content" style="max-width: 900px;">
+      <button class="modal-close" onclick="closeProposalsModal()">×</button>
+
+      <div class="modal-header">
+        <h2 class="modal-title" id="proposalsProjectTitle">Project Proposals</h2>
+        <p class="modal-subtitle" id="proposalsProjectSubtitle">Review contractor bids and estimates</p>
+      </div>
+
+      <div id="proposalsContainer">
+        <div class="loading">Loading proposals...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <script src="components/navigation.js"></script>
+
+  <script>
+    // State
+    let allProjects = [];
+    let currentFilter = 'all';
+    let userEmail = '';
+    let currentReviewProject = null;
+    let selectedStarRating = 0;
+    let selectedPositiveTags = [];
+    let selectedNegativeTags = [];
+    let uploadedPhotos = [];
+
+    // Text cleaning utility (from AI results page)
+    function cleanAIArtifacts(text) {
+      if (!text) return '';
+
+      // Remove INTENT TYPE lines
+      let cleaned = text.replace(/^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim, '').trim();
+
+      // Remove other common AI artifacts
+      cleaned = cleaned.replace(/^[\s]*AI ANALYSIS:[\s]*/gim, '').trim();
+
+      return cleaned;
+    }
+
+    // Auth check
+    async function checkAuth() {
+      try {
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) return false;
+
+        const profile = await window.authService.getUserProfile();
+        if (!profile || profile.role !== 'homeowner') return false;
+
+        userEmail = user.email;
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        return false;
+      }
+    }
+
+    // Initialize
+    checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
+        loadProjects();
+      }
+    });
+
+    // Load projects
+    async function loadProjects() {
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to load projects');
+        }
+
+        const data = await response.json();
+        allProjects = data.jobs || [];
+
+        updateStats();
+        checkStaleProjects();
+        renderProjects();
+
+      } catch (error) {
+        console.error('Error loading projects:', error);
+        showError('Failed to load your projects. Please try again.');
+      }
+    }
+
+    // Update stats
+    function updateStats() {
+      document.getElementById('totalProjectsStat').textContent = allProjects.length;
+
+      const activeCount = allProjects.filter(p => p.status === 'open' || p.status === 'in_progress').length;
+      document.getElementById('activeProjectsStat').textContent = activeCount;
+
+      const totalBids = allProjects.reduce((sum, p) => sum + (p.bids?.length || 0), 0);
+      document.getElementById('totalBidsStat').textContent = totalBids;
+
+      const completedCount = allProjects.filter(p => p.status === 'completed').length;
+      document.getElementById('completedProjectsStat').textContent = completedCount;
+    }
+
+    // Check for stale projects (>30 days in progress)
+    function checkStaleProjects() {
+      const staleProject = allProjects.find(project => {
+        if (project.status !== 'in_progress') return false;
+
+        const startDate = new Date(project.posted_at);
+        const daysSince = Math.floor((new Date() - startDate) / (1000 * 60 * 60 * 24));
+
+        return daysSince > 30;
+      });
+
+      if (staleProject) {
+        const alert = document.getElementById('staleProjectAlert');
+        document.getElementById('staleProjectTitle').textContent = `Is the ${staleProject.title} finished?`;
+        document.getElementById('staleProjectCompleteBtn').onclick = () => openReviewModal(staleProject);
+        document.getElementById('staleProjectDismissBtn').onclick = () => alert.classList.remove('show');
+        alert.classList.add('show');
+      }
+    }
+
+    // Render projects
+    function renderProjects() {
+      const container = document.getElementById('projectsContainer');
+
+      let filteredProjects = allProjects;
+      if (currentFilter === 'active') {
+        filteredProjects = allProjects.filter(p => p.status === 'open' || p.status === 'in_progress');
+      } else if (currentFilter !== 'all') {
+        filteredProjects = allProjects.filter(p => p.status === currentFilter);
+      }
+
+      if (filteredProjects.length === 0) {
+        container.innerHTML = `
+          <div class="no-projects">
+            <h3>No projects found</h3>
+            <p>Get started by asking our AI assistant about your home issue!</p>
+            <button class="btn-primary" onclick="window.location.href='home.html'">Ask AI Assistant</button>
+          </div>
+        `;
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'projects-grid';
+
+      filteredProjects.forEach(project => {
+        const card = createProjectCard(project);
+        grid.appendChild(card);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(grid);
+    }
+
+    // Create project card
+    function createProjectCard(project) {
+      const card = document.createElement('div');
+      card.className = 'project-card';
+
+      const cleanDescription = cleanAIArtifacts(project.description || '');
+      const summary = cleanDescription.substring(0, 120) + (cleanDescription.length > 120 ? '...' : '');
+
+      const bidsCount = project.bids?.length || 0;
+      const statusClass = project.status === 'open' ? 'active' : project.status;
+      const statusText = project.status === 'open' ? 'Open' :
+                        project.status === 'in_progress' ? 'In Progress' :
+                        project.status === 'completed' ? 'Completed' :
+                        project.status === 'cancelled' ? 'Cancelled' : project.status;
+
+      card.innerHTML = `
+        <div class="project-card-header">
+          <div class="project-title-row">
+            <h3 class="project-title">${escapeHtml(project.title)}</h3>
+            <span class="status-badge ${statusClass}">${statusText}</span>
+          </div>
+          <p class="project-summary">${escapeHtml(summary)}</p>
+        </div>
+
+        <div class="project-card-body">
+          <div class="project-meta">
+            <div class="project-meta-item">
+              <span>📅</span>
+              <span>${formatDate(project.posted_at)}</span>
+            </div>
+            <div class="project-meta-item">
+              <span>📍</span>
+              <span>${escapeHtml(project.address || 'Location not specified')}</span>
+            </div>
+          </div>
+
+          ${project.budget_low && project.budget_high ? `
+            <div class="project-budget">
+              ${formatCurrency(project.budget_low)} - ${formatCurrency(project.budget_high)}
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="project-card-footer">
+          <div class="bids-count ${bidsCount > 0 ? 'has-bids' : ''}" onclick="viewBids('${project.id}')">
+            ${bidsCount} Bid${bidsCount !== 1 ? 's' : ''} Received
+          </div>
+
+          <div class="manage-dropdown">
+            <button class="btn-manage" onclick="toggleDropdown(event, '${project.id}')">
+              Manage ▼
+            </button>
+            <div class="dropdown-menu" id="dropdown-${project.id}">
+              <div class="dropdown-item" onclick="viewBids('${project.id}')">
+                <span>📋</span>
+                <span>View Proposals</span>
+              </div>
+              <div class="dropdown-item" onclick="editProject('${project.id}')">
+                <span>✏️</span>
+                <span>Edit Details</span>
+              </div>
+              ${project.status !== 'completed' ? `
+                <div class="dropdown-item primary" onclick="openReviewModal(${JSON.stringify(project).replace(/"/g, '&quot;')})">
+                  <span>✅</span>
+                  <span>Mark as Completed</span>
+                </div>
+              ` : ''}
+              <div class="dropdown-item destructive" onclick="cancelProject('${project.id}')">
+                <span>🗑️</span>
+                <span>Cancel Project</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Toggle dropdown
+    function toggleDropdown(event, projectId) {
+      event.stopPropagation();
+
+      // Close all other dropdowns
+      document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        if (menu.id !== `dropdown-${projectId}`) {
+          menu.classList.remove('show');
+        }
+      });
+
+      // Toggle this dropdown
+      const dropdown = document.getElementById(`dropdown-${projectId}`);
+      dropdown.classList.toggle('show');
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.classList.remove('show');
+      });
+    });
+
+    // View bids - open proposals modal
+    async function viewBids(projectId) {
+      const project = allProjects.find(p => p.id === projectId);
+      if (!project) {
+        alert('Project not found');
+        return;
+      }
+
+      // Update modal title
+      document.getElementById('proposalsProjectTitle').textContent = `Proposals for: ${project.title}`;
+      document.getElementById('proposalsProjectSubtitle').textContent = `${(project.bids || []).length} proposal${(project.bids || []).length !== 1 ? 's' : ''} received`;
+
+      // Show modal
+      document.getElementById('proposalsModal').classList.add('show');
+
+      // Render proposals
+      renderProposalsModal(project);
+    }
+
+    function closeProposalsModal() {
+      document.getElementById('proposalsModal').classList.remove('show');
+    }
+
+    function renderProposalsModal(project) {
+      const container = document.getElementById('proposalsContainer');
+      const bids = project.bids || [];
+
+      if (bids.length === 0) {
+        container.innerHTML = `
+          <div class="proposals-empty">
+            <div class="proposals-empty-icon">📭</div>
+            <div class="proposals-empty-title">No Proposals Yet</div>
+            <p>Contractors haven't submitted any proposals for this project yet.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = bids.map(bid => {
+        const contractorName = bid.contractor?.business_name || bid.contractor_business_name || 'Contractor';
+        const contractorInitial = contractorName.charAt(0).toUpperCase();
+
+        // Status badge
+        const statusClass = bid.status === 'accepted' ? 'status-badge active' :
+                           bid.status === 'rejected' ? 'status-badge completed' :
+                           'status-badge in_progress';
+        const statusText = bid.status === 'accepted' ? 'Accepted' :
+                          bid.status === 'rejected' ? 'Declined' :
+                          'Pending Review';
+
+        // Check if estimate exists and convert to string if it's an object
+        const estimateData = bid.estimate || bid.ai_estimate || bid.line_item_estimate;
+        const hasEstimate = !!estimateData;
+
+        // Handle both string and object formats
+        let estimateText = '';
+        if (estimateData) {
+          if (typeof estimateData === 'string') {
+            estimateText = estimateData;
+          } else if (typeof estimateData === 'object') {
+            // Convert object to formatted string
+            estimateText = JSON.stringify(estimateData, null, 2);
+          }
+        }
+
+        return `
+          <div class="proposal-item">
+            <div class="proposal-item-header">
+              <div class="proposal-contractor">
+                <div class="proposal-contractor-avatar">${contractorInitial}</div>
+                <div>
+                  <h3 class="proposal-contractor-name">${escapeHtml(contractorName)}</h3>
+                  <span class="${statusClass}">${statusText}</span>
+                </div>
+              </div>
+              <div class="proposal-amount">
+                <div class="proposal-amount-label">Bid Amount</div>
+                <div class="proposal-amount-value">$${bid.bid_amount_low || 0} - $${bid.bid_amount_high || 0}</div>
+              </div>
+            </div>
+
+            <div class="proposal-meta">
+              <div class="proposal-meta-item">
+                <span>⏱️</span>
+                <span><strong>Duration:</strong> ${escapeHtml(bid.estimated_duration || 'Not specified')}</span>
+              </div>
+              <div class="proposal-meta-item">
+                <span>📅</span>
+                <span><strong>Can Start:</strong> ${escapeHtml(bid.start_availability || 'ASAP')}</span>
+              </div>
+            </div>
+
+            ${bid.message ? `
+              <div class="proposal-message">
+                ${escapeHtml(bid.message)}
+              </div>
+            ` : ''}
+
+            ${hasEstimate ? `
+              <div class="proposal-estimate">
+                <div class="proposal-estimate-header">
+                  <span>📋</span>
+                  <span>Line-by-Line Estimate</span>
+                </div>
+                <div class="proposal-estimate-lines">${escapeHtml(estimateText)}</div>
+              </div>
+            ` : `
+              <div class="proposal-no-estimate">
+                <span>📄</span>
+                <span>No detailed estimate provided with this bid</span>
+              </div>
+            `}
+
+            ${bid.status === 'pending' ? `
+              <div class="proposal-actions">
+                <button class="btn-primary" onclick="acceptBid('${bid.id}', '${project.id}')">Accept Proposal</button>
+                <button class="btn-secondary" onclick="rejectBid('${bid.id}')">Decline</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function acceptBid(bidId, projectId) {
+      if (!confirm('Accept this proposal? Other pending proposals will be automatically declined.')) {
+        return;
+      }
+
+      try {
+        const response = await window.authService.authenticatedFetch(`/api/bids/${bidId}/accept`, {
+          method: 'POST',
+          body: JSON.stringify({ job_id: projectId })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to accept proposal');
+        }
+
+        alert('Proposal accepted! The contractor will be notified.');
+        closeProposalsModal();
+        await loadProjects(); // Reload to show updated status
+
+      } catch (error) {
+        console.error('Error accepting proposal:', error);
+        alert('Failed to accept proposal. Please try again.');
+      }
+    }
+
+    async function rejectBid(bidId) {
+      if (!confirm('Decline this proposal?')) {
+        return;
+      }
+
+      try {
+        const response = await window.authService.authenticatedFetch(`/api/bids/${bidId}/reject`, {
+          method: 'POST'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to decline proposal');
+        }
+
+        alert('Proposal declined.');
+        closeProposalsModal();
+        await loadProjects(); // Reload to show updated status
+
+      } catch (error) {
+        console.error('Error declining proposal:', error);
+        alert('Failed to decline proposal. Please try again.');
+      }
+    }
+
+    // Edit project - open edit modal
+    async function editProject(projectId) {
+      const project = allProjects.find(p => p.id === projectId);
+      if (!project) {
+        alert('Project not found');
+        return;
+      }
+
+      // Pre-fill edit modal with current project data
+      document.getElementById('editProjectId').value = project.id;
+      document.getElementById('editProjectTitle').value = project.title || '';
+      document.getElementById('editProjectDescription').value = project.description || '';
+      document.getElementById('editProjectAddress').value = project.address || '';
+      document.getElementById('editProjectZip').value = project.zip_code || '';
+      document.getElementById('editProjectUrgency').value = project.urgency || 'flexible';
+
+      // Show edit modal
+      document.getElementById('editProjectModal').classList.add('show');
+    }
+
+    // Close edit modal
+    function closeEditModal() {
+      document.getElementById('editProjectModal').classList.remove('show');
+    }
+
+    // Save edited project
+    async function saveEditedProject() {
+      const projectId = document.getElementById('editProjectId').value;
+      const title = document.getElementById('editProjectTitle').value.trim();
+      const description = document.getElementById('editProjectDescription').value.trim();
+      const address = document.getElementById('editProjectAddress').value.trim();
+      const zipCode = document.getElementById('editProjectZip').value.trim();
+      const urgency = document.getElementById('editProjectUrgency').value;
+
+      if (!title || !description || !address || !zipCode) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      const saveBtn = document.querySelector('#editProjectModal .btn-primary');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        const response = await window.authService.authenticatedFetch(`/api/project/${projectId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            title,
+            description,
+            address,
+            zip_code: zipCode,
+            urgency
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update project');
+        }
+
+        alert('Project updated successfully!');
+        closeEditModal();
+        await loadProjects(); // Reload projects
+
+      } catch (error) {
+        console.error('Error updating project:', error);
+        alert('Failed to update project. Please try again.');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    }
+
+    // Cancel project
+    async function cancelProject(projectId) {
+      if (!confirm('Are you sure you want to cancel this project? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const response = await window.authService.authenticatedFetch(`/api/project/${projectId}/cancel`, {
+          method: 'PUT'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to cancel project');
+        }
+
+        alert('Project has been cancelled.');
+        await loadProjects(); // Reload to show updated status
+
+      } catch (error) {
+        console.error('Error canceling project:', error);
+        alert('Failed to cancel project. Please try again.');
+      }
+    }
+
+    // Open review modal
+    function openReviewModal(project) {
+      if (typeof project === 'string') {
+        // If called from dropdown, parse the JSON
+        project = JSON.parse(project.replace(/&quot;/g, '"'));
+      }
+
+      currentReviewProject = project;
+
+      // Find contractor name from accepted bid
+      const acceptedBid = project.bids?.find(b => b.status === 'accepted');
+      const contractorName = acceptedBid?.contractor?.business_name || acceptedBid?.contractor_business_name || 'the contractor';
+
+      document.getElementById('contractorNameReview').textContent = contractorName;
+      document.getElementById('reviewModal').classList.add('show');
+
+      // Reset form
+      selectedStarRating = 0;
+      selectedPositiveTags = [];
+      selectedNegativeTags = [];
+      uploadedPhotos = [];
+      document.getElementById('reviewText').value = '';
+      document.getElementById('photoPreview').innerHTML = '';
+      updateStarRating();
+    }
+
+    // Close review modal
+    function closeReviewModal() {
+      document.getElementById('reviewModal').classList.remove('show');
+      currentReviewProject = null;
+    }
+
+    // Star rating interaction
+    document.getElementById('starRating').addEventListener('click', (e) => {
+      if (e.target.classList.contains('star')) {
+        selectedStarRating = parseInt(e.target.dataset.rating);
+        updateStarRating();
+      }
+    });
+
+    function updateStarRating() {
+      const stars = document.querySelectorAll('.star');
+      const text = document.getElementById('starRatingText');
+
+      stars.forEach((star, index) => {
+        if (index < selectedStarRating) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      });
+
+      const ratingTexts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+      text.textContent = selectedStarRating > 0 ? ratingTexts[selectedStarRating] : '';
+    }
+
+    // Tap tags interaction
+    document.getElementById('positiveTags').addEventListener('click', (e) => {
+      const tag = e.target.closest('.tap-tag');
+      if (tag) {
+        tag.classList.toggle('selected');
+        const tagText = tag.dataset.tag;
+
+        if (selectedPositiveTags.includes(tagText)) {
+          selectedPositiveTags = selectedPositiveTags.filter(t => t !== tagText);
+        } else {
+          selectedPositiveTags.push(tagText);
+        }
+      }
+    });
+
+    document.getElementById('negativeTags').addEventListener('click', (e) => {
+      const tag = e.target.closest('.tap-tag');
+      if (tag) {
+        tag.classList.toggle('selected');
+        const tagText = tag.dataset.tag;
+
+        if (selectedNegativeTags.includes(tagText)) {
+          selectedNegativeTags = selectedNegativeTags.filter(t => t !== tagText);
+        } else {
+          selectedNegativeTags.push(tagText);
+        }
+      }
+    });
+
+    // Photo upload
+    document.getElementById('photoDropzone').addEventListener('click', () => {
+      document.getElementById('photoInput').click();
+    });
+
+    document.getElementById('photoInput').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          uploadedPhotos.push(e.target.result);
+          renderPhotoPreview();
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    function renderPhotoPreview() {
+      const preview = document.getElementById('photoPreview');
+      preview.innerHTML = uploadedPhotos.map((photo, index) => `
+        <div class="photo-preview-item">
+          <img src="${photo}" alt="Upload ${index + 1}" />
+          <button class="photo-remove" onclick="removePhoto(${index})">×</button>
+        </div>
+      `).join('');
+    }
+
+    function removePhoto(index) {
+      uploadedPhotos.splice(index, 1);
+      renderPhotoPreview();
+    }
+
+    // Submit review
+    document.getElementById('submitReviewBtn').addEventListener('click', async () => {
+      if (selectedStarRating === 0) {
+        alert('Please select a star rating');
+        return;
+      }
+
+      if (!currentReviewProject || !currentReviewProject.id) {
+        alert('Error: Project information missing. Please try again.');
+        return;
+      }
+
+      if (!userEmail) {
+        alert('Error: User email not found. Please refresh the page.');
+        return;
+      }
+
+      const btn = document.getElementById('submitReviewBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const reviewData = {
+          projectId: currentReviewProject.id,
+          rating: selectedStarRating,
+          positiveTags: selectedPositiveTags,
+          negativeTags: selectedNegativeTags,
+          photos: uploadedPhotos,
+          reviewText: document.getElementById('reviewText').value.trim(),
+          homeownerEmail: userEmail
+        };
+
+        console.log('Submitting review data:', reviewData);
+
+        // API call to submit review and mark project complete
+        const response = await window.authService.authenticatedFetch('/api/project/complete', {
+          method: 'POST',
+          body: JSON.stringify(reviewData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Review submission failed:', errorData);
+          throw new Error(errorData.error || 'Failed to submit review');
+        }
+
+        alert('Review submitted! +10 points added to your Homeowner Grade. The contractor will be notified.');
+
+        closeReviewModal();
+        await loadProjects(); // Reload to show updated status
+
+      } catch (error) {
+        console.error('Error submitting review:', error);
+        alert(`Failed to submit review: ${error.message}`);
+        btn.disabled = false;
+        btn.textContent = 'Submit Review';
+      }
+    });
+
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        currentFilter = this.dataset.filter;
+        renderProjects();
+      });
+    });
+
+    // New project button
+    document.getElementById('newProjectBtn').addEventListener('click', () => {
+      window.location.href = 'home.html';
+    });
+
+    // Utility functions
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+      setTimeout(() => {
+        errorEl.classList.remove('show');
+      }, 5000);
+    }
+  </script>
+
+  <!-- Global Footer -->
+  <script src="components/footer.js"></script>
+</body>
+</html>

@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analysis Report – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Marked.js for Markdown Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    body {
+      background: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .page-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .page-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 12px;
+      letter-spacing: -0.03em;
+    }
+
+    .page-subtitle {
+      font-size: 17px;
+      color: #6b7280;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       PHASE 1: THE DIAGNOSIS (Report Card)
+       ============================================ */
+    .diagnosis-report {
+      max-width: 800px;
+      margin: 0 auto 80px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .report-header {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .report-icon {
+      font-size: 48px;
+      flex-shrink: 0;
+    }
+
+    .report-header-content h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .report-header-content p {
+      font-size: 15px;
+      opacity: 0.95;
+      line-height: 1.5;
+    }
+
+    .report-body {
+      padding: 48px 40px;
+    }
+
+    /* Rich Typography for AI Content */
+    .diagnosis-content {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #374151;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .diagnosis-content h1,
+    .diagnosis-content h2,
+    .diagnosis-content h3,
+    .diagnosis-content h4 {
+      color: #111827;
+      font-weight: 700;
+      margin-top: 32px;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .diagnosis-content h1 {
+      font-size: 28px;
+      margin-top: 0;
+    }
+
+    .diagnosis-content h2 {
+      font-size: 22px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .diagnosis-content h3 {
+      font-size: 18px;
+    }
+
+    .diagnosis-content h4 {
+      font-size: 16px;
+      text-transform: uppercase;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    .diagnosis-content p {
+      margin-bottom: 20px;
+      line-height: 1.8;
+    }
+
+    .diagnosis-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .diagnosis-content ul,
+    .diagnosis-content ol {
+      margin: 20px 0;
+      padding-left: 28px;
+    }
+
+    .diagnosis-content li {
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+
+    /* Bold headers within paragraphs - make them stand out */
+    .diagnosis-content p strong,
+    .diagnosis-content strong {
+      font-weight: 700;
+      color: #111827;
+      font-size: 1.05em;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    /* Special styling for bold headers that start a paragraph */
+    .diagnosis-content p strong:first-child {
+      display: block;
+      font-size: 1.15em;
+      margin-bottom: 4px;
+      color: #1f2937;
+    }
+
+    .diagnosis-content em {
+      font-style: italic;
+      color: #6b7280;
+    }
+
+    .diagnosis-content blockquote {
+      border-left: 4px solid #3b82f6;
+      padding: 16px 24px;
+      margin: 24px 0;
+      background: #eff6ff;
+      border-radius: 8px;
+      font-style: italic;
+      color: #1e3a8a;
+    }
+
+    .diagnosis-content code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      color: #991b1b;
+    }
+
+    .diagnosis-content pre {
+      background: #1f2937;
+      color: #f3f4f6;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 24px 0;
+    }
+
+    .diagnosis-content pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Safety Warnings */
+    .diagnosis-content .warning,
+    .diagnosis-content .safety {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+
+    .diagnosis-content .warning strong,
+    .diagnosis-content .safety strong {
+      color: #991b1b;
+    }
+
+    .diagnosis-content .info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+
+    .diagnosis-content .tip {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+
+    .report-footer {
+      background: #f9fafb;
+      padding: 24px 40px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    .report-footer-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* ============================================
+       PHASE 2: NEXT STEPS (Call to Action)
+       ============================================ */
+    .next-steps-section {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .next-steps-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .next-steps-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .next-steps-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+    }
+
+    .next-steps-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .next-steps-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .report-body {
+        padding: 32px 24px;
+      }
+
+      .report-header {
+        padding: 24px;
+      }
+
+      .report-footer {
+        padding: 20px 24px;
+      }
+    }
+
+    /* Path Cards */
+    .path-card {
+      background: white;
+      border-radius: 12px;
+      padding: 36px 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 2px solid #e5e7eb;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .path-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .path-card.premium {
+      border-color: #fbbf24;
+      background: linear-gradient(to bottom, #fffbeb, white);
+    }
+
+    .path-card.premium:hover {
+      border-color: #f59e0b;
+      box-shadow: 0 8px 24px rgba(251, 191, 36, 0.25);
+    }
+
+    .path-header {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f3f4f6;
+    }
+
+    .path-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .path-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .path-description {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    .path-features {
+      flex: 1;
+      margin: 20px 0;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: 15px;
+      color: #374151;
+      line-height: 1.6;
+    }
+
+    .feature-icon {
+      flex-shrink: 0;
+      margin-top: 3px;
+      color: #10b981;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .price-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 20px;
+      margin: 16px 0;
+      border: 2px solid #fbbf24;
+    }
+
+    .cta-button {
+      width: 100%;
+      padding: 16px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      margin-top: auto;
+    }
+
+    .cta-button-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .cta-button-primary:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .cta-button-secondary {
+      background: #10b981;
+      color: white;
+      margin-top: 12px;
+    }
+
+    .cta-button-secondary:hover {
+      background: #059669;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .cta-button-premium {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #78350f;
+      font-weight: 800;
+    }
+
+    .cta-button-premium:hover {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
+    }
+
+    .microcopy {
+      font-size: 13px;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 12px;
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    /* Loading State */
+    .loading-skeleton {
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s ease-in-out infinite;
+      border-radius: 8px;
+      height: 20px;
+      margin-bottom: 16px;
+    }
+
+    @keyframes loading {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-container"></div>
+
+  <div class="page-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Your Home Analysis Report</h1>
+      <p class="page-subtitle">
+        Review the diagnosis below, then choose your next step when you're ready.
+      </p>
+    </div>
+
+    <!-- PHASE 1: THE DIAGNOSIS (Report Card) -->
+    <div class="diagnosis-report">
+      <div class="report-header">
+        <span class="report-icon">📋</span>
+        <div class="report-header-content">
+          <h2>Preliminary Analysis</h2>
+          <p>AI-generated assessment based on your description</p>
+        </div>
+      </div>
+
+      <div class="report-body">
+        <div class="diagnosis-content" id="diagnosisContent">
+          <!-- AI diagnosis will be rendered here with markdown -->
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton" style="width: 90%;"></div>
+          <div class="loading-skeleton" style="width: 95%;"></div>
+        </div>
+      </div>
+
+      <div class="report-footer">
+        <span class="report-footer-icon">ℹ️</span>
+        <span>This is an educational assessment, not a professional inspection. Always consult a licensed professional for official diagnosis and recommendations.</span>
+      </div>
+    </div>
+
+    <!-- PHASE 2: NEXT STEPS -->
+    <div class="next-steps-section">
+      <div class="next-steps-header">
+        <h2 class="next-steps-title">Choose Your Next Step</h2>
+        <p class="next-steps-subtitle">Ready to take action? Select the path that works best for you.</p>
+      </div>
+
+      <div class="next-steps-grid">
+        <!-- PATH 1: HIRE A PRO (Free) -->
+        <div class="path-card">
+          <div class="path-header">
+            <span class="path-icon">🏗️</span>
+            <h3 class="path-title">Hire a Pro</h3>
+            <p class="path-description">Connect with vetted, licensed contractors near you—completely free</p>
+          </div>
+
+          <div class="path-features">
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Browse verified contractors scored A–F based on real performance</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Post your project and receive competitive bids</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Licensed, insured, and background-checked professionals</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>100% free to post—no hidden fees or commitments</span>
+            </div>
+          </div>
+
+          <button class="cta-button cta-button-primary" onclick="window.location.href='contractor-directory.html'">
+            Browse Verified Contractors
+          </button>
+
+          <button class="cta-button cta-button-secondary" onclick="postJobFromDiagnosis()">
+            Post This Project & Get Bids
+          </button>
+
+          <p class="microcopy">
+            No obligation • Free to post • Cancel anytime
+          </p>
+        </div>
+
+        <!-- PATH 2: ASK AN EXPERT (Paid/Premium) -->
+        <div class="path-card premium">
+          <div class="path-header">
+            <span class="path-icon">👨‍🔧</span>
+            <h3 class="path-title">Ask an Expert</h3>
+            <p class="path-description">Get a straight answer from a licensed professional right now</p>
+          </div>
+
+          <div class="price-indicator">
+            <span>💵</span>
+            <span id="expertPrice">$50</span>
+            <span style="font-size: 15px; font-weight: 500; color: #92400e;">/ session</span>
+          </div>
+
+          <div class="path-features">
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Live video or phone consultation with licensed pros</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Get answers in 15-30 minutes, not days</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Experts with 10+ years of field experience</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">✓</span>
+              <span>Receive written summary and next steps after your call</span>
+            </div>
+          </div>
+
+          <button class="cta-button cta-button-premium" onclick="bookExpertConsultation()" id="expertButton">
+            Talk to an Expert Now
+          </button>
+
+          <p class="microcopy" id="expertMicrocopy">
+            Pay per session • No subscription required
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="components/navigation.js"></script>
+
+  <script>
+    (async function() {
+      'use strict';
+
+      // Configure marked.js options
+      marked.setOptions({
+        breaks: true,
+        gfm: true,
+        headerIds: false,
+        mangle: false
+      });
+
+      // Get diagnosis data from sessionStorage
+      const diagnosisData = sessionStorage.getItem('aiDiagnosis');
+
+      if (!diagnosisData) {
+        // No diagnosis data - redirect back to home
+        window.location.href = 'home.html';
+        return;
+      }
+
+      const data = JSON.parse(diagnosisData);
+      const { question, answer, intent, budgetLow, budgetHigh } = data;
+
+      // Extract and clean INTENT TYPE from AI response
+      const { cleanedAnswer, intentType, isProject } = extractIntent(answer);
+
+      // Render AI response with markdown parser
+      const diagnosisContent = document.getElementById('diagnosisContent');
+      const reportHeader = document.querySelector('.report-header-content h2');
+      const reportHeaderDesc = document.querySelector('.report-header-content p');
+
+      // Conditional logic based on intent type
+      if (isProject) {
+        // Change headers for PROJECT intent
+        reportHeader.textContent = 'Project Scoping & Estimates';
+        reportHeaderDesc.textContent = 'AI-generated project breakdown and cost estimates';
+
+        // Update "Hire a Pro" button text
+        const hirePrButton = document.querySelector('.next-steps-grid .path-card:first-child .cta-button-primary');
+        const hireSecondaryBtn = document.querySelector('.next-steps-grid .path-card:first-child .cta-button-secondary');
+        if (hirePrButton) {
+          hirePrButton.textContent = 'Browse Contractors for This Project';
+        }
+        if (hireSecondaryBtn) {
+          hireSecondaryBtn.textContent = 'Post This Project for Bids';
+        }
+      }
+
+      // Enhance the AI response with better formatting
+      const enhancedAnswer = enhanceAIResponse(cleanedAnswer);
+
+      // Parse markdown and render
+      diagnosisContent.innerHTML = marked.parse(enhancedAnswer);
+
+      // Add safety warnings ONLY if it's an ISSUE (not a project)
+      if (!isProject) {
+        addSafetyWarningsIfNeeded(diagnosisContent, cleanedAnswer);
+      }
+
+      // Check user's subscription tier for Expert pricing
+      await checkSubscriptionTier();
+
+      // Store job posting data for Path 1
+      window.jobPostingData = {
+        originalQuestion: question,
+        aiAnalysis: answer,
+        budgetLow: budgetLow || 500,
+        budgetHigh: budgetHigh || 2000,
+        fromAI: true,
+        intent: intent
+      };
+    })();
+
+    /**
+     * Extract INTENT TYPE from AI response and remove it from the text
+     * Returns: { cleanedAnswer, intentType, isProject }
+     */
+    function extractIntent(text) {
+      // Match patterns like "INTENT TYPE: PROJECT" or "INTENT TYPE: ISSUE"
+      const intentPattern = /^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim;
+      const match = text.match(intentPattern);
+
+      let intentType = 'ISSUE'; // Default to ISSUE
+      let cleanedAnswer = text;
+
+      if (match && match[0]) {
+        // Extract the type
+        const extractedType = match[0].match(/(PROJECT|ISSUE)/i);
+        if (extractedType && extractedType[1]) {
+          intentType = extractedType[1].toUpperCase();
+        }
+
+        // Remove the INTENT TYPE line from the text
+        cleanedAnswer = text.replace(intentPattern, '').trim();
+      }
+
+      return {
+        cleanedAnswer,
+        intentType,
+        isProject: intentType === 'PROJECT'
+      };
+    }
+
+    /**
+     * Enhance AI response for better markdown formatting
+     */
+    function enhanceAIResponse(text) {
+      let enhanced = text;
+
+      // Detect common section patterns and convert to headers
+      enhanced = enhanced.replace(/^(Summary|Overview|What This Is|The Issue):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Severity|How Serious|Concern Level):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Urgency|Timeline|How Soon):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(DIY Checks?|Things to Check|What You Can Do):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Materials?|Supplies|What You'?ll Need):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Safety|Precautions|Warnings?):?\s*/gim, '## ⚠️ $1\n\n');
+      enhanced = enhanced.replace(/^(When to Call|Call a Pro|Hire a Professional):?\s*/gim, '## $1\n\n');
+      enhanced = enhanced.replace(/^(Next Steps?|Recommendations?):?\s*/gim, '## $1\n\n');
+
+      // Convert numbered lists if not already formatted
+      enhanced = enhanced.replace(/^(\d+)\.\s+/gm, '$1. ');
+
+      // Ensure bold for emphasis words
+      enhanced = enhanced.replace(/\b(URGENT|WARNING|CAUTION|DANGER|IMPORTANT|NOTE)\b/g, '**$1**');
+
+      return enhanced;
+    }
+
+    /**
+     * Add safety warnings based on content analysis
+     */
+    function addSafetyWarningsIfNeeded(container, text) {
+      const safetyKeywords = ['danger', 'urgent', 'immediate', 'safety', 'hazard', 'emergency', 'risk', 'electrical', 'gas leak', 'carbon monoxide', 'structural'];
+      const hasSafety = safetyKeywords.some(keyword => text.toLowerCase().includes(keyword));
+
+      if (hasSafety) {
+        // Check if we don't already have a safety section
+        const hasExistingSafety = text.match(/safety|warning|caution/i);
+
+        if (!hasExistingSafety || text.toLowerCase().includes('urgent') || text.toLowerCase().includes('danger')) {
+          const safetyNotice = document.createElement('div');
+          safetyNotice.className = 'warning';
+          safetyNotice.innerHTML = `
+            <p><strong>⚠️ Safety Notice</strong></p>
+            <p>This issue may require immediate professional attention. Consider consulting a licensed contractor as soon as possible to ensure safety and prevent further damage.</p>
+          `;
+          container.insertBefore(safetyNotice, container.firstChild);
+        }
+      }
+    }
+
+    /**
+     * Check subscription tier and update expert pricing
+     */
+    async function checkSubscriptionTier() {
+      try {
+        // Wait for authService
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) return;
+
+        // Check user's subscription tier
+        const response = await window.authService.authenticatedFetch('/api/subscription/status', {
+          method: 'GET'
+        });
+
+        if (response.ok) {
+          const subscription = await response.json();
+
+          // Update pricing based on tier
+          const expertButton = document.getElementById('expertButton');
+          const expertPrice = document.getElementById('expertPrice');
+          const expertMicrocopy = document.getElementById('expertMicrocopy');
+
+          if (subscription.tier === 'pro' || subscription.tier === 'premium') {
+            // Pro/Premium get expert calls included
+            expertPrice.textContent = 'Included';
+            expertMicrocopy.textContent = 'Included in your subscription • Unlimited sessions';
+            expertButton.innerHTML = '📞 Schedule Expert Call (Included)';
+          } else if (subscription.tier === 'basic') {
+            // Basic tier gets discount
+            expertPrice.textContent = '$35';
+            expertMicrocopy.textContent = 'Basic subscriber discount • Pay per session';
+          } else {
+            // Free tier - full price
+            expertPrice.textContent = '$50';
+          }
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        // Default to full price
+      }
+    }
+
+    /**
+     * Post job from diagnosis
+     */
+    function postJobFromDiagnosis() {
+      // Store job data and redirect to dashboard
+      sessionStorage.setItem('pendingJob', JSON.stringify(window.jobPostingData));
+      window.location.href = 'homeowner-dashboard.html';
+    }
+
+    /**
+     * Book expert consultation
+     */
+    function bookExpertConsultation() {
+      // Store diagnosis data for expert reference
+      sessionStorage.setItem('expertConsultationContext', JSON.stringify(window.jobPostingData));
+
+      // Redirect to expert booking page
+      window.location.href = 'expert-booking.html';
+    }
+  </script>
+</body>
+</html>

@@ -2,566 +2,1134 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>HomeProHub – Contractor Tools</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mission Control – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
   <style>
-    /* Darker, more "pro" hero just for contractors */
-    .hero-contractor {
-      background: linear-gradient(to right, #020617, #0b1120, #111827);
-      color: #e5e7eb;
-      padding: 40px 24px;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      line-height: 1.6;
+    }
+
+    .main-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Stats Bar - Top Priority */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
       margin-bottom: 32px;
     }
-    .hero-inner {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .hero-kicker {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: #9ca3af;
-      margin-bottom: 6px;
-    }
-    .hero-title {
-      font-size: 30px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
-      color: #f9fafb;
-    }
-    .hero-subtitle {
-      font-size: 14px;
-      line-height: 1.7;
-      color: #9ca3af;
-      max-width: 620px;
-    }
 
-    /* Plan badges for contractors */
-    .tier-pill {
-      display: inline-block;
-      margin-left: 6px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
+    .stat-card {
+      background: white;
       border: 1px solid #e5e7eb;
-      background: #f3f4f6;
-      color: #4b5563;
-      white-space: nowrap;
-    }
-    .tier-pill--starter {
-      border-color: #4ade80;
-      background: #ecfdf5;
-      color: #166534;
-    }
-    .tier-pill--pro {
-      border-color: #60a5fa;
-      background: #eff6ff;
-      color: #1d4ed8;
-    }
-    .tier-pill--elite {
-      border-color: #c4b5fd;
-      background: #f5f3ff;
-      color: #5b21b6;
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s;
     }
 
-    .contractor-grid {
-      max-width: 900px;
-      margin: 0 auto 60px;
-      padding: 0 24px;
-      display: grid;
-      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
-      gap: 20px;
+    .stat-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
-    @media (max-width: 860px) {
-      .contractor-grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
+    .stat-label {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
 
-    .clarify-label {
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1;
+    }
+
+    .stat-value.grade {
+      color: #10b981;
+    }
+
+    .stat-sublabel {
       font-size: 12px;
-      color: #4b5563;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    /* Main Layout: 70% Feed + 30% Sidebar */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 24px;
+    }
+
+    /* Pending Reviews Section */
+    .pending-reviews-container {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .pending-reviews-container.hidden {
+      display: none;
+    }
+
+    .pending-reviews-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .pending-reviews-icon {
+      font-size: 32px;
+    }
+
+    .pending-reviews-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #92400e;
+      margin: 0;
+    }
+
+    .pending-reviews-subtitle {
+      font-size: 14px;
+      color: #78350f;
+      margin: 0;
+    }
+
+    .review-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       margin-top: 16px;
+    }
+
+    .review-card {
+      background: white;
+      border: 1px solid #fbbf24;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .review-card-content {
+      flex: 1;
+    }
+
+    .review-card-project {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
       margin-bottom: 4px;
     }
-    .clarify-box {
-      width: 100%;
-      min-height: 80px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      background: #f9fafb;
+
+    .review-card-message {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .review-card-incentive {
       font-size: 13px;
+      color: #d97706;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .btn-rate {
+      padding: 10px 20px;
+      background: #f59e0b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-rate:hover {
+      background: #d97706;
+      transform: translateY(-1px);
+    }
+
+    /* Rating Modal */
+    .rating-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .rating-modal.show {
+      display: flex;
+    }
+
+    .rating-modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .rating-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: #9ca3af;
+      line-height: 1;
+    }
+
+    .rating-modal-close:hover {
+      color: #1f2937;
+    }
+
+    .rating-modal-header h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+    }
+
+    .rating-modal-header p {
+      font-size: 15px;
+      color: #6b7280;
+      margin: 0 0 24px 0;
+    }
+
+    .rating-incentive-banner {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rating-incentive-banner span {
+      font-size: 32px;
+    }
+
+    .rating-incentive-banner p {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      margin: 0;
+    }
+
+    .rating-stars {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+
+    .rating-star {
+      font-size: 48px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #d1d5db;
+    }
+
+    .rating-star:hover,
+    .rating-star.active {
+      color: #fbbf24;
+      transform: scale(1.1);
+    }
+
+    .rating-tags-section {
+      margin-bottom: 32px;
+    }
+
+    .rating-tags-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .rating-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .rating-tag {
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid;
+      user-select: none;
+    }
+
+    .rating-tag.positive {
+      border-color: #d1fae5;
+      background: #f0fdf4;
+      color: #065f46;
+    }
+
+    .rating-tag.positive:hover,
+    .rating-tag.positive.selected {
+      border-color: #10b981;
+      background: #d1fae5;
+    }
+
+    .rating-tag.negative {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .rating-tag.negative:hover,
+    .rating-tag.negative.selected {
+      border-color: #ef4444;
+      background: #fecaca;
+    }
+
+    .rating-textarea-section {
+      margin-bottom: 32px;
+    }
+
+    .rating-textarea-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .rating-textarea-section span {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .rating-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 2px solid #e5e7eb;
+      font-size: 14px;
       resize: vertical;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .rating-textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .rating-modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary-modal {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: #f59e0b;
+      color: white;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary-modal:hover:not(:disabled) {
+      background: #d97706;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary-modal:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary-modal {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: white;
+      color: #6b7280;
+      border: 2px solid #e5e7eb;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary-modal:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    /* Opportunity Feed (Main Column) */
+    .feed-container {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .feed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .feed-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .view-all-link {
+      font-size: 14px;
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .view-all-link:hover {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+
+    .job-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .job-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .job-item:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    }
+
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .job-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .job-location {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .urgency-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .urgency-badge.high {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    .urgency-badge.medium {
+      background: #fffbeb;
+      color: #d97706;
+    }
+
+    .urgency-badge.low {
+      background: #f0fdf4;
+      color: #16a34a;
+    }
+
+    .job-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .job-meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state-text {
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .empty-state-subtext {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    /* Toolkit Sidebar */
+    .toolkit-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .toolkit-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+
+    .toolkit-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+
+    .toolkit-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      background: #eff6ff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .toolkit-icon {
+      font-size: 24px;
+    }
+
+    .toolkit-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+
+    .toolkit-description {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .toolkit-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-top: 8px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toolkit-sidebar {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .toolkit-sidebar {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stats-bar {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
+  <link rel="stylesheet" href="components/footer.css" />
 </head>
 <body>
+  <!-- Navigation component will be injected here by navigation.js -->
 
-<header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <div class="profile-area">
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-</header>
-
-<!-- Dark, pro-focused hero band -->
-<section class="hero-contractor">
-  <div class="hero-inner">
-    <div class="hero-kicker">For contractors & trades</div>
-    <h1 class="hero-title">Estimate better. Run tighter. Handle tougher jobs.</h1>
-    <p class="hero-subtitle">
-      Use HomeProHub as a second brain for bids, scope, field decisions, and building a real operation.
-      It’s built for GCs, remodelers, and trades who want fewer surprises and stronger numbers.
-    </p>
-  </div>
-</section>
-
-<main>
-  <!-- Two-column layout: features + contractor coach -->
-  <section class="contractor-grid">
-    <!-- Left card: features + tiers -->
-    <div class="card">
-      <h2 style="margin-top:0; margin-bottom:8px;">What you can do here</h2>
-      <p style="margin:0 0 10px; font-size:14px; color:#4b5563;">
-        Plans: <strong>Starter (Free)</strong>, <strong>Pro</strong>, <strong>Elite</strong>
-      </p>
-
-      <ul style="margin: 8px 0 6px 20px; padding: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
-        <li>
-          <strong>Price jobs with confidence:</strong>
-          Break work into clear scope, allowances, and exclusions so your numbers hold up.
-          <span class="tier-pill tier-pill--starter">Starter / Pro / Elite</span>
-        </li>
-        <li>
-          <strong>Field support on tough projects:</strong>
-          Ask trade-specific questions or diagnose issues with photos and a few details.
-          <span class="tier-pill tier-pill--starter">Starter / Pro / Elite</span>
-        </li>
-        <li>
-          <strong>Licensing & setup done right:</strong>
-          Help getting licensed in your jurisdiction, plus what you need after—insurance, bond, registrations.
-          <span class="tier-pill tier-pill--pro">Pro & Elite</span>
-        </li>
-        <li>
-          <strong>Build a real operation:</strong>
-          Guidance on branding, uniforms, logo, website, project management tools, and customer financing options.
-          <span class="tier-pill tier-pill--pro">Pro & Elite</span>
-        </li>
-        <li>
-          <strong>Access to experts:</strong>
-          Tap into designers, architects, engineers, and 1-on-1 business coaching when jobs get complex.
-          <span class="tier-pill tier-pill--elite">Elite</span>
-        <li style="margin-top: 10px; border-top: 1px solid #e5e7eb; padding-top: 8px;">
-  <a href="homeowner-grading-directory.html"" style="color: #2563eb; text-decoration: none;">
-    <strong>Homeowner Grading Directory:</strong>
-    Filter job leads by homeowner communication, decision speed, and payment reliability grade.
-  </a>
-  <span class="tier-pill tier-pill--pro">Pro & Elite</span>
-</li>
-      </ul>
-    </div>
-
-    <!-- Right card: Contractor Coach tool -->
-    <div class="card">
-      <h2 style="margin-top:0; margin-bottom:8px;">Contractor Coach</h2>
-      <p style="margin:0 0 12px; font-size:14px; color:#4b5563;">
-        Describe the job, client situation, or business problem you’re dealing with.
-        The coach responds like a seasoned GC or trade business mentor.
-      </p>
-      <p class="small-text" style="margin-top:0; margin-bottom:14px;">
-        Contractor Coach (AI) is available on all plans: <strong>Starter</strong>, <strong>Pro</strong>, and <strong>Elite</strong>.
-      </p>
-
-      <label for="focus" style="font-size:12px; color:#4b5563;">What do you need help with?</label>
-      <select id="focus">
-        <option value="general">General contractor / project advice</option>
-        <option value="pricing">Pricing & estimating</option>
-        <option value="materials">Materials & methods</option>
-        <option value="licensing">Licensing, insurance & compliance</option>
-        <option value="client_comms">Client communication & expectations</option>
-        <option value="business">Business systems & profitability</option>
-      </select>
-
-      <label for="zip" style="font-size:12px; color:#4b5563;">Job ZIP code (Required for estimate):</label>
-      <input id="zip" type="text" placeholder="e.g. 33602" required />
-      
-      <label for="scopeLevel" style="font-size:12px; color:#4b5563;">Material & Finish Level</label>
-      <select id="scopeLevel">
-        <option value="budget">Budget / Builder Grade</option>
-        <option value="mid">Mid-Range / Standard</option>
-        <option value="high">High-End / Custom</option>
-      </select>
-
-      <label for="size" style="font-size:12px; color:#4b5563; margin-top:8px;">Project Size/Units (e.g., 200 sq ft, 5x8 bath)</label>
-      <input id="size" type="text" placeholder="e.g. 150 sq ft of tiling, or 6x10 kitchen" />
-
-      <label for="question" style="font-size:12px; color:#4b5563;">Describe the situation (What exactly needs to be done?):</label>
-      <textarea
-        id="question"
-        placeholder="Example: Full master bath remodel. Client wants custom glass shower enclosure, heated floors, and mid-range tile."
-      ></textarea>
-
-      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <button id="askBtn" class="btn-primary">🧰 Ask Coach</button>
-        <div id="status" class="status"></div>
+  <div class="main-container">
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-card" onclick="window.location.href='contractor-grade.html'" style="cursor: pointer;">
+        <div class="stat-label">My Grade</div>
+        <div class="stat-value grade" id="myGrade">A</div>
+        <div class="stat-sublabel">Click for details</div>
       </div>
 
-      <div id="answer" class="answer-box"></div>
+      <div class="stat-card">
+        <div class="stat-label">Active Bids</div>
+        <div class="stat-value" id="activeBids">3</div>
+        <div class="stat-sublabel">This week</div>
+      </div>
 
+      <div class="stat-card">
+        <div class="stat-label">Profile Views</div>
+        <div class="stat-value" id="profileViews">42</div>
+        <div class="stat-sublabel">Last 30 days</div>
+      </div>
+
+      <div class="stat-card" onclick="window.location.href='subscription-plans.html'" style="cursor: pointer;">
+        <div class="stat-label">Subscription</div>
+        <div class="stat-value" id="subscriptionTier" style="font-size: 18px; margin-top: 4px;">Pro</div>
+        <div class="stat-sublabel">Click to manage</div>
+      </div>
     </div>
-  </section>
-</main>
 
-<script>
-  // --- ELEMENT SELECTORS ---
-  const askButton = document.getElementById("askBtn");
-  const textarea = document.getElementById("question");
-  const statusText = document.getElementById("status");
-  const answerBox = document.getElementById("answer");
-  const focusSelect = document.getElementById("focus");
-  const zipInput = document.getElementById("zip");
-  const profileLinkEl = document.getElementById("profileLink");
-  
-  // New element for follow-up questions
-  const followUpBox = document.getElementById("followUp"); 
-
-  // Variables for the PDF/Email Controls
-  let lastQuestion = null;
-  let lastFocus = null;
-  let lastZip = null;
-  let lastEstimateData = null; 
-  
-  const pdfEmailControls = document.createElement('div');
-  pdfEmailControls.id = 'pdfEmailControlsContainer'; 
-  pdfEmailControls.style.cssText = 'margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
-  
-  // --- AUTH AND ONBOARDING CHECK (FAIL-SAFE) ---
-  function getProfileData(runRedirect = true) {
-    try {
-      const username = localStorage.getItem('homeprohub_username');
-      const token = localStorage.getItem('homeprohub_auth_token');
-      const rawRole = localStorage.getItem("homeprohub_user_role");
-      const rawProfile = localStorage.getItem('homeprohub_contractor_profile');
-
-      // 1. Check Authentication (must have token and username)
-      if (!username || !token || rawRole !== 'contractor') {
-          if (runRedirect) window.location.href = "index.html"; 
-          return null;
-      }
-      
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
-      
-      // 2. CRITICAL CHECK: ONLY redirect if profileComplete flag is explicitly false or missing.
-      // We assume if the profile key exists, the data is valid enough to proceed.
-      if (!profile.profileComplete) { 
-          if (runRedirect) window.location.href = "contractor-profile.html"; 
-          return null;
-      }
-
-      // Return combined data
-      return { 
-          ...profile, 
-          username: username,
-          role: rawRole,
-          name: profile.companyName || username.split('@')[0]
-      };
-
-    } catch (e) {
-      if (runRedirect) window.location.href = "index.html"; 
-      return null;
-    }
-  }
-
-  const profile = getProfileData(); 
-
-  function logout() {
-    localStorage.removeItem("homeprohub_user_role");
-    localStorage.removeItem("homeprohub_contractor_profile"); 
-    localStorage.removeItem("homeprohub_history_v1");
-    window.location.href = "index.html";
-  }
-  // --- END AUTH CHECK ---
-  
-  // --- PDF Generation Function (Client-Side) ---
-  function generatePdfEstimate(data) {
-    const printWindow = window.open('', '', 'height=800,width=800');
-    
-    const contractorName = profile ? profile.companyName : 'HomeProHub Contractor';
-    const contractorLicense = profile ? profile.license : 'N/A';
-    const contractorZip = profile ? profile.zipCode : 'N/A';
-
-    const lineItemsHtml = data.line_items.map(item => `
-      <tr>
-        <td style="padding: 8px; border: 1px solid #ddd;">${item.item}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">$${item.low.toLocaleString()} - $${item.high.toLocaleString()}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${item.notes || '-'}</td>
-      </tr>
-    `).join('');
-
-    const templateHtml = `
-      <html>
-        <head>
-          <title>${data.project_title || 'Project Estimate'}</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #1f2937; }
-            h1 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-            .header-info { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 20px; }
-            .table-container { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            .table-container th { background-color: #f3f4f6; text-align: left; padding: 10px; border: 1px solid #ddd; }
-            .total-row { font-weight: bold; background-color: #e5e7eb; }
-          </style>
-        </head>
-        <body>
-          <div class="header-info">
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Pending Reviews Section -->
+      <div>
+        <div class="pending-reviews-container hidden" id="pending-reviews">
+          <div class="pending-reviews-header">
+            <span class="pending-reviews-icon">⭐</span>
             <div>
-              <strong>Contractor:</strong> ${contractorName}<br>
-              <strong>License:</strong> ${contractorLicense}<br>
-              <strong>Service Area:</strong> ${contractorZip}
-            </div>
-            <div>
-              <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
-              <strong>Estimate ID:</strong> HPH-${Math.floor(Math.random() * 90000) + 10000}
+              <h2 class="pending-reviews-title">Pending Client Reviews</h2>
+              <p class="pending-reviews-subtitle">Rate your clients to unlock your reviews and earn +5 points!</p>
             </div>
           </div>
-          <h1>Estimate: ${data.project_title || 'Project Estimate'}</h1>
-          
-          <h3>Line Item Breakdown (Rough Estimate)</h3>
-          <table class="table-container">
-            <thead>
-              <tr>
-                <th style="width: 40%;">Item / Service</th>
-                <th style="width: 30%;">Low - High Range</th>
-                <th style="width: 30%;">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${lineItemsHtml}
-              <tr><td colspan="3" style="height: 10px;"></td></tr>
-              <tr class="total-row"><td colspan="2" style="text-align: right; padding: 8px;">Subtotal (Labor & Materials)</td><td style="padding: 8px;">$${data.subtotal_low.toLocaleString()} - $${data.subtotal_high.toLocaleString()}</td></tr>
-              <tr><td colspan="2" style="text-align: right; padding: 5px;">Overhead & Profit (${data.overhead_profit_percent}%)</td><td style="padding: 5px;"></td></tr>
-              <tr><td colspan="2" style="text-align: right; padding: 5px;">Contingency (${data.contingency_percent}%)</td><td style="padding: 5px;"></td></tr>
-              <tr><td colspan="3" style="height: 10px;"></td></tr>
-              <tr class="total-row" style="background-color: #bfdbfe;"><td colspan="2" style="text-align: right; padding: 8px;">TOTAL ESTIMATE RANGE</td><td style="padding: 8px;">$${data.total_projected_low.toLocaleString()} - $${data.total_projected_high.toLocaleString()}</td></tr>
-            </tbody>
-          </table>
+          <div class="review-cards" id="reviewCards">
+            <!-- Cards will be populated here -->
+          </div>
+        </div>
 
-          <h3 style="margin-top: 30px;">Disclaimers</h3>
-          <ul style="font-size: 12px; color: #4b5563;">
-            ${data.disclaimers.map(d => `<li>${d}</li>`).join('')}
-            <li>This document is a computer-generated budget estimate, not a binding quote.</li>
-          </ul>
-        </body>
-      </html>
-    `;
+        <!-- Opportunity Feed (Main Column) -->
+        <div class="feed-container">
+        <div class="feed-header">
+          <h2 class="feed-title">Opportunity Feed</h2>
+          <a href="contractor-dashboard.html" class="view-all-link">View All Jobs →</a>
+        </div>
 
-    printWindow.document.write(templateHtml);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print(); // Triggers the browser's print dialog (Print to PDF)
-  }
-  // --- END PDF Generation Function ---
+        <div class="job-list" id="jobList">
+          <!-- Jobs will be loaded here dynamically -->
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-text">Loading opportunities...</div>
+            <div class="empty-state-subtext">Matching jobs to your profile</div>
+          </div>
+        </div>
+        </div>
+      </div>
 
-  // --- NEW: Email Function (Client-Side) ---
-  function emailEstimate(data) {
-      const contractorName = profile ? profile.companyName : 'HomeProHub Contractor';
+      <!-- Toolkit Sidebar -->
+      <div class="toolkit-sidebar">
+        <a href="pricing-estimator.html" class="toolkit-card">
+          <div class="toolkit-icon-wrapper">
+            <span class="toolkit-icon">📊</span>
+          </div>
+          <div class="toolkit-title">AI Estimator</div>
+          <div class="toolkit-description">Draft professional estimates in under 60 seconds</div>
+          <span class="toolkit-badge">Free Tool</span>
+        </a>
 
-      const subject = `Rough Estimate: ${data.project_title || 'Your Project'}`;
-      const body = `
-Dear Customer,
+        <a href="#" class="toolkit-card" onclick="alert('Coming soon!'); return false;">
+          <div class="toolkit-icon-wrapper">
+            <span class="toolkit-icon">📐</span>
+          </div>
+          <div class="toolkit-title">Takeoffs</div>
+          <div class="toolkit-description">Material calculations from blueprints</div>
+          <span class="toolkit-badge">Coming Soon</span>
+        </a>
 
-Thank photo: ${data.project_title}
-Total Estimated Range: $${data.total_projected_low.toLocaleString()} - $${data.total_projected_high.toLocaleString()}
----
+        <a href="contractor-profile.html" class="toolkit-card">
+          <div class="toolkit-icon-wrapper">
+            <span class="toolkit-icon">👤</span>
+          </div>
+          <div class="toolkit-title">My Profile</div>
+          <div class="toolkit-description">Update licenses, portfolio, and credentials</div>
+        </a>
 
-Please note that this is a non-binding ballpark figure created for initial budgeting. A formal, binding quote will require a site visit to assess all existing conditions and final material selections.
+        <a href="messages.html" class="toolkit-card">
+          <div class="toolkit-icon-wrapper">
+            <span class="toolkit-icon">💬</span>
+          </div>
+          <div class="toolkit-title">Messages</div>
+          <div class="toolkit-description">Communicate with homeowners</div>
+        </a>
+      </div>
+    </div>
+  </div>
 
-We look forward to speaking with you!
+  <script src="components/navigation.js"></script>
+  <script>
+    // Load recent job opportunities
+    async function loadOpportunities() {
+      try {
+        // Wait for auth service
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
 
-Best regards,
-${contractorName}
-${profile && profile.license ? 'License: ' + profile.license : ''}
-`;
-      // Use the browser's native mail client
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  }
-  // --- END Email Function ---
-  
-  // --- NEW: Render Controls Function ---
-  function renderEstimateControls(data, isUpdate = false) {
-      // Create the controls container if it doesn't exist
-      let controlsContainer = document.getElementById('pdfEmailControlsContainer');
-      if (!controlsContainer) {
-          controlsContainer = document.createElement('div');
-          controlsContainer.id = 'pdfEmailControlsContainer';
-          controlsContainer.style.cssText = 'margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
-          
-          // CRITICAL INSERTION: Place it after the answer box
-          const mainAnswerBox = document.getElementById("answer");
-          if (mainAnswerBox && mainAnswerBox.parentNode) {
-              mainAnswerBox.parentNode.insertBefore(controlsContainer, mainAnswerBox.nextSibling);
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        const profile = await window.authService.getUserProfile();
+        if (!profile || profile.role !== 'contractor') {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // Fetch recent jobs from job board
+        const response = await window.authService.authenticatedFetch(
+          '/api/contractor/recent-jobs?limit=5'
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to load jobs');
+        }
+
+        const data = await response.json();
+        const jobs = data.jobs || [];
+
+        const jobList = document.getElementById('jobList');
+
+        if (jobs.length === 0) {
+          jobList.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📭</div>
+              <div class="empty-state-text">No new opportunities right now</div>
+              <div class="empty-state-subtext">Check back soon or browse all jobs</div>
+            </div>
+          `;
+          return;
+        }
+
+        // Render jobs
+        jobList.innerHTML = jobs.map(job => `
+          <div class="job-item" onclick="window.location.href='contractor-dashboard.html#job-${job.id}'">
+            <div class="job-header">
+              <div>
+                <div class="job-title">${escapeHtml(job.title || 'Untitled Job')}</div>
+                <div class="job-location">📍 ${escapeHtml(job.address || 'Location not specified')}</div>
+              </div>
+              <span class="urgency-badge ${getUrgencyClass(job.urgency)}">${job.urgency || 'Normal'}</span>
+            </div>
+            <div class="job-meta">
+              <span>🏠 ${escapeHtml(job.homeowner_grade || 'N/A')}</span>
+              <span>💰 ${job.budget_low && job.budget_high ? `$${job.budget_low}-$${job.budget_high}` : 'Budget TBD'}</span>
+              <span>📅 ${formatDate(job.posted_at)}</span>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('Error loading opportunities:', error);
+        document.getElementById('jobList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-text">Unable to load opportunities</div>
+            <div class="empty-state-subtext">Please try refreshing the page</div>
+          </div>
+        `;
+      }
+    }
+
+    function getUrgencyClass(urgency) {
+      if (!urgency) return 'low';
+      const lower = urgency.toLowerCase();
+      if (lower.includes('urgent') || lower.includes('high')) return 'high';
+      if (lower.includes('medium') || lower.includes('moderate')) return 'medium';
+      return 'low';
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'Recently';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diff = now - date;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+      if (days === 0) return 'Today';
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return `${days} days ago`;
+      return date.toLocaleDateString();
+    }
+
+    // Load stats
+    async function loadStats() {
+      try {
+        // Wait for auth service
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkAuth = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkAuth);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const profile = await window.authService.getUserProfile();
+        if (!profile) return;
+
+        // Update subscription tier
+        const subscriptionTier = profile.subscription_tier || 'starter';
+        const tierDisplay = subscriptionTier === 'starter' ? 'Starter (Free)' :
+                           subscriptionTier === 'pro' ? 'Pro' :
+                           subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1);
+
+        document.getElementById('subscriptionTier').textContent = tierDisplay;
+
+        // You could also fetch and display profile views here if available
+        // const profileViews = profile.profile_views || 0;
+        // document.getElementById('profileViews').textContent = profileViews;
+
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
+    // Load pending reviews
+    async function loadPendingReviews() {
+      try {
+        const response = await window.authService.authenticatedFetch('/api/contractor/pending-reviews');
+        if (!response.ok) {
+          console.error('Failed to load pending reviews');
+          return;
+        }
+
+        const data = await response.json();
+        const pendingReviews = data.pending_reviews || [];
+
+        if (pendingReviews.length === 0) {
+          document.getElementById('pending-reviews').classList.add('hidden');
+          return;
+        }
+
+        // Show the section
+        document.getElementById('pending-reviews').classList.remove('hidden');
+
+        // Render review cards
+        const reviewCards = document.getElementById('reviewCards');
+        reviewCards.innerHTML = pendingReviews.map(project => `
+          <div class="review-card">
+            <div class="review-card-content">
+              <div class="review-card-project">${escapeHtml(project.title)}</div>
+              <div class="review-card-message">Project completed. How was working with this homeowner?</div>
+              <div class="review-card-incentive">+5 Points for completing this review</div>
+            </div>
+            <button class="btn-rate" onclick="openRatingModal('${project.id}', '${escapeHtml(project.title)}')">
+              Rate Client
+            </button>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('Error loading pending reviews:', error);
+      }
+    }
+
+    // Rating modal state
+    let currentRatingProject = null;
+    let selectedRating = 0;
+    let selectedPositiveTags = [];
+    let selectedNegativeTags = [];
+
+    function openRatingModal(projectId, projectTitle) {
+      currentRatingProject = { id: projectId, title: projectTitle };
+      selectedRating = 0;
+      selectedPositiveTags = [];
+      selectedNegativeTags = [];
+
+      document.getElementById('ratingProjectTitle').textContent = projectTitle;
+      document.getElementById('ratingTextarea').value = '';
+      updateRatingStars();
+
+      // Clear tag selections
+      document.querySelectorAll('.rating-tag').forEach(tag => tag.classList.remove('selected'));
+
+      document.getElementById('ratingModal').classList.add('show');
+    }
+
+    function closeRatingModal() {
+      document.getElementById('ratingModal').classList.remove('show');
+      currentRatingProject = null;
+    }
+
+    function updateRatingStars() {
+      const stars = document.querySelectorAll('.rating-star');
+      stars.forEach((star, index) => {
+        if (index < selectedRating) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      });
+    }
+
+    async function submitRating() {
+      if (selectedRating === 0) {
+        alert('Please select a star rating');
+        return;
+      }
+
+      if (!currentRatingProject) {
+        alert('Error: Project information missing');
+        return;
+      }
+
+      const btn = document.getElementById('submitRatingBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const response = await window.authService.authenticatedFetch('/api/contractor/rate-homeowner', {
+          method: 'POST',
+          body: JSON.stringify({
+            projectId: currentRatingProject.id,
+            rating: selectedRating,
+            positiveTags: selectedPositiveTags,
+            negativeTags: selectedNegativeTags,
+            reviewText: document.getElementById('ratingTextarea').value.trim()
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to submit rating');
+        }
+
+        alert('Review submitted! +5 points added to your Contractor Grade. Thank you!');
+        closeRatingModal();
+        loadPendingReviews(); // Refresh the pending reviews
+
+      } catch (error) {
+        console.error('Error submitting rating:', error);
+        alert(`Failed to submit rating: ${error.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Submit Review';
+      }
+    }
+
+    // Utility function
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadOpportunities();
+      loadStats();
+      loadPendingReviews();
+
+      // Rating star click handlers
+      document.querySelectorAll('.rating-star').forEach((star, index) => {
+        star.addEventListener('click', () => {
+          selectedRating = index + 1;
+          updateRatingStars();
+        });
+      });
+
+      // Positive tags click handlers
+      document.querySelectorAll('.rating-tag.positive').forEach(tag => {
+        tag.addEventListener('click', () => {
+          tag.classList.toggle('selected');
+          const tagText = tag.dataset.tag;
+          if (selectedPositiveTags.includes(tagText)) {
+            selectedPositiveTags = selectedPositiveTags.filter(t => t !== tagText);
           } else {
-              console.error("Could not find answer box to insert controls.");
-              return; // Stop function if insertion fails
+            selectedPositiveTags.push(tagText);
           }
-      }
-      
-      // Clear old buttons
-      controlsContainer.innerHTML = '';
-      
-      // 1. PDF Button (triggers the print/save-as-pdf dialog)
-      const pdfBtn = document.createElement('button');
-      pdfBtn.className = 'btn-primary';
-      pdfBtn.textContent = '📄 Download PDF Estimate';
-      pdfBtn.addEventListener('click', () => generatePdfEstimate(data));
-      controlsContainer.appendChild(pdfBtn);
+        });
+      });
 
-      // 2. Email Button (triggers mailto client)
-      const emailBtn = document.createElement('button');
-      emailBtn.className = 'btn-secondary';
-      emailBtn.textContent = '✉️ Email to Customer';
-      emailBtn.addEventListener('click', () => emailEstimate(data));
-      controlsContainer.appendChild(emailBtn);
-      
-      // Store the estimate data globally
-      lastEstimateData = data;
-
-      // Update status text on successful response
-      statusText.textContent = isUpdate ? 'Updated' : 'Done.'; 
-      askButton.textContent = 'Update'; // Set button to Update after first successful ask
-  }
-  // --- END Render Controls Function ---
-
-  async function askContractorBackend(question, focus, zip, scopeLevel, size) {
-    // FIX: Use a relative path, which automatically resolves to the current live domain (www.homeprohub.today)
-    const response = await fetch("/contractor-ask", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ question, focus, zip, scopeLevel, size })
+      // Negative tags click handlers
+      document.querySelectorAll('.rating-tag.negative').forEach(tag => {
+        tag.addEventListener('click', () => {
+          tag.classList.toggle('selected');
+          const tagText = tag.dataset.tag;
+          if (selectedNegativeTags.includes(tagText)) {
+            selectedNegativeTags = selectedNegativeTags.filter(t => t !== tagText);
+          } else {
+            selectedNegativeTags.push(tagText);
+          }
+        });
+      });
     });
+  </script>
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(
-        data.error || "Request failed with status " + response.status
-      );
-    }
+  <!-- Rating Modal -->
+  <div class="rating-modal" id="ratingModal">
+    <div class="rating-modal-content">
+      <button class="rating-modal-close" onclick="closeRatingModal()">×</button>
 
-    const data = await response.json();
-    return data; // Return full response object, not just answer
-  }
+      <div class="rating-modal-header">
+        <h2>How was working with this client?</h2>
+        <p id="ratingProjectTitle">Project Title</p>
+      </div>
 
-  askButton.addEventListener("click", async () => {
-    if (!profile) {
-        window.location.href = "contractor-profile.html"; 
-        return;
-    }
-    
-    // --- GRAB INPUTS SAFELY ---
-    // Use optional chaining (?) and nullish coalescing (|| '') for maximum stability.
-    // This guarantees the script does not crash if an element is null/missing.
-    
-    // Check if the input element exists before reading its value
-    const scopeLevel = document.getElementById('scopeLevel')?.value || '';
-    const size = document.getElementById('size')?.value.trim() || '';
-    
-    // Note: textarea, focusSelect, and zipInput are global consts, so we must assume 
-    // they are defined but may not have values.
-    const q = textarea.value.trim();
-    const followUp = followUpBox?.value.trim() || ''; // Use safe access on followUpBox
-    const focus = focusSelect?.value || '';
-    const zip = zipInput?.value.trim() || '';
-    
-    // The previous crash was likely related to one of the global consts (like zipInput)
-    // being read as 'null' because the DOM hadn't finished loading fully.
+      <div class="rating-incentive-banner">
+        <span>🎯</span>
+        <p>Complete this review to earn +5 Points for your Contractor Grade!</p>
+      </div>
 
-    // --- DETERMINE QUESTION MODE (Initial Ask or Refinement) ---
-    let finalQuestion = q;
-    let isRefinement = false;
-    
-    // Check if we have previous context AND the followUp box has new text
-    if (lastQuestion && followUp) {
-        isRefinement = true;
-        finalQuestion =
-            `Original question from contractor:\n` +
-            lastQuestion +
-            `\n\nNew details / clarifications/follow-up:\n` +
-            followUp +
-            `\n\nPlease update and refine your previous guidance based on these new details. ` +
-            `If this is a pricing question, return a new, updated JSON estimate.`;
-        // Clear follow-up box immediately
-        followUpBox.value = '';
-    } else if (!q) {
-        // If neither the initial box nor the follow-up box has text, exit.
-        answerBox.textContent = "Please describe your situation first.";
-        return;
-    }
-    // ------------------------------------------------------------------
+      <!-- Star Rating -->
+      <div class="rating-stars">
+        <span class="rating-star" data-rating="1">★</span>
+        <span class="rating-star" data-rating="2">★</span>
+        <span class="rating-star" data-rating="3">★</span>
+        <span class="rating-star" data-rating="4">★</span>
+        <span class="rating-star" data-rating="5">★</span>
+      </div>
 
-    if (focus === 'pricing' && zip.length !== 5) {
-        answerBox.textContent = "ZIP code is required for pricing estimates.";
-        return;
-    }
+      <!-- Positive Tags -->
+      <div class="rating-tags-section">
+        <h3>What went well? (Tap all that apply)</h3>
+        <div class="rating-tags">
+          <div class="rating-tag positive" data-tag="Fast Payment">💰 Fast Payment</div>
+          <div class="rating-tag positive" data-tag="Clear Communication">💬 Clear Communication</div>
+          <div class="rating-tag positive" data-tag="Realistic Expectations">👍 Realistic Expectations</div>
+          <div class="rating-tag positive" data-tag="Respectful">⭐ Respectful</div>
+          <div class="rating-tag positive" data-tag="Flexible">🤝 Flexible</div>
+          <div class="rating-tag positive" data-tag="Prepared">📋 Prepared</div>
+        </div>
+      </div>
 
-    // Set UI state to disabled/thinking
-    askButton.disabled = true;
-    statusText.textContent = "Thinking…";
-    answerBox.textContent = "";
-    
-    // Clear zip code input if focus is not pricing (Keep original behavior)
-    if (focus !== 'pricing') {
-        zipInput.value = '';
-    }
+      <!-- Negative Tags -->
+      <div class="rating-tags-section">
+        <h3>Any issues? (Tap all that apply)</h3>
+        <div class="rating-tags">
+          <div class="rating-tag negative" data-tag="Slow Payment">💸 Slow Payment</div>
+          <div class="rating-tag negative" data-tag="Poor Communication">📵 Poor Communication</div>
+          <div class="rating-tag negative" data-tag="Unrealistic">⚠️ Unrealistic</div>
+          <div class="rating-tag negative" data-tag="Rude">😤 Rude</div>
+          <div class="rating-tag negative" data-tag="Indecisive">🤔 Indecisive</div>
+          <div class="rating-tag negative" data-tag="Unprepared">📝 Unprepared</div>
+        </div>
+      </div>
 
-    try {
-      const response = await askContractorBackend(finalQuestion, focus, zip, scopeLevel, size);
-      
-      if (response.format === 'json' && focus === 'pricing') {
-          // --- SUCCESS: JSON ESTIMATE RECEIVED ---
-          answerBox.textContent = isRefinement ? "✅ Estimate Updated! (See Controls Below)" : "✅ Estimate Generated! (See Controls Below)";
-          renderEstimateControls(response.answer, isRefinement); // Pass the status of the request
-          answerBox.style.whiteSpace = 'normal';
-          
-          // Store context for refinement 
-          lastQuestion = finalQuestion; 
-          lastFocus = focus;
-          lastZip = zip;
-          
-      } else {
-          // --- TEXT RESPONSE RECEIVED (Non-Pricing or Error) ---
-          answerBox.textContent = response.answer;
-          pdfEmailControls.innerHTML = ''; 
-          
-          // Store context only if it was an initial text ask for later follow-up
-          lastQuestion = finalQuestion; 
-          lastFocus = focus;
-          lastZip = zip;
-      }
-      
-      // Update status text and button state correctly
-      statusText.textContent = isRefinement ? 'Updated' : 'Done.';
-      askButton.textContent = 'Update'; // Ensure button says 'Update' after the first ask/update
+      <!-- Optional Text -->
+      <div class="rating-textarea-section">
+        <h3>Any specific details? <span>(Optional)</span></h3>
+        <textarea class="rating-textarea" id="ratingTextarea" placeholder="Share any additional thoughts about working with this homeowner..."></textarea>
+      </div>
 
-    } catch (err) {
-      console.error(err);
-      answerBox.textContent = "Something went wrong: " + err.message;
-      statusText.textContent = "";
-      pdfEmailControls.innerHTML = '';
-      askButton.textContent = 'Ask Coach'; // Revert button on error
-    } finally {
-      askButton.disabled = false;
-    }
-  });
-</script>
+      <!-- Actions -->
+      <div class="rating-modal-actions">
+        <button class="btn-secondary-modal" onclick="closeRatingModal()">Cancel</button>
+        <button class="btn-primary-modal" id="submitRatingBtn" onclick="submitRating()">Submit Review</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
+  <script src="components/footer.js"></script>
 </body>
 </html>
