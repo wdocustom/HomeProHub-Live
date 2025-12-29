@@ -448,7 +448,7 @@
     }
 
     /**
-     * Clean AI artifacts from text (INTENT TYPE, etc.)
+     * Clean AI artifacts from text (INTENT TYPE, headers, etc.)
      */
     function cleanAIArtifacts(text) {
       if (!text) return '';
@@ -458,6 +458,13 @@
 
       // Remove AI ANALYSIS prefix
       cleaned = cleaned.replace(/^[\s]*AI ANALYSIS:[\s]*/gim, '').trim();
+
+      // Remove divider lines (---, ===, etc.)
+      cleaned = cleaned.replace(/^[\s]*[-=]{3,}[\s]*$/gm, '').trim();
+
+      // Remove STEP headers (--- STEP 1: ... ---, etc.)
+      cleaned = cleaned.replace(/^[\s]*---[\s]*STEP\s+\d+:.*?---[\s]*$/gim, '').trim();
+      cleaned = cleaned.replace(/^[\s]*STEP\s+\d+:.*$/gim, '').trim();
 
       // Remove markdown bold
       cleaned = cleaned.replace(/\*\*/g, '');
@@ -481,22 +488,25 @@
       // Clean text first
       const cleanedText = cleanAIArtifacts(text);
 
-      // Extract Designer Note (from Local Design Insights feature)
-      const designerNoteMatch = cleanedText.match(/Design(?:er)?\s*Note:\s*(.+?)(?:\n\n|\n(?=[A-Z])|$)/is);
+      // Extract Designer Note - STRICTLY limit to single paragraph
+      const designerNoteMatch = cleanedText.match(/Design(?:er)?\s*Note:\s*([^\n]+)/i);
       if (designerNoteMatch) {
         parsed.designerNote = designerNoteMatch[1].trim();
       }
 
-      // Extract first paragraph as summary (skip if it's INTENT TYPE)
-      const paragraphs = cleanedText.split('\n\n').filter(p => p.trim().length > 0);
+      // Extract first meaningful paragraph as summary
+      const paragraphs = cleanedText.split('\n\n').filter(p => {
+        const trimmed = p.trim();
+        // Exclude headers, steps, and empty paragraphs
+        return trimmed.length > 0 &&
+               !trimmed.toLowerCase().includes('intent type') &&
+               !trimmed.match(/^[\s]*---/) &&
+               !trimmed.match(/^[\s]*STEP/i) &&
+               !trimmed.match(/^[\s]*Design(?:er)?\s*Note:/i);
+      });
+
       if (paragraphs.length > 0) {
-        const firstPara = paragraphs[0].trim();
-        if (!firstPara.toLowerCase().includes('intent type')) {
-          parsed.summary = firstPara;
-        } else if (paragraphs.length > 1) {
-          // Use second paragraph if first is INTENT TYPE
-          parsed.summary = paragraphs[1].trim();
-        }
+        parsed.summary = paragraphs[0].trim();
       }
 
       // Extract budget with regex
@@ -514,7 +524,7 @@
         parsed.timeline = timelineMatch[0];
       }
 
-      // Extract scope items - ONLY work statements, NOT questions
+      // Extract scope items - ONLY work statements from Scope Considerations
       const lines = cleanedText.split('\n');
       let inScopeSection = false;
 
@@ -525,9 +535,14 @@
           return;
         }
 
-        // Stop at question sections
-        if (line.match(/questions?\s+for|ask\s+about|verify|confirm\s+with/i)) {
+        // Stop at question sections OR designer note sections
+        if (line.match(/questions?\s+for|ask\s+about|verify|confirm\s+with|design(?:er)?\s*note/i)) {
           inScopeSection = false;
+          return;
+        }
+
+        // Skip STEP headers and dividers
+        if (line.match(/^[\s]*---/) || line.match(/^[\s]*STEP/i) || line.match(/INSIGHTS/i)) {
           return;
         }
 
@@ -548,6 +563,11 @@
 
           // Skip if contains question mark
           if (item.includes('?')) {
+            return;
+          }
+
+          // Skip if it's a header or contains STEP/INSIGHTS
+          if (item.match(/STEP|INSIGHTS|---/i)) {
             return;
           }
 

@@ -304,7 +304,7 @@
       font-weight: 500;
     }
 
-    /* Scope Items Section */
+    /* Scope Items Section - Professional Invoice Style */
     .scope-section {
       margin-bottom: 32px;
     }
@@ -318,28 +318,31 @@
       margin-bottom: 16px;
     }
 
-    .scope-grid {
-      display: grid;
-      gap: 12px;
+    .scope-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border-top: 1px solid #e5e7eb;
     }
 
     .scope-item {
+      padding: 14px 0;
+      border-bottom: 1px solid #e5e7eb;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      background: #f0fdf4;
-      border: 2px solid #d1fae5;
-      border-radius: 10px;
+      color: #374151;
       font-size: 15px;
-      color: #065f46;
-      font-weight: 500;
+      line-height: 1.5;
     }
 
-    .scope-check {
-      font-size: 20px;
-      color: #10b981;
-      flex-shrink: 0;
+    .scope-item:hover {
+      background: #f9fafb;
+      padding-left: 12px;
+      padding-right: 12px;
+      margin-left: -12px;
+      margin-right: -12px;
+      border-radius: 6px;
     }
 
     /* Action Bar */
@@ -573,9 +576,9 @@
         <div id="scopeSection" style="display: none;">
           <div class="scope-section">
             <div class="scope-label">Scope Highlights</div>
-            <div class="scope-grid" id="scopeGrid">
+            <ul class="scope-list" id="scopeGrid">
               <!-- Dynamically populated -->
-            </div>
+            </ul>
           </div>
         </div>
 
@@ -676,8 +679,13 @@
       document.getElementById('budgetDisplay').textContent =
         `$${(data.budgetMin || 5000).toLocaleString()} - $${(data.budgetMax || 15000).toLocaleString()}`;
       document.getElementById('timelineDisplay').textContent = data.timeline || '2-4 weeks';
-      document.getElementById('categoryDisplay').textContent =
-        data.tradeType ? capitalize(data.tradeType) : 'General';
+
+      // Category - abbreviate "General Contractor" to "GC"
+      let displayCategory = data.tradeType ? capitalize(data.tradeType) : 'General';
+      if (displayCategory.toLowerCase() === 'general') {
+        displayCategory = 'GC';
+      }
+      document.getElementById('categoryDisplay').textContent = displayCategory;
 
       // Title
       document.getElementById('titleDisplay').textContent = data.title || 'Home Renovation Project';
@@ -691,14 +699,13 @@
       // Description
       document.getElementById('descriptionDisplay').textContent = data.description || '';
 
-      // Scope Items (if available)
+      // Scope Items (if available) - Professional invoice style
       if (data.scopeItems && data.scopeItems.length > 0) {
         const scopeGrid = document.getElementById('scopeGrid');
         scopeGrid.innerHTML = data.scopeItems.map(item => `
-          <div class="scope-item">
-            <span class="scope-check">✓</span>
-            <span>${escapeHtml(item)}</span>
-          </div>
+          <li class="scope-item">
+            <span>• ${escapeHtml(item)}</span>
+          </li>
         `).join('');
         document.getElementById('scopeSection').style.display = 'block';
       }
@@ -811,17 +818,28 @@
       btn.textContent = 'Posting...';
 
       try {
+        // Rebuild projectData from current UI state (in case user edited fields)
+        const currentProjectData = {
+          title: projectData.title,
+          description: projectData.description,
+          category: projectData.category || 'general',
+          budgetMin: projectData.budgetMin || 5000,
+          budgetMax: projectData.budgetMax || 15000,
+          urgency: projectData.urgency || 'flexible',
+          aiAnalysis: projectData.aiAnalysis || null
+        };
+
         // POST to create job
         const response = await window.authService.authenticatedFetch('/api/homeowner/job', {
           method: 'POST',
           body: JSON.stringify({
-            title: projectData.title,
-            description: projectData.description,
-            category: projectData.category || 'general',
-            budgetLow: projectData.budgetMin || 5000,
-            budgetHigh: projectData.budgetMax || 15000,
-            urgency: projectData.urgency || 'flexible',
-            ai_analysis: projectData.aiAnalysis || null
+            title: currentProjectData.title,
+            description: currentProjectData.description,
+            category: currentProjectData.category,
+            budgetLow: currentProjectData.budgetMin,
+            budgetHigh: currentProjectData.budgetMax,
+            urgency: currentProjectData.urgency,
+            ai_analysis: currentProjectData.aiAnalysis
           })
         });
 
