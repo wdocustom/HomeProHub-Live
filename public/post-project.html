@@ -266,6 +266,82 @@
       background: #e5e7eb;
     }
 
+    /* Designer Note Card */
+    .designer-note-card {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: start;
+      gap: 16px;
+    }
+
+    .designer-note-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .designer-note-content {
+      flex: 1;
+    }
+
+    .designer-note-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1e40af;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .designer-note-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #1e3a8a;
+      font-weight: 500;
+    }
+
+    /* Scope Items Section */
+    .scope-section {
+      margin-bottom: 32px;
+    }
+
+    .scope-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .scope-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .scope-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #f0fdf4;
+      border: 2px solid #d1fae5;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #065f46;
+      font-weight: 500;
+    }
+
+    .scope-check {
+      font-size: 20px;
+      color: #10b981;
+      flex-shrink: 0;
+    }
+
     /* Action Bar */
     .action-bar {
       position: fixed;
@@ -475,11 +551,32 @@
           <button class="edit-button" onclick="editField('title')">Edit</button>
         </div>
 
+        <!-- Designer Note (if available) -->
+        <div id="designerNoteSection" style="display: none;">
+          <div class="designer-note-card">
+            <span class="designer-note-icon">💡</span>
+            <div class="designer-note-content">
+              <div class="designer-note-label">Designer Note</div>
+              <div class="designer-note-text" id="designerNoteText"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Description -->
         <div class="detail-section editable-field" id="descriptionSection">
           <div class="detail-label">Description</div>
           <div class="detail-value description" id="descriptionDisplay"></div>
           <button class="edit-button" onclick="editField('description')">Edit</button>
+        </div>
+
+        <!-- Scope Items (if available) -->
+        <div id="scopeSection" style="display: none;">
+          <div class="scope-section">
+            <div class="scope-label">Scope Highlights</div>
+            <div class="scope-grid" id="scopeGrid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
         </div>
 
         <!-- AI Analysis (Collapsible) -->
@@ -585,8 +682,26 @@
       // Title
       document.getElementById('titleDisplay').textContent = data.title || 'Home Renovation Project';
 
+      // Designer Note (if available)
+      if (data.designerNote && data.designerNote.trim().length > 0) {
+        document.getElementById('designerNoteText').textContent = data.designerNote;
+        document.getElementById('designerNoteSection').style.display = 'block';
+      }
+
       // Description
       document.getElementById('descriptionDisplay').textContent = data.description || '';
+
+      // Scope Items (if available)
+      if (data.scopeItems && data.scopeItems.length > 0) {
+        const scopeGrid = document.getElementById('scopeGrid');
+        scopeGrid.innerHTML = data.scopeItems.map(item => `
+          <div class="scope-item">
+            <span class="scope-check">✓</span>
+            <span>${escapeHtml(item)}</span>
+          </div>
+        `).join('');
+        document.getElementById('scopeSection').style.display = 'block';
+      }
 
       // AI Analysis
       document.getElementById('aiAnalysisText').textContent = data.aiAnalysis || '';
