@@ -824,21 +824,34 @@
           throw new Error('Project data not found. Please refresh and try again.');
         }
 
-        // Build submission data from current projectData (which is updated on edits)
+        // Get current user for homeowner_email
+        const user = await window.authService.getCurrentUser();
+        if (!user || !user.email) {
+          throw new Error('User email not found. Please sign in again.');
+        }
+
+        // Get user profile for zip_code
+        const profile = await window.authService.getUserProfile();
+        const zipCode = profile?.zip_code || projectData.zipCode || '00000';
+
+        // Build submission data matching backend schema (/api/jobs)
         const submissionData = {
           title: projectData.title || 'Home Renovation Project',
           description: projectData.description || '',
           category: projectData.category || 'general',
-          budgetLow: projectData.budgetMin || 5000,
-          budgetHigh: projectData.budgetMax || 15000,
+          budget_low: projectData.budgetMin || 5000,  // snake_case for backend
+          budget_high: projectData.budgetMax || 15000, // snake_case for backend
+          zip_code: zipCode,  // REQUIRED by backend
           urgency: projectData.urgency || 'flexible',
+          homeowner_email: user.email,  // REQUIRED by backend
+          original_question: projectData.description,
           ai_analysis: projectData.aiAnalysis || null
         };
 
-        console.log('📤 Submitting project:', submissionData);
+        console.log('📤 Submitting project to /api/jobs:', submissionData);
 
-        // POST to create job
-        const response = await window.authService.authenticatedFetch('/api/homeowner/job', {
+        // POST to create job - CORRECTED ROUTE
+        const response = await window.authService.authenticatedFetch('/api/jobs', {
           method: 'POST',
           body: JSON.stringify(submissionData)
         });
