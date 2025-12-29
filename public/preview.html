@@ -3,94 +3,250 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Free AI Analysis – HomeProHub</title>
+  <title>Your Project Blueprint – HomeProHub</title>
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #1f2937;
       background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     }
 
-    .top-nav {
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 16px 0;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-
-    .nav-container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1f2937;
-      text-decoration: none;
-      letter-spacing: -0.02em;
-    }
-
-    .container {
+    .page-container {
       max-width: 900px;
-      margin: 40px auto;
-      padding: 0 24px;
+      margin: 0 auto;
+      padding: 24px 24px 120px;
     }
 
-    .signup-banner {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      color: white;
-      padding: 24px 32px;
-      border-radius: 12px;
-      text-align: center;
+    /* ============================================
+       THE BLUEPRINT - Premium Card Design
+       ============================================ */
+    .blueprint-card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
       margin-bottom: 32px;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      border: 1px solid #e5e7eb;
     }
 
-    .signup-banner h2 {
-      font-size: 24px;
+    .blueprint-header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+      padding: 40px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .blueprint-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .blueprint-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: white;
+      margin-bottom: 16px;
+    }
+
+    .blueprint-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      margin: 0;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .blueprint-body {
+      padding: 48px;
+    }
+
+    /* Hero Vision Statement */
+    .vision-section {
+      margin-bottom: 40px;
+      padding-bottom: 32px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .vision-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6b7280;
       font-weight: 700;
       margin-bottom: 12px;
     }
 
-    .signup-banner p {
-      font-size: 16px;
-      margin-bottom: 20px;
-      opacity: 0.95;
+    .vision-text {
+      font-size: 22px;
+      line-height: 1.6;
+      color: #111827;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-weight: 400;
     }
 
-    .btn-signup {
-      padding: 14px 32px;
-      background: white;
-      color: #2563eb;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    /* Data Grid - Budget + Timeline */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
     }
 
-    .btn-signup:hover {
+    .stat-card {
+      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+      border-color: #3b82f6;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
     }
 
+    .stat-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-value.budget {
+      color: #10b981;
+    }
+
+    /* Scope Checklist */
+    .scope-section {
+      margin-bottom: 40px;
+    }
+
+    .scope-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .scope-checklist {
+      display: grid;
+      gap: 12px;
+    }
+
+    .scope-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #f0fdf4;
+      border: 2px solid #d1fae5;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #065f46;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .scope-item:hover {
+      background: #d1fae5;
+      transform: translateX(4px);
+    }
+
+    .scope-check {
+      font-size: 20px;
+      color: #10b981;
+      flex-shrink: 0;
+    }
+
+    /* Sticky Action Bar */
+    .action-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 2px solid #e5e7eb;
+      padding: 20px 24px;
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
+      z-index: 100;
+    }
+
+    .action-bar-content {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .action-hint {
+      font-size: 14px;
+      color: #6b7280;
+      flex: 1;
+    }
+
+    .approve-button {
+      padding: 16px 48px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .approve-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+    }
+
+    .approve-button:active {
+      transform: translateY(0);
+    }
+
+    /* Loading State */
     .loading {
       text-align: center;
       padding: 60px 24px;
@@ -116,146 +272,47 @@
       font-weight: 500;
     }
 
-    .analysis-card {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 32px;
-      margin-bottom: 32px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-
-    .question-section {
-      margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 2px solid #e5e7eb;
-    }
-
-    .question-label {
-      font-size: 13px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .question-text {
-      font-size: 18px;
-      color: #111827;
-      line-height: 1.6;
-    }
-
-    .ai-response {
-      font-size: 16px;
-      line-height: 1.8;
-      color: #374151;
-    }
-
-    .ai-response h1,
-    .ai-response h2,
-    .ai-response h3 {
-      color: #111827;
-      margin-top: 24px;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-
-    .ai-response h1 { font-size: 24px; }
-    .ai-response h2 { font-size: 20px; }
-    .ai-response h3 { font-size: 18px; }
-
-    .ai-response ul, .ai-response ol {
-      margin-left: 24px;
-      margin-bottom: 16px;
-    }
-
-    .ai-response li {
-      margin-bottom: 8px;
-    }
-
-    .ai-response p {
-      margin-bottom: 16px;
-    }
-
+    /* Error State */
     .error {
       background: #fef2f2;
       border: 2px solid #fca5a5;
       color: #991b1b;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    }
-
-    .footer-cta {
-      background: #f9fafb;
-      border: 2px dashed #d1d5db;
-      border-radius: 12px;
       padding: 32px;
+      border-radius: 12px;
       text-align: center;
     }
 
-    .footer-cta h3 {
-      font-size: 20px;
-      color: #111827;
-      margin-bottom: 12px;
-    }
-
-    .footer-cta p {
-      font-size: 16px;
-      color: #6b7280;
-      margin-bottom: 20px;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-bottom: 24px;
-    }
-
-    .feature {
-      text-align: center;
-      font-size: 14px;
-      color: #374151;
-    }
-
-    .feature-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
+    /* Responsive */
     @media (max-width: 768px) {
-      .features-grid {
+      .blueprint-header {
+        padding: 32px 24px;
+      }
+
+      .blueprint-title {
+        font-size: 28px;
+      }
+
+      .blueprint-body {
+        padding: 32px 24px;
+      }
+
+      .stats-grid {
         grid-template-columns: 1fr;
       }
 
-      .signup-banner h2 {
-        font-size: 20px;
+      .action-bar-content {
+        flex-direction: column;
+        align-items: stretch;
       }
 
-      .analysis-card {
-        padding: 24px 20px;
+      .approve-button {
+        width: 100%;
       }
     }
   </style>
 </head>
 <body>
-
-  <nav class="top-nav">
-    <div class="nav-container">
-      <a href="/" class="logo">HomeProHub</a>
-    </div>
-  </nav>
-
-  <div class="container">
-    <!-- Signup Banner -->
-    <div class="signup-banner" id="signupBanner" style="display: none;">
-      <h2>Want to do more?</h2>
-      <p>Sign up free to post your project, get bids from contractors, and access your full AI analysis anytime.</p>
-      <button class="btn-signup" onclick="signUpNow()">Sign Up Free – No Credit Card</button>
-    </div>
-
+  <div class="page-container">
     <!-- Loading State -->
     <div id="loadingSection" class="loading">
       <div class="loading-spinner"></div>
@@ -268,46 +325,71 @@
       <p id="errorMessage">Please try again or contact support.</p>
     </div>
 
-    <!-- Analysis Result -->
-    <div id="analysisSection" style="display: none;">
-      <div class="analysis-card">
-        <div class="question-section">
-          <div class="question-label">Your Question</div>
-          <div class="question-text" id="questionDisplay"></div>
+    <!-- Blueprint Card -->
+    <div id="blueprintSection" style="display: none;">
+      <div class="blueprint-card">
+        <div class="blueprint-header">
+          <div class="blueprint-badge">AI-Powered Analysis</div>
+          <h1 class="blueprint-title">Your Project Blueprint</h1>
         </div>
 
-        <div class="ai-response" id="aiResponse"></div>
-      </div>
-
-      <!-- Footer CTA -->
-      <div class="footer-cta">
-        <h3>Ready to take the next step?</h3>
-        <p>Sign up free to connect with vetted contractors and get bids for your project.</p>
-
-        <div class="features-grid">
-          <div class="feature">
-            <div class="feature-icon">🔍</div>
-            <strong>Post Your Project</strong><br>
-            Free to post, no obligation
+        <div class="blueprint-body">
+          <!-- Vision Statement -->
+          <div class="vision-section">
+            <div class="vision-label">Your Vision</div>
+            <div class="vision-text" id="visionText">
+              <!-- Extracted project summary -->
+            </div>
           </div>
-          <div class="feature">
-            <div class="feature-icon">⭐</div>
-            <strong>Get Bids</strong><br>
-            From licensed contractors
+
+          <!-- Data Grid: Budget + Timeline -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-icon">💰</span>
+              <div class="stat-label">Estimated Fair Value</div>
+              <div class="stat-value budget" id="budgetValue">$XX - $YY</div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">⏱️</span>
+              <div class="stat-label">Typical Duration</div>
+              <div class="stat-value" id="timelineValue">X weeks</div>
+            </div>
           </div>
-          <div class="feature">
-            <div class="feature-icon">💬</div>
-            <strong>Compare & Choose</strong><br>
-            Review grades & pricing
+
+          <!-- Scope Checklist -->
+          <div class="scope-section">
+            <div class="scope-label">What's Included</div>
+            <div class="scope-checklist" id="scopeChecklist">
+              <!-- Dynamically populated -->
+            </div>
           </div>
         </div>
-
-        <button class="btn-signup" onclick="signUpNow()">Create Free Account</button>
       </div>
     </div>
   </div>
 
+  <!-- Sticky Action Bar -->
+  <div class="action-bar" id="actionBar" style="display: none;">
+    <div class="action-bar-content">
+      <div class="action-hint">
+        Ready to connect with licensed contractors?
+      </div>
+      <button class="approve-button" id="approveButton" onclick="approveAndPost()">
+        Approve This Plan & Get Bids
+      </button>
+    </div>
+  </div>
+
   <script>
+    // Global state
+    window.blueprintData = {
+      question: '',
+      answer: '',
+      parsed: {},
+      budgetLow: 0,
+      budgetHigh: 0
+    };
+
     // Get question from sessionStorage or URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const question = sessionStorage.getItem('pendingQuestion') || urlParams.get('q') || '';
@@ -320,9 +402,6 @@
 
     async function analyzeQuestion() {
       try {
-        // Display the question
-        document.getElementById('questionDisplay').textContent = question;
-
         // Call unauthenticated AI preview endpoint
         const response = await fetch('/api/ai/preview', {
           method: 'POST',
@@ -339,18 +418,25 @@
 
         const data = await response.json();
 
+        // Store globally
+        window.blueprintData.question = question;
+        window.blueprintData.answer = data.answer;
+
+        // Parse AI response
+        const parsed = parseAIResponse(data.answer);
+        window.blueprintData.parsed = parsed;
+
+        // Store budget values
+        window.blueprintData.budgetLow = parsed.budgetLow || 5000;
+        window.blueprintData.budgetHigh = parsed.budgetHigh || 15000;
+
+        // Render Blueprint UI
+        renderBlueprint(parsed);
+
         // Hide loading, show results
         document.getElementById('loadingSection').style.display = 'none';
-        document.getElementById('analysisSection').style.display = 'block';
-        document.getElementById('signupBanner').style.display = 'block';
-
-        // Format and display AI response
-        const formattedResponse = formatAIResponse(data.answer);
-        document.getElementById('aiResponse').innerHTML = formattedResponse;
-
-        // Store for signup redirect
-        sessionStorage.setItem('previewQuestion', question);
-        sessionStorage.setItem('previewAnswer', data.answer);
+        document.getElementById('blueprintSection').style.display = 'block';
+        document.getElementById('actionBar').style.display = 'block';
 
         // Clear pending question
         sessionStorage.removeItem('pendingQuestion');
@@ -361,24 +447,181 @@
       }
     }
 
-    function formatAIResponse(text) {
-      // Basic markdown-style formatting
-      let formatted = text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>');
+    /**
+     * Parse AI response for structured data (Budget, Timeline, Scope)
+     */
+    function parseAIResponse(text) {
+      const parsed = {
+        summary: '',
+        budgetLow: 0,
+        budgetHigh: 0,
+        timeline: '',
+        scopeItems: []
+      };
 
-      // Wrap in paragraph tags
-      formatted = '<p>' + formatted + '</p>';
+      // Extract first paragraph as summary
+      const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
+      if (paragraphs.length > 0) {
+        parsed.summary = paragraphs[0].replace(/\*\*/g, '').trim();
+      }
 
-      // Convert numbered lists
-      formatted = formatted.replace(/(\d+\.\s.*?)(<br>|<\/p>)/g, '<li>$1</li>');
+      // Extract budget with regex
+      const budgetPattern = /\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i;
+      const budgetMatch = text.match(budgetPattern);
+      if (budgetMatch) {
+        parsed.budgetLow = parseInt(budgetMatch[1].replace(/,/g, ''));
+        parsed.budgetHigh = parseInt(budgetMatch[2].replace(/,/g, ''));
+      }
 
-      // Convert bullet points
-      formatted = formatted.replace(/[-•]\s(.*?)(<br>|<\/p>)/g, '<li>$1</li>');
+      // Extract timeline
+      const timelinePattern = /(\d+[-–to]+\d+)\s*(days?|weeks?|months?)/i;
+      const timelineMatch = text.match(timelinePattern);
+      if (timelineMatch) {
+        parsed.timeline = timelineMatch[0];
+      }
 
-      return formatted;
+      // Extract scope items from bullet points or numbered lists
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        // Match bullets or numbers
+        const bulletMatch = line.match(/^[\s]*[-•*]\s*(.+)/);
+        const numberMatch = line.match(/^[\s]*\d+\.\s*(.+)/);
+
+        if (bulletMatch && bulletMatch[1].length < 100) {
+          parsed.scopeItems.push(bulletMatch[1].trim());
+        } else if (numberMatch && numberMatch[1].length < 100) {
+          parsed.scopeItems.push(numberMatch[1].trim());
+        }
+      });
+
+      // Limit scope items
+      parsed.scopeItems = parsed.scopeItems.slice(0, 8);
+
+      return parsed;
+    }
+
+    /**
+     * Render Blueprint UI from parsed data
+     */
+    function renderBlueprint(parsed) {
+      // Vision statement
+      document.getElementById('visionText').textContent =
+        parsed.summary || 'Your home improvement project is ready for professional bids.';
+
+      // Budget
+      const budgetLow = parsed.budgetLow || 5000;
+      const budgetHigh = parsed.budgetHigh || 15000;
+      document.getElementById('budgetValue').textContent =
+        `$${budgetLow.toLocaleString()} - $${budgetHigh.toLocaleString()}`;
+
+      // Timeline
+      document.getElementById('timelineValue').textContent =
+        parsed.timeline || '2-4 weeks';
+
+      // Scope checklist
+      const scopeContainer = document.getElementById('scopeChecklist');
+      if (parsed.scopeItems.length > 0) {
+        scopeContainer.innerHTML = parsed.scopeItems.map(item => `
+          <div class="scope-item">
+            <span class="scope-check">✓</span>
+            <span>${escapeHtml(item)}</span>
+          </div>
+        `).join('');
+      } else {
+        // Fallback if no scope items found
+        scopeContainer.innerHTML = `
+          <div class="scope-item">
+            <span class="scope-check">✓</span>
+            <span>Professional assessment and quote</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-check">✓</span>
+            <span>Licensed and vetted contractors</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-check">✓</span>
+            <span>Competitive pricing comparison</span>
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Approve and Post - NEW "Click-Click-Boom" Flow
+     * Saves hot_lead_draft to localStorage and redirects with intent
+     */
+    async function approveAndPost() {
+      // STEP 1: Extract structured data from Blueprint
+      const parsed = window.blueprintData.parsed;
+
+      let projectTitle = 'Home Renovation Project';
+      if (parsed.summary) {
+        const firstSentence = parsed.summary.split('.')[0].trim();
+        projectTitle = firstSentence.length > 60
+          ? firstSentence.substring(0, 57) + '...'
+          : firstSentence;
+      }
+
+      const tradeType = extractTradeType(window.blueprintData.answer);
+
+      // STEP 2: Create "hot_lead_draft" with all extracted data
+      const hotLeadDraft = {
+        title: projectTitle,
+        description: window.blueprintData.question,
+        aiAnalysis: window.blueprintData.answer,
+        budgetMin: parsed.budgetLow || window.blueprintData.budgetLow || 5000,
+        budgetMax: parsed.budgetHigh || window.blueprintData.budgetHigh || 15000,
+        timeline: parsed.timeline || '2-4 weeks',
+        tradeType: tradeType,
+        category: tradeType || 'general',
+        urgency: 'flexible',
+        scopeItems: parsed.scopeItems || [],
+        fromBlueprint: true,
+        timestamp: new Date().toISOString()
+      };
+
+      localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
+      console.log('✓ Saved hot_lead_draft:', hotLeadDraft);
+
+      // STEP 3: Check authentication and route accordingly
+      if (window.authService && window.authService.initialized) {
+        const user = await window.authService.getCurrentUser();
+
+        if (user) {
+          // Logged in - go directly to Review & Post page
+          window.location.href = 'post-project.html';
+          return;
+        }
+      }
+
+      // NOT logged in - redirect to signup WITH INTENT
+      sessionStorage.setItem('signup_role', 'homeowner');
+      window.location.href = 'signup.html?intent=post_project';
+    }
+
+    /**
+     * Extract trade type from AI text
+     */
+    function extractTradeType(aiText) {
+      const text = aiText.toLowerCase();
+      const tradeMap = {
+        'plumbing': ['plumber', 'plumbing', 'pipe', 'leak', 'faucet', 'water', 'drain'],
+        'electrical': ['electrician', 'electrical', 'wiring', 'outlet', 'circuit', 'breaker'],
+        'hvac': ['hvac', 'heating', 'cooling', 'furnace', 'ac', 'air conditioning'],
+        'roofing': ['roof', 'roofing', 'shingles', 'gutter'],
+        'painting': ['paint', 'painting', 'painter'],
+        'flooring': ['floor', 'flooring', 'carpet', 'hardwood', 'tile'],
+        'carpentry': ['carpenter', 'carpentry', 'wood', 'deck', 'fence'],
+        'landscaping': ['landscape', 'landscaping', 'yard', 'lawn', 'garden']
+      };
+
+      for (const [trade, keywords] of Object.entries(tradeMap)) {
+        if (keywords.some(keyword => text.includes(keyword))) {
+          return trade;
+        }
+      }
+
+      return 'general';
     }
 
     function showError(message) {
@@ -387,15 +630,16 @@
       document.getElementById('errorMessage').textContent = message;
     }
 
-    function signUpNow() {
-      // Store that user came from preview
-      sessionStorage.setItem('signup_role', 'homeowner');
-      sessionStorage.setItem('from_preview', 'true');
-
-      // Redirect to signup
-      window.location.href = 'signup.html';
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
   </script>
-
 </body>
 </html>
