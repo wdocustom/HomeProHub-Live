@@ -1077,10 +1077,10 @@
             ➕ Post New Project
           </button>
           <div class="filter-tabs">
-            <button class="filter-tab active" data-filter="all">All</button>
-            <button class="filter-tab" data-filter="active">Active</button>
+            <button class="filter-tab active" data-filter="active">Active Only</button>
             <button class="filter-tab" data-filter="in_progress">In Progress</button>
-            <button class="filter-tab" data-filter="completed">Completed</button>
+            <button class="filter-tab" data-filter="past">Past Projects</button>
+            <button class="filter-tab" data-filter="all">All</button>
           </div>
         </div>
       </div>
@@ -1248,7 +1248,7 @@
   <script>
     // State
     let allProjects = [];
-    let currentFilter = 'all';
+    let currentFilter = 'active'; // Default to showing only active projects (open + in_progress)
     let userEmail = '';
     let currentReviewProject = null;
     let selectedStarRating = 0;
@@ -1300,9 +1300,127 @@
     // Initialize
     checkAuth().then(isAuthenticated => {
       if (isAuthenticated) {
+        // CRITICAL: Check for draft_project from localStorage (deferred auth handoff)
+        checkAndCreateDraftProject();
         loadProjects();
       }
     });
+
+    /**
+     * Check for draft_project in localStorage (from Blueprint deferred auth flow)
+     * If found, auto-create the project and clear localStorage
+     */
+    async function checkAndCreateDraftProject() {
+      const draftProjectStr = localStorage.getItem('draft_project');
+
+      if (!draftProjectStr) {
+        return; // No draft project
+      }
+
+      try {
+        const draftProject = JSON.parse(draftProjectStr);
+        console.log('✓ Found draft project in localStorage:', draftProject);
+
+        // Show loading indicator
+        const container = document.getElementById('projectsContainer');
+        container.innerHTML = '<div class="loading">Creating your project from Blueprint...</div>';
+
+        // Create the project via API
+        const response = await window.authService.authenticatedFetch('/api/homeowner/job', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: draftProject.title || 'Home Renovation Project',
+            description: draftProject.description,
+            category: draftProject.category || 'general',
+            budgetLow: draftProject.budgetLow || 5000,
+            budgetHigh: draftProject.budgetHigh || 15000,
+            urgency: draftProject.urgency || 'flexible',
+            ai_analysis: draftProject.aiAnalysis || null
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create project');
+        }
+
+        const result = await response.json();
+        console.log('✓ Project created successfully:', result);
+
+        // CRITICAL: Clear localStorage to prevent duplicate creation
+        localStorage.removeItem('draft_project');
+
+        // Show success message
+        showSuccessMessage('Your project has been created! Contractors can now submit bids.');
+
+        // Projects will be loaded by the main loadProjects() call
+
+      } catch (error) {
+        console.error('Error creating draft project:', error);
+        // Clear localStorage even on error to prevent retry loops
+        localStorage.removeItem('draft_project');
+        showError('Failed to create project from Blueprint. Please try posting manually.');
+      }
+    }
+
+    function showSuccessMessage(message) {
+      // Create a temporary success banner
+      const banner = document.createElement('div');
+      banner.className = 'success-banner';
+      banner.style.cssText = `
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border: 2px solid #10b981;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        animation: slideIn 0.3s ease;
+      `;
+      banner.innerHTML = `
+        <span style="font-size: 32px;">✅</span>
+        <div>
+          <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #065f46;">Success!</h3>
+          <p style="margin: 0; font-size: 14px; color: #047857;">${message}</p>
+        </div>
+      `;
+
+      const container = document.querySelector('.dashboard-container');
+      container.insertBefore(banner, container.firstChild);
+
+      // Remove after 5 seconds
+      setTimeout(() => {
+        banner.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => banner.remove(), 300);
+      }, 5000);
+    }
+
+    function showError(message) {
+      const banner = document.createElement('div');
+      banner.className = 'error-banner';
+      banner.style.cssText = `
+        background: #fef2f2;
+        border: 2px solid #ef4444;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      `;
+      banner.innerHTML = `
+        <span style="font-size: 32px;">⚠️</span>
+        <div>
+          <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #991b1b;">Error</h3>
+          <p style="margin: 0; font-size: 14px; color: #b91c1c;">${message}</p>
+        </div>
+      `;
+
+      const container = document.querySelector('.dashboard-container');
+      container.insertBefore(banner, container.firstChild);
+
+      setTimeout(() => banner.remove(), 5000);
+    }
 
     // Load projects
     async function loadProjects() {
@@ -1368,8 +1486,13 @@
 
       let filteredProjects = allProjects;
       if (currentFilter === 'active') {
+        // Active: open OR in_progress
         filteredProjects = allProjects.filter(p => p.status === 'open' || p.status === 'in_progress');
+      } else if (currentFilter === 'past') {
+        // Past Projects: completed OR cancelled
+        filteredProjects = allProjects.filter(p => p.status === 'completed' || p.status === 'cancelled');
       } else if (currentFilter !== 'all') {
+        // Specific status filter
         filteredProjects = allProjects.filter(p => p.status === currentFilter);
       }
 
@@ -1400,6 +1523,13 @@
     function createProjectCard(project) {
       const card = document.createElement('div');
       card.className = 'project-card';
+
+      // Add opacity for past projects (completed/cancelled)
+      const isPastProject = project.status === 'completed' || project.status === 'cancelled';
+      if (isPastProject) {
+        card.style.opacity = '0.6';
+        card.style.filter = 'grayscale(0.3)';
+      }
 
       const cleanDescription = cleanAIArtifacts(project.description || '');
       const summary = cleanDescription.substring(0, 120) + (cleanDescription.length > 120 ? '...' : '');
