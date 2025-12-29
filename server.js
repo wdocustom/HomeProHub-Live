@@ -2902,7 +2902,8 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
       throw profileError;
     }
 
-    // Fetch recent active job postings
+    // Fetch recent open job postings
+    // NOTE: Database schema uses 'open' not 'active' - this was causing empty feeds!
     let query = db.supabase
       .from('job_postings')
       .select(`
@@ -2918,7 +2919,7 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
         posted_at,
         homeowner_email
       `)
-      .eq('status', 'active')
+      .eq('status', 'open')
       .order('posted_at', { ascending: false })
       .limit(parseInt(limit));
 
@@ -2927,10 +2928,9 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
       query = query.eq('category', profile.trade);
     }
 
-    // Filter by contractor's zip code if specified (location-based matching)
-    if (profile.zip_code) {
-      query = query.eq('zip_code', profile.zip_code);
-    }
+    // NOTE: Removed strict zip code filter - contractors can now see ALL open jobs
+    // This ensures the opportunity feed is never empty
+    // Future: Add proximity-based filtering with distance radius
 
     const { data: jobs, error: jobsError } = await query;
 
@@ -3977,9 +3977,41 @@ app.get("/api/contractors/directory", optionalAuth, async (req, res) => {
  * GET /api/contractors/:email/grade
  * Get detailed grade breakdown for a specific contractor
  */
+/**
+ * GET /api/contractor/my-grade
+ * Get grade for currently authenticated contractor (secure, no email encoding issues)
+ */
+app.get("/api/contractor/my-grade", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user.email;
+
+    const { data: grade, error } = await db.supabase.rpc('calculate_contractor_grade', {
+      p_contractor_email: contractorEmail
+    });
+
+    if (error) throw error;
+
+    console.log(`✓ Calculated grade for contractor: ${contractorEmail}`);
+    res.json(grade || { grade: 'N/A', score: 0 });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/my-grade:", err);
+    res.status(500).json({
+      error: "Failed to calculate contractor grade",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractors/:email/grade
+ * Get grade for a specific contractor (public endpoint with URL decoding fix)
+ */
 app.get("/api/contractors/:email/grade", async (req, res) => {
   try {
-    const { email } = req.params;
+    // Decode email from URL params to handle special characters
+    const email = decodeURIComponent(req.params.email);
 
     const { data: grade, error } = await db.supabase.rpc('calculate_contractor_grade', {
       p_contractor_email: email

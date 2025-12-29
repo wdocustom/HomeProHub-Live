@@ -1332,7 +1332,7 @@
     function updateStats() {
       document.getElementById('totalProjectsStat').textContent = allProjects.length;
 
-      const activeCount = allProjects.filter(p => p.status === 'active' || p.status === 'in_progress').length;
+      const activeCount = allProjects.filter(p => p.status === 'open' || p.status === 'in_progress').length;
       document.getElementById('activeProjectsStat').textContent = activeCount;
 
       const totalBids = allProjects.reduce((sum, p) => sum + (p.bids?.length || 0), 0);
@@ -1368,7 +1368,7 @@
 
       let filteredProjects = allProjects;
       if (currentFilter === 'active') {
-        filteredProjects = allProjects.filter(p => p.status === 'active' || p.status === 'in_progress');
+        filteredProjects = allProjects.filter(p => p.status === 'open' || p.status === 'in_progress');
       } else if (currentFilter !== 'all') {
         filteredProjects = allProjects.filter(p => p.status === currentFilter);
       }
@@ -1405,9 +1405,11 @@
       const summary = cleanDescription.substring(0, 120) + (cleanDescription.length > 120 ? '...' : '');
 
       const bidsCount = project.bids?.length || 0;
-      const statusClass = project.status === 'active' ? 'active' : project.status;
-      const statusText = project.status === 'active' ? 'Open' :
-                        project.status === 'in_progress' ? 'In Progress' : 'Completed';
+      const statusClass = project.status === 'open' ? 'active' : project.status;
+      const statusText = project.status === 'open' ? 'Open' :
+                        project.status === 'in_progress' ? 'In Progress' :
+                        project.status === 'completed' ? 'Completed' :
+                        project.status === 'cancelled' ? 'Cancelled' : project.status;
 
       card.innerHTML = `
         <div class="project-card-header">

@@ -392,9 +392,9 @@
           return;
         }
 
-        // Fetch grade data from API
+        // Fetch grade data from API using secure endpoint
         const response = await window.authService.authenticatedFetch(
-          `/api/contractors/${encodeURIComponent(user.email)}/grade`
+          `/api/contractor/my-grade`
         );
 
         if (!response.ok) {
