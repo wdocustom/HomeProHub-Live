@@ -1300,65 +1300,25 @@
     // Initialize
     checkAuth().then(isAuthenticated => {
       if (isAuthenticated) {
-        // CRITICAL: Check for draft_project from localStorage (deferred auth handoff)
-        checkAndCreateDraftProject();
+        // Check for success message from post-project page
+        checkForSuccessMessage();
         loadProjects();
       }
     });
 
     /**
-     * Check for draft_project in localStorage (from Blueprint deferred auth flow)
-     * If found, auto-create the project and clear localStorage
+     * Check for success message from post-project.html
+     * Shows banner if user just posted a project
      */
-    async function checkAndCreateDraftProject() {
-      const draftProjectStr = localStorage.getItem('draft_project');
+    function checkForSuccessMessage() {
+      const success = sessionStorage.getItem('project_posted_success');
 
-      if (!draftProjectStr) {
-        return; // No draft project
-      }
+      if (success) {
+        // Clear flag
+        sessionStorage.removeItem('project_posted_success');
 
-      try {
-        const draftProject = JSON.parse(draftProjectStr);
-        console.log('✓ Found draft project in localStorage:', draftProject);
-
-        // Show loading indicator
-        const container = document.getElementById('projectsContainer');
-        container.innerHTML = '<div class="loading">Creating your project from Blueprint...</div>';
-
-        // Create the project via API
-        const response = await window.authService.authenticatedFetch('/api/homeowner/job', {
-          method: 'POST',
-          body: JSON.stringify({
-            title: draftProject.title || 'Home Renovation Project',
-            description: draftProject.description,
-            category: draftProject.category || 'general',
-            budgetLow: draftProject.budgetLow || 5000,
-            budgetHigh: draftProject.budgetHigh || 15000,
-            urgency: draftProject.urgency || 'flexible',
-            ai_analysis: draftProject.aiAnalysis || null
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create project');
-        }
-
-        const result = await response.json();
-        console.log('✓ Project created successfully:', result);
-
-        // CRITICAL: Clear localStorage to prevent duplicate creation
-        localStorage.removeItem('draft_project');
-
-        // Show success message
-        showSuccessMessage('Your project has been created! Contractors can now submit bids.');
-
-        // Projects will be loaded by the main loadProjects() call
-
-      } catch (error) {
-        console.error('Error creating draft project:', error);
-        // Clear localStorage even on error to prevent retry loops
-        localStorage.removeItem('draft_project');
-        showError('Failed to create project from Blueprint. Please try posting manually.');
+        // Show success banner
+        showSuccessMessage('✨ Project posted successfully! Contractors can now submit bids.');
       }
     }
 
