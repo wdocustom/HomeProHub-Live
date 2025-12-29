@@ -1,7 +1,10 @@
 -- Create notifications table for contractor review reminders
 -- This triggers when a homeowner completes a project
 
-CREATE TABLE IF NOT EXISTS public.notifications (
+-- Drop table if exists (for clean migrations)
+DROP TABLE IF EXISTS public.notifications CASCADE;
+
+CREATE TABLE public.notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_email TEXT NOT NULL,
   type TEXT NOT NULL, -- 'review_request', 'bid_accepted', 'project_complete', etc.
@@ -41,7 +44,9 @@ USING (auth.uid()::text = user_email);
 GRANT SELECT, UPDATE ON notifications TO authenticated;
 
 -- Create contractor_homeowner_ratings table (contractors rating homeowners)
-CREATE TABLE IF NOT EXISTS public.contractor_homeowner_ratings (
+DROP TABLE IF EXISTS public.contractor_homeowner_ratings CASCADE;
+
+CREATE TABLE public.contractor_homeowner_ratings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id UUID NOT NULL REFERENCES job_postings(id) ON DELETE CASCADE,
   contractor_email TEXT NOT NULL,

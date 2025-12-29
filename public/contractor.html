@@ -82,6 +82,334 @@
       gap: 24px;
     }
 
+    /* Pending Reviews Section */
+    .pending-reviews-container {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .pending-reviews-container.hidden {
+      display: none;
+    }
+
+    .pending-reviews-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .pending-reviews-icon {
+      font-size: 32px;
+    }
+
+    .pending-reviews-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #92400e;
+      margin: 0;
+    }
+
+    .pending-reviews-subtitle {
+      font-size: 14px;
+      color: #78350f;
+      margin: 0;
+    }
+
+    .review-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .review-card {
+      background: white;
+      border: 1px solid #fbbf24;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .review-card-content {
+      flex: 1;
+    }
+
+    .review-card-project {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .review-card-message {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .review-card-incentive {
+      font-size: 13px;
+      color: #d97706;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .btn-rate {
+      padding: 10px 20px;
+      background: #f59e0b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-rate:hover {
+      background: #d97706;
+      transform: translateY(-1px);
+    }
+
+    /* Rating Modal */
+    .rating-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .rating-modal.show {
+      display: flex;
+    }
+
+    .rating-modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .rating-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: #9ca3af;
+      line-height: 1;
+    }
+
+    .rating-modal-close:hover {
+      color: #1f2937;
+    }
+
+    .rating-modal-header h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+    }
+
+    .rating-modal-header p {
+      font-size: 15px;
+      color: #6b7280;
+      margin: 0 0 24px 0;
+    }
+
+    .rating-incentive-banner {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rating-incentive-banner span {
+      font-size: 32px;
+    }
+
+    .rating-incentive-banner p {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      margin: 0;
+    }
+
+    .rating-stars {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+
+    .rating-star {
+      font-size: 48px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #d1d5db;
+    }
+
+    .rating-star:hover,
+    .rating-star.active {
+      color: #fbbf24;
+      transform: scale(1.1);
+    }
+
+    .rating-tags-section {
+      margin-bottom: 32px;
+    }
+
+    .rating-tags-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .rating-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .rating-tag {
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid;
+      user-select: none;
+    }
+
+    .rating-tag.positive {
+      border-color: #d1fae5;
+      background: #f0fdf4;
+      color: #065f46;
+    }
+
+    .rating-tag.positive:hover,
+    .rating-tag.positive.selected {
+      border-color: #10b981;
+      background: #d1fae5;
+    }
+
+    .rating-tag.negative {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .rating-tag.negative:hover,
+    .rating-tag.negative.selected {
+      border-color: #ef4444;
+      background: #fecaca;
+    }
+
+    .rating-textarea-section {
+      margin-bottom: 32px;
+    }
+
+    .rating-textarea-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .rating-textarea-section span {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .rating-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 2px solid #e5e7eb;
+      font-size: 14px;
+      resize: vertical;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .rating-textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .rating-modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary-modal {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: #f59e0b;
+      color: white;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary-modal:hover:not(:disabled) {
+      background: #d97706;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary-modal:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary-modal {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: white;
+      color: #6b7280;
+      border: 2px solid #e5e7eb;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary-modal:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
     /* Opportunity Feed (Main Column) */
     .feed-container {
       background: white;
@@ -342,8 +670,23 @@
 
     <!-- Main Dashboard Grid -->
     <div class="dashboard-grid">
-      <!-- Opportunity Feed (Main Column) -->
-      <div class="feed-container">
+      <!-- Pending Reviews Section -->
+      <div>
+        <div class="pending-reviews-container hidden" id="pending-reviews">
+          <div class="pending-reviews-header">
+            <span class="pending-reviews-icon">⭐</span>
+            <div>
+              <h2 class="pending-reviews-title">Pending Client Reviews</h2>
+              <p class="pending-reviews-subtitle">Rate your clients to unlock your reviews and earn +5 points!</p>
+            </div>
+          </div>
+          <div class="review-cards" id="reviewCards">
+            <!-- Cards will be populated here -->
+          </div>
+        </div>
+
+        <!-- Opportunity Feed (Main Column) -->
+        <div class="feed-container">
         <div class="feed-header">
           <h2 class="feed-title">Opportunity Feed</h2>
           <a href="contractor-dashboard.html" class="view-all-link">View All Jobs →</a>
@@ -356,6 +699,7 @@
             <div class="empty-state-text">Loading opportunities...</div>
             <div class="empty-state-subtext">Matching jobs to your profile</div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -544,12 +888,246 @@
       }
     }
 
+    // Load pending reviews
+    async function loadPendingReviews() {
+      try {
+        const response = await window.authService.authenticatedFetch('/api/contractor/pending-reviews');
+        if (!response.ok) {
+          console.error('Failed to load pending reviews');
+          return;
+        }
+
+        const data = await response.json();
+        const pendingReviews = data.pending_reviews || [];
+
+        if (pendingReviews.length === 0) {
+          document.getElementById('pending-reviews').classList.add('hidden');
+          return;
+        }
+
+        // Show the section
+        document.getElementById('pending-reviews').classList.remove('hidden');
+
+        // Render review cards
+        const reviewCards = document.getElementById('reviewCards');
+        reviewCards.innerHTML = pendingReviews.map(project => `
+          <div class="review-card">
+            <div class="review-card-content">
+              <div class="review-card-project">${escapeHtml(project.title)}</div>
+              <div class="review-card-message">Project completed. How was working with this homeowner?</div>
+              <div class="review-card-incentive">+5 Points for completing this review</div>
+            </div>
+            <button class="btn-rate" onclick="openRatingModal('${project.id}', '${escapeHtml(project.title)}')">
+              Rate Client
+            </button>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('Error loading pending reviews:', error);
+      }
+    }
+
+    // Rating modal state
+    let currentRatingProject = null;
+    let selectedRating = 0;
+    let selectedPositiveTags = [];
+    let selectedNegativeTags = [];
+
+    function openRatingModal(projectId, projectTitle) {
+      currentRatingProject = { id: projectId, title: projectTitle };
+      selectedRating = 0;
+      selectedPositiveTags = [];
+      selectedNegativeTags = [];
+
+      document.getElementById('ratingProjectTitle').textContent = projectTitle;
+      document.getElementById('ratingTextarea').value = '';
+      updateRatingStars();
+
+      // Clear tag selections
+      document.querySelectorAll('.rating-tag').forEach(tag => tag.classList.remove('selected'));
+
+      document.getElementById('ratingModal').classList.add('show');
+    }
+
+    function closeRatingModal() {
+      document.getElementById('ratingModal').classList.remove('show');
+      currentRatingProject = null;
+    }
+
+    function updateRatingStars() {
+      const stars = document.querySelectorAll('.rating-star');
+      stars.forEach((star, index) => {
+        if (index < selectedRating) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      });
+    }
+
+    async function submitRating() {
+      if (selectedRating === 0) {
+        alert('Please select a star rating');
+        return;
+      }
+
+      if (!currentRatingProject) {
+        alert('Error: Project information missing');
+        return;
+      }
+
+      const btn = document.getElementById('submitRatingBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const response = await window.authService.authenticatedFetch('/api/contractor/rate-homeowner', {
+          method: 'POST',
+          body: JSON.stringify({
+            projectId: currentRatingProject.id,
+            rating: selectedRating,
+            positiveTags: selectedPositiveTags,
+            negativeTags: selectedNegativeTags,
+            reviewText: document.getElementById('ratingTextarea').value.trim()
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to submit rating');
+        }
+
+        alert('Review submitted! +5 points added to your Contractor Grade. Thank you!');
+        closeRatingModal();
+        loadPendingReviews(); // Refresh the pending reviews
+
+      } catch (error) {
+        console.error('Error submitting rating:', error);
+        alert(`Failed to submit rating: ${error.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Submit Review';
+      }
+    }
+
+    // Utility function
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       loadOpportunities();
       loadStats();
+      loadPendingReviews();
+
+      // Rating star click handlers
+      document.querySelectorAll('.rating-star').forEach((star, index) => {
+        star.addEventListener('click', () => {
+          selectedRating = index + 1;
+          updateRatingStars();
+        });
+      });
+
+      // Positive tags click handlers
+      document.querySelectorAll('.rating-tag.positive').forEach(tag => {
+        tag.addEventListener('click', () => {
+          tag.classList.toggle('selected');
+          const tagText = tag.dataset.tag;
+          if (selectedPositiveTags.includes(tagText)) {
+            selectedPositiveTags = selectedPositiveTags.filter(t => t !== tagText);
+          } else {
+            selectedPositiveTags.push(tagText);
+          }
+        });
+      });
+
+      // Negative tags click handlers
+      document.querySelectorAll('.rating-tag.negative').forEach(tag => {
+        tag.addEventListener('click', () => {
+          tag.classList.toggle('selected');
+          const tagText = tag.dataset.tag;
+          if (selectedNegativeTags.includes(tagText)) {
+            selectedNegativeTags = selectedNegativeTags.filter(t => t !== tagText);
+          } else {
+            selectedNegativeTags.push(tagText);
+          }
+        });
+      });
     });
   </script>
+
+  <!-- Rating Modal -->
+  <div class="rating-modal" id="ratingModal">
+    <div class="rating-modal-content">
+      <button class="rating-modal-close" onclick="closeRatingModal()">×</button>
+
+      <div class="rating-modal-header">
+        <h2>How was working with this client?</h2>
+        <p id="ratingProjectTitle">Project Title</p>
+      </div>
+
+      <div class="rating-incentive-banner">
+        <span>🎯</span>
+        <p>Complete this review to earn +5 Points for your Contractor Grade!</p>
+      </div>
+
+      <!-- Star Rating -->
+      <div class="rating-stars">
+        <span class="rating-star" data-rating="1">★</span>
+        <span class="rating-star" data-rating="2">★</span>
+        <span class="rating-star" data-rating="3">★</span>
+        <span class="rating-star" data-rating="4">★</span>
+        <span class="rating-star" data-rating="5">★</span>
+      </div>
+
+      <!-- Positive Tags -->
+      <div class="rating-tags-section">
+        <h3>What went well? (Tap all that apply)</h3>
+        <div class="rating-tags">
+          <div class="rating-tag positive" data-tag="Fast Payment">💰 Fast Payment</div>
+          <div class="rating-tag positive" data-tag="Clear Communication">💬 Clear Communication</div>
+          <div class="rating-tag positive" data-tag="Realistic Expectations">👍 Realistic Expectations</div>
+          <div class="rating-tag positive" data-tag="Respectful">⭐ Respectful</div>
+          <div class="rating-tag positive" data-tag="Flexible">🤝 Flexible</div>
+          <div class="rating-tag positive" data-tag="Prepared">📋 Prepared</div>
+        </div>
+      </div>
+
+      <!-- Negative Tags -->
+      <div class="rating-tags-section">
+        <h3>Any issues? (Tap all that apply)</h3>
+        <div class="rating-tags">
+          <div class="rating-tag negative" data-tag="Slow Payment">💸 Slow Payment</div>
+          <div class="rating-tag negative" data-tag="Poor Communication">📵 Poor Communication</div>
+          <div class="rating-tag negative" data-tag="Unrealistic">⚠️ Unrealistic</div>
+          <div class="rating-tag negative" data-tag="Rude">😤 Rude</div>
+          <div class="rating-tag negative" data-tag="Indecisive">🤔 Indecisive</div>
+          <div class="rating-tag negative" data-tag="Unprepared">📝 Unprepared</div>
+        </div>
+      </div>
+
+      <!-- Optional Text -->
+      <div class="rating-textarea-section">
+        <h3>Any specific details? <span>(Optional)</span></h3>
+        <textarea class="rating-textarea" id="ratingTextarea" placeholder="Share any additional thoughts about working with this homeowner..."></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="rating-modal-actions">
+        <button class="btn-secondary-modal" onclick="closeRatingModal()">Cancel</button>
+        <button class="btn-primary-modal" id="submitRatingBtn" onclick="submitRating()">Submit Review</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Global Footer -->
   <script src="components/footer.js"></script>
