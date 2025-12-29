@@ -458,14 +458,14 @@
             <div class="job-header">
               <div>
                 <div class="job-title">${escapeHtml(job.title || 'Untitled Job')}</div>
-                <div class="job-location">📍 ${escapeHtml(job.city || 'Location not specified')}, ${escapeHtml(job.state || '')}</div>
+                <div class="job-location">📍 ${escapeHtml(job.address || 'Location not specified')}</div>
               </div>
               <span class="urgency-badge ${getUrgencyClass(job.urgency)}">${job.urgency || 'Normal'}</span>
             </div>
             <div class="job-meta">
               <span>🏠 ${escapeHtml(job.homeowner_grade || 'N/A')}</span>
               <span>💰 ${job.budget_low && job.budget_high ? `$${job.budget_low}-$${job.budget_high}` : 'Budget TBD'}</span>
-              <span>📅 ${formatDate(job.created_at)}</span>
+              <span>📅 ${formatDate(job.posted_at)}</span>
             </div>
           </div>
         `).join('');

@@ -2913,14 +2913,13 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
         urgency,
         budget_low,
         budget_high,
-        city,
-        state,
+        address,
         zip_code,
-        created_at,
+        posted_at,
         homeowner_email
       `)
       .eq('status', 'active')
-      .order('created_at', { ascending: false })
+      .order('posted_at', { ascending: false })
       .limit(parseInt(limit));
 
     // Filter by contractor's trade if specified
@@ -2928,9 +2927,9 @@ app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), a
       query = query.eq('category', profile.trade);
     }
 
-    // Filter by contractor's state if specified
-    if (profile.state) {
-      query = query.eq('state', profile.state);
+    // Filter by contractor's zip code if specified (location-based matching)
+    if (profile.zip_code) {
+      query = query.eq('zip_code', profile.zip_code);
     }
 
     const { data: jobs, error: jobsError } = await query;
