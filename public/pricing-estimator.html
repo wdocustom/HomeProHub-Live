@@ -251,7 +251,21 @@ const STORAGE_KEYS = {
         const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
         html += '<tr style="background: ' + bg + '; border-bottom: 1px solid #e5e7eb;">';
         html += '<td style="padding: 12px;"><strong>' + item.item + '</strong>';
+
+        // Add lightbulb icon if local_insight exists
+        if (item.local_insight && item.local_insight.message) {
+          html += ' <span class="insight-icon" style="cursor: help; font-size: 16px; color: #f59e0b;" title="' + item.local_insight.message.replace(/"/g, '&quot;') + '">💡</span>';
+        }
+
         if (item.notes) html += '<br><span style="font-size: 12px; color: #6b7280;">' + item.notes + '</span>';
+
+        // Display local insight message in a subtle box below the item
+        if (item.local_insight && item.local_insight.message) {
+          html += '<br><div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px 10px; margin-top: 8px; border-radius: 4px; font-size: 12px; color: #92400e; font-style: italic;">';
+          html += '💡 ' + item.local_insight.message;
+          html += '</div>';
+        }
+
         html += '</td>';
         html += '<td style="padding: 12px; text-align: right; white-space: nowrap;">$' + (item.low || 0).toLocaleString() + ' - $' + (item.high || 0).toLocaleString() + '</td>';
         html += '</tr>';
@@ -311,6 +325,14 @@ const STORAGE_KEYS = {
         lineItemsHtml += '<tr style="background:' + bg + ';">';
         lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;">' + item.item;
         if (item.notes) lineItemsHtml += '<br><span style="font-size:11px;color:#6b7280;">' + item.notes + '</span>';
+
+        // Include local insights in PDF
+        if (item.local_insight && item.local_insight.message) {
+          lineItemsHtml += '<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">';
+          lineItemsHtml += '💡 ' + item.local_insight.message;
+          lineItemsHtml += '</div>';
+        }
+
         lineItemsHtml += '</td>';
         lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$' + (item.low || 0).toLocaleString() + '</td>';
         lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$' + (item.high || 0).toLocaleString() + '</td>';

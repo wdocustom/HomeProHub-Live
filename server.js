@@ -813,19 +813,39 @@ app.post("/ask", async (req, res) => {
     // Build content blocks for Claude
     const contentBlocks = [];
 
-    // Smart prompt that detects intent and responds appropriately
+    // Smart prompt that detects intent and responds appropriately with local design insights
     contentBlocks.push({
       type: "text",
-      text: `You are an experienced home contractor and home inspector helping homeowners.
+      text: `You are an experienced home contractor and home inspector helping homeowners with intelligent, location-aware guidance.
 
 The homeowner said:
 ${sanitizedQuestion}
 
-FIRST, determine the intent:
+--- STEP 1: IDENTIFY INTENT TYPE ---
+Determine the intent:
 - Is this about an EXISTING PROBLEM/ISSUE that needs fixing? (leak, crack, noise, smell, malfunction, damage, etc.)
 - OR is this about a NEW PROJECT/REMODEL they want to do? (addition, remodel, renovation, upgrade, installation of something new, etc.)
 
 INTENT TYPE: [Write either "ISSUE" or "PROJECT"]
+
+--- STEP 2: LOCAL DESIGN INSIGHTS (PROJECT ONLY) ---
+IF INTENT TYPE = "ISSUE":
+  - SKIP any design trend or material sourcing suggestions
+  - Focus purely on repair, diagnosis, and functional fixes
+  - Provide cost estimates for standard repairs only
+  - Keep response focused on solving the immediate problem
+
+IF INTENT TYPE = "PROJECT":
+  - When discussing materials (flooring, countertops, cabinets, fixtures, finishes), consider local design trends
+  - If discussing mid to high-end finishes, include modest local insights
+  - Guidelines for local insights:
+    * Tone: Helpful, modest, consultative (e.g., "Design Note:" or "Local tip:")
+    * Keep suggestions under 2 sentences per material
+    * Only add where genuinely helpful - not for every item
+    * Match suggestions to the homeowner's described style/budget level
+  - Example: "Design Note: In your area, many homeowners are choosing large-format tiles (24x48) to create a modern, low-maintenance look with fewer grout lines."
+
+--- RESPONSE STRUCTURE ---
 
 If ISSUE (something broken/wrong that needs repair):
 Respond using this structure:
@@ -842,7 +862,7 @@ If PROJECT (new work they want done):
 Respond using this structure:
 1. Project Summary: [2-3 sentence overview of what they're asking for]
 2. Estimated Budget Range: $[LOW] - $[HIGH] (realistic range for this type of project in their area)
-3. Scope Considerations: [Bullet points of what this typically includes]
+3. Scope Considerations: [Bullet points of what this typically includes. Include modest local design insights for finish materials where helpful]
 4. Permits & Requirements: [What permits or approvals they'll likely need]
 5. Timeline Estimate: [Typical duration for this project]
 6. Contractor Type Needed: [What type of contractor - general contractor, specialist, etc.]
@@ -978,21 +998,41 @@ app.post("/api/ai/preview", async (req, res) => {
       });
     }
 
-    // Build content blocks for Claude (same as /ask endpoint)
+    // Build content blocks for Claude (same as /ask endpoint with local insights)
     const contentBlocks = [];
 
     contentBlocks.push({
       type: "text",
-      text: `You are an experienced home contractor and home inspector helping homeowners.
+      text: `You are an experienced home contractor and home inspector helping homeowners with intelligent, location-aware guidance.
 
 The homeowner said:
 ${sanitizedQuestion}
 
-FIRST, determine the intent:
+--- STEP 1: IDENTIFY INTENT TYPE ---
+Determine the intent:
 - Is this about an EXISTING PROBLEM/ISSUE that needs fixing? (leak, crack, noise, smell, malfunction, damage, etc.)
 - OR is this about a NEW PROJECT/REMODEL they want to do? (addition, remodel, renovation, upgrade, installation of something new, etc.)
 
 INTENT TYPE: [Write either "ISSUE" or "PROJECT"]
+
+--- STEP 2: LOCAL DESIGN INSIGHTS (PROJECT ONLY) ---
+IF INTENT TYPE = "ISSUE":
+  - SKIP any design trend or material sourcing suggestions
+  - Focus purely on repair, diagnosis, and functional fixes
+  - Provide cost estimates for standard repairs only
+  - Keep response focused on solving the immediate problem
+
+IF INTENT TYPE = "PROJECT":
+  - When discussing materials (flooring, countertops, cabinets, fixtures, finishes), consider local design trends
+  - If discussing mid to high-end finishes, include modest local insights
+  - Guidelines for local insights:
+    * Tone: Helpful, modest, consultative (e.g., "Design Note:" or "Local tip:")
+    * Keep suggestions under 2 sentences per material
+    * Only add where genuinely helpful - not for every item
+    * Match suggestions to the homeowner's described style/budget level
+  - Example: "Design Note: In your area, many homeowners are choosing large-format tiles (24x48) to create a modern, low-maintenance look with fewer grout lines."
+
+--- RESPONSE STRUCTURE ---
 
 If ISSUE (something broken/wrong that needs repair):
 Respond using this structure:
@@ -1009,7 +1049,7 @@ If PROJECT (new work they want done):
 Respond using this structure:
 1. Project Summary: [2-3 sentence overview of what they're asking for]
 2. Estimated Budget Range: $[LOW] - $[HIGH] (realistic range for this type of project in their area)
-3. Scope Considerations: [Bullet points of what this typically includes]
+3. Scope Considerations: [Bullet points of what this typically includes. Include modest local design insights for finish materials where helpful]
 4. Permits & Requirements: [What permits or approvals they'll likely need]
 5. Timeline Estimate: [Typical duration for this project]
 6. Contractor Type Needed: [What type of contractor - general contractor, specialist, etc.]
@@ -1183,8 +1223,8 @@ app.post("/contractor-ask", async (req, res) => {
 
     if (selectedFocus === "pricing") {
       // For pricing, return ONLY JSON
-      maxTokens = 1500;
-      contentText = `You are an experienced estimating expert for contractors. Analyze this job and create a detailed estimate.
+      maxTokens = 1800;
+      contentText = `You are an experienced estimating expert for contractors. Analyze this job and create a detailed estimate with intelligent local design insights.
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
@@ -1201,13 +1241,52 @@ CRITICAL: Your response MUST be ONLY a valid JSON object. No explanatory text be
 
 If ZIP code is missing, return: {"error": "ZIP code is required for pricing estimates"}
 
+--- STEP 1: IDENTIFY INTENT TYPE ---
+Analyze the job description and determine:
+- Is this a PROJECT (Remodel, Addition, New Construction, Upgrade)?
+- OR is this an ISSUE (Repair, Emergency Fix, Leak, Damage)?
+
+Set "intent_type" to either "PROJECT" or "ISSUE"
+
+--- STEP 2: LOCAL DESIGN INSIGHTS (PROJECT ONLY) ---
+IF intent_type == "ISSUE":
+  - SKIP local insights entirely
+  - Focus on functional repair costs only
+  - Do NOT add any local_insight fields
+
+IF intent_type == "PROJECT":
+  - For material line items (flooring, countertops, cabinets, fixtures, etc.), analyze local design trends
+  - If the SCOPE LEVEL suggests mid/high-end finishes, add a "local_insight" object
+  - Guidelines for local_insight:
+    * Tone: Modest, helpful, consultative (e.g., "Design Note:" or "Local sourcing tip:")
+    * Geography: Reference the specific city/region from ZIP ${zip || 'unknown'}
+    * Match finish level: Standard vs High-End based on SCOPE LEVEL
+    * Mention real local distributors if known, or describe vendor type (e.g., "local tile showroom")
+    * Keep messages under 2 sentences
+    * Only add if genuinely helpful - not every item needs one
+
 Otherwise, return a JSON object with this EXACT structure:
 {
   "status": "ok",
+  "intent_type": "PROJECT" or "ISSUE",
   "project_title": "Brief descriptive title",
   "line_items": [
-    {"item": "Labor - [Trade Name]", "low": 0, "high": 0, "notes": "Brief description"},
-    {"item": "Materials - [Material Type]", "low": 0, "high": 0, "notes": "Brief description"}
+    {
+      "item": "Labor - [Trade Name]",
+      "low": 0,
+      "high": 0,
+      "notes": "Brief description",
+      "local_insight": {
+        "type": "design_trend" or "sourcing_tip",
+        "message": "Modest local design note or sourcing tip"
+      }
+    },
+    {
+      "item": "Materials - [Material Type]",
+      "low": 0,
+      "high": 0,
+      "notes": "Brief description"
+    }
   ],
   "subtotal_low": 0,
   "subtotal_high": 0,
@@ -1222,7 +1301,12 @@ Otherwise, return a JSON object with this EXACT structure:
   ]
 }
 
-IMPORTANT CALCULATION RULES:
+IMPORTANT NOTES:
+- The "local_insight" field is OPTIONAL and should only appear on material items for PROJECTS
+- If intent_type is "ISSUE", NO line items should have local_insight
+- Preserve ALL existing calculation logic exactly as before
+
+CALCULATION RULES (UNCHANGED):
 1. Use the provided labor rates and multiply by regional multiplier ${ragData.regionalMultiplier}
 2. Break down labor by trade (e.g., Electrician, Plumber, Carpenter)
 3. Include material costs as separate line items
