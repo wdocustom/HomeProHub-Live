@@ -892,6 +892,11 @@
         // CRITICAL: Clear hot_lead_draft from localStorage
         localStorage.removeItem('hot_lead_draft');
 
+        // CRITICAL: Clear Hot Potato cookies (only after successful post)
+        deleteCookie('project_draft');
+        deleteCookie('post_intent');
+        console.log('✓ Cleared project cookies after successful post');
+
         // Redirect to dashboard with success message
         sessionStorage.setItem('project_posted_success', 'true');
         window.location.href = 'homeowner-dashboard.html';
@@ -923,6 +928,14 @@
 
     function capitalize(str) {
       return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    /**
+     * Delete cookie by name
+     * Sets cookie with past expiration date to remove it
+     */
+    function deleteCookie(name) {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     }
   </script>
 </body>

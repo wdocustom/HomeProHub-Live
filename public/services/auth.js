@@ -40,9 +40,14 @@ class AuthService {
       }
 
       // Listen for auth state changes
-      this.supabase.auth.onAuthStateChange((event, session) => {
+      this.supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('Auth state changed:', event);
         this.currentUser = session?.user || null;
+
+        // MAGIC LINK LOGIC: Handle sign in (email verification or manual login)
+        if (event === 'SIGNED_IN') {
+          await this.handleSignIn();
+        }
 
         // Handle sign out
         if (event === 'SIGNED_OUT') {
@@ -327,6 +332,55 @@ class AuthService {
     } catch (error) {
       console.error('Create profile error:', error);
     }
+  }
+
+  /**
+   * Handle sign in - "Magic Link" logic for email verification
+   * Automatically redirects to draft project if available
+   */
+  async handleSignIn() {
+    console.log('🔐 User signed in - checking for draft project...');
+
+    // Check for the "Hot Potato" Cookie
+    const projectDraftCookie = this.getCookie('project_draft');
+    const postIntentCookie = this.getCookie('post_intent');
+
+    if (projectDraftCookie && postIntentCookie === 'post_project') {
+      console.log('✓ Found draft project cookie - redirecting to post-project.html');
+
+      // Restore to localStorage for post-project.html to read
+      localStorage.setItem('hot_lead_draft', decodeURIComponent(projectDraftCookie));
+
+      // Redirect to post-project page
+      window.location.href = 'post-project.html';
+      return;
+    }
+
+    // No draft project - redirect to appropriate dashboard based on role
+    const profile = await this.getUserProfile();
+    const role = profile?.role || 'homeowner';
+
+    console.log(`No draft project found - redirecting to ${role} dashboard`);
+
+    if (role === 'contractor') {
+      window.location.href = 'contractor.html';
+    } else {
+      window.location.href = 'home.html';
+    }
+  }
+
+  /**
+   * Get cookie value by name
+   */
+  getCookie(name) {
+    const cookies = document.cookie.split(';');
+    const cookie = cookies.find(c => c.trim().startsWith(`${name}=`));
+
+    if (cookie) {
+      return cookie.split('=')[1];
+    }
+
+    return null;
   }
 
   /**
