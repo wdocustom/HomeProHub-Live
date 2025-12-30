@@ -897,6 +897,17 @@
         deleteCookie('post_intent');
         console.log('✓ Cleared project cookies after successful post');
 
+        // TASK 3: CLEANUP - Clear pending_project_draft from user metadata
+        try {
+          await window.authService.authenticatedFetch('/api/user/clear-pending-draft', {
+            method: 'POST'
+          });
+          console.log('✓ Cleared pending draft from user metadata');
+        } catch (metaError) {
+          // Non-critical - user can still proceed even if metadata cleanup fails
+          console.warn('Could not clear user metadata (non-critical):', metaError);
+        }
+
         // Redirect to dashboard with success message
         sessionStorage.setItem('project_posted_success', 'true');
         window.location.href = 'homeowner-dashboard.html';

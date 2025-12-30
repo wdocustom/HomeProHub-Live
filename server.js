@@ -266,7 +266,7 @@ app.get('/api/config', (req, res) => {
  */
 app.post('/api/auth/signup', async (req, res) => {
   try {
-    const { email, password, role, ...userData } = req.body;
+    const { email, password, role, pending_project_draft, ...userData } = req.body;
 
     // Validate required fields
     if (!email || !password || !role) {
@@ -284,15 +284,25 @@ app.post('/api/auth/signup', async (req, res) => {
       });
     }
 
-    // Create user in Supabase Auth
+    // Prepare user metadata
+    const userMetadata = {
+      role: role,
+      ...userData
+    };
+
+    // EMBEDDED METADATA STRATEGY: Include pending project draft in user metadata
+    // This ensures the draft is saved in the cloud and accessible across devices
+    if (pending_project_draft) {
+      userMetadata.pending_project_draft = pending_project_draft;
+      console.log('✓ Embedding project draft in user metadata for cross-device access');
+    }
+
+    // Create user in Supabase Auth with metadata
     const { data, error } = await supabaseAuth.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          role: role,
-          ...userData
-        }
+        data: userMetadata
       }
     });
 
@@ -2334,6 +2344,74 @@ app.delete("/api/user/delete", requireAuth, async (req, res) => {
     res.status(500).json({
       error: "Failed to delete account. Please contact support.",
       code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/user/clear-pending-draft
+ * Clear pending_project_draft from user metadata after successful project post
+ * TASK 3: CLEANUP - Ensures draft doesn't persist in cloud after use
+ */
+app.post("/api/user/clear-pending-draft", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    console.log(`🧹 Clearing pending draft for user: ${req.user.email}`);
+
+    // Use Supabase Admin API to update user metadata
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!serviceRoleKey) {
+      console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY not set - cannot clear user metadata');
+      return res.status(200).json({
+        success: true,
+        message: 'Service role key not configured - metadata cleanup skipped (non-critical)'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL || '',
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
+    // Update user metadata to clear pending_project_draft
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      {
+        user_metadata: {
+          pending_project_draft: null
+        }
+      }
+    );
+
+    if (error) {
+      console.error('❌ Error clearing user metadata:', error);
+      return res.status(500).json({
+        error: 'Failed to clear metadata',
+        message: error.message
+      });
+    }
+
+    console.log('✅ Cleared pending_project_draft from user metadata');
+
+    res.json({
+      success: true,
+      message: 'Pending draft cleared from user metadata'
+    });
+
+  } catch (err) {
+    console.error("❌ Error clearing pending draft:", err);
+    res.status(500).json({
+      error: "Failed to clear pending draft",
       message: err.message
     });
   }

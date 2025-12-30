@@ -85,7 +85,9 @@ class AuthService {
           address: userData.address,
           city: userData.city,
           state: userData.state,
-          zip_code: userData.zip_code
+          zip_code: userData.zip_code,
+          // EMBEDDED METADATA STRATEGY: Pass draft project data to be saved in user metadata
+          pending_project_draft: userData.pending_project_draft || null
         })
       });
 
@@ -362,19 +364,42 @@ class AuthService {
    * 1. "Already Verified" User: otp_expired errors handled gracefully
    * 2. "Magic Carpet" User: Redirect to draft project if exists
    * 3. "Loop of Death" Prevention: Don't redirect if already on destination page
+   *
+   * TASK 2: EMBEDDED METADATA STRATEGY
+   * Now checks user metadata for pending draft in addition to cookies (cross-device support)
    */
   async handleSignInSmart() {
-    const draftProject = this.getCookie('project_draft');
+    // 1. Check Cookies (Legacy/Fallback)
+    let draftProject = this.getCookie('project_draft');
+
+    // 2. THE FIX: Check User Metadata (Cross-Device Cloud Save)
+    const user = await this.getCurrentUser();
+    const metaDraft = user?.user_metadata?.pending_project_draft;
+
+    // If we found a draft in the cloud but not locally, use the cloud one
+    if (!draftProject && metaDraft) {
+      console.log("✓ Found cloud draft! Restoring from user metadata...");
+      // Re-save to cookie/localStorage so post-project.html can read it easily
+      this.setCookie('project_draft', JSON.stringify(metaDraft), 1);
+      localStorage.setItem('hot_lead_draft', JSON.stringify(metaDraft));
+      draftProject = metaDraft;
+    }
+
     // NORMALIZATION: Remove trailing slashes to prevent matching errors
     const currentPath = window.location.pathname.replace(/\/$/, "");
 
+    // 3. Execute the Magic Carpet Redirect
     if (draftProject) {
       // Scenario A: User has a draft (The Magic Carpet)
       // Fix: Only redirect if NOT already on the post-project page
       if (!currentPath.includes('post-project')) {
         console.log("✓ Draft found! Redirecting to project creation...");
-        // Restore to localStorage for post-project.html to read
-        localStorage.setItem('hot_lead_draft', decodeURIComponent(draftProject));
+        // Ensure draft is in localStorage for post-project.html to read
+        if (typeof draftProject === 'string') {
+          localStorage.setItem('hot_lead_draft', draftProject);
+        } else {
+          localStorage.setItem('hot_lead_draft', JSON.stringify(draftProject));
+        }
         window.location.href = '/post-project.html';
       }
     } else {
@@ -452,6 +477,16 @@ class AuthService {
     }
 
     return null;
+  }
+
+  /**
+   * Set cookie with expiration in days
+   */
+  setCookie(name, value, days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    const expires = `expires=${date.toUTCString()}`;
+    document.cookie = `${name}=${value}; ${expires}; path=/`;
   }
 
   /**

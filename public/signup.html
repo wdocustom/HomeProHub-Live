@@ -504,6 +504,19 @@
           profileData.years_experience = document.getElementById('yearsExperience').value;
         }
 
+        // TASK 1: EMBEDDED METADATA STRATEGY
+        // Retrieve the draft project from localStorage and inject it into user metadata
+        const draftRaw = localStorage.getItem('hot_lead_draft');
+        if (draftRaw) {
+          try {
+            const draftData = JSON.parse(draftRaw);
+            profileData.pending_project_draft = draftData;
+            console.log('✓ Found project draft - embedding in user metadata for cross-device access');
+          } catch (err) {
+            console.warn('Failed to parse draft project data:', err);
+          }
+        }
+
         const result = await window.authService.signUp(email, password, profileData);
 
         if (result.success) {
