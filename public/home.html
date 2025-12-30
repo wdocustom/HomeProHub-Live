@@ -686,8 +686,385 @@
     // No need for redundant inline auth check that causes race conditions
   </script>
 
-  <!-- AI Assistant Component -->
-  <script src="components/ai-assistant.js"></script>
+  <!-- Blueprint Generation Logic (same as preview.html) -->
+  <script>
+    (function() {
+      'use strict';
+
+      // Global Blueprint data store
+      window.blueprintData = {
+        question: '',
+        answer: '',
+        parsed: {},
+        budgetLow: 5000,
+        budgetHigh: 15000
+      };
+
+      // DOM elements
+      const askBtn = document.getElementById('askAiBtn');
+      const homeIssueInput = document.getElementById('homeIssueInput');
+      const aiStatus = document.getElementById('aiStatus');
+      const aiResponseSection = document.getElementById('aiResponseSection');
+      const aiResponseContent = document.getElementById('aiResponseContent');
+      const postProjectBtn = document.getElementById('postProjectBtn');
+
+      // Ask AI Handler - Blueprint Generation
+      if (askBtn) {
+        askBtn.addEventListener('click', async () => {
+          const question = homeIssueInput.value.trim();
+
+          if (question.length < 10) {
+            aiStatus.textContent = 'Please describe your issue in more detail (at least 10 characters)';
+            aiStatus.style.color = '#ef4444';
+            return;
+          }
+
+          // Disable button and show loading
+          askBtn.disabled = true;
+          askBtn.textContent = 'Analyzing...';
+          aiStatus.textContent = 'Our AI is analyzing your issue...';
+          aiStatus.style.color = '#6b7280';
+          aiResponseSection.classList.remove('show');
+
+          try {
+            // Call AI preview endpoint (same as public landing page)
+            const response = await fetch('/api/ai/preview', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ question })
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to analyze question');
+            }
+
+            const data = await response.json();
+
+            // Store globally
+            window.blueprintData.question = question;
+            window.blueprintData.answer = data.answer;
+
+            // Parse AI response for structured data
+            const parsed = parseAIResponse(data.answer);
+            window.blueprintData.parsed = parsed;
+            window.blueprintData.budgetLow = parsed.budgetLow || 5000;
+            window.blueprintData.budgetHigh = parsed.budgetHigh || 15000;
+
+            // Display the AI response (formatted)
+            const cleanAnswer = cleanAIArtifacts(data.answer);
+            aiResponseContent.innerHTML = formatAIResponse(cleanAnswer);
+
+            // Show response section
+            aiResponseSection.classList.add('show');
+            document.getElementById('projectPostCta').classList.add('show');
+
+            aiStatus.textContent = '✓ Analysis complete!';
+            aiStatus.style.color = '#10b981';
+
+            // Save to hot_lead_draft for potential project posting
+            saveHotLeadDraft();
+
+          } catch (error) {
+            console.error('Analysis error:', error);
+            aiStatus.textContent = error.message || 'Failed to analyze. Please try again.';
+            aiStatus.style.color = '#ef4444';
+          } finally {
+            askBtn.disabled = false;
+            askBtn.textContent = '🤖 Get AI Help Now';
+          }
+        });
+      }
+
+      // Post Project Handler
+      if (postProjectBtn) {
+        postProjectBtn.addEventListener('click', async () => {
+          if (!window.blueprintData.question) {
+            alert('Please generate an AI analysis first.');
+            return;
+          }
+
+          // Check auth
+          const user = await window.authService.getCurrentUser();
+          if (!user) {
+            // Not logged in - redirect to signup with intent
+            sessionStorage.setItem('signup_role', 'homeowner');
+            window.location.href = 'signup.html?intent=post_project';
+            return;
+          }
+
+          // Logged in - go directly to post-project page
+          window.location.href = 'post-project.html';
+        });
+      }
+
+      /**
+       * Clean AI artifacts (INTENT TYPE, headers, etc.)
+       */
+      function cleanAIArtifacts(text) {
+        if (!text) return '';
+
+        let cleaned = text.replace(/^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim, '').trim();
+        cleaned = cleaned.replace(/^[\s]*AI ANALYSIS:[\s]*/gim, '').trim();
+        cleaned = cleaned.replace(/^[\s]*[-=]{3,}[\s]*$/gm, '').trim();
+        cleaned = cleaned.replace(/^[\s]*---[\s]*STEP\s+\d+:.*?---[\s]*$/gim, '').trim();
+        cleaned = cleaned.replace(/^[\s]*STEP\s+\d+:.*$/gim, '').trim();
+        cleaned = cleaned.replace(/\*\*/g, '');
+
+        return cleaned;
+      }
+
+      /**
+       * Parse AI response for structured data
+       */
+      function parseAIResponse(text) {
+        const parsed = {
+          summary: '',
+          budgetLow: 0,
+          budgetHigh: 0,
+          timeline: '',
+          scopeItems: [],
+          designerNote: ''
+        };
+
+        const cleanedText = cleanAIArtifacts(text);
+
+        // Extract Designer Note
+        const designerNoteMatch = cleanedText.match(/Design(?:er)?\s*Note:\s*([^\n]+)/i);
+        if (designerNoteMatch) {
+          parsed.designerNote = designerNoteMatch[1].trim();
+        }
+
+        // Extract first meaningful paragraph as summary
+        const paragraphs = cleanedText.split('\n\n').filter(p => {
+          const trimmed = p.trim();
+          return trimmed.length > 0 &&
+                 !trimmed.toLowerCase().includes('intent type') &&
+                 !trimmed.match(/^[\s]*---/) &&
+                 !trimmed.match(/^[\s]*STEP/i) &&
+                 !trimmed.match(/^[\s]*Design(?:er)?\s*Note:/i);
+        });
+
+        if (paragraphs.length > 0) {
+          parsed.summary = paragraphs[0].trim();
+        }
+
+        // Extract budget
+        const budgetPattern = /\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i;
+        const budgetMatch = cleanedText.match(budgetPattern);
+        if (budgetMatch) {
+          parsed.budgetLow = parseInt(budgetMatch[1].replace(/,/g, ''));
+          parsed.budgetHigh = parseInt(budgetMatch[2].replace(/,/g, ''));
+        }
+
+        // Extract timeline
+        const timelinePattern = /(\d+[-–to]+\d+)\s*(days?|weeks?|months?)/i;
+        const timelineMatch = cleanedText.match(timelinePattern);
+        if (timelineMatch) {
+          parsed.timeline = timelineMatch[0];
+        }
+
+        // Extract scope items (work statements only, not questions)
+        const lines = cleanedText.split('\n');
+        let inScopeSection = false;
+
+        lines.forEach(line => {
+          if (line.match(/scope\s+considerations|materials?\s+(&|and)\s+tools?|work\s+includes?/i)) {
+            inScopeSection = true;
+            return;
+          }
+
+          if (line.match(/questions?\s+for|ask\s+about|verify|confirm\s+with|design(?:er)?\s*note/i)) {
+            inScopeSection = false;
+            return;
+          }
+
+          if (line.match(/^[\s]*---/) || line.match(/^[\s]*STEP/i) || line.match(/INSIGHTS/i)) {
+            return;
+          }
+
+          const bulletMatch = line.match(/^[\s]*[-•*]\s*(.+)/);
+          const numberMatch = line.match(/^[\s]*\d+\.\s*(.+)/);
+
+          let item = null;
+          if (bulletMatch) item = bulletMatch[1].trim();
+          if (numberMatch) item = numberMatch[1].trim();
+
+          if (item && item.length < 120) {
+            if (item.match(/^(do|does|can|will|should|would|is|are|have|has|verify|confirm|ask)/i)) {
+              return;
+            }
+            if (item.includes('?')) {
+              return;
+            }
+            if (item.match(/STEP|INSIGHTS|---/i)) {
+              return;
+            }
+
+            if (inScopeSection || parsed.scopeItems.length < 3) {
+              parsed.scopeItems.push(item);
+            }
+          }
+        });
+
+        parsed.scopeItems = parsed.scopeItems.slice(0, 8);
+
+        return parsed;
+      }
+
+      /**
+       * Format AI response for display
+       */
+      function formatAIResponse(text) {
+        // Basic formatting - preserve line breaks and structure
+        return text
+          .split('\n\n')
+          .map(paragraph => `<p>${escapeHtml(paragraph.trim())}</p>`)
+          .join('');
+      }
+
+      /**
+       * Save hot_lead_draft for project posting
+       */
+      function saveHotLeadDraft() {
+        const parsed = window.blueprintData.parsed;
+
+        // Extract clean title
+        let projectTitle = 'Home Renovation Project';
+        if (parsed.summary) {
+          let cleanSummary = cleanAIArtifacts(parsed.summary);
+          cleanSummary = cleanSummary.replace(/^Project\s+Summary:\s*/i, '').trim();
+          let firstSentence = cleanSummary.split('.')[0].trim();
+
+          const isValidTitle = firstSentence &&
+                              firstSentence.length > 5 &&
+                              firstSentence.length < 80 &&
+                              !firstSentence.toLowerCase().includes('intent') &&
+                              !firstSentence.toLowerCase().startsWith('based on');
+
+          if (isValidTitle) {
+            projectTitle = firstSentence.length > 60
+              ? firstSentence.substring(0, 57) + '...'
+              : firstSentence;
+          } else {
+            const userQuestion = window.blueprintData.question || '';
+            const questionFirstPart = userQuestion.split('.')[0].trim();
+            if (questionFirstPart.length > 10) {
+              projectTitle = questionFirstPart.length > 60
+                ? questionFirstPart.substring(0, 57) + '...'
+                : questionFirstPart;
+            }
+          }
+        }
+
+        const tradeType = extractTradeType(window.blueprintData.answer);
+
+        const hotLeadDraft = {
+          title: projectTitle,
+          description: window.blueprintData.question,
+          aiAnalysis: window.blueprintData.answer,
+          budgetMin: parsed.budgetLow || 5000,
+          budgetMax: parsed.budgetHigh || 15000,
+          timeline: parsed.timeline || '2-4 weeks',
+          tradeType: tradeType,
+          category: tradeType || 'general',
+          urgency: 'flexible',
+          scopeItems: parsed.scopeItems || [],
+          designerNote: parsed.designerNote || '',
+          fromBlueprint: true,
+          timestamp: new Date().toISOString()
+        };
+
+        localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
+        console.log('✓ Saved hot_lead_draft:', hotLeadDraft);
+      }
+
+      /**
+       * Extract trade type with complexity detection
+       */
+      function extractTradeType(aiText) {
+        const text = aiText.toLowerCase();
+
+        const tradeMap = {
+          'plumbing': ['plumber', 'plumbing', 'pipe', 'leak', 'faucet', 'water heater', 'drain'],
+          'electrical': ['electrician', 'electrical', 'wiring', 'outlet', 'circuit', 'breaker'],
+          'hvac': ['hvac', 'heating', 'cooling', 'furnace', 'ac', 'air conditioning'],
+          'roofing': ['roof', 'roofing', 'shingles', 'gutter'],
+          'painting': ['paint', 'painting', 'painter'],
+          'flooring': ['floor', 'flooring', 'carpet', 'hardwood', 'tile', 'vinyl'],
+          'carpentry': ['carpenter', 'carpentry', 'wood', 'deck', 'fence', 'framing'],
+          'landscaping': ['landscape', 'landscaping', 'yard', 'lawn', 'garden']
+        };
+
+        const complexityKeywords = [
+          'remodel', 'renovation', 'addition', 'extension', 'demolition', 'demo',
+          'bathroom remodel', 'kitchen remodel', 'basement finish', 'gut',
+          'multiple', 'several', 'various', 'complete overhaul'
+        ];
+
+        if (complexityKeywords.some(keyword => text.includes(keyword))) {
+          return 'general';
+        }
+
+        let tradesMatched = [];
+        for (const [trade, keywords] of Object.entries(tradeMap)) {
+          if (keywords.some(keyword => text.includes(keyword))) {
+            tradesMatched.push(trade);
+          }
+        }
+
+        if (tradesMatched.length >= 3) {
+          return 'general';
+        }
+
+        const handymanKeywords = ['minor', 'small', 'quick fix', 'patch', 'touch up'];
+        const hasHandymanIndicators = handymanKeywords.some(k => text.includes(k));
+        const budgetMatch = text.match(/\$?([\d,]+)/);
+        const estimatedBudget = budgetMatch ? parseInt(budgetMatch[1].replace(/,/g, '')) : 0;
+
+        if (hasHandymanIndicators && estimatedBudget < 500) {
+          return 'handyman';
+        }
+
+        if (tradesMatched.length === 1) {
+          return tradesMatched[0];
+        }
+
+        if (tradesMatched.length === 2) {
+          const tradeCounts = {};
+          tradesMatched.forEach(trade => {
+            tradeCounts[trade] = tradeMap[trade].filter(k => text.includes(k)).length;
+          });
+
+          const dominant = Object.keys(tradeCounts).reduce((a, b) =>
+            tradeCounts[a] > tradeCounts[b] * 2 ? a : null
+          );
+
+          if (dominant) {
+            return dominant;
+          }
+
+          return 'general';
+        }
+
+        return 'general';
+      }
+
+      function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+          .toString()
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+    })();
+  </script>
 
   <!-- Unified Navigation Component -->
   <script src="components/navigation.js"></script>
