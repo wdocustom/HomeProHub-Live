@@ -530,9 +530,100 @@
       cursor: pointer;
       font-size: 14px;
     }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border: 2px solid #10b981;
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      z-index: 10000;
+      min-width: 320px;
+      max-width: 420px;
+      transform: translateX(500px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    .toast.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .toast-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .toast-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .toast-text {
+      flex: 1;
+    }
+
+    .toast-title {
+      font-weight: 700;
+      color: #065f46;
+      margin-bottom: 4px;
+      font-size: 16px;
+    }
+
+    .toast-message {
+      color: #047857;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: #047857;
+      cursor: pointer;
+      font-size: 20px;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .toast-close:hover {
+      opacity: 1;
+    }
+
+    @media (max-width: 768px) {
+      .toast {
+        top: 16px;
+        right: 16px;
+        left: 16px;
+        min-width: auto;
+        max-width: none;
+      }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Toast Notification (for account deletion goodbye message) -->
+  <div id="accountDeletedToast" class="toast">
+    <div class="toast-content">
+      <span class="toast-icon">👋</span>
+      <div class="toast-text">
+        <div class="toast-title">Account Deleted Successfully</div>
+        <div class="toast-message">Your account has been permanently deleted. We're sorry to see you go!</div>
+      </div>
+      <button class="toast-close" onclick="closeToast()" aria-label="Close">×</button>
+    </div>
+  </div>
 
   <!-- SECTION A: TOP NAV -->
   <nav class="top-nav">
@@ -941,6 +1032,42 @@
         }
       });
     });
+
+    // ========================================
+    // Account Deletion Goodbye Toast
+    // ========================================
+
+    function showToast() {
+      const toast = document.getElementById('accountDeletedToast');
+      if (toast) {
+        // Show toast with animation
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 300);
+
+        // Auto-hide after 6 seconds
+        setTimeout(() => {
+          closeToast();
+        }, 6000);
+      }
+    }
+
+    function closeToast() {
+      const toast = document.getElementById('accountDeletedToast');
+      if (toast) {
+        toast.classList.remove('show');
+      }
+    }
+
+    // Check for account deletion flag on page load
+    (function() {
+      if (sessionStorage.getItem('account_deleted') === 'true') {
+        // Clear the flag
+        sessionStorage.removeItem('account_deleted');
+        // Show goodbye message
+        showToast();
+      }
+    })();
   </script>
 </body>
 </html>

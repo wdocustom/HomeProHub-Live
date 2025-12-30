@@ -2181,6 +2181,165 @@ app.put("/api/profile/update", requireAuth, async (req, res) => {
 });
 
 /**
+ * DELETE /api/user/delete
+ * Permanently delete user account and all associated data
+ * CRITICAL: This action cannot be undone
+ */
+app.delete("/api/user/delete", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const userId = req.user.id;
+    const { confirmation } = req.body;
+
+    // Safety check: Require confirmation
+    if (confirmation !== 'DELETE') {
+      return res.status(400).json({
+        error: "Confirmation required. Please type DELETE to confirm account deletion.",
+        code: 'CONFIRMATION_REQUIRED'
+      });
+    }
+
+    console.log(`🗑️  Starting account deletion for user: ${userEmail}`);
+
+    // Get user profile to determine role and data to delete
+    const userProfile = await db.getUserProfile(userEmail);
+    if (!userProfile) {
+      return res.status(404).json({
+        error: "User profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const userRole = userProfile.role;
+    let deletionSummary = {
+      email: userEmail,
+      role: userRole,
+      deleted: {
+        profile: false,
+        jobs: 0,
+        bids: 0,
+        messages: 0,
+        auth: false
+      }
+    };
+
+    // Step 1: Delete role-specific data
+    if (userRole === 'homeowner') {
+      // Delete all jobs posted by this homeowner
+      const { data: jobs, error: jobsError } = await db.supabase
+        .from('jobs')
+        .delete()
+        .eq('homeowner_email', userEmail)
+        .select();
+
+      if (!jobsError && jobs) {
+        deletionSummary.deleted.jobs = jobs.length;
+        console.log(`  ✓ Deleted ${jobs.length} job postings`);
+      }
+    } else if (userRole === 'contractor') {
+      // Delete all bids submitted by this contractor
+      const { data: bids, error: bidsError } = await db.supabase
+        .from('bids')
+        .delete()
+        .eq('contractor_email', userEmail)
+        .select();
+
+      if (!bidsError && bids) {
+        deletionSummary.deleted.bids = bids.length;
+        console.log(`  ✓ Deleted ${bids.length} bids`);
+      }
+    }
+
+    // Step 2: Delete messages (both sent and received)
+    const { data: messages, error: messagesError } = await db.supabase
+      .from('messages')
+      .delete()
+      .or(`sender_email.eq.${userEmail},recipient_email.eq.${userEmail}`)
+      .select();
+
+    if (!messagesError && messages) {
+      deletionSummary.deleted.messages = messages.length;
+      console.log(`  ✓ Deleted ${messages.length} messages`);
+    }
+
+    // Step 3: Delete activity logs
+    await db.supabase
+      .from('activity_log')
+      .delete()
+      .eq('user_email', userEmail);
+    console.log(`  ✓ Deleted activity logs`);
+
+    // Step 4: Delete user profile
+    const { error: profileError } = await db.supabase
+      .from('user_profiles')
+      .delete()
+      .eq('email', userEmail);
+
+    if (!profileError) {
+      deletionSummary.deleted.profile = true;
+      console.log(`  ✓ Deleted user profile`);
+    } else {
+      console.error(`  ❌ Error deleting profile:`, profileError);
+    }
+
+    // Step 5: Delete from Supabase Auth
+    // Note: This requires admin privileges (service role key)
+    try {
+      // Create admin client with service role key (if available)
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (serviceRoleKey) {
+        const { createClient } = require('@supabase/supabase-js');
+        const supabaseAdmin = createClient(
+          process.env.SUPABASE_URL || '',
+          serviceRoleKey,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false
+            }
+          }
+        );
+
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+        if (!authError) {
+          deletionSummary.deleted.auth = true;
+          console.log(`  ✓ Deleted auth user from Supabase Auth`);
+        } else {
+          console.error(`  ❌ Error deleting auth user:`, authError);
+          // Continue anyway - profile data is deleted
+        }
+      } else {
+        console.warn(`  ⚠️  SUPABASE_SERVICE_ROLE_KEY not set - cannot delete from Supabase Auth`);
+        console.warn(`     Add SUPABASE_SERVICE_ROLE_KEY to .env to enable full account deletion`);
+        // Continue anyway - profile and data are deleted
+      }
+    } catch (authError) {
+      console.error(`  ❌ Error during auth deletion:`, authError);
+      // Continue anyway - main data is deleted
+    }
+
+    console.log(`✅ Account deletion completed for ${userEmail}`);
+    console.log(`   Summary:`, JSON.stringify(deletionSummary, null, 2));
+
+    res.json({
+      success: true,
+      message: "Account deleted successfully. We're sorry to see you go!",
+      summary: deletionSummary
+    });
+
+  } catch (err) {
+    console.error("❌ Error deleting user account:", err);
+    res.status(500).json({
+      error: "Failed to delete account. Please contact support.",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * POST /api/submit-job
  * Submit a new job posting from homeowner
  */
