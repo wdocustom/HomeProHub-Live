@@ -630,11 +630,25 @@
         return;
       }
 
-      // Load hot_lead_draft from localStorage
-      const draftStr = localStorage.getItem('hot_lead_draft');
+      // TASK 3: Hot Potato Strategy - Check cookies FIRST, then localStorage
+      let draftStr = localStorage.getItem('hot_lead_draft');
+
+      // If localStorage is empty, check for cookie (cross-device/session persistence)
+      if (!draftStr) {
+        const cookies = document.cookie.split(';');
+        const projectDraftCookie = cookies.find(c => c.trim().startsWith('project_draft='));
+
+        if (projectDraftCookie) {
+          draftStr = decodeURIComponent(projectDraftCookie.split('=')[1]);
+          console.log('✓ Restored project data from cookie (cross-device handoff)');
+
+          // Save to localStorage for this session
+          localStorage.setItem('hot_lead_draft', draftStr);
+        }
+      }
 
       if (!draftStr) {
-        // No draft found - show error
+        // No draft found in localStorage OR cookies - show error
         document.getElementById('loadingSection').style.display = 'none';
         document.getElementById('errorSection').style.display = 'flex';
         return;
@@ -691,28 +705,34 @@
       // Title
       document.getElementById('titleDisplay').textContent = data.title || 'Home Renovation Project';
 
-      // Designer Note (if available)
-      if (data.designerNote && data.designerNote.trim().length > 0) {
+      // Designer Note (if available) - TASK 3: Type check before .trim()
+      if (data.designerNote && typeof data.designerNote === 'string' && data.designerNote.trim().length > 0) {
         document.getElementById('designerNoteText').textContent = data.designerNote;
         document.getElementById('designerNoteSection').style.display = 'block';
       }
 
-      // Description
-      document.getElementById('descriptionDisplay').textContent = data.description || '';
+      // Description - TASK 3: Ensure it's a string
+      const description = (typeof data.description === 'string') ? data.description : '';
+      document.getElementById('descriptionDisplay').textContent = description;
 
       // Scope Items (if available) - Professional invoice style
-      if (data.scopeItems && data.scopeItems.length > 0) {
+      // TASK 3: Validate scopeItems is an array and filter out non-strings
+      if (Array.isArray(data.scopeItems) && data.scopeItems.length > 0) {
         const scopeGrid = document.getElementById('scopeGrid');
-        scopeGrid.innerHTML = data.scopeItems.map(item => `
+        const validItems = data.scopeItems.filter(item => typeof item === 'string');
+        scopeGrid.innerHTML = validItems.map(item => `
           <li class="scope-item">
             <span>• ${escapeHtml(item)}</span>
           </li>
         `).join('');
-        document.getElementById('scopeSection').style.display = 'block';
+        if (validItems.length > 0) {
+          document.getElementById('scopeSection').style.display = 'block';
+        }
       }
 
-      // AI Analysis
-      document.getElementById('aiAnalysisText').textContent = data.aiAnalysis || '';
+      // AI Analysis - TASK 3: Ensure it's a string
+      const aiAnalysis = (typeof data.aiAnalysis === 'string') ? data.aiAnalysis : '';
+      document.getElementById('aiAnalysisText').textContent = aiAnalysis;
     }
 
     /**
@@ -724,7 +744,12 @@
       editing = field;
       const section = document.getElementById(`${field}Section`);
       const displayEl = document.getElementById(`${field}Display`);
-      const currentValue = field === 'title' ? projectData.title : projectData.description;
+
+      // TASK 3: Ensure currentValue is a string before passing to escapeHtml()
+      let currentValue = field === 'title' ? projectData.title : projectData.description;
+      if (typeof currentValue !== 'string') {
+        currentValue = '';
+      }
 
       // Create input
       const input = field === 'title'
@@ -880,6 +905,12 @@
     }
 
     function escapeHtml(text) {
+      // TASK 3: Type check - prevent TypeError when text is not a string
+      if (typeof text !== 'string') {
+        console.warn('escapeHtml received non-string:', typeof text, text);
+        return '';
+      }
+
       const map = {
         '&': '&amp;',
         '<': '&lt;',

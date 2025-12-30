@@ -252,6 +252,26 @@
 
     <div id="statusMessage" class="status-message"></div>
 
+    <!-- Email Confirmation Success Card (hidden by default) -->
+    <div id="emailConfirmationCard" style="display: none; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 2px solid #10b981; border-radius: 16px; padding: 40px 32px; text-align: center; margin-bottom: 24px;">
+      <div style="font-size: 64px; margin-bottom: 20px;">📧</div>
+      <h2 style="font-size: 24px; font-weight: 700; color: #065f46; margin: 0 0 12px 0;">Check Your Email!</h2>
+      <p style="font-size: 16px; color: #047857; margin-bottom: 20px; line-height: 1.6;">
+        We sent a confirmation link to <strong id="confirmEmail"></strong>
+      </p>
+      <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+        <p style="font-size: 14px; color: #374151; margin: 0;">
+          <strong>📋 Next Steps:</strong><br>
+          1. Check your inbox (and spam folder)<br>
+          2. Click the confirmation link in the email<br>
+          3. Come back here to post your project!
+        </p>
+      </div>
+      <p style="font-size: 13px; color: #059669; margin: 0;">
+        Didn't receive it? Check your spam folder or contact support.
+      </p>
+    </div>
+
     <form id="signupForm">
       <div class="form-group">
         <label for="email">Email</label>
@@ -487,29 +507,37 @@
         const result = await window.authService.signUp(email, password, profileData);
 
         if (result.success) {
-          displaySuccess('Account created successfully! Redirecting...');
+          // TASK 1: Show email confirmation card instead of redirecting
+          document.getElementById('signupForm').style.display = 'none';
+          document.getElementById('roleSelector').style.display = 'none';
+          document.getElementById('pageTitle').textContent = 'Almost There!';
+          document.getElementById('pageSubtitle').textContent = 'One more step to activate your account';
+          document.getElementById('confirmEmail').textContent = email;
+          document.getElementById('emailConfirmationCard').style.display = 'block';
+
+          // TASK 2: Hot Potato Strategy - Save project data to cookie for cross-device persistence
+          const urlParams = new URLSearchParams(window.location.search);
+          const intent = urlParams.get('intent');
+
+          if (intent === 'post_project') {
+            // Check for project data from localStorage (Blueprint flow)
+            const hotLeadDraft = localStorage.getItem('hot_lead_draft');
+
+            if (hotLeadDraft) {
+              // Save to cookie (persists across browser sessions/devices)
+              document.cookie = `project_draft=${encodeURIComponent(hotLeadDraft)}; path=/; max-age=86400`; // 24 hours
+              console.log('✓ Project data saved to cookie for post-verification handoff');
+            }
+
+            // Also save intent to cookie
+            document.cookie = `post_intent=post_project; path=/; max-age=86400`;
+          }
 
           // Clear signup role from sessionStorage
           sessionStorage.removeItem('signup_role');
+          setLoading(false);
 
-          setTimeout(() => {
-            if (selectedRole === 'contractor') {
-              window.location.href = 'contractor.html';
-            } else {
-              // HOMEOWNER: Check for intent parameter
-              const urlParams = new URLSearchParams(window.location.search);
-              const intent = urlParams.get('intent');
-
-              if (intent === 'post_project') {
-                // NEW FLOW: Redirect to Review & Post page (not home)
-                console.log('✓ Intent detected: Redirecting to post-project.html');
-                window.location.href = 'post-project.html';
-              } else {
-                // Default: Go to home page
-                window.location.href = 'home.html';
-              }
-            }
-          }, 1500);
+          // NOTE: User will click email link to verify, then be auto-redirected by auth flow
         } else {
           displayError(result.error || 'Sign up failed. Please try again.');
           setLoading(false);
