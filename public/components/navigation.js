@@ -84,9 +84,13 @@
           const data = await response.json();
           this.notificationCount = data.count || 0;
           this.updateNotificationBadge();
+        } else {
+          // API returned error - fail silently without alarming user
+          console.warn('Notifications API unavailable (non-critical)');
         }
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+        // Network error or other issue - fail silently
+        console.warn('Could not fetch notifications (non-critical):', error.message);
       }
     }
 
@@ -246,7 +250,12 @@
         const response = await window.authService.authenticatedFetch(
           `/api/notifications?email=${encodeURIComponent(this.user.email)}&limit=10`
         );
-        if (!response.ok) throw new Error('Failed to load notifications');
+        if (!response.ok) {
+          // API error - fail gracefully
+          console.warn('Notifications API unavailable (non-critical)');
+          list.innerHTML = '<div class="notifications-empty">Notifications temporarily unavailable</div>';
+          return;
+        }
 
         const data = await response.json();
         const notifications = data.notifications || [];
@@ -268,8 +277,9 @@
           </div>
         `).join('');
       } catch (error) {
-        console.error('Error loading notifications:', error);
-        list.innerHTML = '<div class="notifications-error">Failed to load notifications</div>';
+        // Network or parsing error - fail gracefully
+        console.warn('Could not load notifications (non-critical):', error.message);
+        list.innerHTML = '<div class="notifications-empty">Notifications temporarily unavailable</div>';
       }
     }
 

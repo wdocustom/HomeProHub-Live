@@ -22,6 +22,9 @@ class AuthService {
     if (this.initialized) return;
 
     try {
+      // PART 1: Handle Supabase errors in URL hash (e.g., otp_expired from cross-device verification)
+      this.handleURLErrors();
+
       // Get Supabase config from server
       const response = await fetch('/api/config');
       if (!response.ok) {
@@ -39,14 +42,14 @@ class AuthService {
         this.currentUser = session.user;
       }
 
-      // Listen for auth state changes
+      // PART 2: Smart Auth Listener - Prevents infinite redirect loops
       this.supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('Auth state changed:', event);
         this.currentUser = session?.user || null;
 
-        // MAGIC LINK LOGIC: Handle sign in (email verification or manual login)
-        if (event === 'SIGNED_IN') {
-          await this.handleSignIn();
+        // Handle sign in with loop prevention
+        if (event === 'SIGNED_IN' || session) {
+          await this.handleSignInSmart();
         }
 
         // Handle sign out
@@ -335,8 +338,76 @@ class AuthService {
   }
 
   /**
-   * Handle sign in - "Magic Link" logic for email verification
-   * Automatically redirects to draft project if available
+   * Handle URL errors from Supabase auth (e.g., otp_expired)
+   * Called during init to gracefully handle cross-device verification errors
+   */
+  handleURLErrors() {
+    // Check for Supabase errors in the URL hash (e.g., otp_expired from cross-device verification)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const errorCode = hashParams.get('error_code');
+
+    if (errorCode === 'otp_expired') {
+      // 1. Clean the URL so it looks professional
+      window.history.replaceState(null, '', window.location.pathname);
+      // 2. Alert the user (Don't leave them hanging)
+      alert("Verification link expired or already used. You are likely verified! Please log in.");
+      // 3. Send to Login
+      window.location.href = '/signin.html';
+    }
+  }
+
+  /**
+   * Smart sign-in handler with infinite loop prevention
+   * Handles 3 scenarios:
+   * 1. "Already Verified" User: otp_expired errors handled gracefully
+   * 2. "Magic Carpet" User: Redirect to draft project if exists
+   * 3. "Loop of Death" Prevention: Don't redirect if already on destination page
+   */
+  async handleSignInSmart() {
+    const draftProject = this.getCookie('project_draft');
+    // NORMALIZATION: Remove trailing slashes to prevent matching errors
+    const currentPath = window.location.pathname.replace(/\/$/, "");
+
+    if (draftProject) {
+      // Scenario A: User has a draft (The Magic Carpet)
+      // Fix: Only redirect if NOT already on the post-project page
+      if (!currentPath.includes('post-project')) {
+        console.log("✓ Draft found! Redirecting to project creation...");
+        // Restore to localStorage for post-project.html to read
+        localStorage.setItem('hot_lead_draft', decodeURIComponent(draftProject));
+        window.location.href = '/post-project.html';
+      }
+    } else {
+      // Scenario B: Standard Login (No draft)
+      // CRITICAL FIX: STOP LOOPING.
+      // Only redirect if the user is currently on a "Public" page (Login, Signup, Landing).
+      // If they are already on '/homeowner-dashboard.html' or '/home.html', DO NOT REDIRECT.
+      const publicPages = ['/index.html', '/signin.html', '/signup.html', '/'];
+      const isPublicPage = publicPages.some(page =>
+        currentPath === page || currentPath === '' || currentPath === '/'
+      );
+
+      if (isPublicPage) {
+        // Get user role to determine destination
+        const profile = await this.getUserProfile();
+        const role = profile?.role || 'homeowner';
+
+        console.log(`No draft project - redirecting ${role} to dashboard`);
+
+        if (role === 'contractor') {
+          window.location.href = '/contractor.html';
+        } else {
+          window.location.href = '/home.html';
+        }
+      } else {
+        console.log('Already on dashboard - skipping redirect to prevent loop');
+      }
+    }
+  }
+
+  /**
+   * DEPRECATED: Old handleSignIn method - replaced by handleSignInSmart
+   * Kept for reference only
    */
   async handleSignIn() {
     console.log('🔐 User signed in - checking for draft project...');
