@@ -255,6 +255,73 @@
       background: #fee2e2;
       color: #991b1b;
     }
+
+    /* Line Items Table */
+    .line-items-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .line-items-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .line-items-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .line-items-table thead {
+      background: #f9fafb;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .line-items-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      color: #6b7280;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .line-items-table th:last-child {
+      text-align: right;
+    }
+
+    .line-items-table tbody tr {
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .line-items-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .line-items-table td {
+      padding: 12px;
+      color: #374151;
+    }
+
+    .line-items-table td:last-child {
+      text-align: right;
+      font-weight: 600;
+      color: #2563eb;
+    }
+
+    .line-items-subtotal {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+
+    .line-items-subtotal td {
+      color: #111827;
+    }
   </style>
 </head>
 <body>
@@ -433,6 +500,8 @@
                   <span><strong>Can Start:</strong> ${escapeHtml(bid.start_availability || 'ASAP')}</span>
                 </div>
               </div>
+
+              ${renderLineItems(bid)}
             </div>
 
             ${bid.status === 'pending' ? `
@@ -452,13 +521,25 @@
       }
 
       try {
-        const response = await window.authService.authenticatedFetch(`/api/bids/${bidId}/accept`, {
+        // Get current user for homeownerEmail
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        // FIXED ROUTE: Use /api/bid/accept (not /api/bids/${bidId}/accept)
+        const response = await window.authService.authenticatedFetch('/api/bid/accept', {
           method: 'POST',
-          body: JSON.stringify({ job_id: projectId })
+          body: JSON.stringify({
+            bidId: bidId,
+            jobId: projectId,
+            homeownerEmail: user.email
+          })
         });
 
         if (!response.ok) {
-          throw new Error('Failed to accept proposal');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to accept proposal');
         }
 
         alert('Proposal accepted! The contractor will be notified.');
@@ -476,12 +557,25 @@
       }
 
       try {
-        const response = await window.authService.authenticatedFetch(`/api/bids/${bidId}/reject`, {
-          method: 'POST'
+        // Get current user for homeownerEmail
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        // FIXED ROUTE: Use /api/bid/decline (not /api/bids/${bidId}/reject)
+        const response = await window.authService.authenticatedFetch('/api/bid/decline', {
+          method: 'POST',
+          body: JSON.stringify({
+            bidId: bidId,
+            jobId: projectId,
+            homeownerEmail: user.email
+          })
         });
 
         if (!response.ok) {
-          throw new Error('Failed to decline proposal');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to decline proposal');
         }
 
         alert('Proposal declined.');
@@ -497,6 +591,73 @@
       if (!dateString) return 'Unknown';
       const date = new Date(dateString);
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function renderLineItems(bid) {
+      // Check if bid has line_items (detailed breakdown)
+      if (!bid.line_items || !Array.isArray(bid.line_items) || bid.line_items.length === 0) {
+        return ''; // No line items, return empty string
+      }
+
+      let html = `
+        <div class="line-items-section">
+          <div class="line-items-title">📋 Cost Breakdown</div>
+          <table class="line-items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Description</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      bid.line_items.forEach(item => {
+        const itemName = escapeHtml(item.item || item.name || 'Item');
+        const description = item.notes || item.description || '';
+        const costLow = item.cost_low || item.low || 0;
+        const costHigh = item.cost_high || item.high || 0;
+        const cost = costLow === costHigh
+          ? `$${costLow.toLocaleString()}`
+          : `$${costLow.toLocaleString()} - $${costHigh.toLocaleString()}`;
+
+        html += `
+          <tr>
+            <td><strong>${itemName}</strong></td>
+            <td>${escapeHtml(description)}</td>
+            <td>${cost}</td>
+          </tr>
+        `;
+      });
+
+      // Add subtotal if available
+      if (bid.subtotal_low && bid.subtotal_high) {
+        html += `
+          <tr class="line-items-subtotal">
+            <td colspan="2"><strong>Subtotal (Labor & Materials)</strong></td>
+            <td>$${bid.subtotal_low.toLocaleString()} - $${bid.subtotal_high.toLocaleString()}</td>
+          </tr>
+        `;
+      }
+
+      // Add total
+      if (bid.total_low && bid.total_high) {
+        html += `
+          <tr class="line-items-subtotal">
+            <td colspan="2"><strong>Total Project Cost</strong></td>
+            <td>$${bid.total_low.toLocaleString()} - $${bid.total_high.toLocaleString()}</td>
+          </tr>
+        `;
+      }
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      return html;
     }
 
     function escapeHtml(text) {

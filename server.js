@@ -4336,16 +4336,25 @@ app.get("/api/contractors/directory", optionalAuth, async (req, res) => {
     // Enrich contractors with grade, license status, and reviews
     const enrichedContractors = await Promise.all(
       contractors.map(async (contractor) => {
-        // Get grade
-        const gradeResult = await db.supabase.rpc('calculate_contractor_grade', {
-          p_contractor_email: contractor.email
-        });
-
-        const grade = gradeResult.data || {
+        // Get grade - with error handling for missing RPC
+        let grade = {
           grade: 'N/A',
           score: 0,
           color: '#6b7280'
         };
+
+        try {
+          const gradeResult = await db.supabase.rpc('calculate_contractor_grade', {
+            p_contractor_email: contractor.email
+          });
+
+          if (gradeResult.data) {
+            grade = gradeResult.data;
+          }
+        } catch (gradeError) {
+          console.warn(`Grade calculation failed for ${contractor.email}:`, gradeError.message);
+          // Continue with default grade
+        }
 
         // Get license status
         const { data: licenses } = await db.supabase

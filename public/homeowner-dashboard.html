@@ -243,7 +243,7 @@
       }
     }
 
-    /* Project Card - Portfolio Style */
+    /* Project Card - Portfolio Style with Flex Layout */
     .project-card {
       background: white;
       border-radius: 16px;
@@ -251,6 +251,10 @@
       overflow: visible;
       transition: all 0.3s;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      /* TASK 4 FIX: Add flex layout for aligned buttons */
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
     .project-card:hover {
@@ -321,6 +325,8 @@
 
     .project-card-body {
       padding: 16px 24px;
+      /* TASK 4 FIX: Flex-grow to push footer to bottom */
+      flex: 1;
     }
 
     .project-meta {
@@ -353,6 +359,8 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      /* TASK 4 FIX: Stay at bottom with flex layout */
+      margin-top: auto;
     }
 
     .bids-count {
