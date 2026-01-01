@@ -29,16 +29,17 @@
     }
 
     /* ============================================
-       SEVERITY BANNER SYSTEM
+       1. RISK GAUGE - STATUS CENTER
        ============================================ */
-    .severity-banner {
-      padding: 24px 32px;
-      border-radius: 16px;
+    .status-center {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      padding: 48px;
       margin-bottom: 32px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
       animation: slideDown 0.5s ease-out;
     }
 
@@ -53,44 +54,122 @@
       }
     }
 
-    .severity-banner.high {
-      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-      border: 3px solid #fca5a5;
+    .risk-gauge {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 24px;
+      position: relative;
     }
 
-    .severity-banner.medium {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      border: 3px solid #fcd34d;
+    .gauge-ring {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 180deg,
+        #10b981 0deg 120deg,
+        #f59e0b 120deg 240deg,
+        #dc2626 240deg 360deg
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: gaugeRotate 1s ease-out;
     }
 
-    .severity-banner.low {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      border: 3px solid #6ee7b7;
+    @keyframes gaugeRotate {
+      from {
+        transform: rotate(-180deg);
+      }
+      to {
+        transform: rotate(0deg);
+      }
     }
 
-    .severity-icon {
-      font-size: 48px;
-      line-height: 1;
-      flex-shrink: 0;
+    .gauge-inner {
+      width: 160px;
+      height: 160px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
     }
 
-    .severity-content {
-      flex: 1;
+    .risk-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 4px;
+      height: 90px;
+      background: #111827;
+      transform-origin: bottom center;
+      border-radius: 2px;
+      margin-left: -2px;
+      margin-top: -90px;
+      transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
 
-    .severity-title {
-      font-size: 24px;
-      font-weight: 800;
-      color: white;
-      margin: 0 0 4px 0;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    .risk-indicator::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 12px;
+      height: 12px;
+      background: #111827;
+      border-radius: 50%;
+      transform: translateX(-50%);
     }
 
-    .severity-subtitle {
+    .risk-indicator.low {
+      transform: rotate(-60deg);
+    }
+
+    .risk-indicator.medium {
+      transform: rotate(0deg);
+    }
+
+    .risk-indicator.high {
+      transform: rotate(60deg);
+    }
+
+    .status-label {
       font-size: 14px;
-      color: rgba(255, 255, 255, 0.9);
-      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .status-title {
+      font-size: 32px;
+      font-weight: 900;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .status-title.high {
+      color: #dc2626;
+    }
+
+    .status-title.medium {
+      color: #f59e0b;
+    }
+
+    .status-title.low {
+      color: #10b981;
+    }
+
+    .status-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0 auto;
     }
 
     /* ============================================
@@ -103,6 +182,7 @@
       margin-bottom: 32px;
       overflow: hidden;
       animation: fadeIn 0.6s ease-out;
+      position: relative;
     }
 
     @keyframes fadeIn {
@@ -119,12 +199,19 @@
     .card-header {
       padding: 32px 40px;
       border-bottom: 2px solid #e5e7eb;
+      position: relative;
     }
 
-    .card-icon {
-      font-size: 36px;
-      margin-bottom: 12px;
-      display: block;
+    /* 5. FIX ICON REPETITION - Single watermark icon */
+    .card-header::before {
+      content: attr(data-icon);
+      position: absolute;
+      top: 50%;
+      right: 40px;
+      transform: translateY(-50%);
+      font-size: 80px;
+      opacity: 0.08;
+      pointer-events: none;
     }
 
     .card-title {
@@ -149,7 +236,7 @@
     }
 
     /* ============================================
-       ACTION PLAN CARD
+       4. ACTION CHECKLIST - INTERACTIVE
        ============================================ */
     .action-list {
       display: grid;
@@ -165,6 +252,8 @@
       border: 2px solid #fbbf24;
       border-radius: 16px;
       transition: all 0.3s;
+      cursor: pointer;
+      user-select: none;
     }
 
     .action-item:hover {
@@ -172,11 +261,35 @@
       box-shadow: 0 8px 24px rgba(251, 191, 36, 0.3);
     }
 
+    .action-item.checked {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      border-color: #10b981;
+      opacity: 0.7;
+    }
+
     .action-checkbox {
-      font-size: 24px;
-      color: #f59e0b;
+      width: 28px;
+      height: 28px;
+      border: 3px solid #f59e0b;
+      border-radius: 8px;
       flex-shrink: 0;
-      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .action-item.checked .action-checkbox {
+      background: #10b981;
+      border-color: #10b981;
+    }
+
+    .action-item.checked .action-checkbox::after {
+      content: '✓';
+      color: white;
+      font-weight: bold;
     }
 
     .action-text {
@@ -184,10 +297,17 @@
       line-height: 1.6;
       color: #78350f;
       font-weight: 500;
+      flex: 1;
+      transition: all 0.3s;
+    }
+
+    .action-item.checked .action-text {
+      text-decoration: line-through;
+      color: #059669;
     }
 
     /* ============================================
-       DIAGNOSTIC GRID (2 COLUMNS)
+       DIAGNOSTIC GRID (Clean Typography)
        ============================================ */
     .diagnostic-grid {
       display: grid;
@@ -196,7 +316,7 @@
     }
 
     .diagnostic-item {
-      padding: 24px;
+      padding: 32px;
       background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
       border: 2px solid #7dd3fc;
       border-radius: 16px;
@@ -208,100 +328,132 @@
       box-shadow: 0 12px 32px rgba(59, 130, 246, 0.2);
     }
 
-    .diagnostic-icon {
-      font-size: 28px;
+    .diagnostic-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #0369a1;
+      font-weight: 700;
       margin-bottom: 12px;
-      display: block;
     }
 
     .diagnostic-text {
-      font-size: 15px;
+      font-size: 16px;
       line-height: 1.6;
       color: #0c4a6e;
       font-weight: 500;
     }
 
     /* ============================================
-       FINANCIAL SCOPE CARD
+       3. COST METER - HORIZONTAL RANGE BAR
        ============================================ */
-    .financial-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 24px;
+    .cost-meter-container {
+      margin-bottom: 32px;
     }
 
-    .financial-box {
-      padding: 32px;
-      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-      border: 3px solid #86efac;
-      border-radius: 20px;
-      text-align: center;
-    }
-
-    .financial-label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #166534;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-
-    .financial-value {
-      font-size: 48px;
-      font-weight: 900;
-      color: #15803d;
-      letter-spacing: -0.03em;
-    }
-
-    .cost-factors {
-      background: #f9fafb;
-      padding: 24px;
-      border-radius: 16px;
-    }
-
-    .cost-factors h4 {
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #6b7280;
-      margin: 0 0 16px 0;
-      font-weight: 700;
-    }
-
-    .cost-factors ul {
-      margin: 0;
-      padding-left: 20px;
-      list-style: none;
-    }
-
-    .cost-factors li {
-      margin-bottom: 12px;
-      font-size: 15px;
-      color: #374151;
-      line-height: 1.6;
+    .cost-range-bar {
       position: relative;
-      padding-left: 24px;
+      height: 80px;
+      background: #f3f4f6;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      overflow: hidden;
     }
 
-    .cost-factors li::before {
-      content: "💰";
+    .cost-range-fill {
       position: absolute;
+      top: 0;
       left: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+      border-radius: 16px;
+      transition: width 1s ease-out;
+      animation: fillBar 1.5s ease-out;
+    }
+
+    @keyframes fillBar {
+      from {
+        width: 0%;
+      }
+    }
+
+    .cost-label {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: 800;
+      font-size: 24px;
+      padding: 0 24px;
+      white-space: nowrap;
+    }
+
+    .cost-label.low {
+      left: 0;
+      color: #10b981;
+    }
+
+    .cost-label.high {
+      right: 0;
+      color: #374151;
+    }
+
+    .cost-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .cost-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 24px;
+      font-size: 14px;
+      color: #374151;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .cost-tag:hover {
+      border-color: #10b981;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .cost-tag::before {
+      content: '💰';
       font-size: 16px;
     }
 
     /* ============================================
-       RED FLAGS (VETERAN'S WARNING)
+       RED FLAGS (VETERAN'S WARNING) - Watermark
        ============================================ */
     .red-flags-card {
       background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
       color: white;
+      position: relative;
+    }
+
+    .red-flags-card::before {
+      content: '🛡️';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 300px;
+      opacity: 0.05;
+      pointer-events: none;
     }
 
     .red-flags-card .card-header {
       border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .red-flags-card .card-header::before {
+      display: none; /* Override watermark for this special card */
     }
 
     .red-flags-card .card-title,
@@ -338,40 +490,78 @@
     }
 
     /* ============================================
-       STRATEGY TIMELINE
+       2. STRATEGY TIMELINE - VERTICAL STEPPER
        ============================================ */
     .strategy-timeline {
       display: grid;
-      gap: 20px;
+      gap: 0;
+      position: relative;
     }
 
     .timeline-step {
       display: flex;
       align-items: flex-start;
-      gap: 20px;
-      padding: 24px;
-      background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
-      border: 2px solid #e9d5ff;
-      border-radius: 16px;
+      gap: 24px;
+      padding: 32px 0;
       position: relative;
     }
 
-    .timeline-number {
+    .timeline-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 70px;
+      bottom: -32px;
+      width: 3px;
+      background: linear-gradient(180deg, #a855f7 0%, #e9d5ff 100%);
+    }
+
+    .timeline-dot {
       width: 40px;
       height: 40px;
-      background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
-      color: white;
+      background: white;
+      border: 4px solid #a855f7;
       border-radius: 50%;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 800;
-      flex-shrink: 0;
+      color: #a855f7;
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+
+    .timeline-step.active .timeline-dot {
+      background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4);
+      }
+      50% {
+        box-shadow: 0 4px 24px rgba(168, 85, 247, 0.6);
+      }
     }
 
     .timeline-content {
       flex: 1;
+      padding-top: 8px;
+    }
+
+    .timeline-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #a855f7;
+      font-weight: 700;
+      margin-bottom: 8px;
     }
 
     .timeline-text {
@@ -490,7 +680,6 @@
        RESPONSIVE
        ============================================ */
     @media (max-width: 768px) {
-      .financial-grid,
       .diagnostic-grid {
         grid-template-columns: 1fr;
       }
@@ -504,12 +693,24 @@
         width: 100%;
       }
 
-      .financial-value {
-        font-size: 36px;
-      }
-
       .card-title {
         font-size: 24px;
+      }
+
+      .risk-gauge {
+        width: 150px;
+        height: 150px;
+      }
+
+      .gauge-inner {
+        width: 120px;
+        height: 120px;
+        font-size: 48px;
+      }
+
+      .cost-label {
+        font-size: 18px;
+        padding: 0 16px;
       }
     }
   </style>
@@ -530,26 +731,24 @@
 
     <!-- Dashboard Content -->
     <div id="dashboardSection" style="display: none;">
-      <!-- Severity Banner (dynamic) -->
-      <div id="severityBanner"></div>
+      <!-- 1. STATUS CENTER (Risk Gauge) -->
+      <div id="statusCenter"></div>
 
-      <!-- 1) ACTION PLAN -->
+      <!-- 4. ACTION PLAN (Interactive Checklist) -->
       <div class="sanctuary-card" id="actionPlanCard" style="display: none;">
-        <div class="card-header">
-          <span class="card-icon">⚡</span>
+        <div class="card-header" data-icon="⚡">
           <h2 class="card-title">The Action Plan</h2>
-          <p class="card-subtitle">What you should do right now</p>
+          <p class="card-subtitle">Click to check off completed items</p>
         </div>
         <div class="card-body">
           <div class="action-list" id="actionList"></div>
         </div>
       </div>
 
-      <!-- 2) DIAGNOSTIC GRID -->
+      <!-- DIAGNOSTIC GRID (Clean Typography) -->
       <div class="sanctuary-card" id="diagnosticCard" style="display: none;">
-        <div class="card-header">
-          <span class="card-icon">🔍</span>
-          <h2 class="card-title">Diagnostic Grid</h2>
+        <div class="card-header" data-icon="🔍">
+          <h2 class="card-title">Diagnostic Analysis</h2>
           <p class="card-subtitle">Likely causes of your issue</p>
         </div>
         <div class="card-body">
@@ -557,22 +756,20 @@
         </div>
       </div>
 
-      <!-- 3) FINANCIAL SCOPE -->
+      <!-- 3. COST METER (Horizontal Range Bar) -->
       <div class="sanctuary-card" id="financialCard" style="display: none;">
-        <div class="card-header">
-          <span class="card-icon">💰</span>
+        <div class="card-header" data-icon="💰">
           <h2 class="card-title">Financial Scope</h2>
           <p class="card-subtitle">What this will cost</p>
         </div>
         <div class="card-body">
-          <div id="financialContent"></div>
+          <div class="cost-meter-container" id="costMeterContainer"></div>
         </div>
       </div>
 
-      <!-- 6) RED FLAGS (VETERAN'S WARNING) -->
+      <!-- RED FLAGS (VETERAN'S WARNING) -->
       <div class="sanctuary-card red-flags-card" id="redFlagsCard" style="display: none;">
         <div class="card-header">
-          <span class="card-icon">💡</span>
           <h2 class="card-title">The Veteran's Warning</h2>
           <p class="card-subtitle">Insider tips & blind spots</p>
         </div>
@@ -581,22 +778,20 @@
         </div>
       </div>
 
-      <!-- 5) STRATEGY TIMELINE -->
+      <!-- 2. STRATEGY TIMELINE (Vertical Stepper) -->
       <div class="sanctuary-card" id="strategyCard" style="display: none;">
-        <div class="card-header">
-          <span class="card-icon">📋</span>
-          <h2 class="card-title">Your Strategy</h2>
-          <p class="card-subtitle">Hiring & next steps</p>
+        <div class="card-header" data-icon="📋">
+          <h2 class="card-title">Your Journey</h2>
+          <p class="card-subtitle">Step-by-step strategy</p>
         </div>
         <div class="card-body">
           <div class="strategy-timeline" id="strategyTimeline"></div>
         </div>
       </div>
 
-      <!-- 7) CLARIFYING QUESTIONS -->
+      <!-- CLARIFYING QUESTIONS -->
       <div class="sanctuary-card" id="questionsCard" style="display: none;">
-        <div class="card-header">
-          <span class="card-icon">❓</span>
+        <div class="card-header" data-icon="❓">
           <h2 class="card-title">Questions to Consider</h2>
           <p class="card-subtitle">Details that might affect your plan</p>
         </div>
@@ -683,8 +878,7 @@
     }
 
     /**
-     * TASK 2: THE MAGIC PARSER
-     * Slices markdown by numbered section headers (1-7)
+     * THE MAGIC PARSER
      */
     function parseTriageOutput(markdown) {
       const sections = {
@@ -786,80 +980,92 @@
     }
 
     /**
-     * TASK 3: RENDER SANCTUARY DASHBOARD
+     * RENDER SANCTUARY DASHBOARD
      */
     function renderSanctuary(router, parsed) {
-      // TASK 1: Severity Banner
-      renderSeverityBanner(router.risk_level || 'medium');
+      // 1. Status Center (Risk Gauge)
+      renderStatusCenter(router.risk_level || 'medium');
 
-      // Render each section
+      // 4. Action Plan (Interactive Checklist)
       if (parsed.actions && parsed.actions.length > 0) {
         renderActionPlan(parsed.actions);
       }
 
+      // Diagnostic Grid
       if (parsed.causes && parsed.causes.length > 0) {
         renderDiagnosticGrid(parsed.causes);
       }
 
+      // 3. Cost Meter
       if (parsed.costs) {
-        renderFinancialScope(parsed.costs, parsed.variables);
+        renderCostMeter(parsed.costs, parsed.variables);
       }
 
+      // Red Flags
       if (parsed.redFlags && parsed.redFlags.length > 0) {
         renderRedFlags(parsed.redFlags);
       }
 
+      // 2. Strategy Timeline
       if (parsed.hiring && parsed.hiring.length > 0) {
-        renderStrategy(parsed.hiring);
+        renderStrategyTimeline(parsed.hiring);
       }
 
+      // Questions
       if (parsed.questions && parsed.questions.length > 0) {
         renderQuestions(parsed.questions);
       }
     }
 
     /**
-     * TASK 1: SEVERITY BADGE
+     * 1. STATUS CENTER - RISK GAUGE
      */
-    function renderSeverityBanner(riskLevel) {
-      const bannerConfig = {
+    function renderStatusCenter(riskLevel) {
+      const config = {
         high: {
           class: 'high',
           icon: '🚨',
-          title: 'Critical Safety Alert',
+          title: 'CRITICAL',
           subtitle: 'This issue requires immediate professional attention'
         },
         medium: {
           class: 'medium',
           icon: '⚠️',
-          title: 'Attention Required',
+          title: 'ATTENTION REQUIRED',
           subtitle: 'Schedule professional evaluation soon to prevent escalation'
         },
         low: {
           class: 'low',
           icon: '✅',
-          title: 'Maintenance / Cosmetic',
+          title: 'ROUTINE',
           subtitle: 'Non-urgent issue – plan at your convenience'
         }
       };
 
-      const config = bannerConfig[riskLevel] || bannerConfig.medium;
+      const c = config[riskLevel] || config.medium;
 
-      document.getElementById('severityBanner').innerHTML = `
-        <div class="severity-banner ${config.class}">
-          <div class="severity-icon">${config.icon}</div>
-          <div class="severity-content">
-            <h2 class="severity-title">${config.title}</h2>
-            <p class="severity-subtitle">${config.subtitle}</p>
+      document.getElementById('statusCenter').innerHTML = `
+        <div class="status-center">
+          <div class="risk-gauge">
+            <div class="gauge-ring">
+              <div class="gauge-inner">${c.icon}</div>
+              <div class="risk-indicator ${riskLevel}"></div>
+            </div>
           </div>
+          <div class="status-label">Risk Level</div>
+          <h2 class="status-title ${c.class}">${c.title}</h2>
+          <p class="status-subtitle">${c.subtitle}</p>
         </div>
       `;
     }
 
+    /**
+     * 4. ACTION PLAN - INTERACTIVE CHECKLIST
+     */
     function renderActionPlan(actions) {
-      const html = actions.map(action => `
-        <div class="action-item">
-          <span class="action-checkbox">☑️</span>
+      const html = actions.map((action, index) => `
+        <div class="action-item" onclick="toggleAction(this)">
+          <div class="action-checkbox"></div>
           <div class="action-text">${escapeHtml(action)}</div>
         </div>
       `).join('');
@@ -868,10 +1074,14 @@
       document.getElementById('actionPlanCard').style.display = 'block';
     }
 
+    function toggleAction(element) {
+      element.classList.toggle('checked');
+    }
+
     function renderDiagnosticGrid(causes) {
-      const html = causes.map(cause => `
+      const html = causes.map((cause, index) => `
         <div class="diagnostic-item">
-          <span class="diagnostic-icon">🩺</span>
+          <div class="diagnostic-label">Cause ${index + 1}</div>
           <div class="diagnostic-text">${escapeHtml(cause)}</div>
         </div>
       `).join('');
@@ -880,40 +1090,42 @@
       document.getElementById('diagnosticCard').style.display = 'block';
     }
 
-    function renderFinancialScope(costsText, variables) {
-      // Extract cost range from text
+    /**
+     * 3. COST METER - HORIZONTAL RANGE BAR
+     */
+    function renderCostMeter(costsText, variables) {
       const costMatch = costsText.match(/\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i);
 
-      let lowCost = '$X,XXX';
-      let highCost = '$XX,XXX';
+      let lowCost = 500;
+      let highCost = 2000;
+      let lowLabel = '$500';
+      let highLabel = '$2,000';
 
       if (costMatch) {
-        lowCost = '$' + parseInt(costMatch[1].replace(/,/g, '')).toLocaleString();
-        highCost = '$' + parseInt(costMatch[2].replace(/,/g, '')).toLocaleString();
+        lowCost = parseInt(costMatch[1].replace(/,/g, ''));
+        highCost = parseInt(costMatch[2].replace(/,/g, ''));
+        lowLabel = '$' + lowCost.toLocaleString();
+        highLabel = '$' + highCost.toLocaleString();
       }
+
+      // Calculate percentage for visual bar (cap at 100%)
+      const maxRange = Math.max(highCost, 10000);
+      const fillPercentage = Math.min((highCost / maxRange) * 100, 100);
 
       let variablesHtml = '';
       if (variables && variables.length > 0) {
         variablesHtml = `
-          <div class="cost-factors">
-            <h4>Price Variables</h4>
-            <ul>
-              ${variables.map(v => `<li>${escapeHtml(v)}</li>`).join('')}
-            </ul>
+          <div class="cost-tags">
+            ${variables.map(v => `<div class="cost-tag">${escapeHtml(v)}</div>`).join('')}
           </div>
         `;
       }
 
-      document.getElementById('financialContent').innerHTML = `
-        <div class="financial-grid">
-          <div class="financial-box">
-            <div class="financial-label">Low End</div>
-            <div class="financial-value">${lowCost}</div>
-          </div>
-          <div class="financial-box">
-            <div class="financial-label">High End</div>
-            <div class="financial-value">${highCost}</div>
-          </div>
+      document.getElementById('costMeterContainer').innerHTML = `
+        <div class="cost-range-bar">
+          <div class="cost-range-fill" style="width: ${fillPercentage}%"></div>
+          <div class="cost-label low">${lowLabel}</div>
+          <div class="cost-label high">${highLabel}</div>
         </div>
         ${variablesHtml}
       `;
@@ -933,11 +1145,17 @@
       document.getElementById('redFlagsCard').style.display = 'block';
     }
 
-    function renderStrategy(steps) {
+    /**
+     * 2. STRATEGY TIMELINE - VERTICAL STEPPER
+     */
+    function renderStrategyTimeline(steps) {
+      const labels = ['Immediate', 'Planning', 'Execution', 'Follow-up'];
+
       const html = steps.map((step, index) => `
-        <div class="timeline-step">
-          <div class="timeline-number">${index + 1}</div>
+        <div class="timeline-step ${index === 0 ? 'active' : ''}">
+          <div class="timeline-dot">${index + 1}</div>
           <div class="timeline-content">
+            <div class="timeline-label">${labels[index] || 'Step ' + (index + 1)}</div>
             <div class="timeline-text">${escapeHtml(step)}</div>
           </div>
         </div>
@@ -957,16 +1175,13 @@
     }
 
     async function approveAndPost() {
-      // Extract data for project posting
       const parsed = window.triageData.parsed;
 
-      // Build project title from question
       let projectTitle = window.triageData.question.split('.')[0].trim();
       if (projectTitle.length > 60) {
         projectTitle = projectTitle.substring(0, 57) + '...';
       }
 
-      // Extract budget from costs section
       const costMatch = parsed.costs?.match(/\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i);
       let budgetMin = 5000;
       let budgetMax = 15000;
@@ -994,7 +1209,6 @@
       localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
       console.log('✓ Saved hot_lead_draft:', hotLeadDraft);
 
-      // Check authentication
       if (window.authService && window.authService.initialized) {
         const user = await window.authService.getCurrentUser();
         if (user) {
@@ -1003,7 +1217,6 @@
         }
       }
 
-      // Not logged in - redirect to signup
       sessionStorage.setItem('signup_role', 'homeowner');
       window.location.href = 'signup.html?intent=post_project';
     }
