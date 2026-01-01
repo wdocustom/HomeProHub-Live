@@ -858,22 +858,46 @@
         // Get user profile for zip_code
         const profile = await window.authService.getUserProfile();
 
-        // CRITICAL: Extract zip_code with multiple fallbacks to prevent 500 errors
-        // Priority: 1. User profile, 2. Draft data, 3. Safe default
-        const zipCode = profile?.zip_code || projectData.zipCode || projectData.zip_code || '68106';
+        // NUCLEAR FALLBACK: "Just-in-Time" Zip Code Collection
+        // Priority: 1. User profile, 2. Draft data, 3. Extract from title, 4. Ask user
+        let finalZip = profile?.zip_code || projectData.zipCode || projectData.zip_code;
 
-        // Validate we have a zip code before proceeding
-        if (!zipCode || zipCode === '00000') {
-          console.error('❌ Missing or invalid zip_code:', {
-            profile_zip: profile?.zip_code,
-            draft_zipCode: projectData.zipCode,
-            draft_zip_code: projectData.zip_code,
-            fallback: zipCode
-          });
-          throw new Error('ZIP code is required. Please update your profile or include location in the project draft.');
+        // FALLBACK 2: Regex check the title for zip code (e.g., "Bathroom in 68104")
+        if (!finalZip || finalZip === '00000') {
+          const title = projectData.title || '';
+          const match = title.match(/\b\d{5}\b/);
+          if (match) {
+            finalZip = match[0];
+            console.log('✓ Extracted zip_code from title:', finalZip);
+          }
         }
 
-        console.log('✓ Using zip_code:', zipCode);
+        // FALLBACK 3: THE "NUCLEAR" FALLBACK - Ask the user
+        // If we still don't have a zip, force the user to type it now.
+        if (!finalZip || finalZip === '00000') {
+          finalZip = prompt("We need a Zip Code to match you with local pros. Please enter your project Zip Code:");
+
+          // If they click Cancel or leave it blank, STOP. Do not crash the server.
+          if (!finalZip || finalZip.trim() === '') {
+            alert("Project posting cancelled. A Zip Code is required.");
+            btn.disabled = false;
+            btn.textContent = '✅ Confirm & Post to Job Board';
+            return; // STOP EXECUTION
+          }
+
+          // Validate the entered zip code format
+          finalZip = finalZip.trim();
+          if (!/^\d{5}(-\d{4})?$/.test(finalZip)) {
+            alert("Invalid Zip Code format. Please enter a 5-digit ZIP code (e.g., 68105).");
+            btn.disabled = false;
+            btn.textContent = '✅ Confirm & Post to Job Board';
+            return; // STOP EXECUTION
+          }
+
+          console.log('✓ User provided zip_code:', finalZip);
+        }
+
+        console.log('✓ Final zip_code confirmed:', finalZip);
 
         // TASK 2: Map category values (lowercase to Title Case for database)
         const categoryMap = {
@@ -905,13 +929,14 @@
 
         // Build submission data matching backend schema (/api/jobs)
         // CRITICAL: Backend expects budget_min and budget_max (NOT budget_low/budget_high)
+        // NOW GUARANTEED TO HAVE A ZIP CODE (from nuclear fallback above)
         const submissionData = {
           title: projectData.title || 'Home Renovation Project',
           description: projectData.description || '',
           category: mappedCategory,  // Use mapped Title Case value
           budget_min: cleanNumber(projectData.budgetMin) || 5000,  // CRITICAL: Use budget_min
           budget_max: cleanNumber(projectData.budgetMax) || 15000, // CRITICAL: Use budget_max
-          zip_code: zipCode,  // REQUIRED by backend
+          zip_code: finalZip,  // REQUIRED - Guaranteed by nuclear fallback
           urgency: projectData.urgency || 'flexible',
           homeowner_email: user.email,  // REQUIRED by backend
           original_question: projectData.description,
