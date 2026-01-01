@@ -372,17 +372,30 @@ class AuthService {
     // 1. Check Cookies (Legacy/Fallback)
     let draftProject = this.getCookie('project_draft');
 
-    // 2. THE FIX: Check User Metadata (Cross-Device Cloud Save)
-    const user = await this.getCurrentUser();
-    const metaDraft = user?.user_metadata?.pending_project_draft;
+    // 2. TASK 2 FIX: Check localStorage (Landing page saves here!)
+    if (!draftProject) {
+      const localDraft = localStorage.getItem('hot_lead_draft');
+      if (localDraft) {
+        console.log("✓ Found draft in localStorage!");
+        draftProject = localDraft;
+        // Sync to cookie for consistency across pages
+        this.setCookie('project_draft', localDraft, 1);
+      }
+    }
 
-    // If we found a draft in the cloud but not locally, use the cloud one
-    if (!draftProject && metaDraft) {
-      console.log("✓ Found cloud draft! Restoring from user metadata...");
-      // Re-save to cookie/localStorage so post-project.html can read it easily
-      this.setCookie('project_draft', JSON.stringify(metaDraft), 1);
-      localStorage.setItem('hot_lead_draft', JSON.stringify(metaDraft));
-      draftProject = metaDraft;
+    // 3. Check User Metadata (Cross-Device Cloud Save)
+    if (!draftProject) {
+      const user = await this.getCurrentUser();
+      const metaDraft = user?.user_metadata?.pending_project_draft;
+
+      // If we found a draft in the cloud but not locally, use the cloud one
+      if (metaDraft) {
+        console.log("✓ Found cloud draft! Restoring from user metadata...");
+        // Re-save to cookie/localStorage so post-project.html can read it easily
+        this.setCookie('project_draft', JSON.stringify(metaDraft), 1);
+        localStorage.setItem('hot_lead_draft', JSON.stringify(metaDraft));
+        draftProject = metaDraft;
+      }
     }
 
     // NORMALIZATION: Remove trailing slashes to prevent matching errors

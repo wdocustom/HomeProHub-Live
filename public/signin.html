@@ -307,16 +307,18 @@
         if (result.success) {
           displaySuccess('Sign in successful! Redirecting...');
 
-          // Get user profile to determine where to redirect
-          const profile = await window.authService.getUserProfile();
+          // TASK 1 & 3 FIX: Let handleSignInSmart() handle ALL redirects (draft-aware)
+          // Add 3-second safety timeout to prevent infinite "Signing In..." spinner
+          const safetyTimeout = setTimeout(() => {
+            console.warn('⚠️  Safety timeout triggered - forcing redirect to dashboard');
+            setLoading(false);
+            window.location.href = 'home.html';
+          }, 3000);
 
-          setTimeout(() => {
-            if (profile && profile.role === 'contractor') {
-              window.location.href = 'contractor.html';
-            } else {
-              window.location.href = 'home.html';
-            }
-          }, 1000);
+          // Clear safety timeout if redirect happens (handleSignInSmart runs automatically via SIGNED_IN event)
+          window.addEventListener('beforeunload', () => {
+            clearTimeout(safetyTimeout);
+          });
         } else {
           displayError(result.error || 'Sign in failed. Please check your credentials.');
           setLoading(false);
