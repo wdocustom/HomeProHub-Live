@@ -36,12 +36,26 @@
       color: #111827;
     }
     .concierge-question {
-      font-size: 48px;
+      font-size: 52px;
       font-weight: 700;
       color: #111827;
       margin-bottom: 24px;
       letter-spacing: -0.03em;
       line-height: 1.1;
+    }
+    .hero-subhead {
+      font-size: 20px;
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero-trust-line {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-top: 24px;
     }
 
     /* Search Bar - Exactly Like Landing Page */
@@ -121,6 +135,61 @@
       font-size: 14px;
       text-align: center;
       color: #6b7280;
+    }
+
+    /* How It Works Section */
+    .how-it-works {
+      background: #f9fafb;
+      padding: 80px 24px;
+    }
+    .section-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 56px;
+      letter-spacing: -0.02em;
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+    .step-card {
+      text-align: center;
+    }
+    .step-number {
+      display: inline-block;
+      width: 48px;
+      height: 48px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 48px;
+      margin-bottom: 20px;
+    }
+    .step-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+    .step-description {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+    @media (max-width: 768px) {
+      .steps-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
     }
 
     /* TASK 2: Blueprint Analysis Card */
@@ -411,25 +480,16 @@
       color: #1e3a8a;
     }
 
-    /* TASK 2: Quick Actions - Exact Landing Page Feature Cards */
-    .section-header {
-      max-width: 1100px;
-      margin: 80px auto 48px;
-      padding: 0 24px;
-      text-align: center;
+    /* Three Paths Forward Section */
+    .three-paths {
+      padding: 80px 24px;
     }
-    .section-header h2 {
-      font-size: 36px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 12px;
-      letter-spacing: -0.02em;
-    }
-    .section-header p {
-      font-size: 16px;
-      color: #6b7280;
-      max-width: 600px;
-      margin: 0 auto;
+    .path-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #10b981;
+      font-weight: 600;
+      text-align: left;
     }
 
     /* Feature Grid - Exact Landing Page Style */
@@ -640,20 +700,23 @@
   <!-- Navigation component will be injected here by navigation.js -->
 
   <main>
-    <!-- TASK 1: Concierge Hero Section -->
+    <!-- Hero Section -->
     <section class="concierge-hero">
       <p class="concierge-greeting">
         Good <span id="timeOfDay">day</span>, <span class="user-name" id="userName">there</span>.
       </p>
-      <h1 class="concierge-question">What are we fixing today?</h1>
+      <h1 class="concierge-question">What's going on with your home?</h1>
+      <p class="hero-subhead">
+        Leaks, cracks, strange noises, or weird smells? Get instant AI-powered guidance—understand the issue, check for safety concerns, and know your next steps.
+      </p>
 
       <div class="search-container">
         <div class="search-input-group">
           <textarea
             class="search-bar"
-            placeholder="Describe your issue (e.g., 'Water stain on ceiling after rain')"
+            placeholder="Example: There's a wet spot on my ceiling near the bathroom. It's about 12 inches across and the paint is bubbling..."
             id="homeIssueInput"
-            rows="1"
+            rows="2"
           ></textarea>
           <button class="search-button" id="askAiBtn">
             Get AI Help
@@ -666,10 +729,39 @@
         <label for="photoInput" class="photo-upload-btn">
           upload a photo
         </label>
+        for faster diagnosis
         <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" />
       </div>
 
+      <div class="hero-trust-line">
+        <strong>100% Free</strong> — No credit card. No pressure. Just honest help for homeowners.
+      </div>
+
       <div class="status-message" id="aiStatus"></div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+      <div class="section-container">
+        <h2 class="section-title">How It Works</h2>
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <h3 class="step-title">Describe Your Issue</h3>
+            <p class="step-description">Tell us what's happening or upload a photo. The more detail, the better.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <h3 class="step-title">Get AI Analysis</h3>
+            <p class="step-description">Instant diagnosis with cost estimates, safety warnings, and what to tell a contractor.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <h3 class="step-title">Choose Your Path</h3>
+            <p class="step-description">DIY it, hire a verified pro, or get expert support. You're in control.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- TASK 2: Blueprint Analysis Card -->
@@ -730,35 +822,40 @@
       </div>
     </section>
 
-    <!-- Section Header: Explore & Do -->
-    <div class="section-header">
-      <h2>Quick Actions</h2>
-      <p>Everything you need to manage your home projects in one place.</p>
-    </div>
+    <!-- Three Paths Forward -->
+    <section class="three-paths">
+      <div class="section-container">
+        <h2 class="section-title">What You Can Do Next</h2>
+        <p style="text-align: center; color: #6b7280; max-width: 700px; margin: 0 auto 0; font-size: 16px;">
+          After your AI analysis, you choose what happens next. No pressure, no funnel.
+        </p>
 
-    <!-- TASK 2: Feature Cards - Exact Landing Page Style -->
-    <section class="bento-grid">
-      <!-- Find a Contractor -->
-      <a href="contractor-directory.html" class="bento-tile blue">
-        <div class="bento-tile-icon-container">🏅</div>
-        <h3 class="bento-tile-title">Find a Contractor</h3>
-        <p class="bento-tile-description">Search verified pros scored A–F based on transparent criteria. Find the right contractor with confidence.</p>
-      </a>
+        <div class="bento-grid" style="margin-top: 48px;">
+          <!-- Find a Contractor -->
+          <a href="contractor-directory.html" class="bento-tile blue">
+            <div class="bento-tile-icon-container">🔍</div>
+            <h3 class="bento-tile-title">Understand & DIY</h3>
+            <p class="bento-tile-description">Review the AI diagnosis, safety warnings, and what you need. Many homeowners stop here—and that's perfectly fine.</p>
+            <div class="path-note">FREE</div>
+          </a>
 
-      <!-- My Projects -->
-      <a href="homeowner-dashboard.html" class="bento-tile green">
-        <div class="bento-tile-icon-container">📋</div>
-        <h3 class="bento-tile-title">My Projects</h3>
-        <p class="bento-tile-description">View your active projects, track bids, and manage contractor communications.</p>
-      </a>
+          <!-- My Projects -->
+          <a href="homeowner-dashboard.html" class="bento-tile green">
+            <div class="bento-tile-icon-container">🏅</div>
+            <h3 class="bento-tile-title">Hire a Pro</h3>
+            <p class="bento-tile-description">Post your project and get competitive bids from verified contractors. Compare options and hire with confidence.</p>
+            <div class="path-note">FREE</div>
+          </a>
 
-      <!-- Expert Support -->
-      <a href="access-experts.html" class="bento-tile purple">
-        <div class="bento-tile-icon-container">🤝</div>
-        <h3 class="bento-tile-title">Expert Support</h3>
-        <p class="bento-tile-description">Get help reviewing bids, understanding contractor jargon, and making confident decisions.</p>
-        <span class="premium-badge" style="margin-top: 16px;">Premium</span>
-      </a>
+          <!-- Expert Support -->
+          <a href="access-experts.html" class="bento-tile purple">
+            <div class="bento-tile-icon-container">🤝</div>
+            <h3 class="bento-tile-title">Get Expert Help</h3>
+            <p class="bento-tile-description">Need a second opinion? Video call with our construction experts for bid reviews, design guidance, or just peace of mind.</p>
+            <span class="premium-badge" style="margin-top: 12px;">Premium</span>
+          </a>
+        </div>
+      </div>
     </section>
 
   </main>
