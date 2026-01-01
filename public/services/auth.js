@@ -47,8 +47,17 @@ class AuthService {
         console.log('Auth state changed:', event);
         this.currentUser = session?.user || null;
 
+        // CRITICAL FIX: Stop execution if no user is logged in.
+        // Allow guests to browse the site and use the AI without being redirected.
+        if (!session || !session.user) {
+          console.log("Guest user: No auto-redirects.");
+          return;
+        }
+
+        // --- BELOW THIS LINE ONLY RUNS FOR LOGGED-IN USERS ---
+
         // Handle sign in with loop prevention
-        if (event === 'SIGNED_IN' || session) {
+        if (event === 'SIGNED_IN') {
           await this.handleSignInSmart();
         }
 
