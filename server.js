@@ -2543,8 +2543,20 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       ai_analysis
     } = req.body;
 
+    // Debug logging to diagnose 500 errors
+    console.log('📥 Received POST /api/jobs:', {
+      title: title ? '✓' : '❌ MISSING',
+      description: description ? '✓' : '❌ MISSING',
+      zip_code: zip_code ? `✓ (${zip_code})` : '❌ MISSING',
+      homeowner_email: homeowner_email ? '✓' : '❌ MISSING',
+      budget_min,
+      budget_max,
+      category
+    });
+
     // Validation
     if (!title || !description || !zip_code || !homeowner_email) {
+      console.error('❌ Validation failed - missing required fields');
       return res.status(400).json({
         error: "Missing required fields: title, description, zip_code, homeowner_email",
         code: 'VALIDATION_ERROR'
@@ -2585,7 +2597,24 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       ai_analysis: ai_analysis || null
     };
 
-    const job = await db.createJobPosting(jobData);
+    console.log('💾 Attempting to create job posting with data:', {
+      ...jobData,
+      description: jobData.description?.substring(0, 50) + '...' // Truncate for logs
+    });
+
+    let job;
+    try {
+      job = await db.createJobPosting(jobData);
+      console.log('✓ Job created successfully:', job.id);
+    } catch (dbError) {
+      console.error('❌ Database error creating job posting:', {
+        error: dbError.message,
+        code: dbError.code,
+        detail: dbError.detail,
+        constraint: dbError.constraint
+      });
+      throw dbError; // Re-throw to be caught by outer catch
+    }
 
     // Create notification (optional - could notify nearby contractors)
     await db.createNotification({

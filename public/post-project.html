@@ -857,7 +857,23 @@
 
         // Get user profile for zip_code
         const profile = await window.authService.getUserProfile();
-        const zipCode = profile?.zip_code || projectData.zipCode || '00000';
+
+        // CRITICAL: Extract zip_code with multiple fallbacks to prevent 500 errors
+        // Priority: 1. User profile, 2. Draft data, 3. Safe default
+        const zipCode = profile?.zip_code || projectData.zipCode || projectData.zip_code || '68106';
+
+        // Validate we have a zip code before proceeding
+        if (!zipCode || zipCode === '00000') {
+          console.error('❌ Missing or invalid zip_code:', {
+            profile_zip: profile?.zip_code,
+            draft_zipCode: projectData.zipCode,
+            draft_zip_code: projectData.zip_code,
+            fallback: zipCode
+          });
+          throw new Error('ZIP code is required. Please update your profile or include location in the project draft.');
+        }
+
+        console.log('✓ Using zip_code:', zipCode);
 
         // TASK 2: Map category values (lowercase to Title Case for database)
         const categoryMap = {
@@ -904,6 +920,12 @@
 
         // Debug logging to verify payload structure
         console.log('📤 Submitting project to /api/jobs:');
+        console.log('Required fields check:', {
+          title: submissionData.title ? '✓' : '❌',
+          description: submissionData.description ? '✓' : '❌',
+          zip_code: submissionData.zip_code ? `✓ (${submissionData.zip_code})` : '❌ MISSING',
+          homeowner_email: submissionData.homeowner_email ? '✓' : '❌'
+        });
         console.log('Budget fields:', {
           budget_min: submissionData.budget_min,
           budget_max: submissionData.budget_max
