@@ -53,14 +53,49 @@
 
         // Get current user
         const user = await window.authService.getCurrentUser();
+
+        // SECURITY GUARD: If no user session, redirect to login
+        if (!user) {
+          console.log('No active session detected. Redirecting to login...');
+          // Only redirect if we're on a protected page (not on public pages)
+          const currentPath = window.location.pathname;
+          const publicPages = ['/', '/index.html', '/signin.html', '/signup.html'];
+          const isPublicPage = publicPages.some(page =>
+            currentPath === page || currentPath.endsWith(page)
+          );
+
+          if (!isPublicPage) {
+            window.location.href = '/signin.html';
+            return;
+          }
+        }
+
         if (user) {
           this.user = user;
+
           // Get profile for role information
           this.profile = await window.authService.getUserProfile();
-          this.init();
+
+          // Only initialize UI if we have both user and profile
+          if (this.profile) {
+            this.init();
+          } else {
+            console.warn('Profile not found for user');
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
+        // On auth error, redirect to login for protected pages
+        const currentPath = window.location.pathname;
+        const publicPages = ['/', '/index.html', '/signin.html', '/signup.html'];
+        const isPublicPage = publicPages.some(page =>
+          currentPath === page || currentPath.endsWith(page)
+        );
+
+        if (!isPublicPage) {
+          console.log('Auth error on protected page. Redirecting to login...');
+          window.location.href = '/signin.html';
+        }
       }
     }
 
@@ -74,18 +109,29 @@
     }
 
     async fetchNotificationCount() {
-      if (!this.user) return;
+      // Only fetch if we have authenticated user and valid session
+      if (!this.user || !this.profile) return;
 
       try {
+        // Verify we have a valid session before making the call
+        const session = await window.authService.getSession();
+        if (!session) {
+          console.log('No session available for notification fetch');
+          return;
+        }
+
         const response = await window.authService.authenticatedFetch(
           `/api/notifications/unread?email=${encodeURIComponent(this.user.email)}`
         );
+
         if (response.ok) {
           const data = await response.json();
           this.notificationCount = data.count || 0;
           this.updateNotificationBadge();
+        } else if (response.status === 401) {
+          console.log('Session expired. User needs to re-login.');
+          // Don't spam console with 401s - session will auto-refresh or user will be redirected
         } else {
-          // API returned error - fail silently without alarming user
           console.warn('Notifications API unavailable (non-critical)');
         }
       } catch (error) {
@@ -95,19 +141,33 @@
     }
 
     async fetchMessageCount() {
-      if (!this.user) return;
+      // Only fetch if we have authenticated user and valid session
+      if (!this.user || !this.profile) return;
 
       try {
+        // Verify we have a valid session before making the call
+        const session = await window.authService.getSession();
+        if (!session) {
+          console.log('No session available for message fetch');
+          return;
+        }
+
         const response = await window.authService.authenticatedFetch(
           `/api/messages/unread?email=${encodeURIComponent(this.user.email)}`
         );
+
         if (response.ok) {
           const data = await response.json();
           this.messageCount = data.count || 0;
           this.updateMessageBadge();
+        } else if (response.status === 401) {
+          console.log('Session expired. User needs to re-login.');
+          // Don't spam console with 401s
+        } else {
+          console.warn('Messages API error:', response.status);
         }
       } catch (error) {
-        console.error('Error fetching messages:', error);
+        console.warn('Could not fetch messages (non-critical):', error.message);
       }
     }
 
@@ -359,9 +419,11 @@
         // Insert at the beginning of body
         document.body.insertAdjacentHTML('afterbegin', navHTML);
 
-        // Fetch initial counts
-        this.fetchNotificationCount();
-        this.fetchMessageCount();
+        // Delay initial data fetch to ensure session is fully established
+        setTimeout(() => {
+          this.fetchNotificationCount();
+          this.fetchMessageCount();
+        }, 500);
 
         // Poll for updates every 30 seconds
         setInterval(() => {
