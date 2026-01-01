@@ -107,13 +107,21 @@ class AuthService {
         const allowedRedirectPages = ['/signin.html', '/signup.html'];
         const isAuthPage = allowedRedirectPages.some(p => path.endsWith(p));
 
-        // If we are NOT on a Login/Signup page, do nothing. Stop the "Hijack".
+        // CRITICAL FIX: Only redirect on explicit SIGNED_IN event, not INITIAL_SESSION
+        // This prevents auto-redirect when user visits signin page with existing session
         if (!isAuthPage) {
           console.log("Auth Debug: User is on a content page. No redirect.");
           return;
         }
 
-        // --- FROM HERE DOWN, WE ONLY RUN FOR USERS ON LOGIN/SIGNUP PAGES ---
+        // If user just loaded the page (INITIAL_SESSION), don't auto-redirect
+        // Let them see the signin page and decide what to do
+        if (event === 'INITIAL_SESSION') {
+          console.log("Auth Debug: Initial session detected on auth page. No auto-redirect.");
+          return;
+        }
+
+        // --- FROM HERE DOWN, WE ONLY RUN FOR EXPLICIT SIGN-IN (SIGNED_IN event) ---
 
         // 5. Retrieve Draft Data
         const cookieDraft = this.getCookie('hot_lead_draft');
@@ -303,8 +311,8 @@ class AuthService {
       this.currentUser = null;
       this.handleSignOut();
 
-      // Redirect to landing page after sign out
-      window.location.href = 'index.html';
+      // Redirect to sign-in page after sign out
+      window.location.href = 'signin.html';
 
       return { success: true };
     } catch (error) {
@@ -312,7 +320,7 @@ class AuthService {
       // Even if there's an error, clear local state and redirect
       this.currentUser = null;
       this.handleSignOut();
-      window.location.href = 'index.html';
+      window.location.href = 'signin.html';
       return { success: false, error: error.message };
     }
   }
