@@ -1619,6 +1619,39 @@
       document.getElementById('proposalsModal').classList.remove('show');
     }
 
+    // Helper function to render estimate data nicely (instead of raw JSON)
+    function renderEstimateData(rawData) {
+      // Safety: Parse if it's a string, use as-is if object
+      let data = rawData;
+      try {
+        if (typeof rawData === 'string') {
+          data = JSON.parse(rawData);
+        }
+      } catch (e) {
+        return '<div style="color: #6b7280; font-size: 14px;">Details unavailable</div>';
+      }
+
+      // Check if data has line_items
+      if (!data || !data.line_items || !Array.isArray(data.line_items)) {
+        return '<div style="color: #6b7280; font-size: 14px;">No breakdown provided</div>';
+      }
+
+      // Render clean list
+      return `
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 16px;">
+          <h4 style="font-weight: 600; color: #374151; margin: 0 0 12px 0; font-size: 14px;">Bid Breakdown</h4>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${data.line_items.map(item => `
+              <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px;">
+                <span style="color: #6b7280;">${escapeHtml(item.item || item.description || 'Item')}</span>
+                <span style="font-weight: 500; color: #111827;">$${item.low || item.cost || 0} - $${item.high || item.cost || 0}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
     function renderProposalsModal(project) {
       const container = document.getElementById('proposalsContainer');
       const bids = project.bids || [];
@@ -1646,20 +1679,12 @@
                           bid.status === 'rejected' ? 'Declined' :
                           'Pending Review';
 
-        // Check if estimate exists and convert to string if it's an object
+        // Check if estimate exists
         const estimateData = bid.estimate || bid.ai_estimate || bid.line_item_estimate;
         const hasEstimate = !!estimateData;
 
-        // Handle both string and object formats
-        let estimateText = '';
-        if (estimateData) {
-          if (typeof estimateData === 'string') {
-            estimateText = estimateData;
-          } else if (typeof estimateData === 'object') {
-            // Convert object to formatted string
-            estimateText = JSON.stringify(estimateData, null, 2);
-          }
-        }
+        // FIXED: Use renderEstimateData function instead of JSON.stringify
+        const estimateHTML = hasEstimate ? renderEstimateData(estimateData) : '';
 
         return `
           <div class="proposal-item">
@@ -1700,7 +1725,7 @@
                   <span>📋</span>
                   <span>Line-by-Line Estimate</span>
                 </div>
-                <div class="proposal-estimate-lines">${escapeHtml(estimateText)}</div>
+                ${estimateHTML}
               </div>
             ` : `
               <div class="proposal-no-estimate">
@@ -1726,9 +1751,22 @@
       }
 
       try {
-        const response = await window.authService.authenticatedFetch(`/api/bids/${bidId}/accept`, {
+        // Get current user email
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          alert('Please log in to accept proposals');
+          return;
+        }
+
+        // FIXED: Correct route is /api/bid/accept (singular)
+        // and it requires bidId, jobId, and homeownerEmail
+        const response = await window.authService.authenticatedFetch('/api/bid/accept', {
           method: 'POST',
-          body: JSON.stringify({ job_id: projectId })
+          body: JSON.stringify({
+            bidId: bidId,
+            jobId: projectId,
+            homeownerEmail: user.email
+          })
         });
 
         if (!response.ok) {
@@ -2052,8 +2090,9 @@
     });
 
     // New project button
+    // FIXED: Redirect to post-project.html instead of home.html
     document.getElementById('newProjectBtn').addEventListener('click', () => {
-      window.location.href = 'home.html';
+      window.location.href = 'post-project.html';
     });
 
     // Utility functions
