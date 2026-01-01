@@ -79,7 +79,7 @@ class AuthService {
         } else {
           // Scenario B: Just Logging In -> Dashboard
           console.log("Auth Debug: Standard Login. Going to Dashboard...");
-          window.location.href = '/homeowner-dashboard.html';
+          window.location.href = '/home.html';
         }
 
         // Handle sign out

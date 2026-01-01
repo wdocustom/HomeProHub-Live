@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HomeProHub – Your Home Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
   <!-- Supabase Auth -->
@@ -749,30 +750,53 @@
     <div style="max-width: 1200px; margin: 0 auto; padding: 40px 20px;">
 
       <!-- AI Help Section -->
-      <section style="background: white; border-radius: 12px; padding: 32px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">Need help with something?</h1>
-        <p style="color: #6b7280; margin: 0 0 24px 0;">Describe your issue or upload a photo. Get instant AI analysis.</p>
-
-        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-          <input
-            type="text"
-            class="hero-input"
-            placeholder="What's going on? (e.g., 'Water leak under sink')"
-            id="homeIssueInput"
-            style="flex: 1; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
-          />
-          <button class="btn-large" id="askAiBtn" style="padding: 14px 28px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap;">
-            Get Help
-          </button>
+      <div class="relative bg-gradient-to-b from-blue-50/80 to-white py-16 px-4 sm:px-6 lg:px-8 rounded-3xl mb-10 border border-blue-50/50">
+        <div class="text-center max-w-3xl mx-auto space-y-4">
+          <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight sm:text-5xl">
+            What can we help you fix?
+          </h1>
+          <p class="text-lg text-slate-600">
+            Describe the issue (e.g., "Water stain on ceiling") or upload a photo for instant expert analysis.
+          </p>
         </div>
 
-        <label for="photoInput" style="color: #6b7280; font-size: 14px; cursor: pointer; text-decoration: underline;">
-          Or upload a photo
-        </label>
-        <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" style="display: none;" />
+        <div class="mt-10 max-w-2xl mx-auto relative group">
+          <div class="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
 
-        <div class="status-message" id="aiStatus" style="margin-top: 12px; font-size: 14px; color: #6b7280;"></div>
-      </section>
+          <div class="relative flex items-center bg-white rounded-full shadow-xl ring-1 ring-slate-900/5">
+            <div class="pl-6 text-slate-400">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
+            <input
+              type="text"
+              id="homeIssueInput"
+              class="w-full border-0 bg-transparent py-5 pl-4 pr-36 text-slate-900 placeholder:text-slate-400 focus:ring-0 sm:text-lg outline-none"
+              placeholder="Describe your issue..."
+            />
+
+            <div class="absolute right-2 top-2 bottom-2">
+              <button
+                id="askAiBtn"
+                class="h-full px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full shadow-lg hover:shadow-blue-500/30 transition-all duration-200 flex items-center gap-2"
+              >
+                <span>Get Help</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 text-center">
+          <button onclick="document.getElementById('photoInput').click()" class="text-sm font-medium text-slate-500 hover:text-blue-600 flex items-center justify-center gap-2 mx-auto transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Or upload a photo instead
+          </button>
+          <input type="file" id="photoInput" class="hidden" accept="image/*" capture="environment" />
+        </div>
+
+        <div class="status-message text-center mt-4 text-sm text-slate-600" id="aiStatus"></div>
+      </div>
 
       <!-- Quick Actions -->
       <section style="margin-bottom: 32px;">
