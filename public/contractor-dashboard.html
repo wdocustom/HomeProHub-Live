@@ -615,6 +615,66 @@
     </div>
   </div>
 
+  <!-- Sub-Hunter Modal (Crew Connect) -->
+  <div class="modal" id="subHunterModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🔨 Need Subs for This Project?</h2>
+        <button class="modal-close" onclick="closeSubHunterModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 20px;">Find verified trades in your area to help complete this project.</p>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 8px;">Which trades do you need?</label>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="electrical" style="width: 18px; height: 18px;">
+              <span>⚡ Electrician</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="plumbing" style="width: 18px; height: 18px;">
+              <span>🔧 Plumber</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="hvac" style="width: 18px; height: 18px;">
+              <span>❄️ HVAC</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="roofing" style="width: 18px; height: 18px;">
+              <span>🏠 Roofer</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="flooring" style="width: 18px; height: 18px;">
+              <span>🪵 Flooring</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="painting" style="width: 18px; height: 18px;">
+              <span>🎨 Painter</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="carpentry" style="width: 18px; height: 18px;">
+              <span>🔨 Carpenter</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="landscaping" style="width: 18px; height: 18px;">
+              <span>🌳 Landscaping</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="subSearchResults" style="margin-top: 20px; display: none;">
+          <h3 style="font-size: 16px; margin-bottom: 12px;">Available Contractors Nearby</h3>
+          <div id="subsList" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeSubHunterModal()">Cancel</button>
+        <button class="btn-bid" id="findSubsBtn" onclick="findSubs()">🔍 Find Subs</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Job Details Modal -->
   <div class="modal" id="jobDetailsModal">
     <div class="modal-content">
@@ -1395,6 +1455,208 @@
       }
     });
 
+    // FEATURE 2: Sub-Hunter (Crew Connect) Functions
+    let currentProjectForSubs = null;
+
+    // Load active projects (accepted bids) into the Active Projects tab
+    async function loadActiveProjects() {
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/contractor/bids?email=${encodeURIComponent(contractorEmail)}&status=accepted`
+        );
+
+        if (!response.ok) throw new Error('Failed to load active projects');
+
+        const data = await response.json();
+        const activeProjects = data.bids || [];
+
+        renderActiveProjects(activeProjects);
+      } catch (error) {
+        console.error('Error loading active projects:', error);
+        document.getElementById('activeProjectsContainer').innerHTML =
+          '<div class="no-jobs"><h3>Failed to load active projects</h3></div>';
+      }
+    }
+
+    // Render active projects
+    function renderActiveProjects(projects) {
+      const container = document.getElementById('activeProjectsContainer');
+
+      if (projects.length === 0) {
+        container.innerHTML = '<div class="no-jobs"><h3>No active projects yet</h3><p>Submit bids to get started!</p></div>';
+        return;
+      }
+
+      container.innerHTML = projects.map(bid => {
+        const job = bid.job;
+        return `
+          <div class="job-card">
+            <div class="job-header">
+              <div>
+                <h3 class="job-title">${escapeHtml(job.title)}</h3>
+                <div class="job-meta">
+                  <span>📍 ${escapeHtml(job.address)}</span>
+                  <span>💰 Your Bid: ${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</span>
+                </div>
+              </div>
+              <span class="bid-status accepted">Active</span>
+            </div>
+
+            <div class="job-description">
+              ${escapeHtml(job.description).substring(0, 200)}${job.description.length > 200 ? '...' : ''}
+            </div>
+
+            <div class="job-actions" style="display: flex; gap: 12px; margin-top: 16px;">
+              <button class="btn-bid" onclick="contactHomeowner('${job.id}', '${job.homeowner_email}')">💬 Contact Homeowner</button>
+              <button class="btn-secondary" onclick="openSubHunterModal('${job.id}')">🔨 Find Subs</button>
+              <button class="btn-secondary" onclick="viewTeam('${job.id}')">👥 View Team</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Open Sub-Hunter modal
+    function openSubHunterModal(jobId) {
+      currentProjectForSubs = jobId;
+      document.getElementById('subHunterModal').classList.add('active');
+      document.getElementById('subSearchResults').style.display = 'none';
+      document.getElementById('subsList').innerHTML = '';
+      // Uncheck all checkboxes
+      document.querySelectorAll('#subHunterModal input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
+    window.openSubHunterModal = openSubHunterModal;
+
+    // Close Sub-Hunter modal
+    function closeSubHunterModal() {
+      document.getElementById('subHunterModal').classList.remove('active');
+      currentProjectForSubs = null;
+    }
+    window.closeSubHunterModal = closeSubHunterModal;
+
+    // Find subs based on selected trades
+    async function findSubs() {
+      if (!currentProjectForSubs) return;
+
+      const selectedTrades = Array.from(
+        document.querySelectorAll('#subHunterModal input[name="trade"]:checked')
+      ).map(cb => cb.value);
+
+      if (selectedTrades.length === 0) {
+        alert('Please select at least one trade.');
+        return;
+      }
+
+      const findBtn = document.getElementById('findSubsBtn');
+      findBtn.disabled = true;
+      findBtn.textContent = '🔍 Searching...';
+
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/find-subs`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId: currentProjectForSubs,
+              trades: selectedTrades
+            })
+          }
+        );
+
+        if (!response.ok) throw new Error('Failed to find subs');
+
+        const data = await response.json();
+        displaySubResults(data.contractors || []);
+
+      } catch (error) {
+        console.error('Error finding subs:', error);
+        alert('Failed to find subs. Please try again.');
+      } finally {
+        findBtn.disabled = false;
+        findBtn.textContent = '🔍 Find Subs';
+      }
+    }
+    window.findSubs = findSubs;
+
+    // Display sub search results
+    function displaySubResults(contractors) {
+      const resultsDiv = document.getElementById('subSearchResults');
+      const subsList = document.getElementById('subsList');
+
+      if (contractors.length === 0) {
+        subsList.innerHTML = '<p style="color: #6b7280;">No verified contractors found in your area.</p>';
+        resultsDiv.style.display = 'block';
+        return;
+      }
+
+      subsList.innerHTML = contractors.map(contractor => `
+        <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+              <div style="font-weight: 600; margin-bottom: 4px;">${escapeHtml(contractor.company_name || contractor.full_name)}</div>
+              <div style="font-size: 13px; color: #6b7280;">
+                ${contractor.trade_type} • ${contractor.years_in_business || 0} years experience
+              </div>
+              <div style="font-size: 13px; color: #6b7280;">
+                📍 ${contractor.zip_code}
+              </div>
+            </div>
+            <button
+              class="btn-bid"
+              style="padding: 6px 12px; font-size: 13px;"
+              onclick="inviteSub('${contractor.email}', '${contractor.trade_type}')">
+              Invite
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      resultsDiv.style.display = 'block';
+    }
+
+    // Invite a sub to the project
+    async function inviteSub(contractorEmail, tradeType) {
+      if (!currentProjectForSubs) return;
+
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/invite-sub`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId: currentProjectForSubs,
+              contractorEmail: contractorEmail,
+              tradeType: tradeType
+            })
+          }
+        );
+
+        if (!response.ok) throw new Error('Failed to invite sub');
+
+        alert('✓ Invitation sent! The contractor will be notified.');
+
+      } catch (error) {
+        console.error('Error inviting sub:', error);
+        alert('Failed to send invitation. Please try again.');
+      }
+    }
+    window.inviteSub = inviteSub;
+
+    // View team for a project
+    function viewTeam(jobId) {
+      alert('Team view coming soon!');
+      // TODO: Implement team view modal
+    }
+    window.viewTeam = viewTeam;
+
+    // Contact homeowner
+    function contactHomeowner(jobId, homeownerEmail) {
+      window.location.href = `mailto:${homeownerEmail}?subject=Regarding Your Project`;
+    }
+    window.contactHomeowner = contactHomeowner;
+
     // Tab switching
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', function() {
@@ -1409,6 +1671,9 @@
         // Load data for the tab
         if (tabName === 'mybids' && myBids.length === 0) {
           loadMyBids();
+        }
+        if (tabName === 'active') {
+          loadActiveProjects();
         }
       });
     });

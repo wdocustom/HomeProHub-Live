@@ -3347,6 +3347,185 @@ app.post("/api/bid/decline", requireAuth, requireRole('homeowner'), async (req, 
 });
 
 // ========================================
+// SUB-HUNTER (CREW CONNECT) API ENDPOINTS
+// ========================================
+
+/**
+ * POST /api/find-subs
+ * Find verified contractors by trade type in the job's zip code area
+ */
+app.post("/api/find-subs", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { jobId, trades } = req.body;
+
+    if (!jobId || !trades || !Array.isArray(trades) || trades.length === 0) {
+      return res.status(400).json({
+        error: "Missing required fields: jobId and trades array",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get job details to find zip code
+    const job = await db.getJobById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        error: "Job not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    console.log(`🔍 Finding subs for job ${jobId} in zip ${job.zip_code}, trades: ${trades.join(', ')}`);
+
+    // Query contractor_licenses table for verified contractors with matching trades
+    const { data: licenses, error } = await db.supabase
+      .from('contractor_licenses')
+      .select(`
+        contractor_email,
+        trade_type,
+        verification_status,
+        user_profiles!contractor_licenses_contractor_email_fkey (
+          email,
+          full_name,
+          company_name,
+          zip_code,
+          years_in_business
+        )
+      `)
+      .in('trade_type', trades)
+      .eq('verification_status', 'verified')
+      .not('user_profiles.zip_code', 'is', null);
+
+    if (error) {
+      console.error('❌ Error querying contractor licenses:', error);
+      throw error;
+    }
+
+    // Filter by zip code proximity (same zip or nearby)
+    // For MVP, we'll just match exact zip code
+    // TODO: Implement radius-based search using zip code geolocation
+    const matchingContractors = licenses
+      .filter(license => {
+        const profile = license.user_profiles;
+        return profile && profile.zip_code === job.zip_code;
+      })
+      .map(license => ({
+        email: license.contractor_email,
+        full_name: license.user_profiles.full_name,
+        company_name: license.user_profiles.company_name,
+        zip_code: license.user_profiles.zip_code,
+        years_in_business: license.user_profiles.years_in_business,
+        trade_type: license.trade_type
+      }));
+
+    console.log(`✓ Found ${matchingContractors.length} matching contractors`);
+
+    res.json({
+      success: true,
+      contractors: matchingContractors
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/find-subs:", err);
+    res.status(500).json({
+      error: "Failed to find subs",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/invite-sub
+ * Invite a subcontractor to join a project team
+ */
+app.post("/api/invite-sub", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { jobId, contractorEmail, tradeType } = req.body;
+    const gcEmail = req.body.userEmail; // From auth middleware
+
+    if (!jobId || !contractorEmail || !tradeType) {
+      return res.status(400).json({
+        error: "Missing required fields: jobId, contractorEmail, tradeType",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get job details
+    const job = await db.getJobById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        error: "Job not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Get contractor profile
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({
+        error: "Contractor not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    console.log(`📧 GC ${gcEmail} inviting ${contractorEmail} (${tradeType}) to job ${jobId}`);
+
+    // Add to project_team table
+    const { data: teamMember, error: teamError } = await db.supabase
+      .from('project_team')
+      .insert({
+        job_id: jobId,
+        contractor_email: contractorEmail,
+        contractor_id: contractor.id,
+        role: 'subcontractor',
+        trade_type: tradeType,
+        status: 'invited',
+        invited_by: gcEmail,
+        invited_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (teamError) {
+      // Check if already invited
+      if (teamError.code === '23505') { // Unique constraint violation
+        return res.status(409).json({
+          error: "Contractor already invited to this project",
+          code: 'ALREADY_EXISTS'
+        });
+      }
+      throw teamError;
+    }
+
+    // Send notification to subcontractor
+    await db.createNotification({
+      user_email: contractorEmail,
+      user_id: contractor.id,
+      type: 'new_job',
+      title: 'Sub-Contract Opportunity',
+      message: `You've been invited to join "${job.title}" as ${tradeType}`,
+      job_id: jobId,
+      action_url: `/contractor-dashboard.html`
+    });
+
+    console.log(`✓ Invitation sent to ${contractorEmail}`);
+
+    res.json({
+      success: true,
+      teamMember: teamMember
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/invite-sub:", err);
+    res.status(500).json({
+      error: "Failed to invite subcontractor",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
 // LICENSE MANAGEMENT API ENDPOINTS
 // ========================================
 
