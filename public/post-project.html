@@ -888,12 +888,13 @@
         const mappedCategory = categoryMap[rawCategory] || rawCategory;
 
         // Build submission data matching backend schema (/api/jobs)
+        // CRITICAL: Backend expects budget_min and budget_max (NOT budget_low/budget_high)
         const submissionData = {
           title: projectData.title || 'Home Renovation Project',
           description: projectData.description || '',
           category: mappedCategory,  // Use mapped Title Case value
-          budget_min: cleanNumber(projectData.budgetMin) || 5000,  // FIXED: Map to budget_min
-          budget_max: cleanNumber(projectData.budgetMax) || 15000, // FIXED: Map to budget_max
+          budget_min: cleanNumber(projectData.budgetMin) || 5000,  // CRITICAL: Use budget_min
+          budget_max: cleanNumber(projectData.budgetMax) || 15000, // CRITICAL: Use budget_max
           zip_code: zipCode,  // REQUIRED by backend
           urgency: projectData.urgency || 'flexible',
           homeowner_email: user.email,  // REQUIRED by backend
@@ -901,7 +902,13 @@
           ai_analysis: projectData.aiAnalysis || null
         };
 
-        console.log('📤 Submitting project to /api/jobs:', submissionData);
+        // Debug logging to verify payload structure
+        console.log('📤 Submitting project to /api/jobs:');
+        console.log('Budget fields:', {
+          budget_min: submissionData.budget_min,
+          budget_max: submissionData.budget_max
+        });
+        console.log('Full payload:', submissionData);
 
         // POST to create job - CORRECTED ROUTE
         const response = await window.authService.authenticatedFetch('/api/jobs', {
