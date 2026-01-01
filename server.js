@@ -12,6 +12,12 @@ const db = require('./database/db');
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
+// ====== TRIAGE SYSTEM IMPORTS ======
+const { v4: uuidv4 } = require('uuid');
+const { createProvider } = require('./triage/providers');
+const { runRouter } = require('./triage/router/router');
+const { runAnswer } = require('./triage/answer/answer');
+
 // ====== ENVIRONMENT VALIDATION ======
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -958,12 +964,15 @@ Be specific with budget estimates based on typical market rates. Consider the pr
 
 /**
  * POST /api/ai/preview
- * Unauthenticated AI preview - allows ONE free AI check for landing page users
- * Shows value before requiring signup
+ * Two-pass LLM triage system for home improvement Q&A
+ * Drop-in replacement using production triage orchestration
  */
 app.post("/api/ai/preview", async (req, res) => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+
   try {
-    const { question, imageBase64, imageType } = req.body;
+    const { question, imageBase64, imageType, location, yearBuilt, propertyType } = req.body;
 
     // Input validation
     if (!question || typeof question !== 'string') {
@@ -982,7 +991,7 @@ app.post("/api/ai/preview", async (req, res) => {
       });
     }
 
-    // Validate image data if provided
+    // Validate image data if provided (for future enhancement)
     if (imageBase64) {
       if (!imageType || typeof imageType !== 'string') {
         return res.status(400).json({
@@ -1000,362 +1009,88 @@ app.post("/api/ai/preview", async (req, res) => {
       }
     }
 
-    // Check if API key is configured
-    if (!ANTHROPIC_API_KEY) {
+    // Determine provider (prefer Anthropic if configured, fallback to OpenAI)
+    const provider = ANTHROPIC_API_KEY ? 'anthropic' : 'openai';
+
+    if (!ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
       return res.status(503).json({
         error: "AI service is not configured. Please contact support.",
         code: 'SERVICE_UNAVAILABLE'
       });
     }
 
-    // Build content blocks for Claude (same as /ask endpoint with local insights)
-    const contentBlocks = [];
+    // Build user context
+    const userContext = {};
+    if (location) userContext.location = location;
+    if (yearBuilt) userContext.yearBuilt = parseInt(yearBuilt);
+    if (propertyType) userContext.propertyType = propertyType;
 
-    // FEATURE 1: Multi-Trade Orchestration (Council of Experts)
-    // Rate relevance of ALL trades on 0-10 scale
-    const questionLower = sanitizedQuestion.toLowerCase();
+    console.log(`🎯 Triage request ${requestId}: provider=${provider}, question=${sanitizedQuestion.substring(0, 50)}...`);
 
-    // Enhanced keyword sets with weighted terms
-    const tradeKeywords = {
-      plumbing: {
-        primary: ['leak', 'drain', 'pipe', 'faucet', 'toilet', 'sewer', 'sewage', 'water heater', 'disposal', 'dishwasher drain'],
-        secondary: ['water', 'sink', 'shower', 'tub', 'fixture', 'valve', 'pump', 'clog', 'backup']
-      },
-      electrical: {
-        primary: ['breaker', 'circuit', 'wire', 'wiring', 'outlet', 'switch', 'panel', 'electrical', 'shock', 'spark', 'burning smell'],
-        secondary: ['electric', 'power', 'light', 'voltage', 'afci', 'gfci', 'amp', 'tripped']
-      },
-      appliance: {
-        primary: ['dishwasher', 'refrigerator', 'oven', 'stove', 'microwave', 'washer', 'dryer', 'garbage disposal', 'water heater', 'hvac unit'],
-        secondary: ['appliance', 'won\'t start', 'not heating', 'not cooling', 'making noise', 'won\'t drain', 'error code']
-      },
-      hvac: {
-        primary: ['furnace', 'ac', 'air conditioning', 'heating', 'cooling', 'thermostat', 'hvac', 'heat pump', 'ductwork'],
-        secondary: ['temperature', 'filter', 'vents', 'blower', 'condenser', 'refrigerant']
-      },
-      structural: {
-        primary: ['foundation', 'crack', 'settling', 'beam', 'joist', 'load bearing', 'structural', 'sagging'],
-        secondary: ['wall', 'ceiling', 'floor', 'framing', 'support']
-      }
-    };
+    // PASS 1: Router (classification)
+    const routerStart = Date.now();
+    const routerProvider = createProvider(provider, 'router');
+    const { output: routerOutput, retries: routerRetries } = await runRouter(
+      routerProvider,
+      sanitizedQuestion,
+      userContext
+    );
+    const routerLatency = Date.now() - routerStart;
 
-    // Calculate normalized scores (0-10 scale)
-    const tradeScores = {};
-    const maxPossibleScore = 15; // Tuning parameter
+    console.log(`✓ Router: domain=${routerOutput.domain}, risk=${routerOutput.risk_level}, posture=${routerOutput.posture.join(',')}, retries=${routerRetries}, latency=${routerLatency}ms`);
 
-    Object.keys(tradeKeywords).forEach(trade => {
-      let rawScore = 0;
+    // PASS 2: Answer (generation)
+    const answerStart = Date.now();
+    const answerProvider = createProvider(provider, 'answer');
+    const { markdown: answerMarkdown } = await runAnswer(
+      answerProvider,
+      sanitizedQuestion,
+      routerOutput,
+      userContext,
+      'homeowner'
+    );
+    const answerLatency = Date.now() - answerStart;
 
-      // Primary keywords worth 2 points each
-      tradeKeywords[trade].primary.forEach(keyword => {
-        if (questionLower.includes(keyword)) rawScore += 2;
-      });
+    const totalLatency = Date.now() - startTime;
 
-      // Secondary keywords worth 1 point each
-      tradeKeywords[trade].secondary.forEach(keyword => {
-        if (questionLower.includes(keyword)) rawScore += 1;
-      });
+    // Detect intent from response (for backward compatibility)
+    const isProject = answerMarkdown.includes('Project Summary:') ||
+                      answerMarkdown.includes('Next Steps:') ||
+                      routerOutput.decision_type === 'planning';
+    const intent = isProject ? 'project' : 'issue';
 
-      // Normalize to 0-10 scale
-      tradeScores[trade] = Math.min(10, Math.round((rawScore / maxPossibleScore) * 10));
-    });
+    console.log(`✓ PREVIEW: ${intent.toUpperCase()} (${answerMarkdown.length} chars, ${totalLatency}ms total, router: ${routerLatency}ms, answer: ${answerLatency}ms)`);
 
-    console.log(`🎯 Multi-Trade Analysis:`, tradeScores);
-
-    // STEP 2: Router Logic - Determine orchestration strategy
-    const highScores = Object.entries(tradeScores).filter(([_, score]) => score >= 5);
-    const dominantTrade = Object.entries(tradeScores).reduce((max, curr) => curr[1] > max[1] ? curr : max, ['general', 0]);
-
-    let orchestrationType = 'general';
-    let activeTrades = [];
-
-    if (highScores.length === 1 && dominantTrade[1] >= 7) {
-      // Scenario A: Single Specialist (one score >= 7, others < 5)
-      orchestrationType = 'specialist';
-      activeTrades = [dominantTrade[0]];
-      console.log(`✅ Specialist Mode: ${dominantTrade[0].toUpperCase()} (score: ${dominantTrade[1]})`);
-    } else if (highScores.length >= 2) {
-      // Scenario B: Complex Multi-Trade System
-      orchestrationType = 'complex';
-      activeTrades = highScores.map(([trade]) => trade);
-      console.log(`🔧 Complex System Mode: ${activeTrades.join(' + ').toUpperCase()}`);
-    } else {
-      // Scenario C: General Contractor fallback
-      console.log(`🏗️ General Contractor Mode (no dominant specialty)`);
-    }
-
-    // STEP 3: Safety Intersection Check
-    let safetyWarning = '';
-    const hasElectrical = tradeScores.electrical >= 5;
-    const hasPlumbing = tradeScores.plumbing >= 5;
-    const hasGas = questionLower.includes('gas') && tradeScores.hvac >= 3;
-
-    if (hasElectrical && hasPlumbing) {
-      safetyWarning = `⚠️ CRITICAL SAFETY WARNING - WET ELECTRIC HAZARD ⚠️
-
-**STOP: Water and Electricity Are Both Present**
-
-Before investigating this issue further:
-1. Turn OFF the circuit breaker for this area at your main electrical panel
-2. Do NOT touch any electrical components if water is present
-3. If water is actively flowing near electrical outlets/wiring, evacuate and call emergency services
-4. Electrical shock in wet conditions can be FATAL
-
-This issue requires BOTH a licensed electrician AND a plumber working in coordination. The electrical hazard MUST be addressed before any plumbing work begins.
-
-`;
-    } else if (hasElectrical && hasGas) {
-      safetyWarning = `⚠️ CRITICAL SAFETY WARNING - ELECTRICAL + GAS HAZARD ⚠️
-
-**STOP: Electrical and Gas Systems Are Both Involved**
-
-Before proceeding:
-1. If you smell gas, evacuate immediately and call 911 from outside
-2. Do NOT operate any electrical switches (sparks can ignite gas)
-3. Turn off the gas supply at the meter if safe to do so
-4. Turn off the circuit breaker for this area
-
-This requires BOTH a licensed electrician AND a licensed HVAC/gas technician. Gas leaks combined with electrical issues are EXTREMELY DANGEROUS.
-
-`;
-    }
-
-    // Select persona based on trade
-    let systemPrompt = '';
-
-    const commonInstructions = `
-
---- STEP 1: IDENTIFY INTENT TYPE ---
-Determine the intent:
-- Is this about an EXISTING PROBLEM/ISSUE that needs fixing? (leak, crack, noise, smell, malfunction, damage, etc.)
-- OR is this about a NEW PROJECT/REMODEL they want to do? (addition, remodel, renovation, upgrade, installation of something new, etc.)
-
-INTENT TYPE: [Write either "ISSUE" or "PROJECT"]
-
---- STEP 2: LOCAL DESIGN INSIGHTS (PROJECT ONLY) ---
-IF INTENT TYPE = "ISSUE":
-  - SKIP any design trend or material sourcing suggestions
-  - Focus purely on repair, diagnosis, and functional fixes
-  - Provide cost estimates for standard repairs only
-  - Keep response focused on solving the immediate problem
-
-IF INTENT TYPE = "PROJECT":
-  - When discussing materials (flooring, countertops, cabinets, fixtures, finishes), consider local design trends
-  - If discussing mid to high-end finishes, include modest local insights
-  - Guidelines for local insights:
-    * Tone: Helpful, modest, consultative (e.g., "Design Note:" or "Local tip:")
-    * Keep suggestions under 2 sentences per material
-    * Only add where genuinely helpful - not for every item
-    * Match suggestions to the homeowner's described style/budget level
-  - Example: "Design Note: In your area, many homeowners are choosing large-format tiles (24x48) to create a modern, low-maintenance look with fewer grout lines."
-
---- RESPONSE STRUCTURE ---
-
-If ISSUE (something broken/wrong that needs repair):
-Respond using this structure:
-1. Summary, Severity & Urgency: [1-2 sentence summary, Severity: High/Medium/Low, Urgency: Fix now/soon/monitor]
-2. Estimated Budget Range: $[LOW] - $[HIGH] (provide realistic cost estimate for professional repair)
-3. Likely Causes: [2-5 bullet points]
-4. Step-by-Step Checks (DIY-friendly): [Numbered steps they can do to diagnose]
-5. Materials & Tools You May Need: [Short bullet list if DIY-able]
-6. Safety Warnings: [Clear bullet points, be specific about dangers]
-7. When to Call a Pro: [Explain when and what type of contractor - plumber, electrician, etc.]
-8. What to Tell a Contractor: [Short script they can use]
-
-If PROJECT (new work they want done):
-Respond using this structure:
-1. Project Summary: [2-3 sentence overview of what they're asking for]
-2. Estimated Budget Range: $[LOW] - $[HIGH] (realistic range for this type of project in their area)
-3. Scope Considerations: [Bullet points of what this typically includes. Include modest local design insights for finish materials where helpful]
-4. Permits & Requirements: [What permits or approvals they'll likely need]
-5. Timeline Estimate: [Typical duration for this project]
-6. Contractor Type Needed: [What type of contractor - general contractor, specialist, etc.]
-7. Key Questions for Contractors: [5-7 questions they should ask when getting bids]
-8. Next Steps: [Clear action items - "Post this project to get bids from contractors"]
-
-Be specific with budget estimates based on typical market rates. Consider the project scope described.`;
-
-    // Define specialist personas
-    const personaLibrary = {
-      plumbing: {
-        title: 'Master Plumber',
-        expertise: `You are a licensed Master Plumber with 15+ years of experience in residential plumbing systems. You specialize in:
-- UPC (Uniform Plumbing Code) compliance and code requirements
-- Leak detection and prevention strategies
-- Material selection (PEX vs Copper vs CPVC vs PVC)
-- Water pressure optimization and flow rate calculations
-- Drain/vent/waste system design and troubleshooting
-- Fixture installation and repair (faucets, toilets, water heaters)
-- Backflow prevention and cross-connection control`
-      },
-      electrical: {
-        title: 'Master Electrician',
-        expertise: `You are a licensed Master Electrician with 15+ years of experience in residential electrical systems. You specialize in:
-- NEC (National Electrical Code) safety requirements and compliance
-- Load calculations and service panel sizing
-- AFCI (Arc-Fault Circuit Interrupter) and GFCI (Ground-Fault Circuit Interrupter) protection
-- Wire gauge selection and ampacity calculations
-- Circuit design and branch circuit layout
-- Grounding and bonding best practices
-- Electrical troubleshooting (voltage drops, short circuits, open circuits)
-- Smart home integration and low-voltage systems`
-      },
-      appliance: {
-        title: 'Appliance Repair Specialist',
-        expertise: `You are a certified Appliance Repair Technician with expertise in major household appliances. You specialize in:
-- Diagnosing mechanical and electrical failures in appliances
-- Understanding manufacturer-specific parts and systems
-- Water supply and drainage systems for appliances
-- Electrical connections and motor troubleshooting
-- Safety interlock systems and error codes
-- Warranty considerations and repair vs replace decisions`
-      },
-      hvac: {
-        title: 'HVAC Specialist',
-        expertise: `You are a licensed HVAC technician with expertise in heating, cooling, and ventilation systems. You specialize in:
-- EPA 608 certification for refrigerant handling
-- Furnace, heat pump, and AC unit diagnostics
-- Ductwork design and airflow optimization
-- Thermostat wiring and smart HVAC integration
-- Gas line safety and carbon monoxide detection
-- Energy efficiency and system sizing`
-      },
-      structural: {
-        title: 'Structural Specialist',
-        expertise: `You are a licensed structural engineer and home inspector with expertise in:
-- Foundation assessment and repair methods
-- Load-bearing wall identification
-- Beam and joist sizing calculations
-- Settlement and crack pattern analysis
-- Building code compliance for structural modifications
-- Moisture and drainage issues affecting structures`
-      }
-    };
-
-    // Build system prompt based on orchestration type
-    if (orchestrationType === 'specialist') {
-      // Scenario A: Single specialist
-      const trade = activeTrades[0];
-      const persona = personaLibrary[trade];
-
-      systemPrompt = `${safetyWarning}${persona.expertise}
-
-The homeowner said:
-${sanitizedQuestion}
-${commonInstructions}`;
-    } else if (orchestrationType === 'complex') {
-      // Scenario B: Multi-trade synthesis (General Contractor orchestrating specialists)
-      const tradeList = activeTrades.map(t => personaLibrary[t]?.title || t).join(', ');
-      const expertiseBlocks = activeTrades.map(trade => {
-        const persona = personaLibrary[trade];
-        return persona ? `As a ${persona.title}:\n${persona.expertise}` : '';
-      }).join('\n\n');
-
-      systemPrompt = `${safetyWarning}You are a Veteran General Contractor with 20+ years of experience managing complex residential projects.
-
-**MULTI-DISCIPLINARY ANALYSIS REQUIRED**
-
-You have identified this issue involves multiple specialty trades: ${tradeList}
-
-Your task is to analyze this problem from each specialist's perspective, then synthesize a cohesive action plan:
-
-${expertiseBlocks}
-
-The homeowner said:
-${sanitizedQuestion}
-
-**ANALYSIS APPROACH:**
-1. First analyze the issue from EACH specialist's perspective separately
-2. Identify the interdependencies (which work must happen first, which trades need coordination)
-3. Provide a unified response that addresses all aspects
-4. Be explicit about which contractor type handles each part
-5. Emphasize safety and proper sequencing of work
-
-${commonInstructions}`;
-    } else {
-      // Scenario C: General Contractor
-      systemPrompt = `${safetyWarning}You are an experienced General Contractor and home inspector helping homeowners with intelligent, location-aware guidance.
-
-The homeowner said:
-${sanitizedQuestion}
-${commonInstructions}`;
-    }
-
-    contentBlocks.push({
-      type: "text",
-      text: systemPrompt
-    });
-
-    // Optional image
-    if (imageBase64 && imageType) {
-      contentBlocks.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: imageType,
-          data: imageBase64
-        }
-      });
-    }
-
-    // Call Anthropic API
-    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 1200,
-        messages: [
-          {
-            role: "user",
-            content: contentBlocks
-          }
-        ]
-      })
-    });
-
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error(`❌ Anthropic API error (${apiResponse.status}):`, errorText);
-
-      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
-        error: "AI service error. Please try again.",
-        code: 'AI_SERVICE_ERROR',
-        status: apiResponse.status
-      });
-    }
-
-    const data = await apiResponse.json();
-
-    const answer = data.content && data.content[0]?.text
-      ? data.content[0].text
-      : "No response generated.";
-
-    // Detect intent from response
-    const isProject = answer.includes('INTENT TYPE: PROJECT') ||
-                      answer.includes('Project Summary:') ||
-                      answer.includes('Next Steps:');
-    const isIssue = answer.includes('INTENT TYPE: ISSUE') ||
-                    answer.includes('Likely Causes:') ||
-                    !isProject;
-
-    console.log(`✓ PREVIEW: Unauthenticated AI analysis (${answer.length} chars, type: ${isProject ? 'PROJECT' : 'ISSUE'})`);
-
+    // Return response in original format for backward compatibility
     res.json({
-      answer,
-      intent: isProject ? 'project' : 'issue',
-      preview: true // Signal this is a preview response
+      answer: answerMarkdown,
+      intent,
+      preview: true,
+      // Include router metadata for debugging (optional)
+      _meta: {
+        request_id: requestId,
+        router: {
+          domain: routerOutput.domain,
+          risk_level: routerOutput.risk_level,
+          posture: routerOutput.posture,
+          retries: routerRetries
+        },
+        latency: {
+          router_ms: routerLatency,
+          answer_ms: answerLatency,
+          total_ms: totalLatency
+        },
+        provider
+      }
     });
 
   } catch (err) {
-    console.error("❌ Error in /api/ai/preview:", err);
+    const errorLatency = Date.now() - startTime;
+    console.error(`❌ Error in /api/ai/preview (${requestId}, ${errorLatency}ms):`, err);
     res.status(500).json({
       error: "Internal server error processing your question.",
-      code: 'INTERNAL_ERROR'
+      code: 'INTERNAL_ERROR',
+      request_id: requestId
     });
   }
 });
