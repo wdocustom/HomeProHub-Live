@@ -1011,12 +1011,37 @@ app.post("/api/ai/preview", async (req, res) => {
     // Build content blocks for Claude (same as /ask endpoint with local insights)
     const contentBlocks = [];
 
-    contentBlocks.push({
-      type: "text",
-      text: `You are an experienced home contractor and home inspector helping homeowners with intelligent, location-aware guidance.
+    // FEATURE 1: Dynamic AI Personas (Expert Router)
+    // Classify the trade based on keywords in the question
+    const questionLower = sanitizedQuestion.toLowerCase();
 
-The homeowner said:
-${sanitizedQuestion}
+    const plumbingKeywords = ['leak', 'pipe', 'faucet', 'drain', 'water', 'toilet', 'sink', 'shower', 'tub', 'sewer', 'plumbing', 'sewage', 'fixture', 'valve', 'pump'];
+    const electricalKeywords = ['wire', 'outlet', 'breaker', 'electric', 'electrical', 'power', 'switch', 'light', 'circuit', 'voltage', 'panel', 'afci', 'gfci', 'amp', 'wiring'];
+
+    let tradeType = 'general'; // default
+    let plumbingScore = 0;
+    let electricalScore = 0;
+
+    plumbingKeywords.forEach(keyword => {
+      if (questionLower.includes(keyword)) plumbingScore++;
+    });
+
+    electricalKeywords.forEach(keyword => {
+      if (questionLower.includes(keyword)) electricalScore++;
+    });
+
+    if (plumbingScore > electricalScore && plumbingScore > 0) {
+      tradeType = 'plumber';
+    } else if (electricalScore > plumbingScore && electricalScore > 0) {
+      tradeType = 'electrician';
+    }
+
+    console.log(`🎯 Trade Classification: ${tradeType.toUpperCase()} (Plumbing: ${plumbingScore}, Electrical: ${electricalScore})`);
+
+    // Select persona based on trade
+    let systemPrompt = '';
+
+    const commonInstructions = `
 
 --- STEP 1: IDENTIFY INTENT TYPE ---
 Determine the intent:
@@ -1066,7 +1091,46 @@ Respond using this structure:
 7. Key Questions for Contractors: [5-7 questions they should ask when getting bids]
 8. Next Steps: [Clear action items - "Post this project to get bids from contractors"]
 
-Be specific with budget estimates based on typical market rates. Consider the project scope described.`
+Be specific with budget estimates based on typical market rates. Consider the project scope described.`;
+
+    if (tradeType === 'plumber') {
+      systemPrompt = `You are a licensed Master Plumber with 15+ years of experience in residential plumbing systems. You specialize in:
+- UPC (Uniform Plumbing Code) compliance and code requirements
+- Leak detection and prevention strategies
+- Material selection (PEX vs Copper vs CPVC vs PVC)
+- Water pressure optimization and flow rate calculations
+- Drain/vent/waste system design and troubleshooting
+- Fixture installation and repair (faucets, toilets, water heaters)
+- Backflow prevention and cross-connection control
+
+The homeowner said:
+${sanitizedQuestion}
+${commonInstructions}`;
+    } else if (tradeType === 'electrician') {
+      systemPrompt = `You are a licensed Master Electrician with 15+ years of experience in residential electrical systems. You specialize in:
+- NEC (National Electrical Code) safety requirements and compliance
+- Load calculations and service panel sizing
+- AFCI (Arc-Fault Circuit Interrupter) and GFCI (Ground-Fault Circuit Interrupter) protection
+- Wire gauge selection and ampacity calculations
+- Circuit design and branch circuit layout
+- Grounding and bonding best practices
+- Electrical troubleshooting (voltage drops, short circuits, open circuits)
+- Smart home integration and low-voltage systems
+
+The homeowner said:
+${sanitizedQuestion}
+${commonInstructions}`;
+    } else {
+      systemPrompt = `You are an experienced General Contractor and home inspector helping homeowners with intelligent, location-aware guidance.
+
+The homeowner said:
+${sanitizedQuestion}
+${commonInstructions}`;
+    }
+
+    contentBlocks.push({
+      type: "text",
+      text: systemPrompt
     });
 
     // Optional image
