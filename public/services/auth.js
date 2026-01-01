@@ -11,6 +11,7 @@ class AuthService {
   constructor() {
     this.supabase = null;
     this.currentUser = null;
+    this.cachedProfile = null;  // Cache profile from signin to avoid redundant API calls
     this.initialized = false;
   }
 
@@ -128,18 +129,51 @@ class AuthService {
           // CRITICAL FIX: Check user role to redirect to correct dashboard
           console.log("Auth Debug: Standard Login. Checking role...");
 
-          try {
-            const profile = await this.getUserProfile();
-            const role = profile?.role || 'homeowner';
-            console.log(`Auth Debug: User role=${role}, redirecting...`);
+          let role = null;
 
-            if (role === 'contractor') {
-              window.location.href = '/contractor.html';
-            } else {
-              window.location.href = '/home.html';
+          // 1. First, check cached profile from signIn (fastest, already fetched)
+          if (this.cachedProfile?.role) {
+            role = this.cachedProfile.role;
+            console.log(`Auth Debug: Got role from cached profile: ${role}`);
+          }
+
+          // 2. If not cached, check user metadata (faster, no API call)
+          if (!role) {
+            role = session?.user?.user_metadata?.role || session?.user?.app_metadata?.role;
+            if (role) {
+              console.log(`Auth Debug: Got role from session metadata: ${role}`);
             }
-          } catch (err) {
-            console.log('Auth Debug: Could not get profile, defaulting to homeowner');
+          }
+
+          // 3. If still not found, fetch from profile with timeout (slowest)
+          if (!role) {
+            try {
+              console.log('Auth Debug: Role not found, fetching profile...');
+              const profilePromise = this.getUserProfile();
+              const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
+              );
+
+              const profile = await Promise.race([profilePromise, timeoutPromise]);
+              role = profile?.role || 'homeowner';
+              console.log(`Auth Debug: Got role from profile: ${role}`);
+            } catch (err) {
+              console.log('Auth Debug: Could not get profile, defaulting to homeowner:', err.message);
+              role = 'homeowner';
+            }
+          }
+
+          // 4. Fallback to homeowner if still no role
+          role = role || 'homeowner';
+
+          // 5. Clear cached profile after use
+          this.cachedProfile = null;
+
+          // 6. Redirect based on role
+          console.log(`Auth Debug: Redirecting ${role} to dashboard...`);
+          if (role === 'contractor') {
+            window.location.href = '/contractor.html';
+          } else {
             window.location.href = '/home.html';
           }
         }
@@ -222,6 +256,11 @@ class AuthService {
 
       // Update local state
       this.currentUser = data.user;
+
+      // CRITICAL FIX: Cache the profile so auth state change handler can access it
+      // This prevents redundant API calls during redirect
+      this.cachedProfile = data.profile;
+      console.log('Auth Debug: Cached profile during signin:', data.profile?.role);
 
       // Set session in Supabase client
       if (data.session && this.supabase) {
@@ -596,6 +635,7 @@ class AuthService {
   handleSignOut() {
     // Clear any local state
     this.currentUser = null;
+    this.cachedProfile = null;
 
     // CRITICAL FIX: Aggressively clear all auth-related storage
     // This prevents stale sessions from persisting after logout

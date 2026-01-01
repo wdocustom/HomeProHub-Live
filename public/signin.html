@@ -307,15 +307,20 @@
         if (result.success) {
           displaySuccess('Sign in successful! Redirecting...');
 
-          // TASK 1 & 3 FIX: Let handleSignInSmart() handle ALL redirects (draft-aware)
-          // Add 3-second safety timeout to prevent infinite "Signing In..." spinner
+          // CRITICAL FIX: Use role from signin response for correct safety timeout redirect
+          const userRole = result.profile?.role || 'homeowner';
+          const dashboardUrl = userRole === 'contractor' ? '/contractor.html' : '/home.html';
+          console.log(`Sign-in success - role: ${userRole}, will redirect to: ${dashboardUrl}`);
+
+          // Safety timeout to prevent infinite "Signing In..." spinner
+          // Now redirects to correct dashboard based on user role
           const safetyTimeout = setTimeout(() => {
-            console.warn('⚠️  Safety timeout triggered - forcing redirect to dashboard');
+            console.warn('⚠️  Safety timeout triggered - forcing redirect to', dashboardUrl);
             setLoading(false);
-            window.location.href = 'home.html';
+            window.location.href = dashboardUrl;
           }, 3000);
 
-          // Clear safety timeout if redirect happens (handleSignInSmart runs automatically via SIGNED_IN event)
+          // Clear safety timeout if redirect happens (auth state change runs automatically)
           window.addEventListener('beforeunload', () => {
             clearTimeout(safetyTimeout);
           });
