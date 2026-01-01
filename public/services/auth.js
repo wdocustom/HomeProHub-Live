@@ -81,18 +81,21 @@ class AuthService {
         }
 
         // 3. SESSION VALIDATION: Check if this is a stale/invalid session
-        // If we have a session but can't get user profile, it's likely stale
-        try {
-          const { data: { user }, error } = await this.supabase.auth.getUser();
-          if (error || !user) {
-            console.log('Auth Debug: Stale session detected. Clearing...');
+        // Skip validation for INITIAL_SESSION since we already validated on init
+        // Only validate for actual SIGNED_IN events
+        if (event === 'SIGNED_IN') {
+          try {
+            const { data: { user }, error } = await this.supabase.auth.getUser();
+            if (error || !user) {
+              console.log('Auth Debug: Stale session detected. Clearing...');
+              await this.supabase.auth.signOut();
+              return;
+            }
+          } catch (err) {
+            console.log('Auth Debug: Session validation failed. Clearing...');
             await this.supabase.auth.signOut();
             return;
           }
-        } catch (err) {
-          console.log('Auth Debug: Session validation failed. Clearing...');
-          await this.supabase.auth.signOut();
-          return;
         }
 
         // 4. PAGE GUARD (The Fix):
@@ -122,8 +125,23 @@ class AuthService {
           window.location.href = '/post-project.html';
         } else {
           // Scenario B: Just Logging In -> Dashboard
-          console.log("Auth Debug: Standard Login. Going to Dashboard...");
-          window.location.href = '/home.html';
+          // CRITICAL FIX: Check user role to redirect to correct dashboard
+          console.log("Auth Debug: Standard Login. Checking role...");
+
+          try {
+            const profile = await this.getUserProfile();
+            const role = profile?.role || 'homeowner';
+            console.log(`Auth Debug: User role=${role}, redirecting...`);
+
+            if (role === 'contractor') {
+              window.location.href = '/contractor.html';
+            } else {
+              window.location.href = '/home.html';
+            }
+          } catch (err) {
+            console.log('Auth Debug: Could not get profile, defaulting to homeowner');
+            window.location.href = '/home.html';
+          }
         }
       });
 
