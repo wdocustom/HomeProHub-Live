@@ -30,33 +30,35 @@
       padding: 0 24px;
       text-align: center;
       width: 100%;
+      box-sizing: border-box;
     }
 
     .hero h1 {
-      font-size: 52px;
+      font-size: clamp(32px, 8vw, 52px);
       font-weight: 700;
       color: #111827;
       letter-spacing: -0.03em;
       line-height: 1.1;
-      margin-bottom: 24px;
+      margin: 0 0 24px 0;
+      padding: 0;
       width: 100%;
     }
 
     .hero-subhead {
-      font-size: 20px;
+      font-size: clamp(16px, 4vw, 20px);
       color: #6b7280;
       line-height: 1.6;
-      margin-bottom: 16px;
+      margin: 0 auto 16px auto;
+      padding: 0;
       max-width: 700px;
-      margin-left: auto;
-      margin-right: auto;
     }
 
     .hero-helper {
-      font-size: 15px;
+      font-size: clamp(13px, 3.5vw, 15px);
       color: #9ca3af;
       font-style: italic;
-      margin-bottom: 40px;
+      margin: 0 0 40px 0;
+      padding: 0;
     }
 
     .hero-actions {
@@ -195,40 +197,61 @@
     @media (max-width: 768px) {
       .hero {
         margin: 40px auto 60px;
-        padding: 0 20px;
+        padding: 0 16px;
       }
 
       .hero h1 {
-        font-size: 36px;
-        margin-bottom: 20px;
+        font-size: 32px;
+        margin-bottom: 16px;
+        line-height: 1.2;
       }
 
       .hero-subhead {
         font-size: 16px;
         margin-bottom: 12px;
+        line-height: 1.5;
       }
 
       .hero-helper {
-        font-size: 14px;
-        margin-bottom: 32px;
+        font-size: 13px;
+        margin-bottom: 28px;
       }
 
       .hero-input-group {
         flex-direction: column;
+        gap: 10px;
+      }
+
+      .hero-input {
+        width: 100%;
+        font-size: 15px;
+        padding: 14px 16px;
       }
 
       .btn-large {
         width: 100%;
         padding: 14px 24px;
+        font-size: 15px;
+      }
+
+      .hero-secondary-link {
+        font-size: 14px;
       }
 
       .steps-grid,
       .paths-grid {
         grid-template-columns: 1fr;
+        gap: 24px;
       }
 
       .section-title {
         font-size: 28px;
+        margin-bottom: 32px;
+      }
+
+      .how-it-works,
+      .three-paths {
+        padding: 60px 16px;
       }
     }
 
@@ -911,6 +934,27 @@
   <script>
     // Note: Auth check is handled by navigation.js component
     // No need for redundant inline auth check that causes race conditions
+
+    // Clear old draft data on page load if user is just browsing (not coming from AI analysis)
+    (function() {
+      const clearOldDrafts = () => {
+        // Only clear if there's no active AI analysis
+        if (!window.blueprintData || !window.blueprintData.question) {
+          const hasDraft = localStorage.getItem('hot_lead_draft');
+          if (hasDraft) {
+            console.log('Clearing old draft data to prevent unwanted redirects');
+            localStorage.removeItem('hot_lead_draft');
+            // Also clear cookies
+            document.cookie = 'hot_lead_draft=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'project_draft=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'post_intent=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          }
+        }
+      };
+
+      // Run cleanup after a short delay to ensure blueprintData is initialized
+      setTimeout(clearOldDrafts, 1000);
+    })();
 
     // TASK 2: Extract and display stats from AI response
     function displayStatsFromResponse(responseText) {
