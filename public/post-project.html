@@ -964,8 +964,22 @@
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to create project');
+          // Enhanced error logging to capture server response details
+          console.error('❌ Server returned error:', {
+            status: response.status,
+            statusText: response.statusText,
+            url: response.url
+          });
+
+          const errorData = await response.json().catch((parseErr) => {
+            console.error('Failed to parse error response:', parseErr);
+            return {};
+          });
+
+          console.error('❌ Error response body:', errorData);
+
+          const errorMessage = errorData.error || errorData.message || `Server error ${response.status}: ${response.statusText}`;
+          throw new Error(errorMessage);
         }
 
         const result = await response.json();
