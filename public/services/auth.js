@@ -42,51 +42,44 @@ class AuthService {
         this.currentUser = session.user;
       }
 
-      // PART 2: Master Auth Listener - DEFCON 1 Fix for INITIAL_SESSION bug
+      // PART 2: Master Auth Listener - Page Guard to prevent homepage hijacking
       this.supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log(`Auth Debug: Event=${event}, Session=${session ? 'Active' : 'Null'}`);
+        // 1. Debugging
+        console.log(`Auth Debug: Event=${event}, User=${session?.user?.email || 'Guest'}`);
         this.currentUser = session?.user || null;
 
-        // --- GATEKEEPER: THE MOST IMPORTANT LINES ---
-        // If there is no active user session, we MUST return immediately.
-        // This prevents Guests from being hijacked by old cookies.
-        if (!session || !session.user) {
-          console.log("Auth Debug: User is Guest. Halting all redirects.");
+        // 2. GUEST GUARD: If no session, stop everything.
+        if (!session || !session.user) return;
+
+        // 3. PAGE GUARD (The Fix):
+        // We only want to auto-redirect users who are actively trying to Sign In or Sign Up.
+        // If they are on the Home Page (index.html), let them stay there!
+        const path = window.location.pathname.replace(/\/$/, "") || "/";
+        const allowedRedirectPages = ['/signin.html', '/signup.html'];
+        const isAuthPage = allowedRedirectPages.some(p => path.endsWith(p));
+
+        // If we are NOT on a Login/Signup page, do nothing. Stop the "Hijack".
+        if (!isAuthPage) {
+          console.log("Auth Debug: User is on a content page. No redirect.");
           return;
         }
 
-        // --- IF WE REACH HERE, THE USER IS 100% LOGGED IN ---
+        // --- FROM HERE DOWN, WE ONLY RUN FOR USERS ON LOGIN/SIGNUP PAGES ---
 
-        // 1. Get Project Data (Check both storage pockets)
+        // 4. Retrieve Draft Data
         const cookieDraft = this.getCookie('hot_lead_draft');
         const localDraft = localStorage.getItem('hot_lead_draft');
         const hasDraft = cookieDraft || localDraft;
 
-        // 2. Identify Where We Are
-        // Normalize path to avoid "/index.html" vs "/" mismatches
-        const path = window.location.pathname.replace(/\/$/, "") || "/";
-
-        // 3. The "Magic Carpet" Logic (Redirects)
         if (hasDraft) {
-          // SCENARIO A: User has a draft -> Send to Post Project
-          // Guard: Only redirect if we are NOT already there.
-          if (!path.includes('post-project')) {
-            console.log("Auth Debug: Draft found. Redirecting to Post Project...");
-            // Sync cookie if it was only in localStorage
-            if (!cookieDraft && localDraft) this.setCookie('hot_lead_draft', localDraft, 1);
-            window.location.href = '/post-project.html';
-          }
+          // Scenario A: Finishing the Flow -> Post Project
+          console.log("Auth Debug: Draft found. Completing Handoff...");
+          if (!cookieDraft && localDraft) this.setCookie('hot_lead_draft', localDraft, 1);
+          window.location.href = '/post-project.html';
         } else {
-          // SCENARIO B: No draft -> Send to Dashboard
-          // Guard: Only redirect if user is on a "Public" page (Login/Signup/Home)
-          // Do NOT redirect if they are already on the Dashboard (Fixes Infinite Loop)
-          const publicPages = ['/', '/index.html', '/signin.html', '/signup.html'];
-          const isPublicPage = publicPages.some(p => path === p || path.endsWith(p));
-
-          if (isPublicPage) {
-            console.log("Auth Debug: Login verified. Redirecting to Dashboard...");
-            window.location.href = '/homeowner-dashboard.html';
-          }
+          // Scenario B: Just Logging In -> Dashboard
+          console.log("Auth Debug: Standard Login. Going to Dashboard...");
+          window.location.href = '/homeowner-dashboard.html';
         }
 
         // Handle sign out
