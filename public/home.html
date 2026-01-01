@@ -205,63 +205,29 @@
       line-height: 1.6;
     }
     @media (max-width: 768px) {
-      .hero {
-        margin: 40px auto 60px;
-        padding: 0 16px;
+      main > div {
+        padding: 20px 16px !important;
       }
 
-      .hero h1 {
-        font-size: 32px;
-        margin-bottom: 16px;
-        line-height: 1.2;
+      section[style*="padding: 32px"] {
+        padding: 20px !important;
       }
 
-      .hero-subhead {
-        font-size: 16px;
-        margin-bottom: 12px;
-        line-height: 1.5;
+      h1[style*="font-size: 28px"] {
+        font-size: 24px !important;
       }
 
-      .hero-helper {
-        font-size: 13px;
-        margin-bottom: 28px;
+      div[style*="display: flex"] {
+        flex-direction: column !important;
       }
 
-      .hero-input-group {
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .hero-input {
+      button[style*="white-space: nowrap"] {
+        white-space: normal !important;
         width: 100%;
-        font-size: 15px;
-        padding: 14px 16px;
       }
 
-      .btn-large {
-        width: 100%;
-        padding: 14px 24px;
-        font-size: 15px;
-      }
-
-      .hero-secondary-link {
-        font-size: 14px;
-      }
-
-      .steps-grid,
-      .paths-grid {
-        grid-template-columns: 1fr;
-        gap: 24px;
-      }
-
-      .section-title {
-        font-size: 28px;
-        margin-bottom: 32px;
-      }
-
-      .how-it-works,
-      .three-paths {
-        padding: 60px 16px;
+      div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
       }
     }
 
@@ -779,166 +745,77 @@
   <!-- Navigation component will be injected here by navigation.js -->
 
   <main>
-    <!-- Hero Section -->
-    <section class="hero">
-      <h1>What's going on with your home?</h1>
+    <!-- Main Dashboard Container -->
+    <div style="max-width: 1200px; margin: 0 auto; padding: 40px 20px;">
 
-      <p class="hero-subhead">
-        Describe what you're seeing or upload a photo. Our AI helps you understand what might be happening,
-        how serious it could be, and what your options are — completely free.
-      </p>
+      <!-- AI Help Section -->
+      <section style="background: white; border-radius: 12px; padding: 32px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">Need help with something?</h1>
+        <p style="color: #6b7280; margin: 0 0 24px 0;">Describe your issue or upload a photo. Get instant AI analysis.</p>
 
-      <p class="hero-helper">
-        Many homeowners use this just to understand the issue before deciding what to do.
-      </p>
-
-      <div class="hero-actions">
-        <div class="hero-input-group">
+        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
           <input
             type="text"
             class="hero-input"
-            placeholder="Describe your issue (e.g., 'Water stain on ceiling after rain')"
+            placeholder="What's going on? (e.g., 'Water leak under sink')"
             id="homeIssueInput"
+            style="flex: 1; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
           />
-          <button class="btn-large" id="askAiBtn">Try Free AI Check</button>
+          <button class="btn-large" id="askAiBtn" style="padding: 14px 28px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+            Get Help
+          </button>
         </div>
 
-        <label for="photoInput" class="hero-secondary-link" style="cursor: pointer;">
-          Or upload a photo for faster diagnosis
+        <label for="photoInput" style="color: #6b7280; font-size: 14px; cursor: pointer; text-decoration: underline;">
+          Or upload a photo
         </label>
         <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" style="display: none;" />
-      </div>
 
-      <p class="hero-trust-line">
-        Homeowner use is free. Contractors pay for lead access. Optional paid on-demand expert access.
-      </p>
+        <div class="status-message" id="aiStatus" style="margin-top: 12px; font-size: 14px; color: #6b7280;"></div>
+      </section>
 
-      <div class="status-message" id="aiStatus"></div>
-    </section>
+      <!-- Quick Actions -->
+      <section style="margin-bottom: 32px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Quick Actions</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
 
-    <!-- How It Works -->
-    <section class="how-it-works">
-      <div class="section-container">
-        <h2 class="section-title">How It Works</h2>
-        <div class="steps-grid">
-          <div class="step-card">
-            <div class="step-number">1</div>
-            <h3 class="step-title">Describe Your Issue</h3>
-            <p class="step-description">Tell us what's happening or upload a photo. The more detail, the better.</p>
-          </div>
-          <div class="step-card">
-            <div class="step-number">2</div>
-            <h3 class="step-title">Get AI Analysis</h3>
-            <p class="step-description">Instant diagnosis with cost estimates, safety warnings, and what to tell a contractor.</p>
-          </div>
-          <div class="step-card">
-            <div class="step-number">3</div>
-            <h3 class="step-title">Choose Your Path</h3>
-            <p class="step-description">DIY it, hire a verified pro, or get expert support. You're in control.</p>
-          </div>
+          <a href="homeowner-dashboard.html" style="background: white; padding: 20px; border-radius: 10px; text-decoration: none; border: 2px solid #e5e7eb; transition: all 0.2s; display: block;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📋</div>
+            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">My Projects</h3>
+            <p style="font-size: 14px; color: #6b7280; margin: 0;">View active and past projects</p>
+          </a>
+
+          <a href="project-check-in.html" style="background: white; padding: 20px; border-radius: 10px; text-decoration: none; border: 2px solid #e5e7eb; transition: all 0.2s; display: block;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📸</div>
+            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">Project Check-in</h3>
+            <p style="font-size: 14px; color: #6b7280; margin: 0;">Update progress with photos</p>
+          </a>
+
+          <a href="messages.html" style="background: white; padding: 20px; border-radius: 10px; text-decoration: none; border: 2px solid #e5e7eb; transition: all 0.2s; display: block;">
+            <div style="font-size: 24px; margin-bottom: 8px;">💬</div>
+            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">Messages</h3>
+            <p style="font-size: 14px; color: #6b7280; margin: 0;">Chat with contractors</p>
+          </a>
+
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- TASK 2: Blueprint Analysis Card -->
-    <section class="ai-response-section" id="aiResponseSection">
-      <div class="blueprint-card">
-        <!-- Blueprint Header -->
-        <div class="blueprint-header">
-          <div class="blueprint-badge">✨ AI Analysis Complete</div>
-          <h2 class="blueprint-title">Your Project Blueprint</h2>
-        </div>
+      <!-- AI Response Section (Hidden by default) -->
+      <section class="ai-response-section" id="aiResponseSection" style="display: none;">
+        <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <h2 style="font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 16px 0;">AI Analysis</h2>
 
-        <!-- Blueprint Body -->
-        <div class="blueprint-body">
-          <!-- Stats Grid -->
-          <div class="stats-grid" id="statsGrid" style="display: none;">
-            <div class="stat-card">
-              <span class="stat-icon">💰</span>
-              <div class="stat-label">Estimated Cost</div>
-              <div class="stat-value budget" id="statBudget">$5,000 - $15,000</div>
-            </div>
-            <div class="stat-card">
-              <span class="stat-icon">⏱️</span>
-              <div class="stat-label">Time Estimate</div>
-              <div class="stat-value" id="statTime">2-3 weeks</div>
-            </div>
-          </div>
+          <div class="response-content" id="aiResponseContent" style="margin-bottom: 24px; line-height: 1.6; color: #374151;"></div>
 
-          <!-- Response Content -->
-          <div class="response-content" id="aiResponseContent"></div>
-
-          <!-- Clarify Section -->
-          <div class="clarify-section">
-            <label class="clarify-label">
-              Need to clarify or add something? Provide more details for an updated analysis:
-            </label>
-            <textarea
-              class="clarify-textarea"
-              id="clarifyInput"
-              placeholder="Example: The house was built in 2005, this only happens after long showers..."
-            ></textarea>
-            <div class="clarify-actions">
-              <button class="btn-card-primary" id="clarifyBtn">
-                🔁 Update Analysis
-              </button>
-              <div class="status-message" id="clarifyStatus"></div>
-            </div>
-          </div>
-
-          <!-- Action Card: Ready to Hire a Pro -->
-          <div class="project-post-cta" id="projectPostCta">
-            <h3>✅ Ready to Hire a Pro?</h3>
-            <p>Convert this AI diagnosis into a project posting. Get competitive bids from verified contractors in your area.</p>
-            <button class="btn-card-primary" id="postProjectBtn">
-              Post This Project & Get Bids
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; margin-top: 24px;">
+            <button class="btn-card-primary" id="postProjectBtn" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+              Post This as a Project
             </button>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Three Paths Forward -->
-    <section class="three-paths">
-      <div class="section-container">
-        <h2 class="section-title">Three Paths Forward</h2>
-        <p style="text-align: center; color: #6b7280; max-width: 700px; margin: 0 auto 0; font-size: 16px;">
-          After your AI analysis, you choose what happens next. No pressure, no funnel.
-        </p>
-
-        <div class="paths-grid">
-          <!-- PATH 1: UNDERSTAND (No button) -->
-          <div class="path-card no-button">
-            <span class="path-icon">🔍</span>
-            <h3 class="path-title">Understand</h3>
-            <p class="path-subtitle">
-              Use the free AI check to understand the issue, safety concerns, and what to tell a contractor. Many homeowners stop here.
-            </p>
-          </div>
-
-          <!-- PATH 2: HIRE -->
-          <div class="path-card">
-            <span class="path-icon">🏅</span>
-            <h3 class="path-title">Hire</h3>
-            <p class="path-subtitle">
-              Post your project and get competitive bids from verified contractors. Compare options and hire with confidence.
-            </p>
-            <a href="homeowner-dashboard.html" class="btn-primary">Post a Project</a>
-          </div>
-
-          <!-- PATH 3: EXPERT SUPPORT -->
-          <div class="path-card">
-            <span class="path-icon">🤝</span>
-            <h3 class="path-title">Expert Support</h3>
-            <p class="path-subtitle">
-              Need a second opinion? Video call with our construction experts for bid reviews, design guidance, or peace of mind.
-            </p>
-            <a href="access-experts.html" class="btn-primary">Get Expert Help</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
+    </div>
   </main>
 
   <script>
@@ -1022,7 +899,7 @@
           askBtn.textContent = 'Analyzing...';
           aiStatus.textContent = 'Our AI is analyzing your issue...';
           aiStatus.style.color = '#6b7280';
-          aiResponseSection.classList.remove('show');
+          aiResponseSection.style.display = 'none';
 
           try {
             // Call AI preview endpoint (same as public landing page)
@@ -1055,12 +932,8 @@
             const cleanAnswer = cleanAIArtifacts(data.answer);
             aiResponseContent.innerHTML = formatAIResponse(cleanAnswer);
 
-            // TASK 2: Display stats from AI response
-            displayStatsFromResponse(cleanAnswer);
-
             // Show response section
-            aiResponseSection.classList.add('show');
-            document.getElementById('projectPostCta').classList.add('show');
+            aiResponseSection.style.display = 'block';
 
             aiStatus.textContent = '✓ Analysis complete!';
             aiStatus.style.color = '#10b981';
@@ -1074,7 +947,7 @@
             aiStatus.style.color = '#ef4444';
           } finally {
             askBtn.disabled = false;
-            askBtn.textContent = '🤖 Get AI Help Now';
+            askBtn.textContent = 'Get Help';
           }
         });
       }
