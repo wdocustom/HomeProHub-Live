@@ -2044,7 +2044,7 @@ app.get("/api/license/verify", async (req, res) => {
       await db.createNotification({
         user_email: contractor.email,
         user_id: contractor.id,
-        notification_type: action === 'approve' ? 'license_approved' : 'license_rejected',
+        type: action === 'approve' ? 'license_approved' : 'license_rejected',
         title: action === 'approve' ? '✅ License Verified!' : '⚠️ License Verification Update',
         message: action === 'approve'
           ? 'Your contractor license has been verified! You now have the verified badge on your profile.'
@@ -2620,7 +2620,7 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
     await db.createNotification({
       user_email: homeowner_email,
       user_id: homeownerProfile.id,
-      notification_type: 'new_job',
+      type: 'new_job',
       title: 'Job Posted Successfully',
       message: `Your job "${title}" has been posted and is now visible to contractors.`,
       job_id: job.id,
@@ -3054,7 +3054,7 @@ app.post("/api/submit-bid", requireAuth, requireRole('contractor'), async (req, 
       await db.createNotification({
         user_email: job.homeowner_email,
         user_id: job.homeowner_id,
-        notification_type: 'new_bid',
+        type: 'new_bid',
         title: 'New Bid Received',
         message: `${contractorProfile.business_name || contractorProfile.email} submitted a bid on your job "${job.title}"`,
         job_id: jobId,
@@ -3180,7 +3180,7 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
     await db.createNotification({
       user_email: acceptedBid.contractor_email,
       user_id: contractor.id,
-      notification_type: 'bid_accepted',
+      type: 'bid_accepted',
       title: 'Bid Accepted!',
       message: `Your bid on "${job.title}" has been accepted!`,
       job_id: jobId,
@@ -3196,7 +3196,7 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
         await db.createNotification({
           user_email: bid.contractor_email,
           user_id: otherContractor.id,
-          notification_type: 'bid_rejected',
+          type: 'bid_rejected',
           title: 'Bid Not Selected',
           message: `Your bid on "${job.title}" was not selected`,
           job_id: jobId,
@@ -3262,7 +3262,7 @@ app.post("/api/bid/decline", requireAuth, requireRole('homeowner'), async (req, 
     await db.createNotification({
       user_email: data.contractor_email,
       user_id: contractor.id,
-      notification_type: 'bid_rejected',
+      type: 'bid_rejected',
       title: 'Bid Declined',
       message: `Your bid on "${job.title}" has been declined`,
       job_id: jobId,
@@ -4046,7 +4046,7 @@ app.post("/api/messages/send", requireAuth, async (req, res) => {
     await db.createNotification({
       user_email: recipientEmail,
       user_id: recipient.id,
-      notification_type: 'new_message',
+      type: 'new_message',
       title: 'New Message',
       message: `${sender.business_name || sender.first_name || senderEmail} sent you a message`,
       message_id: sentMessage.id,
