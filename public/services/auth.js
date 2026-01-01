@@ -36,22 +36,66 @@ class AuthService {
       // Initialize Supabase client
       this.supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
 
-      // Get current session
+      // Get current session and validate it
       const { data: { session } } = await this.supabase.auth.getSession();
       if (session) {
-        this.currentUser = session.user;
+        // CRITICAL FIX: Validate the session on init to catch stale sessions
+        // Don't just trust localStorage - verify with the server
+        try {
+          const { data: { user }, error } = await this.supabase.auth.getUser();
+          if (error || !user) {
+            console.log('Auth Init: Stale session detected on page load. Clearing...');
+            await this.supabase.auth.signOut();
+            this.currentUser = null;
+          } else {
+            this.currentUser = session.user;
+          }
+        } catch (err) {
+          console.log('Auth Init: Session validation failed on page load. Clearing...');
+          await this.supabase.auth.signOut();
+          this.currentUser = null;
+        }
       }
 
       // PART 2: Master Auth Listener - Page Guard to prevent homepage hijacking
       this.supabase.auth.onAuthStateChange(async (event, session) => {
         // 1. Debugging
         console.log(`Auth Debug: Event=${event}, User=${session?.user?.email || 'Guest'}`);
+
+        // CRITICAL FIX: Handle SIGNED_OUT first before any other logic
+        if (event === 'SIGNED_OUT') {
+          console.log('Auth Debug: User signed out. Clearing state...');
+          this.currentUser = null;
+          this.handleSignOut();
+          // Don't redirect here - let the signOut method handle it
+          return;
+        }
+
+        // Update current user reference
         this.currentUser = session?.user || null;
 
         // 2. GUEST GUARD: If no session, stop everything.
-        if (!session || !session.user) return;
+        if (!session || !session.user) {
+          console.log('Auth Debug: No valid session detected.');
+          return;
+        }
 
-        // 3. PAGE GUARD (The Fix):
+        // 3. SESSION VALIDATION: Check if this is a stale/invalid session
+        // If we have a session but can't get user profile, it's likely stale
+        try {
+          const { data: { user }, error } = await this.supabase.auth.getUser();
+          if (error || !user) {
+            console.log('Auth Debug: Stale session detected. Clearing...');
+            await this.supabase.auth.signOut();
+            return;
+          }
+        } catch (err) {
+          console.log('Auth Debug: Session validation failed. Clearing...');
+          await this.supabase.auth.signOut();
+          return;
+        }
+
+        // 4. PAGE GUARD (The Fix):
         // We only want to auto-redirect users who are actively trying to Sign In or Sign Up.
         // If they are on the Home Page (index.html), let them stay there!
         const path = window.location.pathname.replace(/\/$/, "") || "/";
@@ -66,7 +110,7 @@ class AuthService {
 
         // --- FROM HERE DOWN, WE ONLY RUN FOR USERS ON LOGIN/SIGNUP PAGES ---
 
-        // 4. Retrieve Draft Data
+        // 5. Retrieve Draft Data
         const cookieDraft = this.getCookie('hot_lead_draft');
         const localDraft = localStorage.getItem('hot_lead_draft');
         const hasDraft = cookieDraft || localDraft;
@@ -80,11 +124,6 @@ class AuthService {
           // Scenario B: Just Logging In -> Dashboard
           console.log("Auth Debug: Standard Login. Going to Dashboard...");
           window.location.href = '/home.html';
-        }
-
-        // Handle sign out
-        if (event === 'SIGNED_OUT') {
-          this.handleSignOut();
         }
       });
 
@@ -534,14 +573,43 @@ class AuthService {
 
   /**
    * Handle sign out (cleanup)
+   * Aggressively clears all auth-related storage to prevent stale sessions
    */
   handleSignOut() {
     // Clear any local state
     this.currentUser = null;
 
+    // CRITICAL FIX: Aggressively clear all auth-related storage
+    // This prevents stale sessions from persisting after logout
+
+    // 1. Clear all localStorage items that might contain auth data
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      // Remove Supabase auth keys and draft data
+      if (key && (key.startsWith('supabase.auth') || key.includes('draft') || key.includes('project'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => {
+      console.log(`Clearing localStorage key: ${key}`);
+      localStorage.removeItem(key);
+    });
+
+    // 2. Clear all sessionStorage items
+    sessionStorage.clear();
+
+    // 3. Clear all cookies related to drafts and auth
+    const cookiesToClear = ['hot_lead_draft', 'project_draft', 'post_intent'];
+    cookiesToClear.forEach(cookieName => {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      console.log(`Cleared cookie: ${cookieName}`);
+    });
+
+    console.log('✓ All auth storage cleared - user signed out');
+
     // Note: Navigation component (navigation.js) handles redirects
     // We don't redirect here to avoid race conditions with page auth checks
-    console.log('User signed out - navigation will handle redirect');
   }
 
   /**
