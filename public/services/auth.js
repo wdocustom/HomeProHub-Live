@@ -42,48 +42,49 @@ class AuthService {
         this.currentUser = session.user;
       }
 
-      // PART 2: Smart Auth Listener - Prevents infinite redirect loops
+      // PART 2: Master Auth Listener - DEFCON 1 Fix for INITIAL_SESSION bug
       this.supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log(`Auth Event: ${event}`);
+        console.log(`Auth Debug: Event=${event}, Session=${session ? 'Active' : 'Null'}`);
         this.currentUser = session?.user || null;
 
-        // --- 1. GUEST GUARD (CRITICAL) ---
-        // If no user is logged in, STOP. Do not redirect guests.
+        // --- GATEKEEPER: THE MOST IMPORTANT LINES ---
+        // If there is no active user session, we MUST return immediately.
+        // This prevents Guests from being hijacked by old cookies.
         if (!session || !session.user) {
-          console.log("Guest session. No auto-redirects.");
+          console.log("Auth Debug: User is Guest. Halting all redirects.");
           return;
         }
 
-        // --- 2. RETRIEVE DATA ---
-        // Check both pockets for the project draft
+        // --- IF WE REACH HERE, THE USER IS 100% LOGGED IN ---
+
+        // 1. Get Project Data (Check both storage pockets)
         const cookieDraft = this.getCookie('hot_lead_draft');
         const localDraft = localStorage.getItem('hot_lead_draft');
-        const activeDraft = cookieDraft || localDraft;
+        const hasDraft = cookieDraft || localDraft;
 
-        // Normalize path to prevent mismatch errors
-        const currentPath = window.location.pathname.replace(/\/$/, "");
+        // 2. Identify Where We Are
+        // Normalize path to avoid "/index.html" vs "/" mismatches
+        const path = window.location.pathname.replace(/\/$/, "") || "/";
 
-        // --- 3. ROUTING LOGIC ---
-        if (activeDraft) {
-          // SCENARIO A: User has a draft -> Needs to post it
-          // Fix "Data Amnesia": Ensure cookie exists for the next page to read
-          if (!cookieDraft && localDraft) {
-            this.setCookie('hot_lead_draft', localDraft, 1);
-          }
-
-          if (!currentPath.includes('post-project')) {
-            console.log("Draft found. Redirecting to Post Project...");
+        // 3. The "Magic Carpet" Logic (Redirects)
+        if (hasDraft) {
+          // SCENARIO A: User has a draft -> Send to Post Project
+          // Guard: Only redirect if we are NOT already there.
+          if (!path.includes('post-project')) {
+            console.log("Auth Debug: Draft found. Redirecting to Post Project...");
+            // Sync cookie if it was only in localStorage
+            if (!cookieDraft && localDraft) this.setCookie('hot_lead_draft', localDraft, 1);
             window.location.href = '/post-project.html';
           }
         } else {
-          // SCENARIO B: Standard User -> Go to Dashboard
-          // Only redirect if they are currently on a "Public" page (Login/Signup/Home)
-          // This prevents the "Infinite Dashboard Reload" loop
-          const publicPages = ['/index.html', '/signin.html', '/signup.html', '/', ''];
-          const isPublicPage = publicPages.some(page => currentPath.endsWith(page));
+          // SCENARIO B: No draft -> Send to Dashboard
+          // Guard: Only redirect if user is on a "Public" page (Login/Signup/Home)
+          // Do NOT redirect if they are already on the Dashboard (Fixes Infinite Loop)
+          const publicPages = ['/', '/index.html', '/signin.html', '/signup.html'];
+          const isPublicPage = publicPages.some(p => path === p || path.endsWith(p));
 
           if (isPublicPage) {
-            console.log("Login successful. Redirecting to Dashboard...");
+            console.log("Auth Debug: Login verified. Redirecting to Dashboard...");
             window.location.href = '/homeowner-dashboard.html';
           }
         }
