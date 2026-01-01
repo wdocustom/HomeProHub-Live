@@ -44,21 +44,48 @@ class AuthService {
 
       // PART 2: Smart Auth Listener - Prevents infinite redirect loops
       this.supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event);
+        console.log(`Auth Event: ${event}`);
         this.currentUser = session?.user || null;
 
-        // CRITICAL FIX: Stop execution if no user is logged in.
-        // Allow guests to browse the site and use the AI without being redirected.
+        // --- 1. GUEST GUARD (CRITICAL) ---
+        // If no user is logged in, STOP. Do not redirect guests.
         if (!session || !session.user) {
-          console.log("Guest user: No auto-redirects.");
+          console.log("Guest session. No auto-redirects.");
           return;
         }
 
-        // --- BELOW THIS LINE ONLY RUNS FOR LOGGED-IN USERS ---
+        // --- 2. RETRIEVE DATA ---
+        // Check both pockets for the project draft
+        const cookieDraft = this.getCookie('hot_lead_draft');
+        const localDraft = localStorage.getItem('hot_lead_draft');
+        const activeDraft = cookieDraft || localDraft;
 
-        // Handle sign in with loop prevention
-        if (event === 'SIGNED_IN') {
-          await this.handleSignInSmart();
+        // Normalize path to prevent mismatch errors
+        const currentPath = window.location.pathname.replace(/\/$/, "");
+
+        // --- 3. ROUTING LOGIC ---
+        if (activeDraft) {
+          // SCENARIO A: User has a draft -> Needs to post it
+          // Fix "Data Amnesia": Ensure cookie exists for the next page to read
+          if (!cookieDraft && localDraft) {
+            this.setCookie('hot_lead_draft', localDraft, 1);
+          }
+
+          if (!currentPath.includes('post-project')) {
+            console.log("Draft found. Redirecting to Post Project...");
+            window.location.href = '/post-project.html';
+          }
+        } else {
+          // SCENARIO B: Standard User -> Go to Dashboard
+          // Only redirect if they are currently on a "Public" page (Login/Signup/Home)
+          // This prevents the "Infinite Dashboard Reload" loop
+          const publicPages = ['/index.html', '/signin.html', '/signup.html', '/', ''];
+          const isPublicPage = publicPages.some(page => currentPath.endsWith(page));
+
+          if (isPublicPage) {
+            console.log("Login successful. Redirecting to Dashboard...");
+            window.location.href = '/homeowner-dashboard.html';
+          }
         }
 
         // Handle sign out
