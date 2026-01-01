@@ -4398,16 +4398,16 @@ app.get("/api/unread-count", async (req, res) => {
 /**
  * GET /api/notifications/unread
  * Get unread notification count only (for navigation)
+ * TASK 2: Fail gracefully - return 200 with count: 0 instead of 500 error
  */
 app.get("/api/notifications/unread", async (req, res) => {
   try {
     const { email } = req.query;
 
     if (!email) {
-      return res.status(400).json({
-        error: "Email parameter required",
-        code: 'VALIDATION_ERROR'
-      });
+      // Fail gracefully - don't alarm user with 400 error for optional feature
+      console.warn('⚠️  Notifications endpoint called without email');
+      return res.json({ count: 0 });
     }
 
     const count = await db.getUnreadNotificationCount(email);
@@ -4415,12 +4415,10 @@ app.get("/api/notifications/unread", async (req, res) => {
     res.json({ count });
 
   } catch (err) {
-    console.error("❌ Error in /api/notifications/unread:", err);
-    res.status(500).json({
-      error: "Failed to retrieve unread notification count",
-      code: 'INTERNAL_ERROR',
-      message: err.message
-    });
+    // CRITICAL FIX: Fail gracefully - don't break the UI with 500 errors
+    // Notifications are a non-critical feature
+    console.warn('⚠️  Notification count failed (non-critical):', err.message);
+    res.json({ count: 0 });
   }
 });
 
