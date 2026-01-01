@@ -15,216 +15,354 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
-    /* Welcome section */
-    .welcome-hero {
-      max-width: 1100px;
-      margin: 48px auto 40px;
+    /* TASK 1: Concierge Hero Section */
+    .concierge-hero {
+      max-width: 900px;
+      margin: 80px auto 64px;
       padding: 0 24px;
       text-align: center;
     }
-    .welcome-title {
-      font-size: 36px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 12px;
-      color: #111827;
-      line-height: 1.2;
-    }
-    .welcome-subtitle {
-      font-size: 16px;
-      line-height: 1.6;
+    .concierge-greeting {
+      font-size: 24px;
+      font-weight: 400;
       color: #6b7280;
-      max-width: 680px;
-      margin: 0 auto 8px;
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+    .concierge-greeting .user-name {
+      font-weight: 600;
+      color: #111827;
+    }
+    .concierge-question {
+      font-size: 42px;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 40px;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
     }
 
-    /* STAR FEATURE: AI Assistant Section */
-    .ai-assistant-section {
-      max-width: 1100px;
-      margin: 0 auto 48px;
-      padding: 0 24px;
-    }
-    .ai-assistant-card {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-      border-radius: 20px;
-      padding: 48px 40px;
-      color: white;
-      box-shadow: 0 20px 40px rgba(37, 99, 235, 0.25);
+    /* Pill-Shaped Search Bar (Airbnb Style) */
+    .search-container {
       position: relative;
-      overflow: hidden;
-    }
-    .ai-assistant-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -10%;
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-    .ai-assistant-header {
-      text-align: center;
-      margin-bottom: 32px;
-      position: relative;
-      z-index: 1;
-    }
-    .ai-badge {
-      display: inline-block;
-      padding: 6px 14px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 16px;
-      backdrop-filter: blur(10px);
-    }
-    .ai-title {
-      font-size: 32px;
-      font-weight: 700;
-      margin: 0 0 12px 0;
-      color: white;
-    }
-    .ai-subtitle {
-      font-size: 16px;
-      opacity: 0.95;
-      max-width: 600px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
-    .ai-input-area {
-      position: relative;
-      z-index: 1;
-      max-width: 700px;
+      max-width: 800px;
       margin: 0 auto;
     }
-    .ai-textarea {
+    .search-bar {
       width: 100%;
-      min-height: 120px;
-      padding: 18px 20px;
-      border-radius: 12px;
-      border: 2px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.95);
-      font-size: 15px;
-      color: #1f2937;
-      resize: vertical;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      transition: all 0.2s;
-    }
-    .ai-textarea:focus {
-      outline: none;
-      border-color: white;
+      min-height: 64px;
+      padding: 20px 140px 20px 32px;
+      border-radius: 999px;
+      border: 2px solid #e5e7eb;
       background: white;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      font-size: 17px;
+      color: #1f2937;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      transition: all 0.3s;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      resize: none;
     }
-    .ai-textarea::placeholder {
+    .search-bar:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+    .search-bar::placeholder {
       color: #9ca3af;
     }
-    .ai-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .btn-ai-primary {
+    .search-button {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
       padding: 14px 32px;
-      background: white;
-      color: #2563eb;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 999px;
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
-    .btn-ai-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    .search-button:hover:not(:disabled) {
+      transform: translateY(-50%) translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
     }
-    .btn-ai-primary:disabled {
+    .search-button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
-    .btn-ai-secondary {
-      padding: 14px 28px;
-      background: rgba(255,255,255,0.2);
-      color: white;
-      border: 2px solid rgba(255,255,255,0.4);
-      border-radius: 10px;
+    .search-helper-text {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #6b7280;
+      text-align: center;
+    }
+    .photo-upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
       font-size: 14px;
       font-weight: 600;
+      color: #374151;
       cursor: pointer;
       transition: all 0.2s;
-      backdrop-filter: blur(10px);
+      margin-top: 16px;
     }
-    .btn-ai-secondary:hover {
-      background: rgba(255,255,255,0.3);
-      border-color: rgba(255,255,255,0.6);
+    .photo-upload-btn:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
     .photo-input {
       display: none;
-    }
-    .ai-free-tag {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 13px;
-      opacity: 0.9;
     }
     .status-message {
       margin-top: 12px;
       font-size: 14px;
       text-align: center;
+      color: #6b7280;
     }
 
-    /* AI Response Area */
+    /* TASK 2: Blueprint Analysis Card */
     .ai-response-section {
-      max-width: 1100px;
-      margin: 0 auto 48px;
+      max-width: 900px;
+      margin: 0 auto 64px;
       padding: 0 24px;
       display: none;
     }
     .ai-response-section.show {
       display: block;
     }
-    .ai-response-card {
+
+    /* Blueprint Card Container */
+    .blueprint-card {
       background: white;
-      border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-      border-left: 4px solid #10b981;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+      margin-bottom: 32px;
+      border: 1px solid #e5e7eb;
     }
-    .response-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 2px solid #e5e7eb;
+
+    .blueprint-header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+      padding: 40px 48px;
+      position: relative;
+      overflow: hidden;
     }
-    .response-icon {
-      font-size: 32px;
+
+    .blueprint-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      border-radius: 50%;
     }
-    .response-title {
-      font-size: 22px;
+
+    .blueprint-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
       font-weight: 700;
-      color: #1f2937;
-      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: white;
+      margin-bottom: 16px;
     }
+
+    .blueprint-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: white;
+      margin: 0;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .blueprint-body {
+      padding: 48px;
+    }
+
+    /* Stats Grid - Budget + Timeline */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    .stat-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-value.budget {
+      color: #10b981;
+    }
+
+    /* Response Content */
     .response-content {
       font-size: 15px;
       line-height: 1.8;
       color: #374151;
-      white-space: pre-wrap;
+      margin-bottom: 32px;
+    }
+
+    .response-section {
+      margin-bottom: 32px;
+    }
+
+    .response-section h4 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .response-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .response-list li {
+      padding: 12px 16px;
+      background: #f0fdf4;
+      border: 2px solid #d1fae5;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #065f46;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      transition: all 0.2s;
+    }
+
+    .response-list li:hover {
+      background: #d1fae5;
+      transform: translateX(4px);
+    }
+
+    .response-list li::before {
+      content: '✓';
+      font-size: 20px;
+      color: #10b981;
+      flex-shrink: 0;
+    }
+
+    /* Action Card: Ready to Hire a Pro */
+    .project-post-cta {
+      margin-top: 40px;
+      padding: 32px;
+      background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #8b5cf6 100%);
+      border-radius: 16px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-post-cta::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .project-post-cta h3 {
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+      margin: 0 0 12px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .project-post-cta p {
+      font-size: 15px;
+      color: rgba(255,255,255,0.95);
+      margin: 0 0 24px 0;
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-card-primary {
+      padding: 16px 40px;
+      background: white;
+      color: #7c3aed;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-card-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
     }
 
     /* Clarify Section */
     .clarify-section {
-      margin-top: 24px;
-      padding-top: 24px;
+      margin-top: 32px;
+      padding-top: 32px;
       border-top: 2px solid #e5e7eb;
     }
     .clarify-label {
@@ -281,19 +419,19 @@
       color: #1e3a8a;
     }
 
-    /* Section header for Explore & Do */
+    /* TASK 3: Bento Grid Navigation */
     .section-header {
-      max-width: 1100px;
-      margin: 64px auto 32px;
+      max-width: 900px;
+      margin: 80px auto 40px;
       padding: 0 24px;
       text-align: center;
     }
     .section-header h2 {
-      font-size: 28px;
-      font-weight: 700;
+      font-size: 32px;
+      font-weight: 800;
       color: #111827;
-      margin-bottom: 8px;
-      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      letter-spacing: -0.03em;
     }
     .section-header p {
       font-size: 16px;
@@ -302,80 +440,76 @@
       margin: 0 auto;
     }
 
-    /* Two-column grid for secondary features */
-    .secondary-grid {
-      max-width: 1100px;
-      margin: 0 auto 64px;
+    /* Bento Grid Layout */
+    .bento-grid {
+      max-width: 900px;
+      margin: 0 auto 80px;
       padding: 0 24px;
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
     }
 
-    @media (max-width: 900px) {
-      .secondary-grid {
+    @media (max-width: 768px) {
+      .bento-grid {
         grid-template-columns: 1fr;
       }
     }
 
-    /* Contractor Directory Card & Advocate Card - Unified White Style */
-    .directory-card,
-    .advocate-card {
+    /* Bento Tile */
+    .bento-tile {
       background: white;
-      border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-radius: 20px;
+      padding: 32px 24px;
+      text-align: center;
       border: 2px solid #e5e7eb;
-      transition: all 0.3s;
-    }
-    .directory-card:hover,
-    .advocate-card:hover {
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-      transform: translateY(-2px);
-      border-color: #3b82f6;
-    }
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .card-icon {
-      font-size: 32px;
-    }
-    .card-title {
-      font-size: 22px;
-      font-weight: 700;
-      margin: 0;
-      color: #111827;
-    }
-    .card-description {
-      font-size: 14px;
-      line-height: 1.6;
-      color: #6b7280;
-      margin-bottom: 20px;
-    }
-    .card-features {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 24px 0;
-    }
-    .card-features li {
-      padding: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
-      display: flex;
-      align-items: start;
-      gap: 8px;
-    }
-    .card-features li::before {
-      content: '✓';
-      color: #10b981;
-      font-weight: 700;
-      flex-shrink: 0;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
     }
 
-    /* Premium Badge for Advocate Card */
+    .bento-tile:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+      border-color: #3b82f6;
+    }
+
+    /* Tile Colors */
+    .bento-tile.blue {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    }
+
+    .bento-tile.green {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    }
+
+    .bento-tile.purple {
+      background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    }
+
+    .bento-tile-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .bento-tile-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.01em;
+    }
+
+    .bento-tile-description {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* Premium Badge for Advocate Tile */
     .premium-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -510,173 +644,123 @@
   <!-- Navigation component will be injected here by navigation.js -->
 
   <main>
-    <!-- Welcome Hero -->
-    <section class="welcome-hero">
-      <h1 class="welcome-title">Welcome to Your Home Dashboard</h1>
-      <p class="welcome-subtitle">
-        Get expert help understanding home issues, find verified contractors, and manage your projects—all in one place.
+    <!-- TASK 1: Concierge Hero Section -->
+    <section class="concierge-hero">
+      <p class="concierge-greeting">
+        Good <span id="timeOfDay">day</span>, <span class="user-name" id="userName">there</span>.
       </p>
-    </section>
+      <h1 class="concierge-question">What are we fixing today?</h1>
 
-    <!-- ⭐ STAR FEATURE: AI Assistant Section -->
-    <section class="ai-assistant-section">
-      <div class="ai-assistant-card">
-        <div class="ai-assistant-header">
-          <div class="ai-badge">✨ FREE — AI-Powered</div>
-          <h2 class="ai-title">What's going on with your home?</h2>
-          <p class="ai-subtitle">
-            Leaks, cracks, strange noises, or weird smells? Describe what you're seeing (or upload a photo), and our AI Assistant will help you understand the issue, check for safety concerns, and guide your next steps.
-          </p>
-        </div>
-
-        <div class="ai-input-area">
-          <textarea
-            class="ai-textarea"
-            placeholder="Example: There's a wet spot on my ceiling near the bathroom. It's about 12 inches across and the paint is bubbling..."
-            id="homeIssueInput"
-          ></textarea>
-
-          <div class="ai-actions">
-            <button class="btn-ai-primary" id="askAiBtn">
-              🤖 Get AI Help Now
-            </button>
-            <label for="photoInput" class="btn-ai-secondary" style="cursor: pointer; display: inline-block; line-height: 1;">
-              📸 Upload a Photo
-            </label>
-            <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" />
-          </div>
-
-          <div class="status-message" id="aiStatus"></div>
-
-          <div class="ai-free-tag">
-            <strong>100% Free</strong> — Available on all plans. No credit card needed.
-          </div>
-        </div>
+      <div class="search-container">
+        <textarea
+          class="search-bar"
+          placeholder="Describe what's happening... (e.g., wet spot on ceiling, strange noise from HVAC, cracked driveway...)"
+          id="homeIssueInput"
+          rows="1"
+        ></textarea>
+        <button class="search-button" id="askAiBtn">
+          Ask AI
+        </button>
       </div>
+
+      <div class="search-helper-text">
+        Or
+        <label for="photoInput" class="photo-upload-btn" style="display: inline-flex; vertical-align: middle;">
+          📸 Upload a Photo
+        </label>
+        <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" />
+      </div>
+
+      <div class="status-message" id="aiStatus"></div>
     </section>
 
-    <!-- AI Response Section (Hidden until response) -->
+    <!-- TASK 2: Blueprint Analysis Card -->
     <section class="ai-response-section" id="aiResponseSection">
-      <div class="ai-response-card">
-        <div class="response-header">
-          <span class="response-icon">✅</span>
-          <h3 class="response-title">AI Analysis</h3>
+      <div class="blueprint-card">
+        <!-- Blueprint Header -->
+        <div class="blueprint-header">
+          <div class="blueprint-badge">✨ AI Analysis Complete</div>
+          <h2 class="blueprint-title">Your Project Blueprint</h2>
         </div>
-        <div class="response-content" id="aiResponseContent"></div>
 
-        <!-- Clarify Section -->
-        <div class="clarify-section">
-          <label class="clarify-label">
-            Need to clarify or add something? Provide more details for an updated analysis:
-          </label>
-          <textarea
-            class="clarify-textarea"
-            id="clarifyInput"
-            placeholder="Example: The house was built in 2005, this only happens after long showers..."
-          ></textarea>
-          <div class="clarify-actions">
-            <button class="btn-card btn-card-primary" id="clarifyBtn">
-              🔁 Update Analysis
-            </button>
-            <div class="status-message" id="clarifyStatus"></div>
+        <!-- Blueprint Body -->
+        <div class="blueprint-body">
+          <!-- Stats Grid -->
+          <div class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+              <span class="stat-icon">💰</span>
+              <div class="stat-label">Estimated Cost</div>
+              <div class="stat-value budget" id="statBudget">$5,000 - $15,000</div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">⏱️</span>
+              <div class="stat-label">Time Estimate</div>
+              <div class="stat-value" id="statTime">2-3 weeks</div>
+            </div>
           </div>
-        </div>
 
-        <!-- Project Post CTA -->
-        <div class="project-post-cta" id="projectPostCta">
-          <h3>✅ Ready to Hire a Pro?</h3>
-          <p>Convert this AI diagnosis into a project posting. Get competitive bids from verified contractors in your area.</p>
-          <button class="btn-card btn-card-primary" id="postProjectBtn">
-            Post This Project & Get Bids
-          </button>
+          <!-- Response Content -->
+          <div class="response-content" id="aiResponseContent"></div>
+
+          <!-- Clarify Section -->
+          <div class="clarify-section">
+            <label class="clarify-label">
+              Need to clarify or add something? Provide more details for an updated analysis:
+            </label>
+            <textarea
+              class="clarify-textarea"
+              id="clarifyInput"
+              placeholder="Example: The house was built in 2005, this only happens after long showers..."
+            ></textarea>
+            <div class="clarify-actions">
+              <button class="btn-card-primary" id="clarifyBtn">
+                🔁 Update Analysis
+              </button>
+              <div class="status-message" id="clarifyStatus"></div>
+            </div>
+          </div>
+
+          <!-- Action Card: Ready to Hire a Pro -->
+          <div class="project-post-cta" id="projectPostCta">
+            <h3>✅ Ready to Hire a Pro?</h3>
+            <p>Convert this AI diagnosis into a project posting. Get competitive bids from verified contractors in your area.</p>
+            <button class="btn-card-primary" id="postProjectBtn">
+              Post This Project & Get Bids
+            </button>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Section Header: Explore & Do -->
     <div class="section-header">
-      <h2>Explore & Do</h2>
-      <p>Browse contractors, get expert advice, or explore resources to help with your home projects.</p>
+      <h2>Quick Actions</h2>
+      <p>Everything you need to manage your home projects in one place.</p>
     </div>
 
-    <!-- Secondary Features Grid -->
-    <section class="secondary-grid">
-      <!-- Contractor Directory -->
-      <div class="directory-card">
-        <div class="card-header">
-          <span class="card-icon">🏅</span>
-          <h3 class="card-title">Contractor Directory</h3>
-        </div>
-        <p class="card-description">
-          Search verified pros scored A–F based on transparent criteria—not just reviews. Find the right contractor for your project with confidence.
-        </p>
-        <ul class="card-features">
-          <li>Transparent grading system (A-F ratings)</li>
-          <li>Licensed & insured verification</li>
-          <li>Specialty & trade filtering</li>
-          <li>Distance & availability search</li>
-        </ul>
-        <a href="contractor-directory.html" class="btn-card btn-card-primary">
-          Browse Contractors
-        </a>
-        <span class="tier-free">FREE</span>
-      </div>
+    <!-- TASK 3: Bento Grid Navigation -->
+    <section class="bento-grid">
+      <!-- Find a Contractor -->
+      <a href="contractor-directory.html" class="bento-tile blue">
+        <span class="bento-tile-icon">🏅</span>
+        <h3 class="bento-tile-title">Find a Contractor</h3>
+        <p class="bento-tile-description">Browse verified pros with A-F ratings</p>
+      </a>
 
-      <!-- Owner's Advocate / Rep -->
-      <div class="advocate-card">
-        <span class="premium-badge">Premium Feature</span>
-        <div class="card-header">
-          <span class="card-icon">🤝</span>
-          <h3 class="card-title">Your Owner's Advocate</h3>
-        </div>
-        <p class="card-description">
-          Already started your project? Need help reviewing bids, understanding contractor jargon, or making tough decisions? We're your partner through every step.
-        </p>
-        <ul class="card-features">
-          <li>Review & compare contractor bids</li>
-          <li>Translate technical language into plain English</li>
-          <li>Video calls with construction experts</li>
-          <li>Designer & architect connections</li>
-          <li>Budget & timeline guidance</li>
-        </ul>
-        <a href="access-experts.html" class="btn-card btn-card-primary">
-          Get Expert Support
-        </a>
-      </div>
-    </section>
+      <!-- My Projects -->
+      <a href="homeowner-dashboard.html" class="bento-tile green">
+        <span class="bento-tile-icon">📋</span>
+        <h3 class="bento-tile-title">My Projects</h3>
+        <p class="bento-tile-description">View active projects and bids</p>
+      </a>
 
-    <!-- Special Remodel/Project Section -->
-    <section class="remodel-section">
-      <div class="remodel-card">
-        <div class="remodel-content">
-          <div class="remodel-icon">🏡✨</div>
-          <h2 class="remodel-title">
-            Dreaming of a Remodel or Special Project?
-          </h2>
-          <p class="remodel-description">
-            Whether you're refreshing your kitchen for a growing family, adding a home office, building a deck for summer gatherings, or planning a full renovation—we make it easy to turn your vision into reality.
-          </p>
-
-          <div class="remodel-highlights">
-            <div class="highlight-item">
-              <div class="highlight-title">All Budgets Welcome</div>
-              <div class="highlight-desc">From $5K updates to full renovations</div>
-            </div>
-            <div class="highlight-item">
-              <div class="highlight-title">Competitive Bidding</div>
-              <div class="highlight-desc">Get multiple quotes from verified GCs</div>
-            </div>
-            <div class="highlight-item">
-              <div class="highlight-title">Expert Guidance</div>
-              <div class="highlight-desc">AI planning + human expertise</div>
-            </div>
-          </div>
-
-          <a href="homeowner-dashboard.html" class="btn-card btn-card-white">
-            ✏️ Post Your Project & Get Bids
-          </a>
-        </div>
-      </div>
+      <!-- Expert Support -->
+      <a href="access-experts.html" class="bento-tile purple">
+        <span class="bento-tile-icon">🤝</span>
+        <h3 class="bento-tile-title">Expert Support</h3>
+        <p class="bento-tile-description">Get help from our advocates</p>
+        <span class="premium-badge" style="margin-top: 8px;">Premium</span>
+      </a>
     </section>
 
   </main>
@@ -684,6 +768,52 @@
   <script>
     // Note: Auth check is handled by navigation.js component
     // No need for redundant inline auth check that causes race conditions
+
+    // TASK 1: Personalized Greeting
+    (function() {
+      const hour = new Date().getHours();
+      let timeOfDay = 'day';
+      if (hour < 12) timeOfDay = 'morning';
+      else if (hour < 18) timeOfDay = 'afternoon';
+      else timeOfDay = 'evening';
+
+      document.getElementById('timeOfDay').textContent = timeOfDay;
+
+      // Get user name from auth service when available
+      if (window.authService) {
+        window.authService.getUserProfile().then(profile => {
+          if (profile && profile.full_name) {
+            document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
+          }
+        }).catch(() => {});
+      }
+
+      // Auto-expand textarea
+      const searchBar = document.getElementById('homeIssueInput');
+      if (searchBar) {
+        searchBar.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = Math.max(64, this.scrollHeight) + 'px';
+        });
+      }
+    })();
+
+    // TASK 2: Extract and display stats from AI response
+    function displayStatsFromResponse(responseText) {
+      // Extract budget range
+      const budgetMatch = responseText.match(/\$(\d{1,3}(?:,\d{3})*)\s*-\s*\$(\d{1,3}(?:,\d{3})*)/);
+      if (budgetMatch) {
+        document.getElementById('statBudget').textContent = `$${budgetMatch[1]} - $${budgetMatch[2]}`;
+        document.getElementById('statsGrid').style.display = 'grid';
+      }
+
+      // Extract timeline
+      const timeMatch = responseText.match(/(\d+[-–]\d+)\s*(day|week|month)s?/i);
+      if (timeMatch) {
+        document.getElementById('statTime').textContent = timeMatch[0];
+        document.getElementById('statsGrid').style.display = 'grid';
+      }
+    }
   </script>
 
   <!-- Blueprint Generation Logic (same as preview.html) -->
@@ -756,6 +886,9 @@
             // Display the AI response (formatted)
             const cleanAnswer = cleanAIArtifacts(data.answer);
             aiResponseContent.innerHTML = formatAIResponse(cleanAnswer);
+
+            // TASK 2: Display stats from AI response
+            displayStatsFromResponse(cleanAnswer);
 
             // Show response section
             aiResponseSection.classList.add('show');
