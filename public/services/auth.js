@@ -83,8 +83,9 @@ class AuthService {
 
         // 3. SESSION VALIDATION: Check if this is a stale/invalid session
         // Skip validation for INITIAL_SESSION since we already validated on init
-        // Only validate for actual SIGNED_IN events
-        if (event === 'SIGNED_IN') {
+        // Skip validation for SIGNED_IN when we have fresh cached profile (from signIn)
+        // Only validate for SIGNED_IN events when there's no cached profile
+        if (event === 'SIGNED_IN' && !this.cachedProfile) {
           try {
             const { data: { user }, error } = await this.supabase.auth.getUser();
             if (error || !user) {

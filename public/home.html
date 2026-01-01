@@ -918,61 +918,10 @@
             return;
           }
 
-          // Disable button and show loading
-          askBtn.disabled = true;
-          askBtn.textContent = 'Analyzing...';
-          aiStatus.textContent = 'Our AI is analyzing your issue...';
-          aiStatus.style.color = '#6b7280';
-          aiResponseSection.style.display = 'none';
-
-          try {
-            // Call AI preview endpoint (same as public landing page)
-            const response = await fetch('/api/ai/preview', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ question })
-            });
-
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.error || 'Failed to analyze question');
-            }
-
-            const data = await response.json();
-
-            // Store globally
-            window.blueprintData.question = question;
-            window.blueprintData.answer = data.answer;
-
-            // Parse AI response for structured data
-            const parsed = parseAIResponse(data.answer);
-            window.blueprintData.parsed = parsed;
-            window.blueprintData.budgetLow = parsed.budgetLow || 5000;
-            window.blueprintData.budgetHigh = parsed.budgetHigh || 15000;
-
-            // Display the AI response (formatted)
-            const cleanAnswer = cleanAIArtifacts(data.answer);
-            aiResponseContent.innerHTML = formatAIResponse(cleanAnswer);
-
-            // Show response section
-            aiResponseSection.style.display = 'block';
-
-            aiStatus.textContent = '✓ Analysis complete!';
-            aiStatus.style.color = '#10b981';
-
-            // NOTE: Draft is now only saved when user clicks "Post This Project" button
-            // This prevents unwanted redirects for users who just want to understand the issue
-
-          } catch (error) {
-            console.error('Analysis error:', error);
-            aiStatus.textContent = error.message || 'Failed to analyze. Please try again.';
-            aiStatus.style.color = '#ef4444';
-          } finally {
-            askBtn.disabled = false;
-            askBtn.textContent = 'Get Help';
-          }
+          // UPDATED: Store question and redirect to preview page (like index.html)
+          // This provides a consistent experience across authenticated and non-authenticated users
+          sessionStorage.setItem('pendingQuestion', question);
+          window.location.href = 'preview.html';
         });
       }
 
