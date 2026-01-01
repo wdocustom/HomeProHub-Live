@@ -859,13 +859,41 @@
         const profile = await window.authService.getUserProfile();
         const zipCode = profile?.zip_code || projectData.zipCode || '00000';
 
+        // TASK 2: Map category values (lowercase to Title Case for database)
+        const categoryMap = {
+          'general': 'General Contractor',
+          'plumber': 'Plumber',
+          'electrician': 'Electrician',
+          'hvac': 'HVAC',
+          'landscaping': 'Landscaping',
+          'roofing': 'Roofing',
+          'painting': 'Painting',
+          'flooring': 'Flooring',
+          'remodeling': 'Remodeling'
+        };
+
+        // TASK 3: Helper function to clean and parse budget numbers
+        const cleanNumber = (value) => {
+          if (typeof value === 'number') return Math.floor(value);
+          if (typeof value === 'string') {
+            // Remove $, commas, spaces
+            const cleaned = value.replace(/[$,\s]/g, '');
+            const parsed = parseInt(cleaned, 10);
+            return isNaN(parsed) ? null : parsed;
+          }
+          return null;
+        };
+
+        const rawCategory = projectData.category || 'general';
+        const mappedCategory = categoryMap[rawCategory] || rawCategory;
+
         // Build submission data matching backend schema (/api/jobs)
         const submissionData = {
           title: projectData.title || 'Home Renovation Project',
           description: projectData.description || '',
-          category: projectData.category || 'general',
-          budget_low: projectData.budgetMin || 5000,  // snake_case for backend
-          budget_high: projectData.budgetMax || 15000, // snake_case for backend
+          category: mappedCategory,  // Use mapped Title Case value
+          budget_low: cleanNumber(projectData.budgetMin) || 5000,  // Parse as integer
+          budget_high: cleanNumber(projectData.budgetMax) || 15000, // Parse as integer
           zip_code: zipCode,  // REQUIRED by backend
           urgency: projectData.urgency || 'flexible',
           homeowner_email: user.email,  // REQUIRED by backend
