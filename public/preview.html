@@ -3,199 +3,405 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Project Blueprint – HomeProHub</title>
+  <title>Analysis Complete – HomeProHub</title>
 
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
   <style>
-    body {
-      background: #f9fafb;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    * {
+      box-sizing: border-box;
     }
 
-    .page-container {
-      max-width: 900px;
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .sanctuary-container {
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 24px 24px 120px;
+      padding-bottom: 100px;
     }
 
     /* ============================================
-       THE BLUEPRINT - Premium Card Design
+       SEVERITY BANNER SYSTEM
        ============================================ */
-    .blueprint-card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
-      overflow: hidden;
+    .severity-banner {
+      padding: 24px 32px;
+      border-radius: 16px;
       margin-bottom: 32px;
-      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideDown 0.5s ease-out;
     }
 
-    .blueprint-header {
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-      padding: 40px 48px;
-      position: relative;
-      overflow: hidden;
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    .blueprint-header::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-      border-radius: 50%;
+    .severity-banner.high {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      border: 3px solid #fca5a5;
     }
 
-    .blueprint-badge {
-      display: inline-block;
-      background: rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: white;
-      margin-bottom: 16px;
+    .severity-banner.medium {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      border: 3px solid #fcd34d;
     }
 
-    .blueprint-title {
-      font-size: 36px;
+    .severity-banner.low {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: 3px solid #6ee7b7;
+    }
+
+    .severity-icon {
+      font-size: 48px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .severity-content {
+      flex: 1;
+    }
+
+    .severity-title {
+      font-size: 24px;
       font-weight: 800;
       color: white;
+      margin: 0 0 4px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .severity-subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.9);
       margin: 0;
-      letter-spacing: -0.03em;
-      position: relative;
-      z-index: 1;
     }
 
-    .blueprint-body {
-      padding: 48px;
+    /* ============================================
+       SANCTUARY CARDS
+       ============================================ */
+    .sanctuary-card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1);
+      margin-bottom: 32px;
+      overflow: hidden;
+      animation: fadeIn 0.6s ease-out;
     }
 
-    /* Hero Vision Statement */
-    .vision-section {
-      margin-bottom: 40px;
-      padding-bottom: 32px;
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card-header {
+      padding: 32px 40px;
       border-bottom: 2px solid #e5e7eb;
     }
 
-    .vision-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #6b7280;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-
-    .vision-text {
-      font-size: 22px;
-      line-height: 1.6;
-      color: #111827;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-weight: 400;
-    }
-
-    /* Data Grid - Budget + Timeline */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 40px;
-    }
-
-    .stat-card {
-      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
-      border: 2px solid #e5e7eb;
-      border-radius: 16px;
-      padding: 24px;
-      transition: all 0.3s;
-    }
-
-    .stat-card:hover {
-      border-color: #3b82f6;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-    }
-
-    .stat-icon {
-      font-size: 32px;
+    .card-icon {
+      font-size: 36px;
       margin-bottom: 12px;
       display: block;
     }
 
-    .stat-label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #6b7280;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .stat-value {
+    .card-title {
       font-size: 28px;
       font-weight: 800;
       color: #111827;
+      margin: 0 0 8px 0;
       letter-spacing: -0.02em;
     }
 
-    .stat-value.budget {
-      color: #10b981;
-    }
-
-    /* Scope Checklist */
-    .scope-section {
-      margin-bottom: 40px;
-    }
-
-    .scope-label {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    .card-subtitle {
+      font-size: 14px;
       color: #6b7280;
-      font-weight: 700;
-      margin-bottom: 16px;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
     }
 
-    .scope-checklist {
+    .card-body {
+      padding: 40px;
+    }
+
+    /* ============================================
+       ACTION PLAN CARD
+       ============================================ */
+    .action-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 20px;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #fbbf24;
+      border-radius: 16px;
+      transition: all 0.3s;
+    }
+
+    .action-item:hover {
+      transform: translateX(8px);
+      box-shadow: 0 8px 24px rgba(251, 191, 36, 0.3);
+    }
+
+    .action-checkbox {
+      font-size: 24px;
+      color: #f59e0b;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .action-text {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #78350f;
+      font-weight: 500;
+    }
+
+    /* ============================================
+       DIAGNOSTIC GRID (2 COLUMNS)
+       ============================================ */
+    .diagnostic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .diagnostic-item {
+      padding: 24px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border: 2px solid #7dd3fc;
+      border-radius: 16px;
+      transition: all 0.3s;
+    }
+
+    .diagnostic-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(59, 130, 246, 0.2);
+    }
+
+    .diagnostic-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .diagnostic-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #0c4a6e;
+      font-weight: 500;
+    }
+
+    /* ============================================
+       FINANCIAL SCOPE CARD
+       ============================================ */
+    .financial-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .financial-box {
+      padding: 32px;
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border: 3px solid #86efac;
+      border-radius: 20px;
+      text-align: center;
+    }
+
+    .financial-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #166534;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .financial-value {
+      font-size: 48px;
+      font-weight: 900;
+      color: #15803d;
+      letter-spacing: -0.03em;
+    }
+
+    .cost-factors {
+      background: #f9fafb;
+      padding: 24px;
+      border-radius: 16px;
+    }
+
+    .cost-factors h4 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6b7280;
+      margin: 0 0 16px 0;
+      font-weight: 700;
+    }
+
+    .cost-factors ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style: none;
+    }
+
+    .cost-factors li {
+      margin-bottom: 12px;
+      font-size: 15px;
+      color: #374151;
+      line-height: 1.6;
+      position: relative;
+      padding-left: 24px;
+    }
+
+    .cost-factors li::before {
+      content: "💰";
+      position: absolute;
+      left: 0;
+      font-size: 16px;
+    }
+
+    /* ============================================
+       RED FLAGS (VETERAN'S WARNING)
+       ============================================ */
+    .red-flags-card {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+      color: white;
+    }
+
+    .red-flags-card .card-header {
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .red-flags-card .card-title,
+    .red-flags-card .card-subtitle {
+      color: white;
+    }
+
+    .red-flag-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .red-flag-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+    }
+
+    .red-flag-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .red-flag-text {
+      font-size: 16px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* ============================================
+       STRATEGY TIMELINE
+       ============================================ */
+    .strategy-timeline {
+      display: grid;
+      gap: 20px;
+    }
+
+    .timeline-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 24px;
+      background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
+      border: 2px solid #e9d5ff;
+      border-radius: 16px;
+      position: relative;
+    }
+
+    .timeline-number {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .timeline-content {
+      flex: 1;
+    }
+
+    .timeline-text {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #581c87;
+      font-weight: 500;
+    }
+
+    /* ============================================
+       QUESTIONS SECTION
+       ============================================ */
+    .questions-list {
       display: grid;
       gap: 12px;
     }
 
-    .scope-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      background: #f0fdf4;
-      border: 2px solid #d1fae5;
-      border-radius: 10px;
+    .question-item {
+      padding: 16px 20px;
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
       font-size: 15px;
-      color: #065f46;
-      font-weight: 500;
-      transition: all 0.2s;
+      color: #78350f;
+      line-height: 1.6;
     }
 
-    .scope-item:hover {
-      background: #d1fae5;
-      transform: translateX(4px);
-    }
-
-    .scope-check {
-      font-size: 20px;
-      color: #10b981;
-      flex-shrink: 0;
-    }
-
-    /* Sticky Action Bar */
+    /* ============================================
+       STICKY ACTION BAR
+       ============================================ */
     .action-bar {
       position: fixed;
       bottom: 0;
@@ -204,12 +410,12 @@
       background: white;
       border-top: 2px solid #e5e7eb;
       padding: 20px 24px;
-      box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
       z-index: 100;
     }
 
     .action-bar-content {
-      max-width: 900px;
+      max-width: 1200px;
       margin: 0 auto;
       display: flex;
       align-items: center;
@@ -242,24 +448,23 @@
       box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
     }
 
-    .approve-button:active {
-      transform: translateY(0);
-    }
-
-    /* Loading State */
+    /* ============================================
+       LOADING & ERROR STATES
+       ============================================ */
     .loading {
       text-align: center;
-      padding: 60px 24px;
+      padding: 80px 24px;
+      color: white;
     }
 
     .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid #e5e7eb;
-      border-top-color: #3b82f6;
+      width: 60px;
+      height: 60px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
-      margin: 0 auto 20px;
+      margin: 0 auto 24px;
     }
 
     @keyframes spin {
@@ -267,12 +472,10 @@
     }
 
     .loading-text {
-      font-size: 18px;
-      color: #6b7280;
-      font-weight: 500;
+      font-size: 20px;
+      font-weight: 600;
     }
 
-    /* Error State */
     .error {
       background: #fef2f2;
       border: 2px solid #fca5a5;
@@ -280,23 +483,15 @@
       padding: 32px;
       border-radius: 12px;
       text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     }
 
-    /* Responsive */
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
     @media (max-width: 768px) {
-      .blueprint-header {
-        padding: 32px 24px;
-      }
-
-      .blueprint-title {
-        font-size: 28px;
-      }
-
-      .blueprint-body {
-        padding: 32px 24px;
-      }
-
-      .stats-grid {
+      .financial-grid,
+      .diagnostic-grid {
         grid-template-columns: 1fr;
       }
 
@@ -308,11 +503,19 @@
       .approve-button {
         width: 100%;
       }
+
+      .financial-value {
+        font-size: 36px;
+      }
+
+      .card-title {
+        font-size: 24px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="page-container">
+  <div class="sanctuary-container">
     <!-- Loading State -->
     <div id="loadingSection" class="loading">
       <div class="loading-spinner"></div>
@@ -325,44 +528,80 @@
       <p id="errorMessage">Please try again or contact support.</p>
     </div>
 
-    <!-- Blueprint Card -->
-    <div id="blueprintSection" style="display: none;">
-      <div class="blueprint-card">
-        <div class="blueprint-header">
-          <div class="blueprint-badge">AI-Powered Analysis</div>
-          <h1 class="blueprint-title">Your Project Blueprint</h1>
+    <!-- Dashboard Content -->
+    <div id="dashboardSection" style="display: none;">
+      <!-- Severity Banner (dynamic) -->
+      <div id="severityBanner"></div>
+
+      <!-- 1) ACTION PLAN -->
+      <div class="sanctuary-card" id="actionPlanCard" style="display: none;">
+        <div class="card-header">
+          <span class="card-icon">⚡</span>
+          <h2 class="card-title">The Action Plan</h2>
+          <p class="card-subtitle">What you should do right now</p>
         </div>
+        <div class="card-body">
+          <div class="action-list" id="actionList"></div>
+        </div>
+      </div>
 
-        <div class="blueprint-body">
-          <!-- Vision Statement -->
-          <div class="vision-section">
-            <div class="vision-label">Your Vision</div>
-            <div class="vision-text" id="visionText">
-              <!-- Extracted project summary -->
-            </div>
-          </div>
+      <!-- 2) DIAGNOSTIC GRID -->
+      <div class="sanctuary-card" id="diagnosticCard" style="display: none;">
+        <div class="card-header">
+          <span class="card-icon">🔍</span>
+          <h2 class="card-title">Diagnostic Grid</h2>
+          <p class="card-subtitle">Likely causes of your issue</p>
+        </div>
+        <div class="card-body">
+          <div class="diagnostic-grid" id="diagnosticGrid"></div>
+        </div>
+      </div>
 
-          <!-- Data Grid: Budget + Timeline -->
-          <div class="stats-grid">
-            <div class="stat-card">
-              <span class="stat-icon">💰</span>
-              <div class="stat-label">Estimated Fair Value</div>
-              <div class="stat-value budget" id="budgetValue">$XX - $YY</div>
-            </div>
-            <div class="stat-card">
-              <span class="stat-icon">⏱️</span>
-              <div class="stat-label">Typical Duration</div>
-              <div class="stat-value" id="timelineValue">X weeks</div>
-            </div>
-          </div>
+      <!-- 3) FINANCIAL SCOPE -->
+      <div class="sanctuary-card" id="financialCard" style="display: none;">
+        <div class="card-header">
+          <span class="card-icon">💰</span>
+          <h2 class="card-title">Financial Scope</h2>
+          <p class="card-subtitle">What this will cost</p>
+        </div>
+        <div class="card-body">
+          <div id="financialContent"></div>
+        </div>
+      </div>
 
-          <!-- Scope Checklist -->
-          <div class="scope-section">
-            <div class="scope-label">What's Included</div>
-            <div class="scope-checklist" id="scopeChecklist">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
+      <!-- 6) RED FLAGS (VETERAN'S WARNING) -->
+      <div class="sanctuary-card red-flags-card" id="redFlagsCard" style="display: none;">
+        <div class="card-header">
+          <span class="card-icon">💡</span>
+          <h2 class="card-title">The Veteran's Warning</h2>
+          <p class="card-subtitle">Insider tips & blind spots</p>
+        </div>
+        <div class="card-body">
+          <div class="red-flag-list" id="redFlagList"></div>
+        </div>
+      </div>
+
+      <!-- 5) STRATEGY TIMELINE -->
+      <div class="sanctuary-card" id="strategyCard" style="display: none;">
+        <div class="card-header">
+          <span class="card-icon">📋</span>
+          <h2 class="card-title">Your Strategy</h2>
+          <p class="card-subtitle">Hiring & next steps</p>
+        </div>
+        <div class="card-body">
+          <div class="strategy-timeline" id="strategyTimeline"></div>
+        </div>
+      </div>
+
+      <!-- 7) CLARIFYING QUESTIONS -->
+      <div class="sanctuary-card" id="questionsCard" style="display: none;">
+        <div class="card-header">
+          <span class="card-icon">❓</span>
+          <h2 class="card-title">Questions to Consider</h2>
+          <p class="card-subtitle">Details that might affect your plan</p>
+        </div>
+        <div class="card-body">
+          <div class="questions-list" id="questionsList"></div>
         </div>
       </div>
     </div>
@@ -374,23 +613,22 @@
       <div class="action-hint">
         Ready to connect with licensed contractors?
       </div>
-      <button class="approve-button" id="approveButton" onclick="approveAndPost()">
-        Approve This Plan & Get Bids
+      <button class="approve-button" onclick="approveAndPost()">
+        Get Professional Bids
       </button>
     </div>
   </div>
 
   <script>
     // Global state
-    window.blueprintData = {
+    window.triageData = {
       question: '',
+      router: {},
       answer: '',
-      parsed: {},
-      budgetLow: 0,
-      budgetHigh: 0
+      parsed: {}
     };
 
-    // Get question from sessionStorage or URL parameter
+    // Get question from sessionStorage or URL
     const urlParams = new URLSearchParams(window.location.search);
     const question = sessionStorage.getItem('pendingQuestion') || urlParams.get('q') || '';
 
@@ -402,12 +640,9 @@
 
     async function analyzeQuestion() {
       try {
-        // Call unauthenticated AI preview endpoint
         const response = await fetch('/api/ai/preview', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question })
         });
 
@@ -418,24 +653,24 @@
 
         const data = await response.json();
 
-        // Store globally
-        window.blueprintData.question = question;
-        window.blueprintData.answer = data.answer;
+        // Store triage data
+        window.triageData = {
+          question: question,
+          router: data._meta?.router || {},
+          answer: data.answer,
+          parsed: {}
+        };
 
-        // Parse AI response
-        const parsed = parseAIResponse(data.answer);
-        window.blueprintData.parsed = parsed;
+        // Parse the markdown into sections
+        const parsed = parseTriageOutput(data.answer);
+        window.triageData.parsed = parsed;
 
-        // Store budget values
-        window.blueprintData.budgetLow = parsed.budgetLow || 5000;
-        window.blueprintData.budgetHigh = parsed.budgetHigh || 15000;
+        // Render the Sanctuary Dashboard
+        renderSanctuary(window.triageData.router, parsed);
 
-        // Render Blueprint UI
-        renderBlueprint(parsed);
-
-        // Hide loading, show results
+        // Hide loading, show dashboard
         document.getElementById('loadingSection').style.display = 'none';
-        document.getElementById('blueprintSection').style.display = 'block';
+        document.getElementById('dashboardSection').style.display = 'block';
         document.getElementById('actionBar').style.display = 'block';
 
         // Clear pending question
@@ -448,366 +683,329 @@
     }
 
     /**
-     * Clean AI artifacts from text (INTENT TYPE, headers, etc.)
+     * TASK 2: THE MAGIC PARSER
+     * Slices markdown by numbered section headers (1-7)
      */
-    function cleanAIArtifacts(text) {
-      if (!text) return '';
-
-      // Remove INTENT TYPE lines
-      let cleaned = text.replace(/^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim, '').trim();
-
-      // Remove AI ANALYSIS prefix
-      cleaned = cleaned.replace(/^[\s]*AI ANALYSIS:[\s]*/gim, '').trim();
-
-      // Remove divider lines (---, ===, etc.)
-      cleaned = cleaned.replace(/^[\s]*[-=]{3,}[\s]*$/gm, '').trim();
-
-      // Remove STEP headers (--- STEP 1: ... ---, etc.)
-      cleaned = cleaned.replace(/^[\s]*---[\s]*STEP\s+\d+:.*?---[\s]*$/gim, '').trim();
-      cleaned = cleaned.replace(/^[\s]*STEP\s+\d+:.*$/gim, '').trim();
-
-      // Remove markdown bold
-      cleaned = cleaned.replace(/\*\*/g, '');
-
-      return cleaned;
-    }
-
-    /**
-     * Parse AI response for structured data (Budget, Timeline, Scope, Designer Note)
-     */
-    function parseAIResponse(text) {
-      const parsed = {
-        summary: '',
-        budgetLow: 0,
-        budgetHigh: 0,
-        timeline: '',
-        scopeItems: [],
-        designerNote: ''
+    function parseTriageOutput(markdown) {
+      const sections = {
+        actions: [],
+        causes: [],
+        costs: '',
+        variables: [],
+        hiring: [],
+        redFlags: [],
+        questions: []
       };
 
-      // Clean text first
-      const cleanedText = cleanAIArtifacts(text);
+      if (!markdown) return sections;
 
-      // Extract Designer Note - STRICTLY limit to single paragraph
-      const designerNoteMatch = cleanedText.match(/Design(?:er)?\s*Note:\s*([^\n]+)/i);
-      if (designerNoteMatch) {
-        parsed.designerNote = designerNoteMatch[1].trim();
-      }
+      // Split by section headers
+      const lines = markdown.split('\n');
+      let currentSection = null;
+      let currentContent = [];
 
-      // Extract first meaningful paragraph as summary
-      const paragraphs = cleanedText.split('\n\n').filter(p => {
-        const trimmed = p.trim();
-        // Exclude headers, steps, and empty paragraphs
-        return trimmed.length > 0 &&
-               !trimmed.toLowerCase().includes('intent type') &&
-               !trimmed.match(/^[\s]*---/) &&
-               !trimmed.match(/^[\s]*STEP/i) &&
-               !trimmed.match(/^[\s]*Design(?:er)?\s*Note:/i);
-      });
+      const sectionPatterns = {
+        actions: /^#+\s*1\)\s*Immediate\s+actions?/i,
+        causes: /^#+\s*2\)\s*Likely\s+causes?/i,
+        costs: /^#+\s*3\)\s*Cost.*?ranges?/i,
+        variables: /^#+\s*4\)\s*What\s+changes?\s+the\s+price/i,
+        hiring: /^#+\s*5\)\s*Hiring.*?next\s+steps?/i,
+        redFlags: /^#+\s*6\)\s*Red\s+flags?/i,
+        questions: /^#+\s*7\)\s*Clarifying\s+questions?/i
+      };
 
-      if (paragraphs.length > 0) {
-        parsed.summary = paragraphs[0].trim();
-      }
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
 
-      // Extract budget with regex
-      const budgetPattern = /\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i;
-      const budgetMatch = cleanedText.match(budgetPattern);
-      if (budgetMatch) {
-        parsed.budgetLow = parseInt(budgetMatch[1].replace(/,/g, ''));
-        parsed.budgetHigh = parseInt(budgetMatch[2].replace(/,/g, ''));
-      }
-
-      // Extract timeline
-      const timelinePattern = /(\d+[-–to]+\d+)\s*(days?|weeks?|months?)/i;
-      const timelineMatch = cleanedText.match(timelinePattern);
-      if (timelineMatch) {
-        parsed.timeline = timelineMatch[0];
-      }
-
-      // Extract scope items - ONLY work statements from Scope Considerations
-      const lines = cleanedText.split('\n');
-      let inScopeSection = false;
-
-      lines.forEach((line, index) => {
-        // Detect scope sections
-        if (line.match(/scope\s+considerations|materials?\s+(&|and)\s+tools?|work\s+includes?/i)) {
-          inScopeSection = true;
-          return;
-        }
-
-        // Stop at question sections OR designer note sections
-        if (line.match(/questions?\s+for|ask\s+about|verify|confirm\s+with|design(?:er)?\s*note/i)) {
-          inScopeSection = false;
-          return;
-        }
-
-        // Skip STEP headers and dividers
-        if (line.match(/^[\s]*---/) || line.match(/^[\s]*STEP/i) || line.match(/INSIGHTS/i)) {
-          return;
-        }
-
-        // Match bullets or numbers
-        const bulletMatch = line.match(/^[\s]*[-•*]\s*(.+)/);
-        const numberMatch = line.match(/^[\s]*\d+\.\s*(.+)/);
-
-        let item = null;
-        if (bulletMatch) item = bulletMatch[1].trim();
-        if (numberMatch) item = numberMatch[1].trim();
-
-        // Filter: Only add if it's a work statement (not a question)
-        if (item && item.length < 120) {
-          // Skip questions (starts with Do, Can, Will, Should, etc.)
-          if (item.match(/^(do|does|can|will|should|would|is|are|have|has|verify|confirm|ask)/i)) {
-            return; // Skip questions
-          }
-
-          // Skip if contains question mark
-          if (item.includes('?')) {
-            return;
-          }
-
-          // Skip if it's a header or contains STEP/INSIGHTS
-          if (item.match(/STEP|INSIGHTS|---/i)) {
-            return;
-          }
-
-          // Prefer items from scope sections
-          if (inScopeSection || parsed.scopeItems.length < 3) {
-            parsed.scopeItems.push(item);
+        // Check if this line is a section header
+        let foundSection = null;
+        for (const [key, pattern] of Object.entries(sectionPatterns)) {
+          if (pattern.test(line)) {
+            foundSection = key;
+            break;
           }
         }
-      });
 
-      // Limit scope items
-      parsed.scopeItems = parsed.scopeItems.slice(0, 8);
+        if (foundSection) {
+          // Save previous section
+          if (currentSection && currentContent.length > 0) {
+            saveSectionContent(sections, currentSection, currentContent);
+          }
+          // Start new section
+          currentSection = foundSection;
+          currentContent = [];
+        } else if (currentSection && line.length > 0) {
+          // Add content to current section
+          currentContent.push(line);
+        }
+      }
 
-      return parsed;
+      // Save last section
+      if (currentSection && currentContent.length > 0) {
+        saveSectionContent(sections, currentSection, currentContent);
+      }
+
+      return sections;
+    }
+
+    function saveSectionContent(sections, sectionKey, lines) {
+      const content = lines.join('\n').trim();
+
+      if (sectionKey === 'costs') {
+        // Costs section: keep as full text
+        sections.costs = content;
+      } else {
+        // Other sections: extract bullet points
+        const bullets = extractBullets(content);
+        sections[sectionKey] = bullets;
+      }
+    }
+
+    function extractBullets(text) {
+      const bullets = [];
+      const lines = text.split('\n');
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        // Match bullets (-, *, •) or numbered lists (1., 2., etc.)
+        const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
+        const numberMatch = trimmed.match(/^\d+\.\s+(.+)/);
+
+        if (bulletMatch) {
+          bullets.push(bulletMatch[1].trim());
+        } else if (numberMatch) {
+          bullets.push(numberMatch[1].trim());
+        } else if (trimmed.length > 0 && !trimmed.startsWith('#')) {
+          // If it's not a header and not empty, treat as plain text item
+          bullets.push(trimmed);
+        }
+      }
+
+      return bullets;
     }
 
     /**
-     * Render Blueprint UI from parsed data
+     * TASK 3: RENDER SANCTUARY DASHBOARD
      */
-    function renderBlueprint(parsed) {
-      // Vision statement
-      document.getElementById('visionText').textContent =
-        parsed.summary || 'Your home improvement project is ready for professional bids.';
+    function renderSanctuary(router, parsed) {
+      // TASK 1: Severity Banner
+      renderSeverityBanner(router.risk_level || 'medium');
 
-      // Budget
-      const budgetLow = parsed.budgetLow || 5000;
-      const budgetHigh = parsed.budgetHigh || 15000;
-      document.getElementById('budgetValue').textContent =
-        `$${budgetLow.toLocaleString()} - $${budgetHigh.toLocaleString()}`;
+      // Render each section
+      if (parsed.actions && parsed.actions.length > 0) {
+        renderActionPlan(parsed.actions);
+      }
 
-      // Timeline
-      document.getElementById('timelineValue').textContent =
-        parsed.timeline || '2-4 weeks';
+      if (parsed.causes && parsed.causes.length > 0) {
+        renderDiagnosticGrid(parsed.causes);
+      }
 
-      // Scope checklist
-      const scopeContainer = document.getElementById('scopeChecklist');
-      if (parsed.scopeItems.length > 0) {
-        scopeContainer.innerHTML = parsed.scopeItems.map(item => `
-          <div class="scope-item">
-            <span class="scope-check">✓</span>
-            <span>${escapeHtml(item)}</span>
+      if (parsed.costs) {
+        renderFinancialScope(parsed.costs, parsed.variables);
+      }
+
+      if (parsed.redFlags && parsed.redFlags.length > 0) {
+        renderRedFlags(parsed.redFlags);
+      }
+
+      if (parsed.hiring && parsed.hiring.length > 0) {
+        renderStrategy(parsed.hiring);
+      }
+
+      if (parsed.questions && parsed.questions.length > 0) {
+        renderQuestions(parsed.questions);
+      }
+    }
+
+    /**
+     * TASK 1: SEVERITY BADGE
+     */
+    function renderSeverityBanner(riskLevel) {
+      const bannerConfig = {
+        high: {
+          class: 'high',
+          icon: '🚨',
+          title: 'Critical Safety Alert',
+          subtitle: 'This issue requires immediate professional attention'
+        },
+        medium: {
+          class: 'medium',
+          icon: '⚠️',
+          title: 'Attention Required',
+          subtitle: 'Schedule professional evaluation soon to prevent escalation'
+        },
+        low: {
+          class: 'low',
+          icon: '✅',
+          title: 'Maintenance / Cosmetic',
+          subtitle: 'Non-urgent issue – plan at your convenience'
+        }
+      };
+
+      const config = bannerConfig[riskLevel] || bannerConfig.medium;
+
+      document.getElementById('severityBanner').innerHTML = `
+        <div class="severity-banner ${config.class}">
+          <div class="severity-icon">${config.icon}</div>
+          <div class="severity-content">
+            <h2 class="severity-title">${config.title}</h2>
+            <p class="severity-subtitle">${config.subtitle}</p>
           </div>
-        `).join('');
-      } else {
-        // Fallback if no scope items found
-        scopeContainer.innerHTML = `
-          <div class="scope-item">
-            <span class="scope-check">✓</span>
-            <span>Professional assessment and quote</span>
-          </div>
-          <div class="scope-item">
-            <span class="scope-check">✓</span>
-            <span>Licensed and vetted contractors</span>
-          </div>
-          <div class="scope-item">
-            <span class="scope-check">✓</span>
-            <span>Competitive pricing comparison</span>
+        </div>
+      `;
+    }
+
+    function renderActionPlan(actions) {
+      const html = actions.map(action => `
+        <div class="action-item">
+          <span class="action-checkbox">☑️</span>
+          <div class="action-text">${escapeHtml(action)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('actionList').innerHTML = html;
+      document.getElementById('actionPlanCard').style.display = 'block';
+    }
+
+    function renderDiagnosticGrid(causes) {
+      const html = causes.map(cause => `
+        <div class="diagnostic-item">
+          <span class="diagnostic-icon">🩺</span>
+          <div class="diagnostic-text">${escapeHtml(cause)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('diagnosticGrid').innerHTML = html;
+      document.getElementById('diagnosticCard').style.display = 'block';
+    }
+
+    function renderFinancialScope(costsText, variables) {
+      // Extract cost range from text
+      const costMatch = costsText.match(/\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i);
+
+      let lowCost = '$X,XXX';
+      let highCost = '$XX,XXX';
+
+      if (costMatch) {
+        lowCost = '$' + parseInt(costMatch[1].replace(/,/g, '')).toLocaleString();
+        highCost = '$' + parseInt(costMatch[2].replace(/,/g, '')).toLocaleString();
+      }
+
+      let variablesHtml = '';
+      if (variables && variables.length > 0) {
+        variablesHtml = `
+          <div class="cost-factors">
+            <h4>Price Variables</h4>
+            <ul>
+              ${variables.map(v => `<li>${escapeHtml(v)}</li>`).join('')}
+            </ul>
           </div>
         `;
       }
+
+      document.getElementById('financialContent').innerHTML = `
+        <div class="financial-grid">
+          <div class="financial-box">
+            <div class="financial-label">Low End</div>
+            <div class="financial-value">${lowCost}</div>
+          </div>
+          <div class="financial-box">
+            <div class="financial-label">High End</div>
+            <div class="financial-value">${highCost}</div>
+          </div>
+        </div>
+        ${variablesHtml}
+      `;
+
+      document.getElementById('financialCard').style.display = 'block';
     }
 
-    /**
-     * Approve and Post - NEW "Click-Click-Boom" Flow
-     * Saves hot_lead_draft to localStorage and redirects with intent
-     */
+    function renderRedFlags(redFlags) {
+      const html = redFlags.map(flag => `
+        <div class="red-flag-item">
+          <span class="red-flag-icon">💡</span>
+          <div class="red-flag-text">${escapeHtml(flag)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('redFlagList').innerHTML = html;
+      document.getElementById('redFlagsCard').style.display = 'block';
+    }
+
+    function renderStrategy(steps) {
+      const html = steps.map((step, index) => `
+        <div class="timeline-step">
+          <div class="timeline-number">${index + 1}</div>
+          <div class="timeline-content">
+            <div class="timeline-text">${escapeHtml(step)}</div>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('strategyTimeline').innerHTML = html;
+      document.getElementById('strategyCard').style.display = 'block';
+    }
+
+    function renderQuestions(questions) {
+      const html = questions.map(q => `
+        <div class="question-item">${escapeHtml(q)}</div>
+      `).join('');
+
+      document.getElementById('questionsList').innerHTML = html;
+      document.getElementById('questionsCard').style.display = 'block';
+    }
+
     async function approveAndPost() {
-      // STEP 1: Extract structured data from Blueprint
-      const parsed = window.blueprintData.parsed;
+      // Extract data for project posting
+      const parsed = window.triageData.parsed;
 
-      // Extract clean title with better logic
-      let projectTitle = 'Home Renovation Project';
-
-      if (parsed.summary) {
-        // Clean any remaining artifacts
-        let cleanSummary = cleanAIArtifacts(parsed.summary);
-
-        // Remove "Project Summary:" prefix if present
-        cleanSummary = cleanSummary.replace(/^Project\s+Summary:\s*/i, '').trim();
-
-        // Extract first sentence
-        let firstSentence = cleanSummary.split('.')[0].trim();
-
-        // Validate it's a good title (not too long, not garbage)
-        const isValidTitle = firstSentence &&
-                            firstSentence.length > 5 &&
-                            firstSentence.length < 80 && // Sentences > 80 chars are likely paragraphs
-                            !firstSentence.toLowerCase().includes('intent') &&
-                            !firstSentence.toLowerCase().startsWith('based on');
-
-        if (isValidTitle) {
-          // Use extracted sentence as title
-          projectTitle = firstSentence.length > 60
-            ? firstSentence.substring(0, 57) + '...'
-            : firstSentence;
-        } else {
-          // Fallback: Use user's original question as title
-          const userQuestion = window.blueprintData.question || '';
-          const questionFirstPart = userQuestion.split('.')[0].trim();
-
-          if (questionFirstPart.length > 10) {
-            projectTitle = questionFirstPart.length > 60
-              ? questionFirstPart.substring(0, 57) + '...'
-              : questionFirstPart;
-          }
-        }
-      } else {
-        // No summary found - use user's question as title
-        const userQuestion = window.blueprintData.question || '';
-        const questionFirstPart = userQuestion.split('.')[0].trim();
-
-        if (questionFirstPart.length > 10) {
-          projectTitle = questionFirstPart.length > 60
-            ? questionFirstPart.substring(0, 57) + '...'
-            : questionFirstPart;
-        }
+      // Build project title from question
+      let projectTitle = window.triageData.question.split('.')[0].trim();
+      if (projectTitle.length > 60) {
+        projectTitle = projectTitle.substring(0, 57) + '...';
       }
 
-      const tradeType = extractTradeType(window.blueprintData.answer);
+      // Extract budget from costs section
+      const costMatch = parsed.costs?.match(/\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i);
+      let budgetMin = 5000;
+      let budgetMax = 15000;
 
-      // STEP 2: Create "hot_lead_draft" with all extracted data
+      if (costMatch) {
+        budgetMin = parseInt(costMatch[1].replace(/,/g, ''));
+        budgetMax = parseInt(costMatch[2].replace(/,/g, ''));
+      }
+
       const hotLeadDraft = {
         title: projectTitle,
-        description: window.blueprintData.question,
-        aiAnalysis: window.blueprintData.answer,
-        budgetMin: parsed.budgetLow || window.blueprintData.budgetLow || 5000,
-        budgetMax: parsed.budgetHigh || window.blueprintData.budgetHigh || 15000,
-        timeline: parsed.timeline || '2-4 weeks',
-        tradeType: tradeType,
-        category: tradeType || 'general',
-        urgency: 'flexible',
-        scopeItems: parsed.scopeItems || [],
-        designerNote: parsed.designerNote || '', // Include designer note
-        fromBlueprint: true,
+        description: window.triageData.question,
+        aiAnalysis: window.triageData.answer,
+        budgetMin: budgetMin,
+        budgetMax: budgetMax,
+        timeline: '2-4 weeks',
+        tradeType: window.triageData.router.domain || 'general',
+        category: window.triageData.router.domain || 'general',
+        urgency: window.triageData.router.risk_level === 'high' ? 'urgent' : 'flexible',
+        scopeItems: parsed.actions || [],
+        fromTriage: true,
         timestamp: new Date().toISOString()
       };
 
       localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
       console.log('✓ Saved hot_lead_draft:', hotLeadDraft);
 
-      // STEP 3: Check authentication and route accordingly
+      // Check authentication
       if (window.authService && window.authService.initialized) {
         const user = await window.authService.getCurrentUser();
-
         if (user) {
-          // Logged in - go directly to Review & Post page
           window.location.href = 'post-project.html';
           return;
         }
       }
 
-      // NOT logged in - redirect to signup WITH INTENT
+      // Not logged in - redirect to signup
       sessionStorage.setItem('signup_role', 'homeowner');
       window.location.href = 'signup.html?intent=post_project';
-    }
-
-    /**
-     * Extract trade type with COMPLEXITY DETECTION
-     * Multi-trade projects → General Contractor
-     * Simple single-system jobs → Specific Trade
-     */
-    function extractTradeType(aiText) {
-      const text = aiText.toLowerCase();
-
-      // Trade keywords map
-      const tradeMap = {
-        'plumbing': ['plumber', 'plumbing', 'pipe', 'leak', 'faucet', 'water heater', 'drain'],
-        'electrical': ['electrician', 'electrical', 'wiring', 'outlet', 'circuit', 'breaker'],
-        'hvac': ['hvac', 'heating', 'cooling', 'furnace', 'ac', 'air conditioning'],
-        'roofing': ['roof', 'roofing', 'shingles', 'gutter'],
-        'painting': ['paint', 'painting', 'painter'],
-        'flooring': ['floor', 'flooring', 'carpet', 'hardwood', 'tile', 'vinyl'],
-        'carpentry': ['carpenter', 'carpentry', 'wood', 'deck', 'fence', 'framing'],
-        'landscaping': ['landscape', 'landscaping', 'yard', 'lawn', 'garden']
-      };
-
-      // Complexity indicators (if present → General Contractor)
-      const complexityKeywords = [
-        'remodel', 'renovation', 'addition', 'extension', 'demolition', 'demo',
-        'bathroom remodel', 'kitchen remodel', 'basement finish', 'gut',
-        'multiple', 'several', 'various', 'complete overhaul'
-      ];
-
-      // Check for complexity indicators
-      if (complexityKeywords.some(keyword => text.includes(keyword))) {
-        return 'general';
-      }
-
-      // Count how many different trades are mentioned
-      let tradesMatched = [];
-      for (const [trade, keywords] of Object.entries(tradeMap)) {
-        if (keywords.some(keyword => text.includes(keyword))) {
-          tradesMatched.push(trade);
-        }
-      }
-
-      // If 3+ trades mentioned → General Contractor
-      if (tradesMatched.length >= 3) {
-        return 'general';
-      }
-
-      // Small repair indicators → Handyman
-      const handymanKeywords = ['minor', 'small', 'quick fix', 'patch', 'touch up'];
-      const hasHandymanIndicators = handymanKeywords.some(k => text.includes(k));
-
-      // Check for budget (if < $500 and minor → handyman)
-      const budgetMatch = text.match(/\$?([\d,]+)/);
-      const estimatedBudget = budgetMatch ? parseInt(budgetMatch[1].replace(/,/g, '')) : 0;
-
-      if (hasHandymanIndicators && estimatedBudget < 500) {
-        return 'handyman';
-      }
-
-      // Single trade detected → return that trade
-      if (tradesMatched.length === 1) {
-        return tradesMatched[0];
-      }
-
-      // If 2 trades but one is clearly dominant
-      if (tradesMatched.length === 2) {
-        // If one of the trades appears much more frequently, use it
-        const tradeCounts = {};
-        tradesMatched.forEach(trade => {
-          tradeCounts[trade] = tradeMap[trade].filter(k => text.includes(k)).length;
-        });
-
-        const dominant = Object.keys(tradeCounts).reduce((a, b) =>
-          tradeCounts[a] > tradeCounts[b] * 2 ? a : null
-        );
-
-        if (dominant) {
-          return dominant;
-        }
-
-        // Otherwise, it's multi-trade → general
-        return 'general';
-      }
-
-      // Default fallback
-      return 'general';
     }
 
     function showError(message) {
