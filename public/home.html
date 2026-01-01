@@ -11,38 +11,29 @@
   <script src="/services/auth.js"></script>
   <style>
     body {
-      background: linear-gradient(to bottom, #eff6ff 0%, #ffffff 50%);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
       color: #1f2937;
+      background: #ffffff;
     }
 
-    /* TASK 1: Hero Section - Exact Landing Page Style */
-    .concierge-hero {
+    /* Hero Section - Exact Landing Page Copy */
+    .hero {
       max-width: 900px;
-      margin: 60px auto 80px;
+      margin: 80px auto 120px;
       padding: 0 24px;
       text-align: center;
     }
-    .concierge-greeting {
-      font-size: 20px;
-      font-weight: 400;
-      color: #6b7280;
-      margin-bottom: 16px;
-      letter-spacing: -0.01em;
-    }
-    .concierge-greeting .user-name {
-      font-weight: 600;
-      color: #111827;
-    }
-    .concierge-question {
+
+    .hero h1 {
       font-size: 52px;
       font-weight: 700;
       color: #111827;
-      margin-bottom: 24px;
       letter-spacing: -0.03em;
       line-height: 1.1;
+      margin-bottom: 24px;
     }
+
     .hero-subhead {
       font-size: 20px;
       color: #6b7280;
@@ -52,42 +43,44 @@
       margin-left: auto;
       margin-right: auto;
     }
-    .hero-trust-line {
-      font-size: 13px;
+
+    .hero-helper {
+      font-size: 15px;
       color: #9ca3af;
-      margin-top: 24px;
+      font-style: italic;
+      margin-bottom: 40px;
     }
 
-    /* Search Bar - Exactly Like Landing Page */
-    .search-container {
-      max-width: 600px;
-      margin: 0 auto 16px;
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 32px;
     }
-    .search-input-group {
+
+    .hero-input-group {
       display: flex;
       gap: 12px;
       width: 100%;
+      max-width: 600px;
     }
-    .search-bar {
+
+    .hero-input {
       flex: 1;
       padding: 16px 20px;
       border: 2px solid #d1d5db;
       border-radius: 8px;
       font-size: 16px;
-      color: #1f2937;
       transition: border-color 0.2s;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      resize: vertical;
-      min-height: auto;
     }
-    .search-bar:focus {
+
+    .hero-input:focus {
       outline: none;
       border-color: #3b82f6;
     }
-    .search-bar::placeholder {
-      color: #9ca3af;
-    }
-    .search-button {
+
+    .btn-large {
       padding: 16px 32px;
       background: #3b82f6;
       border: none;
@@ -99,37 +92,43 @@
       transition: all 0.2s;
       white-space: nowrap;
     }
-    .search-button:hover:not(:disabled) {
+
+    .btn-large:hover {
       background: #2563eb;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
-    .search-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    .search-helper-text {
-      margin-top: 16px;
+
+    .hero-secondary-link {
+      color: #6b7280;
       font-size: 15px;
-      color: #6b7280;
-      text-align: center;
-    }
-    .photo-upload-btn {
-      color: #6b7280;
       text-decoration: underline;
       cursor: pointer;
-      font-size: 15px;
-      background: none;
-      border: none;
-      padding: 0;
-      font-family: inherit;
     }
-    .photo-upload-btn:hover {
-      color: #1f2937;
+
+    .hero-trust-line {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-top: 24px;
     }
+
+    .greeting-line {
+      font-size: 20px;
+      font-weight: 400;
+      color: #6b7280;
+      margin-bottom: 16px;
+      letter-spacing: -0.01em;
+    }
+
+    .greeting-line .user-name {
+      font-weight: 600;
+      color: #111827;
+    }
+
     .photo-input {
       display: none;
     }
+
     .status-message {
       margin-top: 12px;
       font-size: 14px;
@@ -186,9 +185,21 @@
       line-height: 1.6;
     }
     @media (max-width: 768px) {
-      .steps-grid {
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero-subhead {
+        font-size: 18px;
+      }
+
+      .hero-input-group {
+        flex-direction: column;
+      }
+
+      .steps-grid,
+      .paths-grid {
         grid-template-columns: 1fr;
-        gap: 32px;
       }
     }
 
@@ -480,89 +491,95 @@
       color: #1e3a8a;
     }
 
-    /* Three Paths Forward Section */
+    /* Three Paths Forward Section - Exact Landing Page */
     .three-paths {
       padding: 80px 24px;
     }
-    .path-note {
-      margin-top: 12px;
-      font-size: 13px;
-      color: #10b981;
-      font-weight: 600;
-      text-align: left;
-    }
 
-    /* Feature Grid - Exact Landing Page Style */
-    .bento-grid {
-      max-width: 1100px;
-      margin: 0 auto 80px;
-      padding: 0 24px;
+    .paths-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 32px;
+      margin-top: 48px;
     }
 
-    @media (max-width: 768px) {
-      .bento-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Feature Card - Exact Landing Page path-card Style */
-    .bento-tile {
+    .path-card {
       background: white;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
       padding: 32px;
       transition: all 0.2s;
-      text-decoration: none;
-      display: block;
-      text-align: left;
     }
 
-    .bento-tile:hover {
+    .path-card:hover {
       border-color: #d1d5db;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
-    .bento-tile-icon-container {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      font-size: 32px;
+    .path-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
     }
 
-    .bento-tile.blue .bento-tile-icon-container {
-      background: #eff6ff;
-      color: #3b82f6;
-    }
-
-    .bento-tile.green .bento-tile-icon-container {
-      background: #f0fdf4;
-      color: #10b981;
-    }
-
-    .bento-tile.purple .bento-tile-icon-container {
-      background: #faf5ff;
-      color: #8b5cf6;
-    }
-
-    .bento-tile-title {
+    .path-title {
       font-size: 22px;
       font-weight: 700;
       color: #111827;
-      margin: 0 0 12px 0;
+      margin-bottom: 12px;
     }
 
-    .bento-tile-description {
+    .path-subtitle {
       font-size: 15px;
       color: #6b7280;
+      margin-bottom: 20px;
       line-height: 1.5;
-      margin: 0;
+    }
+
+    .path-features {
+      margin: 20px 0;
+    }
+
+    .path-feature {
+      display: flex;
+      align-items: start;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .path-card .btn-primary {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .path-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #9ca3af;
+      font-style: italic;
+      text-align: center;
+    }
+
+    .path-card.no-button .btn-primary {
+      display: none;
+    }
+
+    .btn-primary {
+      padding: 10px 20px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
     }
 
     /* Premium Badge for Advocate Tile */
@@ -701,41 +718,38 @@
 
   <main>
     <!-- Hero Section -->
-    <section class="concierge-hero">
-      <p class="concierge-greeting">
-        Good <span id="timeOfDay">day</span>, <span class="user-name" id="userName">there</span>.
-      </p>
-      <h1 class="concierge-question">What's going on with your home?</h1>
+    <section class="hero">
+      <h1>What's going on with your home?</h1>
+
       <p class="hero-subhead">
-        Leaks, cracks, strange noises, or weird smells? Get instant AI-powered guidance—understand the issue, check for safety concerns, and know your next steps.
+        Describe what you're seeing or upload a photo. Our AI helps you understand what might be happening,
+        how serious it could be, and what your options are — completely free.
       </p>
 
-      <div class="search-container">
-        <div class="search-input-group">
-          <textarea
-            class="search-bar"
-            placeholder="Example: There's a wet spot on my ceiling near the bathroom. It's about 12 inches across and the paint is bubbling..."
+      <p class="hero-helper">
+        Many homeowners use this just to understand the issue before deciding what to do.
+      </p>
+
+      <div class="hero-actions">
+        <div class="hero-input-group">
+          <input
+            type="text"
+            class="hero-input"
+            placeholder="Describe your issue (e.g., 'Water stain on ceiling after rain')"
             id="homeIssueInput"
-            rows="2"
-          ></textarea>
-          <button class="search-button" id="askAiBtn">
-            Get AI Help
-          </button>
+          />
+          <button class="btn-large" id="askAiBtn">Try Free AI Check</button>
         </div>
-      </div>
 
-      <div class="search-helper-text">
-        Or
-        <label for="photoInput" class="photo-upload-btn">
-          upload a photo
+        <label for="photoInput" class="hero-secondary-link" style="cursor: pointer;">
+          Or upload a photo for faster diagnosis
         </label>
-        for faster diagnosis
-        <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" />
+        <input type="file" id="photoInput" class="photo-input" accept="image/*" capture="environment" style="display: none;" />
       </div>
 
-      <div class="hero-trust-line">
-        <strong>100% Free</strong> — No credit card. No pressure. Just honest help for homeowners.
-      </div>
+      <p class="hero-trust-line">
+        Homeowner use is free. Contractors pay for lead access. Optional paid on-demand expert access.
+      </p>
 
       <div class="status-message" id="aiStatus"></div>
     </section>
@@ -825,35 +839,40 @@
     <!-- Three Paths Forward -->
     <section class="three-paths">
       <div class="section-container">
-        <h2 class="section-title">What You Can Do Next</h2>
+        <h2 class="section-title">Three Paths Forward</h2>
         <p style="text-align: center; color: #6b7280; max-width: 700px; margin: 0 auto 0; font-size: 16px;">
           After your AI analysis, you choose what happens next. No pressure, no funnel.
         </p>
 
-        <div class="bento-grid" style="margin-top: 48px;">
-          <!-- Find a Contractor -->
-          <a href="contractor-directory.html" class="bento-tile blue">
-            <div class="bento-tile-icon-container">🔍</div>
-            <h3 class="bento-tile-title">Understand & DIY</h3>
-            <p class="bento-tile-description">Review the AI diagnosis, safety warnings, and what you need. Many homeowners stop here—and that's perfectly fine.</p>
-            <div class="path-note">FREE</div>
-          </a>
+        <div class="paths-grid">
+          <!-- PATH 1: UNDERSTAND (No button) -->
+          <div class="path-card no-button">
+            <span class="path-icon">🔍</span>
+            <h3 class="path-title">Understand</h3>
+            <p class="path-subtitle">
+              Use the free AI check to understand the issue, safety concerns, and what to tell a contractor. Many homeowners stop here.
+            </p>
+          </div>
 
-          <!-- My Projects -->
-          <a href="homeowner-dashboard.html" class="bento-tile green">
-            <div class="bento-tile-icon-container">🏅</div>
-            <h3 class="bento-tile-title">Hire a Pro</h3>
-            <p class="bento-tile-description">Post your project and get competitive bids from verified contractors. Compare options and hire with confidence.</p>
-            <div class="path-note">FREE</div>
-          </a>
+          <!-- PATH 2: HIRE -->
+          <div class="path-card">
+            <span class="path-icon">🏅</span>
+            <h3 class="path-title">Hire</h3>
+            <p class="path-subtitle">
+              Post your project and get competitive bids from verified contractors. Compare options and hire with confidence.
+            </p>
+            <a href="homeowner-dashboard.html" class="btn-primary">Post a Project</a>
+          </div>
 
-          <!-- Expert Support -->
-          <a href="access-experts.html" class="bento-tile purple">
-            <div class="bento-tile-icon-container">🤝</div>
-            <h3 class="bento-tile-title">Get Expert Help</h3>
-            <p class="bento-tile-description">Need a second opinion? Video call with our construction experts for bid reviews, design guidance, or just peace of mind.</p>
-            <span class="premium-badge" style="margin-top: 12px;">Premium</span>
-          </a>
+          <!-- PATH 3: EXPERT SUPPORT -->
+          <div class="path-card">
+            <span class="path-icon">🤝</span>
+            <h3 class="path-title">Expert Support</h3>
+            <p class="path-subtitle">
+              Need a second opinion? Video call with our construction experts for bid reviews, design guidance, or peace of mind.
+            </p>
+            <a href="access-experts.html" class="btn-primary">Get Expert Help</a>
+          </div>
         </div>
       </div>
     </section>
@@ -863,35 +882,6 @@
   <script>
     // Note: Auth check is handled by navigation.js component
     // No need for redundant inline auth check that causes race conditions
-
-    // TASK 1: Personalized Greeting
-    (function() {
-      const hour = new Date().getHours();
-      let timeOfDay = 'day';
-      if (hour < 12) timeOfDay = 'morning';
-      else if (hour < 18) timeOfDay = 'afternoon';
-      else timeOfDay = 'evening';
-
-      document.getElementById('timeOfDay').textContent = timeOfDay;
-
-      // Get user name from auth service when available
-      if (window.authService) {
-        window.authService.getUserProfile().then(profile => {
-          if (profile && profile.full_name) {
-            document.getElementById('userName').textContent = profile.full_name.split(' ')[0];
-          }
-        }).catch(() => {});
-      }
-
-      // Auto-expand textarea
-      const searchBar = document.getElementById('homeIssueInput');
-      if (searchBar) {
-        searchBar.addEventListener('input', function() {
-          this.style.height = 'auto';
-          this.style.height = Math.max(64, this.scrollHeight) + 'px';
-        });
-      }
-    })();
 
     // TASK 2: Extract and display stats from AI response
     function displayStatsFromResponse(responseText) {
