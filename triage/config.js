@@ -11,8 +11,8 @@ const config = {
   },
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY || '',
-    routerModel: process.env.ANTHROPIC_ROUTER_MODEL || 'claude-3-5-haiku-20241022',
-    answerModel: process.env.ANTHROPIC_ANSWER_MODEL || 'claude-3-5-sonnet-20240620',
+    routerModel: process.env.ANTHROPIC_ROUTER_MODEL || 'claude-3-haiku-20240307',
+    answerModel: process.env.ANTHROPIC_ANSWER_MODEL || 'claude-3-opus-20240229',
   },
 };
 
