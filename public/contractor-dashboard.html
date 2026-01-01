@@ -1116,9 +1116,12 @@
 
       document.getElementById('bidModalJobTitle').textContent = currentJob.title;
 
-      // Check for attached estimate from pricing estimator
+      // FEATURE 3: Smart Proposal Builder - Pre-fill bid form
+      // Priority 1: Check for attached estimate from pricing estimator
       const attachedEstimateKey = 'attachedEstimate_' + jobId;
       const attachedEstimate = sessionStorage.getItem(attachedEstimateKey);
+
+      let formPreFilled = false;
 
       if (attachedEstimate) {
         try {
@@ -1135,13 +1138,58 @@
 
           // Store estimate data for submission
           window.currentEstimateData = estimate;
+          formPreFilled = true;
 
           console.log('✓ Estimate pre-loaded into bid form', estimate);
         } catch (err) {
           console.error('Error loading attached estimate:', err);
         }
-      } else {
-        // Clear any previous estimate data
+      }
+
+      // Priority 2: If no estimator data, check for AI analysis with draft proposal
+      if (!formPreFilled && currentJob.ai_analysis) {
+        try {
+          const aiAnalysis = typeof currentJob.ai_analysis === 'string'
+            ? JSON.parse(currentJob.ai_analysis)
+            : currentJob.ai_analysis;
+
+          // Pre-fill with AI-suggested data if available
+          if (aiAnalysis.draft_proposal) {
+            const draft = aiAnalysis.draft_proposal;
+
+            // Pre-fill budget from AI draft
+            if (draft.budget_range) {
+              document.getElementById('bidLow').value = draft.budget_range.low || currentJob.budget_low || 0;
+              document.getElementById('bidHigh').value = draft.budget_range.high || currentJob.budget_high || 0;
+            }
+
+            // Pre-fill timeline
+            if (draft.timeline && document.getElementById('bidDuration')) {
+              document.getElementById('bidDuration').value = draft.timeline;
+            }
+
+            // Pre-fill message with AI scope
+            if (draft.scope && document.getElementById('bidMessage')) {
+              document.getElementById('bidMessage').value = draft.scope;
+            }
+
+            formPreFilled = true;
+            console.log('✓ AI draft proposal pre-loaded into bid form');
+          }
+        } catch (err) {
+          console.error('Error parsing AI analysis:', err);
+        }
+      }
+
+      // Priority 3: If still no data, pre-fill with job posting defaults
+      if (!formPreFilled) {
+        document.getElementById('bidLow').value = currentJob.budget_low || 0;
+        document.getElementById('bidHigh').value = currentJob.budget_high || 0;
+        console.log('✓ Job budget pre-loaded into bid form');
+      }
+
+      // Clear estimate data if not used
+      if (!attachedEstimate) {
         window.currentEstimateData = null;
       }
 
