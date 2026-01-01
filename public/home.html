@@ -1011,8 +1011,8 @@
             aiStatus.textContent = '✓ Analysis complete!';
             aiStatus.style.color = '#10b981';
 
-            // Save to hot_lead_draft for potential project posting
-            saveHotLeadDraft();
+            // NOTE: Draft is now only saved when user clicks "Post This Project" button
+            // This prevents unwanted redirects for users who just want to understand the issue
 
           } catch (error) {
             console.error('Analysis error:', error);
@@ -1032,6 +1032,9 @@
             alert('Please generate an AI analysis first.');
             return;
           }
+
+          // Save draft ONLY when user explicitly wants to post (not on every AI analysis)
+          saveHotLeadDraft();
 
           // Check auth
           const user = await window.authService.getCurrentUser();

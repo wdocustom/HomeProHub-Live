@@ -991,6 +991,7 @@
         // CRITICAL: Clear Hot Potato cookies (only after successful post)
         deleteCookie('project_draft');
         deleteCookie('post_intent');
+        deleteCookie('hot_lead_draft'); // FIX: Also clear hot_lead_draft cookie
         console.log('✓ Cleared project cookies after successful post');
 
         // TASK 3: CLEANUP - Clear pending_project_draft from user metadata
