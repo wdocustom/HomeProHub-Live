@@ -2533,8 +2533,8 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       title,
       description,
       category,
-      budget_low,
-      budget_high,
+      budget_min,
+      budget_max,
       zip_code,
       urgency,
       ai_assisted,
@@ -2575,8 +2575,8 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       category: category || 'general',
       address: `ZIP: ${zip_code}`, // Use ZIP as placeholder for address
       zip_code: zip_code,
-      budget_low: budget_low || null,
-      budget_high: budget_high || null,
+      budget_low: budget_min || null,  // Map budget_min to budget_low for database
+      budget_high: budget_max || null, // Map budget_max to budget_high for database
       urgency: urgency || 'flexible',
       status: 'open',
       homeowner_email: homeowner_email,

@@ -892,8 +892,8 @@
           title: projectData.title || 'Home Renovation Project',
           description: projectData.description || '',
           category: mappedCategory,  // Use mapped Title Case value
-          budget_low: cleanNumber(projectData.budgetMin) || 5000,  // Parse as integer
-          budget_high: cleanNumber(projectData.budgetMax) || 15000, // Parse as integer
+          budget_min: cleanNumber(projectData.budgetMin) || 5000,  // FIXED: Map to budget_min
+          budget_max: cleanNumber(projectData.budgetMax) || 15000, // FIXED: Map to budget_max
           zip_code: zipCode,  // REQUIRED by backend
           urgency: projectData.urgency || 'flexible',
           homeowner_email: user.email,  // REQUIRED by backend
