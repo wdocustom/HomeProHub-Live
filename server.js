@@ -1011,32 +1011,114 @@ app.post("/api/ai/preview", async (req, res) => {
     // Build content blocks for Claude (same as /ask endpoint with local insights)
     const contentBlocks = [];
 
-    // FEATURE 1: Dynamic AI Personas (Expert Router)
-    // Classify the trade based on keywords in the question
+    // FEATURE 1: Multi-Trade Orchestration (Council of Experts)
+    // Rate relevance of ALL trades on 0-10 scale
     const questionLower = sanitizedQuestion.toLowerCase();
 
-    const plumbingKeywords = ['leak', 'pipe', 'faucet', 'drain', 'water', 'toilet', 'sink', 'shower', 'tub', 'sewer', 'plumbing', 'sewage', 'fixture', 'valve', 'pump'];
-    const electricalKeywords = ['wire', 'outlet', 'breaker', 'electric', 'electrical', 'power', 'switch', 'light', 'circuit', 'voltage', 'panel', 'afci', 'gfci', 'amp', 'wiring'];
+    // Enhanced keyword sets with weighted terms
+    const tradeKeywords = {
+      plumbing: {
+        primary: ['leak', 'drain', 'pipe', 'faucet', 'toilet', 'sewer', 'sewage', 'water heater', 'disposal', 'dishwasher drain'],
+        secondary: ['water', 'sink', 'shower', 'tub', 'fixture', 'valve', 'pump', 'clog', 'backup']
+      },
+      electrical: {
+        primary: ['breaker', 'circuit', 'wire', 'wiring', 'outlet', 'switch', 'panel', 'electrical', 'shock', 'spark', 'burning smell'],
+        secondary: ['electric', 'power', 'light', 'voltage', 'afci', 'gfci', 'amp', 'tripped']
+      },
+      appliance: {
+        primary: ['dishwasher', 'refrigerator', 'oven', 'stove', 'microwave', 'washer', 'dryer', 'garbage disposal', 'water heater', 'hvac unit'],
+        secondary: ['appliance', 'won\'t start', 'not heating', 'not cooling', 'making noise', 'won\'t drain', 'error code']
+      },
+      hvac: {
+        primary: ['furnace', 'ac', 'air conditioning', 'heating', 'cooling', 'thermostat', 'hvac', 'heat pump', 'ductwork'],
+        secondary: ['temperature', 'filter', 'vents', 'blower', 'condenser', 'refrigerant']
+      },
+      structural: {
+        primary: ['foundation', 'crack', 'settling', 'beam', 'joist', 'load bearing', 'structural', 'sagging'],
+        secondary: ['wall', 'ceiling', 'floor', 'framing', 'support']
+      }
+    };
 
-    let tradeType = 'general'; // default
-    let plumbingScore = 0;
-    let electricalScore = 0;
+    // Calculate normalized scores (0-10 scale)
+    const tradeScores = {};
+    const maxPossibleScore = 15; // Tuning parameter
 
-    plumbingKeywords.forEach(keyword => {
-      if (questionLower.includes(keyword)) plumbingScore++;
+    Object.keys(tradeKeywords).forEach(trade => {
+      let rawScore = 0;
+
+      // Primary keywords worth 2 points each
+      tradeKeywords[trade].primary.forEach(keyword => {
+        if (questionLower.includes(keyword)) rawScore += 2;
+      });
+
+      // Secondary keywords worth 1 point each
+      tradeKeywords[trade].secondary.forEach(keyword => {
+        if (questionLower.includes(keyword)) rawScore += 1;
+      });
+
+      // Normalize to 0-10 scale
+      tradeScores[trade] = Math.min(10, Math.round((rawScore / maxPossibleScore) * 10));
     });
 
-    electricalKeywords.forEach(keyword => {
-      if (questionLower.includes(keyword)) electricalScore++;
-    });
+    console.log(`🎯 Multi-Trade Analysis:`, tradeScores);
 
-    if (plumbingScore > electricalScore && plumbingScore > 0) {
-      tradeType = 'plumber';
-    } else if (electricalScore > plumbingScore && electricalScore > 0) {
-      tradeType = 'electrician';
+    // STEP 2: Router Logic - Determine orchestration strategy
+    const highScores = Object.entries(tradeScores).filter(([_, score]) => score >= 5);
+    const dominantTrade = Object.entries(tradeScores).reduce((max, curr) => curr[1] > max[1] ? curr : max, ['general', 0]);
+
+    let orchestrationType = 'general';
+    let activeTrades = [];
+
+    if (highScores.length === 1 && dominantTrade[1] >= 7) {
+      // Scenario A: Single Specialist (one score >= 7, others < 5)
+      orchestrationType = 'specialist';
+      activeTrades = [dominantTrade[0]];
+      console.log(`✅ Specialist Mode: ${dominantTrade[0].toUpperCase()} (score: ${dominantTrade[1]})`);
+    } else if (highScores.length >= 2) {
+      // Scenario B: Complex Multi-Trade System
+      orchestrationType = 'complex';
+      activeTrades = highScores.map(([trade]) => trade);
+      console.log(`🔧 Complex System Mode: ${activeTrades.join(' + ').toUpperCase()}`);
+    } else {
+      // Scenario C: General Contractor fallback
+      console.log(`🏗️ General Contractor Mode (no dominant specialty)`);
     }
 
-    console.log(`🎯 Trade Classification: ${tradeType.toUpperCase()} (Plumbing: ${plumbingScore}, Electrical: ${electricalScore})`);
+    // STEP 3: Safety Intersection Check
+    let safetyWarning = '';
+    const hasElectrical = tradeScores.electrical >= 5;
+    const hasPlumbing = tradeScores.plumbing >= 5;
+    const hasGas = questionLower.includes('gas') && tradeScores.hvac >= 3;
+
+    if (hasElectrical && hasPlumbing) {
+      safetyWarning = `⚠️ CRITICAL SAFETY WARNING - WET ELECTRIC HAZARD ⚠️
+
+**STOP: Water and Electricity Are Both Present**
+
+Before investigating this issue further:
+1. Turn OFF the circuit breaker for this area at your main electrical panel
+2. Do NOT touch any electrical components if water is present
+3. If water is actively flowing near electrical outlets/wiring, evacuate and call emergency services
+4. Electrical shock in wet conditions can be FATAL
+
+This issue requires BOTH a licensed electrician AND a plumber working in coordination. The electrical hazard MUST be addressed before any plumbing work begins.
+
+`;
+    } else if (hasElectrical && hasGas) {
+      safetyWarning = `⚠️ CRITICAL SAFETY WARNING - ELECTRICAL + GAS HAZARD ⚠️
+
+**STOP: Electrical and Gas Systems Are Both Involved**
+
+Before proceeding:
+1. If you smell gas, evacuate immediately and call 911 from outside
+2. Do NOT operate any electrical switches (sparks can ignite gas)
+3. Turn off the gas supply at the meter if safe to do so
+4. Turn off the circuit breaker for this area
+
+This requires BOTH a licensed electrician AND a licensed HVAC/gas technician. Gas leaks combined with electrical issues are EXTREMELY DANGEROUS.
+
+`;
+    }
 
     // Select persona based on trade
     let systemPrompt = '';
@@ -1093,21 +1175,22 @@ Respond using this structure:
 
 Be specific with budget estimates based on typical market rates. Consider the project scope described.`;
 
-    if (tradeType === 'plumber') {
-      systemPrompt = `You are a licensed Master Plumber with 15+ years of experience in residential plumbing systems. You specialize in:
+    // Define specialist personas
+    const personaLibrary = {
+      plumbing: {
+        title: 'Master Plumber',
+        expertise: `You are a licensed Master Plumber with 15+ years of experience in residential plumbing systems. You specialize in:
 - UPC (Uniform Plumbing Code) compliance and code requirements
 - Leak detection and prevention strategies
 - Material selection (PEX vs Copper vs CPVC vs PVC)
 - Water pressure optimization and flow rate calculations
 - Drain/vent/waste system design and troubleshooting
 - Fixture installation and repair (faucets, toilets, water heaters)
-- Backflow prevention and cross-connection control
-
-The homeowner said:
-${sanitizedQuestion}
-${commonInstructions}`;
-    } else if (tradeType === 'electrician') {
-      systemPrompt = `You are a licensed Master Electrician with 15+ years of experience in residential electrical systems. You specialize in:
+- Backflow prevention and cross-connection control`
+      },
+      electrical: {
+        title: 'Master Electrician',
+        expertise: `You are a licensed Master Electrician with 15+ years of experience in residential electrical systems. You specialize in:
 - NEC (National Electrical Code) safety requirements and compliance
 - Load calculations and service panel sizing
 - AFCI (Arc-Fault Circuit Interrupter) and GFCI (Ground-Fault Circuit Interrupter) protection
@@ -1115,13 +1198,83 @@ ${commonInstructions}`;
 - Circuit design and branch circuit layout
 - Grounding and bonding best practices
 - Electrical troubleshooting (voltage drops, short circuits, open circuits)
-- Smart home integration and low-voltage systems
+- Smart home integration and low-voltage systems`
+      },
+      appliance: {
+        title: 'Appliance Repair Specialist',
+        expertise: `You are a certified Appliance Repair Technician with expertise in major household appliances. You specialize in:
+- Diagnosing mechanical and electrical failures in appliances
+- Understanding manufacturer-specific parts and systems
+- Water supply and drainage systems for appliances
+- Electrical connections and motor troubleshooting
+- Safety interlock systems and error codes
+- Warranty considerations and repair vs replace decisions`
+      },
+      hvac: {
+        title: 'HVAC Specialist',
+        expertise: `You are a licensed HVAC technician with expertise in heating, cooling, and ventilation systems. You specialize in:
+- EPA 608 certification for refrigerant handling
+- Furnace, heat pump, and AC unit diagnostics
+- Ductwork design and airflow optimization
+- Thermostat wiring and smart HVAC integration
+- Gas line safety and carbon monoxide detection
+- Energy efficiency and system sizing`
+      },
+      structural: {
+        title: 'Structural Specialist',
+        expertise: `You are a licensed structural engineer and home inspector with expertise in:
+- Foundation assessment and repair methods
+- Load-bearing wall identification
+- Beam and joist sizing calculations
+- Settlement and crack pattern analysis
+- Building code compliance for structural modifications
+- Moisture and drainage issues affecting structures`
+      }
+    };
+
+    // Build system prompt based on orchestration type
+    if (orchestrationType === 'specialist') {
+      // Scenario A: Single specialist
+      const trade = activeTrades[0];
+      const persona = personaLibrary[trade];
+
+      systemPrompt = `${safetyWarning}${persona.expertise}
 
 The homeowner said:
 ${sanitizedQuestion}
 ${commonInstructions}`;
+    } else if (orchestrationType === 'complex') {
+      // Scenario B: Multi-trade synthesis (General Contractor orchestrating specialists)
+      const tradeList = activeTrades.map(t => personaLibrary[t]?.title || t).join(', ');
+      const expertiseBlocks = activeTrades.map(trade => {
+        const persona = personaLibrary[trade];
+        return persona ? `As a ${persona.title}:\n${persona.expertise}` : '';
+      }).join('\n\n');
+
+      systemPrompt = `${safetyWarning}You are a Veteran General Contractor with 20+ years of experience managing complex residential projects.
+
+**MULTI-DISCIPLINARY ANALYSIS REQUIRED**
+
+You have identified this issue involves multiple specialty trades: ${tradeList}
+
+Your task is to analyze this problem from each specialist's perspective, then synthesize a cohesive action plan:
+
+${expertiseBlocks}
+
+The homeowner said:
+${sanitizedQuestion}
+
+**ANALYSIS APPROACH:**
+1. First analyze the issue from EACH specialist's perspective separately
+2. Identify the interdependencies (which work must happen first, which trades need coordination)
+3. Provide a unified response that addresses all aspects
+4. Be explicit about which contractor type handles each part
+5. Emphasize safety and proper sequencing of work
+
+${commonInstructions}`;
     } else {
-      systemPrompt = `You are an experienced General Contractor and home inspector helping homeowners with intelligent, location-aware guidance.
+      // Scenario C: General Contractor
+      systemPrompt = `${safetyWarning}You are an experienced General Contractor and home inspector helping homeowners with intelligent, location-aware guidance.
 
 The homeowner said:
 ${sanitizedQuestion}
