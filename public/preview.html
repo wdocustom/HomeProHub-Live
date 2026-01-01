@@ -705,13 +705,13 @@
       let currentContent = [];
 
       const sectionPatterns = {
-        actions: /^#+\s*1\)\s*Immediate\s+actions?/i,
-        causes: /^#+\s*2\)\s*Likely\s+causes?/i,
-        costs: /^#+\s*3\)\s*Cost.*?ranges?/i,
-        variables: /^#+\s*4\)\s*What\s+changes?\s+the\s+price/i,
-        hiring: /^#+\s*5\)\s*Hiring.*?next\s+steps?/i,
-        redFlags: /^#+\s*6\)\s*Red\s+flags?/i,
-        questions: /^#+\s*7\)\s*Clarifying\s+questions?/i
+        actions: /^#+\s*Immediate\s+Actions?/i,
+        causes: /^#+\s*Likely\s+Causes?/i,
+        costs: /^#+\s*Cost\s*(&|and|&amp;)?\s*Effort\s+Range/i,
+        variables: /^#+\s*What\s+Changes?\s+(the\s+)?Price/i,
+        hiring: /^#+\s*Hiring\s*(&|and|&amp;)?\s*Next\s+Steps?/i,
+        redFlags: /^#+\s*Red\s+Flags?\s*(&|and|&amp;)?\s*Don'?ts?/i,
+        questions: /^#+\s*Clarifying\s+Questions?/i
       };
 
       for (let i = 0; i < lines.length; i++) {
