@@ -640,6 +640,182 @@ app.post('/api/set-role', (req, res) => {
   }
 });
 
+// ========================================
+// PROFILE ENDPOINTS
+// ========================================
+
+/**
+ * GET /api/profile/me
+ * Get profile data for currently authenticated user
+ * Returns contractor_profile or home_profile based on user role
+ */
+app.get('/api/profile/me', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+    const userRole = req.user.user_metadata?.role;
+
+    let profileData = null;
+    let homeProfileData = null;
+
+    // Fetch contractor profile if user is a contractor
+    if (userRole === 'contractor') {
+      const { data: profile, error } = await req.supabase
+        .from('contractor_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Ignore "not found" errors
+        console.error('Error fetching contractor profile:', error);
+      } else if (profile) {
+        profileData = profile;
+      }
+    }
+
+    // Fetch home profile if user is a homeowner
+    if (userRole === 'homeowner') {
+      const { data: homeProfile, error } = await req.supabase
+        .from('home_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Ignore "not found" errors
+        console.error('Error fetching home profile:', error);
+      } else if (homeProfile) {
+        homeProfileData = homeProfile;
+      }
+    }
+
+    return res.json({
+      success: true,
+      profile: profileData,
+      homeProfile: homeProfileData,
+      userRole: userRole
+    });
+
+  } catch (error) {
+    console.error('Error in /api/profile/me:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile data' });
+  }
+});
+
+/**
+ * POST /api/profile/update
+ * Update or create profile data for authenticated user
+ * Handles both contractor_profiles and home_profiles
+ */
+app.post('/api/profile/update', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.user_metadata?.role;
+    const { homeProfile, ...contractorProfile } = req.body;
+
+    let result = { success: true };
+
+    // Update contractor profile
+    if (userRole === 'contractor' && Object.keys(contractorProfile).length > 0) {
+      const profileData = {
+        user_id: userId,
+        company_name: contractorProfile.company_name,
+        display_name: contractorProfile.display_name,
+        phone: contractorProfile.phone,
+        website: contractorProfile.website,
+        bio: contractorProfile.bio,
+        trades: contractorProfile.trades || [],
+        service_area_zipcodes: contractorProfile.service_area_zipcodes || [],
+        avatar_url: contractorProfile.avatar_url,
+        gallery_urls: contractorProfile.gallery_urls || []
+      };
+
+      const { data, error } = await req.supabase
+        .from('contractor_profiles')
+        .upsert(profileData, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating contractor profile:', error);
+        return res.status(500).json({ error: 'Failed to update contractor profile' });
+      }
+
+      result.contractorProfile = data;
+    }
+
+    // Update home profile
+    if (homeProfile && Object.keys(homeProfile).length > 0) {
+      const homeProfileData = {
+        user_id: userId,
+        address_line1: homeProfile.address_line1,
+        city: homeProfile.city,
+        state: homeProfile.state,
+        zip_code: homeProfile.zip_code,
+        year_built: homeProfile.year_built,
+        sqft: homeProfile.sqft,
+        lot_sqft: homeProfile.lot_sqft,
+        beds: homeProfile.beds,
+        baths: homeProfile.baths,
+        last_sale_date: homeProfile.last_sale_date,
+        property_type: homeProfile.property_type,
+        data_source: homeProfile.data_source || 'User'
+      };
+
+      const { data, error } = await req.supabase
+        .from('home_profiles')
+        .upsert(homeProfileData, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating home profile:', error);
+        return res.status(500).json({ error: 'Failed to update home profile' });
+      }
+
+      result.homeProfile = data;
+    }
+
+    return res.json(result);
+
+  } catch (error) {
+    console.error('Error in /api/profile/update:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/**
+ * POST /api/home/fetch-details
+ * Fetch property details from public records (mock implementation)
+ * In production, integrate with Estated, Attom Data Solutions, or similar API
+ */
+app.get('/api/home/fetch-details', async (req, res) => {
+  try {
+    const { zip } = req.query;
+
+    if (!zip) {
+      return res.status(400).json({ error: 'Zip code is required' });
+    }
+
+    // Mock data - Replace with real API call in production
+    // Example: const response = await fetch(`https://api.estated.com/v4/property?zipcode=${zip}`, { headers: { 'Authorization': process.env.ESTATED_API_KEY } });
+
+    const mockPropertyData = {
+      year_built: 1985 + Math.floor(Math.random() * 30), // Random year between 1985-2015
+      sqft: 1500 + Math.floor(Math.random() * 2000), // Random sqft between 1500-3500
+      beds: 2 + Math.floor(Math.random() * 4), // Random beds 2-5
+      baths: 1.5 + (Math.floor(Math.random() * 3) * 0.5), // Random baths 1.5-3.0
+      property_type: ['Single Family', 'Condo', 'Townhouse'][Math.floor(Math.random() * 3)],
+      data_source: 'PublicRecord'
+    };
+
+    return res.json(mockPropertyData);
+
+  } catch (error) {
+    console.error('Error in /api/home/fetch-details:', error);
+    return res.status(500).json({ error: 'Failed to fetch property details' });
+  }
+});
+
 /**
  * GET /api/get-user-status (alias for get-full-user-status)
  * Returns user profile status (mock implementation - replace with database)

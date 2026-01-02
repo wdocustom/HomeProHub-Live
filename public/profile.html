@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile – HomeProHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #f8fafc;
+      margin: 0;
+      padding: 0;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    /* Cover Photo Upload Zone */
+    .cover-upload-zone {
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .cover-upload-zone:hover {
+      opacity: 0.9;
+    }
+
+    .cover-upload-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .cover-upload-zone:hover .cover-upload-overlay {
+      opacity: 1;
+    }
+
+    /* Gallery Grid Drag Zone */
+    .gallery-drop-zone {
+      border: 2px dashed #cbd5e1;
+      transition: all 0.3s ease;
+    }
+
+    .gallery-drop-zone:hover,
+    .gallery-drop-zone.drag-over {
+      border-color: #3b82f6;
+      background-color: rgba(59, 130, 246, 0.05);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transform: translateY(200%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      border-left: 4px solid #10b981;
+    }
+
+    .toast.error {
+      border-left: 4px solid #ef4444;
+    }
+  </style>
+  <link rel="stylesheet" href="components/footer.css" />
+</head>
+<body class="bg-slate-50">
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <main>
+    <!-- Hero Section: Cover Photo + Avatar -->
+    <div class="relative">
+      <!-- Cover Photo -->
+      <div id="cover-photo" class="cover-upload-zone h-64 bg-gradient-to-br from-blue-600 to-indigo-700 relative overflow-hidden" onclick="document.getElementById('cover-upload').click()">
+        <img id="cover-image" src="" alt="" class="w-full h-full object-cover hidden">
+        <div class="cover-upload-overlay">
+          <div class="text-center text-white">
+            <i class="fa-solid fa-camera text-3xl mb-2"></i>
+            <p class="font-semibold">Change Cover Photo</p>
+          </div>
+        </div>
+        <input type="file" id="cover-upload" class="hidden" accept="image/*" onchange="uploadCoverPhoto(this)">
+      </div>
+
+      <!-- Avatar (Overlapping) -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div class="absolute -top-16 left-8">
+          <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-upload').click()">
+            <div class="w-32 h-32 rounded-full border-4 border-white bg-slate-200 overflow-hidden shadow-xl">
+              <img id="avatar-image" src="" alt="Avatar" class="w-full h-full object-cover hidden">
+              <div id="avatar-placeholder" class="w-full h-full flex items-center justify-center text-slate-400">
+                <i class="fa-solid fa-user text-5xl"></i>
+              </div>
+            </div>
+            <div class="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <i class="fa-solid fa-camera text-white text-2xl"></i>
+            </div>
+            <input type="file" id="avatar-upload" class="hidden" accept="image/*" onchange="uploadAvatar(this)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+
+      <!-- Bento Grid Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Company Details Card (2 columns) -->
+        <div class="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-slate-900">Company Details</h2>
+            <div class="flex gap-2">
+              <!-- Verification Badges -->
+              <div id="license-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-400">
+                <i class="fa-solid fa-certificate"></i> License Pending
+              </div>
+              <div id="insurance-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-400">
+                <i class="fa-solid fa-shield"></i> Insurance Pending
+              </div>
+            </div>
+          </div>
+
+          <!-- Form -->
+          <form id="profile-form" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Company Name -->
+              <div>
+                <label for="company-name" class="block text-sm font-bold text-slate-700 mb-2">Company Name</label>
+                <input type="text" id="company-name" name="company_name" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="ABC Plumbing LLC">
+              </div>
+
+              <!-- Display Name -->
+              <div>
+                <label for="display-name" class="block text-sm font-bold text-slate-700 mb-2">Display Name</label>
+                <input type="text" id="display-name" name="display_name" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="John Smith">
+              </div>
+
+              <!-- Phone -->
+              <div>
+                <label for="phone" class="block text-sm font-bold text-slate-700 mb-2">Phone Number</label>
+                <input type="tel" id="phone" name="phone" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="(555) 123-4567">
+              </div>
+
+              <!-- Website -->
+              <div>
+                <label for="website" class="block text-sm font-bold text-slate-700 mb-2">Website</label>
+                <input type="url" id="website" name="website" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="https://yourcompany.com">
+              </div>
+            </div>
+
+            <!-- Bio -->
+            <div>
+              <label for="bio" class="block text-sm font-bold text-slate-700 mb-2">Bio / About Your Company</label>
+              <textarea id="bio" name="bio" rows="4" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" placeholder="Tell homeowners about your experience, specialties, and what sets you apart..."></textarea>
+            </div>
+
+            <!-- Trades (Multi-select) -->
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Trades & Services</label>
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <label class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
+                  <input type="checkbox" name="trades" value="Plumbing" class="rounded text-blue-600 focus:ring-blue-500">
+                  <span class="text-sm font-medium text-slate-700">Plumbing</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
+                  <input type="checkbox" name="trades" value="Electrical" class="rounded text-blue-600 focus:ring-blue-500">
+                  <span class="text-sm font-medium text-slate-700">Electrical</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
+                  <input type="checkbox" name="trades" value="HVAC" class="rounded text-blue-600 focus:ring-blue-500">
+                  <span class="text-sm font-medium text-slate-700">HVAC</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
+                  <input type="checkbox" name="trades" value="Roofing" class="rounded text-blue-600 focus:ring-blue-500">
+                  <span class="text-sm font-medium text-slate-700">Roofing</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
+                  <input type="checkbox" name="trades" value="Painting" class="rounded text-blue-600 focus:ring-blue-500">
+                  <span class="text-sm font-medium text-slate-700">Painting</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
+                  <input type="checkbox" name="trades" value="General Contractor" class="rounded text-blue-600 focus:ring-blue-500">
+                  <span class="text-sm font-medium text-slate-700">General</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Service Area -->
+            <div>
+              <label for="service-area" class="block text-sm font-bold text-slate-700 mb-2">Service Area (Zip Codes)</label>
+              <input type="text" id="service-area" name="service_area" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="90210, 90211, 90212">
+              <p class="text-xs text-slate-400 mt-2">Separate multiple zip codes with commas</p>
+            </div>
+
+            <!-- Save Button -->
+            <div class="flex justify-end">
+              <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-all hover:scale-105 flex items-center gap-2">
+                <i class="fa-solid fa-save"></i> Save Profile
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Quick Stats Card -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+          <h3 class="text-lg font-bold text-slate-900 mb-6">Profile Completion</h3>
+
+          <!-- Progress Bar -->
+          <div class="mb-6">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-medium text-slate-600">Overall</span>
+              <span id="completion-percentage" class="text-sm font-bold text-blue-600">0%</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+              <div id="completion-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Checklist -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div id="check-avatar" class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-white text-xs">
+                <i class="fa-solid fa-check hidden"></i>
+              </div>
+              <span class="text-sm text-slate-600">Upload avatar</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div id="check-company" class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-white text-xs">
+                <i class="fa-solid fa-check hidden"></i>
+              </div>
+              <span class="text-sm text-slate-600">Add company name</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div id="check-bio" class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-white text-xs">
+                <i class="fa-solid fa-check hidden"></i>
+              </div>
+              <span class="text-sm text-slate-600">Write bio</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div id="check-trades" class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-white text-xs">
+                <i class="fa-solid fa-check hidden"></i>
+              </div>
+              <span class="text-sm text-slate-600">Select trades</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div id="check-gallery" class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-white text-xs">
+                <i class="fa-solid fa-check hidden"></i>
+              </div>
+              <span class="text-sm text-slate-600">Upload 3+ photos</span>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="mt-8 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+            <p class="text-xs font-bold text-blue-900 mb-2">💡 Pro Tip</p>
+            <p class="text-xs text-blue-700">Contractors with complete profiles get 3x more project views!</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Portfolio Gallery Section -->
+      <div class="mt-8 bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+        <h2 class="text-2xl font-bold text-slate-900 mb-6">Portfolio Gallery</h2>
+
+        <!-- Upload Zone -->
+        <div id="gallery-drop-zone" class="gallery-drop-zone relative group cursor-pointer rounded-2xl p-12 text-center mb-6" onclick="document.getElementById('gallery-upload').click()">
+          <div class="mb-4">
+            <div class="mx-auto h-16 w-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-images text-3xl"></i>
+            </div>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">Add Portfolio Photos</h3>
+          <p class="text-slate-500 mb-4">Drag and drop images here, or click to browse</p>
+          <button type="button" class="px-6 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors">
+            Browse Files
+          </button>
+          <input type="file" id="gallery-upload" class="hidden" accept="image/*" multiple onchange="uploadGalleryPhotos(this)">
+        </div>
+
+        <!-- Gallery Grid (3 columns) -->
+        <div id="gallery-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Gallery items will be inserted here dynamically -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <i class="fa-solid fa-circle-check text-green-500"></i>
+    <span id="toast-message">Profile saved successfully!</span>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // ========================================
+    // STATE MANAGEMENT
+    // ========================================
+    let profileData = {
+      avatar_url: null,
+      cover_url: null,
+      gallery_urls: []
+    };
+
+    // ========================================
+    // LOAD PROFILE DATA
+    // ========================================
+    async function loadProfile() {
+      try {
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = '/login.html';
+          return;
+        }
+
+        const response = await fetch('/api/profile/me', {
+          headers: {
+            'Authorization': `Bearer ${user.access_token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.profile) {
+            populateForm(data.profile);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    }
+
+    function populateForm(profile) {
+      if (profile.company_name) document.getElementById('company-name').value = profile.company_name;
+      if (profile.display_name) document.getElementById('display-name').value = profile.display_name;
+      if (profile.phone) document.getElementById('phone').value = profile.phone;
+      if (profile.website) document.getElementById('website').value = profile.website;
+      if (profile.bio) document.getElementById('bio').value = profile.bio;
+      if (profile.service_area_zipcodes) {
+        document.getElementById('service-area').value = profile.service_area_zipcodes.join(', ');
+      }
+      if (profile.trades) {
+        profile.trades.forEach(trade => {
+          const checkbox = document.querySelector(`input[name="trades"][value="${trade}"]`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }
+
+      // Load avatar
+      if (profile.avatar_url) {
+        profileData.avatar_url = profile.avatar_url;
+        document.getElementById('avatar-image').src = profile.avatar_url;
+        document.getElementById('avatar-image').classList.remove('hidden');
+        document.getElementById('avatar-placeholder').classList.add('hidden');
+      }
+
+      // Load gallery
+      if (profile.gallery_urls && profile.gallery_urls.length > 0) {
+        profileData.gallery_urls = profile.gallery_urls;
+        renderGallery();
+      }
+
+      // Update verification badges
+      if (profile.license_verified) {
+        document.getElementById('license-badge').className = 'px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700';
+        document.getElementById('license-badge').innerHTML = '<i class="fa-solid fa-certificate"></i> License Verified';
+      }
+      if (profile.insurance_verified) {
+        document.getElementById('insurance-badge').className = 'px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700';
+        document.getElementById('insurance-badge').innerHTML = '<i class="fa-solid fa-shield"></i> Insurance Verified';
+      }
+
+      updateCompletionProgress();
+    }
+
+    // ========================================
+    // FORM SUBMISSION
+    // ========================================
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const trades = Array.from(document.querySelectorAll('input[name="trades"]:checked')).map(cb => cb.value);
+      const serviceArea = document.getElementById('service-area').value.split(',').map(zip => zip.trim()).filter(zip => zip);
+
+      const profileUpdate = {
+        company_name: formData.get('company_name'),
+        display_name: formData.get('display_name'),
+        phone: formData.get('phone'),
+        website: formData.get('website'),
+        bio: formData.get('bio'),
+        trades: trades,
+        service_area_zipcodes: serviceArea,
+        avatar_url: profileData.avatar_url,
+        gallery_urls: profileData.gallery_urls
+      };
+
+      try {
+        const user = await window.authService.getCurrentUser();
+        const response = await fetch('/api/profile/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.access_token}`
+          },
+          body: JSON.stringify(profileUpdate)
+        });
+
+        if (response.ok) {
+          showToast('Profile saved successfully!', 'success');
+          updateCompletionProgress();
+        } else {
+          showToast('Failed to save profile. Please try again.', 'error');
+        }
+      } catch (error) {
+        console.error('Error saving profile:', error);
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // ========================================
+    // IMAGE UPLOADS (Simulated)
+    // ========================================
+    function uploadCoverPhoto(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById('cover-image').src = e.target.result;
+          document.getElementById('cover-image').classList.remove('hidden');
+          profileData.cover_url = e.target.result; // In production, upload to storage
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function uploadAvatar(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById('avatar-image').src = e.target.result;
+          document.getElementById('avatar-image').classList.remove('hidden');
+          document.getElementById('avatar-placeholder').classList.add('hidden');
+          profileData.avatar_url = e.target.result; // In production, upload to storage
+          updateCompletionProgress();
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function uploadGalleryPhotos(input) {
+      if (input.files && input.files.length > 0) {
+        Array.from(input.files).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            profileData.gallery_urls.push(e.target.result);
+            renderGallery();
+            updateCompletionProgress();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+
+    function renderGallery() {
+      const grid = document.getElementById('gallery-grid');
+      grid.innerHTML = profileData.gallery_urls.map((url, index) => `
+        <div class="relative group rounded-2xl overflow-hidden aspect-square">
+          <img src="${url}" alt="Portfolio ${index + 1}" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <button onclick="removeGalleryPhoto(${index})" class="p-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function removeGalleryPhoto(index) {
+      profileData.gallery_urls.splice(index, 1);
+      renderGallery();
+      updateCompletionProgress();
+    }
+
+    // ========================================
+    // COMPLETION PROGRESS
+    // ========================================
+    function updateCompletionProgress() {
+      let completed = 0;
+      let total = 5;
+
+      // Check avatar
+      if (profileData.avatar_url) {
+        completed++;
+        document.getElementById('check-avatar').classList.add('bg-green-500');
+        document.getElementById('check-avatar').classList.remove('bg-slate-200');
+        document.getElementById('check-avatar').querySelector('i').classList.remove('hidden');
+      }
+
+      // Check company name
+      if (document.getElementById('company-name').value.trim()) {
+        completed++;
+        document.getElementById('check-company').classList.add('bg-green-500');
+        document.getElementById('check-company').classList.remove('bg-slate-200');
+        document.getElementById('check-company').querySelector('i').classList.remove('hidden');
+      }
+
+      // Check bio
+      if (document.getElementById('bio').value.trim().length > 50) {
+        completed++;
+        document.getElementById('check-bio').classList.add('bg-green-500');
+        document.getElementById('check-bio').classList.remove('bg-slate-200');
+        document.getElementById('check-bio').querySelector('i').classList.remove('hidden');
+      }
+
+      // Check trades
+      if (document.querySelectorAll('input[name="trades"]:checked').length > 0) {
+        completed++;
+        document.getElementById('check-trades').classList.add('bg-green-500');
+        document.getElementById('check-trades').classList.remove('bg-slate-200');
+        document.getElementById('check-trades').querySelector('i').classList.remove('hidden');
+      }
+
+      // Check gallery
+      if (profileData.gallery_urls.length >= 3) {
+        completed++;
+        document.getElementById('check-gallery').classList.add('bg-green-500');
+        document.getElementById('check-gallery').classList.remove('bg-slate-200');
+        document.getElementById('check-gallery').querySelector('i').classList.remove('hidden');
+      }
+
+      const percentage = Math.round((completed / total) * 100);
+      document.getElementById('completion-percentage').textContent = `${percentage}%`;
+      document.getElementById('completion-bar').style.width = `${percentage}%`;
+    }
+
+    // ========================================
+    // TOAST NOTIFICATION
+    // ========================================
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toast-message');
+
+      toast.className = `toast ${type}`;
+      toastMessage.textContent = message;
+
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // ========================================
+    // DRAG AND DROP
+    // ========================================
+    const dropZone = document.getElementById('gallery-drop-zone');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.classList.add('drag-over');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.classList.remove('drag-over');
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length > 0) {
+        document.getElementById('gallery-upload').files = files;
+        uploadGalleryPhotos(document.getElementById('gallery-upload'));
+      }
+    }, false);
+
+    // ========================================
+    // INIT
+    // ========================================
+    window.addEventListener('DOMContentLoaded', () => {
+      loadProfile();
+
+      // Update progress on input
+      document.getElementById('profile-form').addEventListener('input', updateCompletionProgress);
+    });
+  </script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
+
+  <!-- Global Footer -->
+  <script src="components/footer.js"></script>
+</body>
+</html>
