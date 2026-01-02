@@ -4,10 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Contractor Dashboard – HomeProHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
   <link rel="stylesheet" href="components/license-badge.css" />
   <style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    body { background: #f8fafc; }
     .dashboard-container {
       max-width: 1400px;
       margin: 0 auto;
@@ -484,45 +488,40 @@
   <!-- Navigation component will be injected here by navigation.js -->
 
   <main>
-    <div class="dashboard-container">
-      <div class="dashboard-header">
-        <h1>Contractor Dashboard</h1>
-        <p>Find jobs, submit bids, and manage your active projects</p>
-      </div>
+    <!-- Command Center Hero -->
+    <div class="bg-white border-b border-slate-200 pb-8 pt-8 px-4 sm:px-6 mb-8">
+      <div class="max-w-5xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Opportunity Feed</h1>
+            <p class="text-slate-500 mt-1">
+              Matching jobs for <span class="font-semibold text-blue-600" id="userTradeDisplay">General Contractor</span> in <span class="font-semibold text-slate-700" id="userZipDisplay">Your Area</span>.
+            </p>
+          </div>
 
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Available Jobs</div>
-          <div class="stat-value" id="availableJobsStat">0</div>
-          <div class="stat-change">In your area</div>
+          <div class="flex gap-3">
+            <div class="px-5 py-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+              <span class="block text-2xl font-black text-slate-900" id="activeBidsStat">0</span>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Bids</span>
+            </div>
+            <div class="px-5 py-3 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+              <span class="block text-2xl font-black text-blue-600" id="newLeadsStat">0</span>
+              <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">New Leads</span>
+            </div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Your Bids</div>
-          <div class="stat-value" id="yourBidsStat">0</div>
-          <div class="stat-change">All time</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Pending Bids</div>
-          <div class="stat-value" id="pendingBidsStat">0</div>
-          <div class="stat-change">Awaiting response</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Won Projects</div>
-          <div class="stat-value" id="wonProjectsStat">0</div>
-          <div class="stat-change">Accepted bids</div>
-        </div>
-      </div>
 
-      <!-- Tabs -->
-      <div class="tabs-container">
-        <div class="tabs">
-          <div class="tab active" data-tab="available">Available Jobs</div>
-          <div class="tab" data-tab="mybids">My Bids</div>
-          <div class="tab" data-tab="active">Active Projects</div>
+        <!-- Tab Buttons -->
+        <div class="flex gap-2 mt-8 overflow-x-auto pb-2">
+          <button class="tab-btn px-6 py-2 bg-slate-900 text-white rounded-full text-sm font-semibold shadow-lg shadow-slate-900/20 active" data-tab="available">New Leads</button>
+          <button class="tab-btn px-6 py-2 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:bg-slate-50" data-tab="mybids">Active Bids</button>
+          <button class="tab-btn px-6 py-2 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:bg-slate-50" data-tab="saved">Saved</button>
         </div>
       </div>
+    </div>
 
+    <!-- Tab Content Container -->
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
       <!-- Available Jobs Tab -->
       <div class="tab-content active" id="availableTab">
         <div class="filters">
@@ -558,6 +557,14 @@
       <div class="tab-content" id="activeTab">
         <div id="activeProjectsContainer">
           <div class="loading">Loading active projects...</div>
+        </div>
+      </div>
+
+      <!-- Saved Jobs Tab -->
+      <div class="tab-content" id="savedTab">
+        <div class="text-center py-16">
+          <h3 class="text-2xl font-bold text-slate-900 mb-2">Saved Jobs</h3>
+          <p class="text-slate-500">Coming soon!</p>
         </div>
       </div>
     </div>
@@ -930,79 +937,197 @@
       }
     }
 
-    // Render available jobs
+    // Helper: Calculate time ago
+    function timeAgo(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+
+    // Helper: Get match badge
+    function getMatchBadge(job) {
+      if (job.urgency === 'urgent') return '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide">Urgent</span>';
+      if (job.bid_count < 2) return '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide">High Match</span>';
+      return '<span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide">Good Match</span>';
+    }
+
+    // Dismiss job with animation
+    function dismissJob(cardId) {
+      // 1. Find the card
+      const card = document.getElementById(cardId);
+      if (!card) return;
+
+      // 2. Animate it out (Shrink & Fade)
+      card.style.transition = "all 0.3s ease";
+      card.style.opacity = "0";
+      card.style.transform = "scale(0.95)";
+
+      setTimeout(() => {
+        // 3. Remove from DOM
+        card.remove();
+
+        // 4. (Optional) Save to LocalStorage so it stays hidden on refresh
+        // const hiddenJobs = JSON.parse(localStorage.getItem('hidden_jobs') || '[]');
+        // hiddenJobs.push(cardId);
+        // localStorage.setItem('hidden_jobs', JSON.stringify(hiddenJobs));
+
+        console.log(`Job ${cardId} dismissed.`);
+      }, 300);
+    }
+    window.dismissJob = dismissJob;
+
+    // Render available jobs with Sanctuary 2.0 design
     function renderAvailableJobs() {
       const container = document.getElementById('availableJobsContainer');
 
       if (availableJobs.length === 0) {
-        container.innerHTML = '<div class="no-jobs"><h3>No jobs available</h3><p>Check back later for new opportunities</p></div>';
+        container.innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">No jobs available</h3><p class="text-slate-500">Check back later for new opportunities</p></div>';
         return;
       }
 
       container.innerHTML = availableJobs.map(job => `
-        <div class="job-card">
-          <div class="job-header">
+        <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300" id="job-card-${job.id}">
+          <!-- Header -->
+          <div class="flex justify-between items-start mb-4">
             <div>
-              <h3 class="job-title">${escapeHtml(job.title)}</h3>
-              <div class="job-meta">
-                <span>📍 ${escapeHtml(job.address)} (${job.zip_code})</span>
-                <span>📅 ${formatDate(job.posted_at)}</span>
-                <span>💼 ${job.bid_count || 0} bid${job.bid_count !== 1 ? 's' : ''}</span>
+              <div class="flex items-center gap-2 mb-1">
+                ${getMatchBadge(job)}
+                <span class="text-slate-400 text-xs font-medium">• ${timeAgo(job.posted_at)}</span>
               </div>
+              <h3 class="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">${escapeHtml(job.title)}</h3>
             </div>
-            <span class="urgency-badge ${job.urgency}">${job.urgency}</span>
+
+            <!-- Dismiss Button -->
+            <button
+              onclick="dismissJob('job-card-${job.id}')"
+              class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              title="Pass on this job"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
           </div>
 
-          <p class="job-description">${escapeHtml(job.description.substring(0, 250))}${job.description.length > 250 ? '...' : ''}</p>
+          <!-- Description -->
+          <p class="text-slate-600 mb-6 line-clamp-2">${escapeHtml(job.description.substring(0, 200))}${job.description.length > 200 ? '...' : ''}</p>
 
-          ${job.budget_low && job.budget_high ? `
-            <div class="job-budget">
-              Homeowner Budget: ${formatCurrency(job.budget_low)} - ${formatCurrency(job.budget_high)}
+          <!-- Info Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            ${job.budget_low && job.budget_high ? `
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Budget</span>
+                <span class="block text-slate-900 font-bold">${formatCurrency(job.budget_low)} - ${formatCurrency(job.budget_high)}</span>
+              </div>
+            ` : `
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Budget</span>
+                <span class="block text-slate-900 font-bold">Not Specified</span>
+              </div>
+            `}
+            <div class="bg-slate-50 rounded-xl p-3">
+              <span class="block text-xs text-slate-400 uppercase font-bold">Timeline</span>
+              <span class="block text-slate-900 font-bold">${job.urgency === 'urgent' ? 'ASAP' : job.urgency === 'soon' ? '1-2 Weeks' : 'Flexible'}</span>
             </div>
-          ` : ''}
+            <div class="bg-slate-50 rounded-xl p-3">
+              <span class="block text-xs text-slate-400 uppercase font-bold">Location</span>
+              <span class="block text-slate-900 font-bold">${job.zip_code || 'N/A'}</span>
+            </div>
+            <div class="bg-slate-50 rounded-xl p-3">
+              <span class="block text-xs text-slate-400 uppercase font-bold">Bids</span>
+              <span class="block text-slate-900 font-bold">${job.bid_count || 0} Submitted</span>
+            </div>
+          </div>
 
-          <div class="job-actions">
-            <button class="btn-bid" onclick="openBidModal('${job.id}')">Submit Bid</button>
-            <button class="btn-estimator" onclick="useEstimator('${job.id}')">💰 Use Estimator</button>
-            <button class="btn-view" onclick="viewJobDetails('${job.id}')">View Details</button>
+          <!-- Actions -->
+          <div class="flex items-center gap-4 border-t border-slate-100 pt-6">
+            <button onclick="openBidModal('${job.id}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+              View Project & Bid <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button onclick="useEstimator('${job.id}')" class="px-6 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition" title="Use AI Estimator">
+              <i class="fa-solid fa-calculator"></i>
+            </button>
           </div>
         </div>
       `).join('');
     }
 
-    // Render my bids
+    // Render my bids with Sanctuary 2.0 design
     function renderMyBids() {
       const container = document.getElementById('myBidsContainer');
 
       if (myBids.length === 0) {
-        container.innerHTML = '<div class="no-jobs"><h3>No bids yet</h3><p>Browse available jobs and submit your first bid!</p></div>';
+        container.innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">No bids yet</h3><p class="text-slate-500">Browse available jobs and submit your first bid!</p></div>';
         return;
       }
 
       container.innerHTML = myBids.map(bid => {
         const job = bid.job;
+
+        // Status badge styling
+        let statusBadge = '';
+        if (bid.status === 'pending') {
+          statusBadge = '<span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Pending</span>';
+        } else if (bid.status === 'accepted') {
+          statusBadge = '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Accepted</span>';
+        } else if (bid.status === 'rejected') {
+          statusBadge = '<span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Declined</span>';
+        }
+
         return `
-          <div class="job-card">
-            <div class="job-header">
+          <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300 mb-4">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-4">
               <div>
-                <h3 class="job-title">${escapeHtml(job.title)}</h3>
-                <div class="job-meta">
-                  <span>📍 ${escapeHtml(job.address)}</span>
-                  <span>📅 Bid submitted ${formatDate(bid.submitted_at)}</span>
+                <div class="flex items-center gap-2 mb-1">
+                  ${statusBadge}
+                  <span class="text-slate-400 text-xs font-medium">• Submitted ${timeAgo(bid.submitted_at)}</span>
                 </div>
+                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(job.title)}</h3>
               </div>
-              <span class="bid-status ${bid.status}">${bid.status}</span>
             </div>
 
-            <div class="job-budget">
-              Your Bid: ${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}
+            <!-- Your Bid Amount -->
+            <div class="bg-blue-50 rounded-xl p-4 mb-4">
+              <span class="block text-xs text-blue-600 uppercase font-bold mb-1">Your Bid</span>
+              <span class="block text-2xl font-black text-blue-600">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</span>
             </div>
 
-            ${bid.message ? `<p class="job-description">${escapeHtml(bid.message)}</p>` : ''}
+            <!-- Info Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Location</span>
+                <span class="block text-slate-900 font-bold">${job.zip_code || 'N/A'}</span>
+              </div>
+              ${bid.estimated_duration ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Duration</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.estimated_duration)}</span>
+                </div>
+              ` : ''}
+              ${bid.start_availability ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Start</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.start_availability)}</span>
+                </div>
+              ` : ''}
+            </div>
 
+            ${bid.message ? `
+              <p class="text-slate-600 mb-4 text-sm italic border-l-4 border-slate-200 pl-4">"${escapeHtml(bid.message.substring(0, 150))}${bid.message.length > 150 ? '...' : ''}"</p>
+            ` : ''}
+
+            <!-- Actions -->
             ${bid.status === 'accepted' ? `
-              <div class="job-actions">
-                <button class="btn-bid" onclick="contactHomeowner('${bid.job_id}', '${bid.homeowner_email}')">💬 Contact Homeowner</button>
+              <div class="flex items-center gap-4 border-t border-slate-100 pt-4">
+                <button onclick="contactHomeowner('${bid.job_id}', '${bid.homeowner_email}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-message"></i> Contact Homeowner
+                </button>
               </div>
             ` : ''}
           </div>
@@ -1010,12 +1135,43 @@
       }).join('');
     }
 
-    // Update stats
+    // Update stats in Command Center Hero
     function updateStats() {
-      document.getElementById('availableJobsStat').textContent = availableJobs.length;
-      document.getElementById('yourBidsStat').textContent = myBids.length;
-      document.getElementById('pendingBidsStat').textContent = myBids.filter(b => b.status === 'pending').length;
-      document.getElementById('wonProjectsStat').textContent = myBids.filter(b => b.status === 'accepted').length;
+      // Active Bids = all my bids
+      const activeBidsEl = document.getElementById('activeBidsStat');
+      if (activeBidsEl) {
+        activeBidsEl.textContent = myBids.length;
+      }
+
+      // New Leads = available jobs
+      const newLeadsEl = document.getElementById('newLeadsStat');
+      if (newLeadsEl) {
+        newLeadsEl.textContent = availableJobs.length;
+      }
+
+      // Update user trade and ZIP in hero if profile data is available
+      const updateUserDisplay = async () => {
+        try {
+          if (window.authService && window.authService.initialized) {
+            const profile = await window.authService.getUserProfile();
+            if (profile) {
+              const tradeDisplay = document.getElementById('userTradeDisplay');
+              const zipDisplay = document.getElementById('userZipDisplay');
+
+              if (tradeDisplay && profile.trade_type) {
+                tradeDisplay.textContent = profile.trade_type.charAt(0).toUpperCase() + profile.trade_type.slice(1);
+              }
+
+              if (zipDisplay && profile.zip_code) {
+                zipDisplay.textContent = profile.zip_code;
+              }
+            }
+          }
+        } catch (err) {
+          console.log('Could not load user profile for display:', err);
+        }
+      };
+      updateUserDisplay();
     }
 
     // Apply filters
@@ -1526,38 +1682,70 @@
       }
     }
 
-    // Render active projects
+    // Render active projects with Sanctuary 2.0 design
     function renderActiveProjects(projects) {
       const container = document.getElementById('activeProjectsContainer');
 
       if (projects.length === 0) {
-        container.innerHTML = '<div class="no-jobs"><h3>No active projects yet</h3><p>Submit bids to get started!</p></div>';
+        container.innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">No active projects yet</h3><p class="text-slate-500">Submit bids to get started!</p></div>';
         return;
       }
 
       container.innerHTML = projects.map(bid => {
         const job = bid.job;
         return `
-          <div class="job-card">
-            <div class="job-header">
+          <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300 mb-4">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-4">
               <div>
-                <h3 class="job-title">${escapeHtml(job.title)}</h3>
-                <div class="job-meta">
-                  <span>📍 ${escapeHtml(job.address)}</span>
-                  <span>💰 Your Bid: ${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</span>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Active Project</span>
+                  <span class="text-slate-400 text-xs font-medium">• Started ${timeAgo(bid.submitted_at)}</span>
                 </div>
+                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(job.title)}</h3>
               </div>
-              <span class="bid-status accepted">Active</span>
             </div>
 
-            <div class="job-description">
-              ${escapeHtml(job.description).substring(0, 200)}${job.description.length > 200 ? '...' : ''}
+            <!-- Description -->
+            <p class="text-slate-600 mb-6 line-clamp-2">${escapeHtml(job.description.substring(0, 200))}${job.description.length > 200 ? '...' : ''}</p>
+
+            <!-- Your Bid Amount -->
+            <div class="bg-emerald-50 rounded-xl p-4 mb-4">
+              <span class="block text-xs text-emerald-600 uppercase font-bold mb-1">Your Winning Bid</span>
+              <span class="block text-2xl font-black text-emerald-600">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</span>
             </div>
 
-            <div class="job-actions" style="display: flex; gap: 12px; margin-top: 16px;">
-              <button class="btn-bid" onclick="contactHomeowner('${job.id}', '${job.homeowner_email}')">💬 Contact Homeowner</button>
-              <button class="btn-secondary" onclick="openSubHunterModal('${job.id}')">🔨 Find Subs</button>
-              <button class="btn-secondary" onclick="viewTeam('${job.id}')">👥 View Team</button>
+            <!-- Info Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Location</span>
+                <span class="block text-slate-900 font-bold">${job.zip_code || escapeHtml(job.address) || 'N/A'}</span>
+              </div>
+              ${bid.estimated_duration ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Duration</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.estimated_duration)}</span>
+                </div>
+              ` : ''}
+              ${bid.start_availability ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Start Date</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.start_availability)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-6">
+              <button onclick="contactHomeowner('${job.id}', '${job.homeowner_email}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-message"></i> Contact Homeowner
+              </button>
+              <button onclick="openSubHunterModal('${job.id}')" class="px-6 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition" title="Find Subcontractors">
+                <i class="fa-solid fa-users"></i> Find Subs
+              </button>
+              <button onclick="viewTeam('${job.id}')" class="px-6 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition" title="View Project Team">
+                <i class="fa-solid fa-people-group"></i>
+              </button>
             </div>
           </div>
         `;
@@ -1705,20 +1893,32 @@
     }
     window.contactHomeowner = contactHomeowner;
 
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', function() {
+    // Tab switching with Sanctuary 2.0 button styling
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
         const tabName = this.dataset.tab;
 
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        // Update button states
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('active', 'bg-slate-900', 'text-white', 'shadow-lg', 'shadow-slate-900/20');
+          b.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+        });
 
-        this.classList.add('active');
+        // Activate clicked button
+        this.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+        this.classList.add('active', 'bg-slate-900', 'text-white', 'shadow-lg', 'shadow-slate-900/20');
+
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(tabName + 'Tab').classList.add('active');
 
         // Load data for the tab
         if (tabName === 'mybids' && myBids.length === 0) {
           loadMyBids();
+        }
+        if (tabName === 'saved') {
+          // TODO: Implement saved jobs feature
+          document.getElementById('savedTab').innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">Saved Jobs</h3><p class="text-slate-500">Coming soon!</p></div>';
         }
         if (tabName === 'active') {
           loadActiveProjects();
