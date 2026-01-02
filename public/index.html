@@ -6,6 +6,9 @@
   <title>HomeProHub – Understand Your Home Issues, Connect with Verified Contractors</title>
   <meta name="description" content="Free AI-powered home issue guidance. Connect with vetted, licensed contractors. Optional on-demand expert access. Trust, clarity, no hidden fees.">
 
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
@@ -15,13 +18,13 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
       color: #1f2937;
-      background: #ffffff;
+      background: #f8fafc;
     }
 
     /* SECTION A: TOP NAV */
@@ -1248,75 +1251,70 @@
     </div>
   </nav>
 
-  <!-- SECTION B: HERO (Homeowner-first sandbox) -->
-  <section class="hero" id="homeowners">
-    <h1>What's going on with your home?</h1>
-
-    <p class="hero-subhead">
-      Describe what you're seeing or upload a photo. Our AI helps you understand what might be happening,
-      how serious it could be, and what your options are — completely free.
-    </p>
-
-    <p class="hero-helper">
-      Many homeowners use this just to understand the issue before deciding what to do.
-    </p>
-
-    <div class="hero-actions">
-      <!-- Photo Preview Strip -->
-      <div id="photo-preview-container" class="photo-preview-container hidden"></div>
-
-      <!-- Smart Composer -->
-      <div class="smart-composer">
-        <input
-          type="text"
-          id="ai-input"
-          placeholder="Describe the issue (e.g., 'Cracked Foundation')..."
-        />
-
-        <div class="composer-divider"></div>
-
-        <button
-          onclick="document.getElementById('hidden-file-input').click()"
-          class="composer-photo-btn"
-          title="Add Photos (Max 5)"
-          type="button"
-        >
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-        </button>
-
-        <button
-          onclick="startAnalysis()"
-          class="composer-submit-btn"
-          type="button"
-        >
-          <span>Analyze</span>
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-          </svg>
-        </button>
+  <!-- SECTION B: HERO WRAPPER (Sanctuary Glass) -->
+  <div class="relative bg-gradient-to-b from-blue-50/50 to-slate-50 pt-20 pb-16 px-4 sm:px-6 lg:px-8" id="homeowners">
+    <div class="text-center max-w-3xl mx-auto mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm mb-6">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+        </span>
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">AI-Powered Home Care</span>
       </div>
-
-      <input
-        type="file"
-        id="hidden-file-input"
-        multiple
-        accept="image/*"
-        class="hidden"
-        onchange="handlePhotoSelection(this)"
-      />
-
-      <a href="#" class="hero-secondary-link" onclick="event.preventDefault(); redirectToDirectory();">
-        Free to browse verified contractors when you're ready
-      </a>
+      <h1 class="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
+        Your home, <span class="text-blue-600">handled.</span>
+      </h1>
+      <p class="text-xl text-slate-500">
+        Diagnose issues, get fair price estimates, and hire verified pros—all in one place.
+      </p>
     </div>
 
-    <p class="hero-trust-line">
-      Homeowner use is free. Contractors pay for lead access. Optional paid on-demand expert access.
-    </p>
-  </section>
+    <!-- Photo Preview Strip -->
+    <div id="photo-preview-container" class="photo-preview-container hidden"></div>
+
+    <!-- Smart Composer -->
+    <div class="smart-composer">
+      <input
+        type="text"
+        id="ai-input"
+        placeholder="Describe the issue (e.g., 'Cracked Foundation')..."
+      />
+
+      <div class="composer-divider"></div>
+
+      <button
+        onclick="document.getElementById('hidden-file-input').click()"
+        class="composer-photo-btn"
+        title="Add Photos (Max 5)"
+        type="button"
+      >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+      </button>
+
+      <button
+        onclick="startAnalysis()"
+        class="composer-submit-btn"
+        type="button"
+      >
+        <span>Analyze</span>
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+        </svg>
+      </button>
+    </div>
+
+    <input
+      type="file"
+      id="hidden-file-input"
+      multiple
+      accept="image/*"
+      class="hidden"
+      onchange="handlePhotoSelection(this)"
+    />
+  </div>
 
   <!-- AI RESULTS SECTION (Hidden by default, shown after analysis) -->
   <section id="ai-results-section" class="ai-results-section" style="display: none;">
@@ -1331,6 +1329,67 @@
       <div class="loading-spinner"></div>
       <p class="loading-text">Analyzing your issue...</p>
       <p class="loading-subtext">This may take 15-30 seconds</p>
+    </div>
+  </div>
+
+  <!-- ACTION GRID (Bento Layout) -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 mb-24 relative z-10">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- Post a Project - Hero Card (2 columns) -->
+      <div class="col-span-1 md:col-span-2 bg-slate-900 rounded-3xl p-8 shadow-xl relative overflow-hidden group">
+        <div class="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
+          <i class="fa-solid fa-hammer text-9xl text-white"></i>
+        </div>
+
+        <div class="relative z-10 flex flex-col h-full justify-between">
+          <div>
+            <div class="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl w-fit mb-4">
+              <i class="fa-solid fa-clipboard-check text-2xl"></i>
+            </div>
+            <h3 class="text-3xl font-bold text-white mb-2">Ready to hire?</h3>
+            <p class="text-slate-400 text-lg max-w-md">Post your project and get bids from verified local contractors. We handle the vetting.</p>
+          </div>
+          <button onclick="window.location.href='/post-project.html'" class="mt-8 w-fit px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition-transform hover:scale-105 flex items-center gap-2">
+            Post a Project <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Price Estimator -->
+      <a href="/pricing-estimator.html" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group">
+        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
+          <i class="fa-solid fa-calculator text-2xl"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mb-2">Price Estimator</h3>
+        <p class="text-slate-500 mb-6">Don't guess. Get a fair market cost range for your zip code instantly.</p>
+        <span class="text-blue-600 font-semibold flex items-center gap-2 group-hover:gap-3 transition-all">
+          Calculate Cost <i class="fa-solid fa-arrow-right"></i>
+        </span>
+      </a>
+
+      <!-- Find a Pro -->
+      <a href="/browse-contractors.html" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group">
+        <div class="p-3 bg-purple-50 text-purple-600 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
+          <i class="fa-solid fa-magnifying-glass text-2xl"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mb-2">Find a Pro</h3>
+        <p class="text-slate-500 mb-6">Browse our directory of graded, licensed, and insured contractors.</p>
+        <span class="text-blue-600 font-semibold flex items-center gap-2 group-hover:gap-3 transition-all">
+          Search Directory <i class="fa-solid fa-arrow-right"></i>
+        </span>
+      </a>
+
+      <!-- HomeProHub Grade Banner (2 columns) -->
+      <div class="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-50 to-white rounded-3xl p-8 shadow-sm border border-blue-100 flex items-center justify-between">
+        <div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">The HomeProHub Grade™</h3>
+          <p class="text-slate-500">We grade every contractor on Licenses, Insurance, and Reviews. If they aren't an A or B, they aren't here.</p>
+        </div>
+        <div class="hidden md:block text-5xl font-black text-blue-200">
+          A+
+        </div>
+      </div>
     </div>
   </div>
 
