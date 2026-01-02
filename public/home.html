@@ -760,38 +760,54 @@
           </p>
         </div>
 
-        <div class="mt-10 max-w-2xl mx-auto relative group">
-          <div class="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+        <!-- Smart Composer Component -->
+        <div class="max-w-3xl mx-auto relative mt-8 mb-12">
+          <!-- Photo Preview Container -->
+          <div id="photo-preview-container" class="hidden flex gap-2 mb-4 overflow-x-auto pb-2 px-2 snap-x">
+          </div>
 
-          <div class="relative flex items-center bg-white rounded-full shadow-xl ring-1 ring-slate-900/5">
-            <div class="pl-6 text-slate-400">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </div>
-
+          <!-- Smart Composer Input -->
+          <div class="relative flex items-center bg-white rounded-full shadow-2xl ring-1 ring-slate-900/5 p-2 transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500">
             <input
               type="text"
-              id="homeIssueInput"
-              class="w-full border-0 bg-transparent py-5 pl-4 pr-36 text-slate-900 placeholder:text-slate-400 focus:ring-0 sm:text-lg outline-none"
-              placeholder="Describe your issue..."
-            />
+              id="ai-input"
+              class="flex-1 border-0 bg-transparent py-4 pl-6 pr-2 text-slate-900 placeholder:text-slate-400 focus:ring-0 text-lg outline-none"
+              placeholder="Describe the issue (e.g., 'Cracked Foundation')..."
+            >
 
-            <div class="absolute right-2 top-2 bottom-2">
-              <button
-                id="askAiBtn"
-                class="h-full px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full shadow-lg hover:shadow-blue-500/30 transition-all duration-200 flex items-center gap-2"
-              >
-                <span>Get Help</span>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-              </button>
-            </div>
+            <div class="h-8 w-px bg-slate-200 mx-2"></div>
+
+            <button
+              onclick="document.getElementById('hidden-file-input').click()"
+              class="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors tooltip-trigger"
+              title="Add Photos (Max 5)"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </button>
+
+            <button
+              onclick="startAnalysis()"
+              class="ml-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+            >
+              <span>Analyze</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+            </button>
           </div>
-        </div>
 
-        <div class="mt-6 text-center">
-          <a href="ai-check.html" class="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center justify-center gap-2 mx-auto transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            Try Free AI Check with Photo Upload (NEW)
-          </a>
+          <!-- Hidden File Input -->
+          <input
+            type="file"
+            id="hidden-file-input"
+            multiple
+            accept="image/*"
+            class="hidden"
+            onchange="handlePhotoSelection(this)"
+          >
         </div>
 
         <div class="status-message text-center mt-4 text-sm text-slate-600" id="aiStatus"></div>
@@ -889,6 +905,102 @@
     (function() {
       'use strict';
 
+      // ========================================
+      // SMART COMPOSER - Photo Upload Component
+      // ========================================
+      const MAX_PHOTOS = 5;
+      let selectedFiles = []; // Stores the actual File objects
+
+      // Handle photo selection from file input
+      window.handlePhotoSelection = function(input) {
+        const files = Array.from(input.files);
+
+        if (selectedFiles.length + files.length > MAX_PHOTOS) {
+          alert(`You can only upload up to ${MAX_PHOTOS} photos.`);
+          return;
+        }
+
+        selectedFiles = [...selectedFiles, ...files];
+        updatePreviewUI();
+      };
+
+      // Update photo preview thumbnails
+      function updatePreviewUI() {
+        const container = document.getElementById('photo-preview-container');
+        container.innerHTML = '';
+
+        if (selectedFiles.length > 0) {
+          container.classList.remove('hidden');
+        } else {
+          container.classList.add('hidden');
+        }
+
+        selectedFiles.forEach((file, index) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const div = document.createElement('div');
+            div.className = "relative flex-shrink-0";
+            div.innerHTML = `
+              <img src="${e.target.result}" class="h-20 w-20 object-cover rounded-lg shadow-md border border-white">
+              <button onclick="removePhoto(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm hover:bg-red-600 transition">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>`;
+            container.appendChild(div);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Remove a photo from the selection
+      window.removePhoto = function(index) {
+        selectedFiles.splice(index, 1);
+        updatePreviewUI();
+      };
+
+      // Helper to convert File to Base64
+      const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+
+      // Start Analysis - Prepare data and redirect to preview
+      window.startAnalysis = async function() {
+        const text = document.getElementById('ai-input').value.trim();
+
+        if (!text && selectedFiles.length === 0) {
+          return alert("Please describe your issue or add a photo.");
+        }
+
+        try {
+          // Convert photos to base64
+          const images = await Promise.all(selectedFiles.map(file => toBase64(file)));
+
+          // Prepare draft data
+          const dashboardDraft = {
+            description: text,
+            images: images, // Array of base64 strings
+            timestamp: Date.now()
+          };
+
+          // Save to localStorage
+          localStorage.setItem('hot_lead_draft', JSON.stringify(dashboardDraft));
+
+          // Redirect to the Blueprint/AI Results page
+          window.location.href = '/preview.html';
+        } catch (error) {
+          console.error('Error preparing analysis:', error);
+          alert('Failed to prepare images. Please try again.');
+        }
+      };
+
+      // ========================================
+      // END SMART COMPOSER
+      // ========================================
+
       // Global Blueprint data store
       window.blueprintData = {
         question: '',
@@ -898,31 +1010,14 @@
         budgetHigh: 15000
       };
 
-      // DOM elements
-      const askBtn = document.getElementById('askAiBtn');
-      const homeIssueInput = document.getElementById('homeIssueInput');
+      // DOM elements (legacy references removed - now using Smart Composer)
       const aiStatus = document.getElementById('aiStatus');
       const aiResponseSection = document.getElementById('aiResponseSection');
       const aiResponseContent = document.getElementById('aiResponseContent');
       const postProjectBtn = document.getElementById('postProjectBtn');
 
-      // Ask AI Handler - Blueprint Generation
-      if (askBtn) {
-        askBtn.addEventListener('click', async () => {
-          const question = homeIssueInput.value.trim();
-
-          if (question.length < 10) {
-            aiStatus.textContent = 'Please describe your issue in more detail (at least 10 characters)';
-            aiStatus.style.color = '#ef4444';
-            return;
-          }
-
-          // UPDATED: Store question and redirect to preview page (like index.html)
-          // This provides a consistent experience across authenticated and non-authenticated users
-          sessionStorage.setItem('pendingQuestion', question);
-          window.location.href = 'preview.html';
-        });
-      }
+      // NOTE: Ask AI Handler replaced by Smart Composer's startAnalysis() function above
+      // The new Smart Composer uses inline onclick handlers and supports photo uploads
 
       // Post Project Handler
       if (postProjectBtn) {
