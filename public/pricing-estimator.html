@@ -3,362 +3,469 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HomeProHub – Job Pricing & Estimator</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>HomeProHub – AI Project Estimator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="components/navigation.css">
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
   <style>
-    .estimator-container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
-    .header-card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .form-card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .estimate-result { margin-top: 24px; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #2563eb; }
-    .action-buttons { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    body { background: #f8fafc; }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.5s ease-out;
+    }
   </style>
 </head>
-<body>
+<body class="bg-slate-50">
   <!-- Navigation component will be injected here by navigation.js -->
 
-<div class="estimator-container">
-  <div class="header-card">
-    <h1 style="margin: 0 0 8px 0; font-size: 28px;">AI Job Pricing & Estimator</h1>
-    <p style="margin: 0; color: #6b7280;">Generate professional estimates powered by AI, tailored to your job location and specifications</p>
+  <!-- Hero Section -->
+  <div class="text-center py-12 px-4">
+    <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">AI Project Estimator</h1>
+    <p class="text-lg text-slate-500 max-w-2xl mx-auto">
+      Generate professional, location-adjusted cost breakdowns in seconds.
+    </p>
   </div>
 
-  <div class="form-card">
-    <form id="estimatorForm">
-      <div class="form-group">
-        <label for="jobDescription">Job Description</label>
-        <textarea id="jobDescription" rows="4" placeholder="Describe the work to be done (e.g., Full master bath remodel with custom tile, heated floors, glass shower enclosure)" required></textarea>
+  <!-- Main Card -->
+  <div class="max-w-3xl mx-auto px-4 pb-12">
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 space-y-6">
+      <!-- Project Description -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Project Description</label>
+        <textarea
+          id="job-description"
+          rows="3"
+          class="w-full rounded-xl border-slate-200 bg-slate-50 p-4 text-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-all shadow-inner resize-none"
+          placeholder="e.g., Master bathroom remodel, 10x12, new tile shower, vanity..."
+        ></textarea>
       </div>
 
-      <div class="form-group">
-        <label for="jobZip">Job ZIP Code <span style="color: #ef4444;">*</span></label>
-        <input id="jobZip" type="text" pattern="[0-9]{5}" maxlength="5" placeholder="12345" required />
+      <!-- Zip Code & Finish Quality -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Zip Code -->
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Zip Code</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-location-dot"></i>
+            </div>
+            <input
+              type="text"
+              id="zip-code"
+              pattern="[0-9]{5}"
+              maxlength="5"
+              class="pl-10 w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="12345"
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Finish Quality -->
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Finish Quality</label>
+          <select id="material-level" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500">
+            <option value="mid">Standard (Mid-Range)</option>
+            <option value="budget">Economy (Budget)</option>
+            <option value="high">Premium (High-End)</option>
+          </select>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="finishLevel">Material & Finish Level</label>
-        <select id="finishLevel">
-          <option value="budget">Budget / Builder Grade</option>
-          <option value="mid" selected>Mid-Range / Standard</option>
-          <option value="high">High-End / Custom</option>
-        </select>
+      <!-- Project Size -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Approx. Size / Scope</label>
+        <input
+          type="text"
+          id="project-size"
+          class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
+          placeholder="e.g. 150 sq ft, 8x10 room, 12 windows"
+        >
       </div>
 
-      <div class="form-group">
-        <label for="projectSize">Project Size / Units</label>
-        <input id="projectSize" type="text" placeholder="e.g., 150 sq ft, 8x10 bathroom, 300 linear ft of fence" />
+      <!-- Auto-populate banner (hidden by default) -->
+      <div id="auto-populate-banner" class="hidden bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+        <p class="text-sm text-blue-800">
+          <strong>📋 Job Info Loaded:</strong> <span id="loaded-job-title"></span>
+        </p>
       </div>
 
-      <button type="submit" class="btn-primary" id="generateBtn">Generate Estimate</button>
-      <div id="status" style="margin-top: 12px; font-size: 14px;"></div>
-    </form>
+      <!-- Status Message -->
+      <div id="status" class="text-sm text-center"></div>
 
-    <div id="resultSection" style="display: none;">
-      <div class="estimate-result">
-        <div id="estimateContent"></div>
+      <!-- Generate Button -->
+      <button
+        onclick="generateEstimate()"
+        id="generate-btn"
+        class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5"
+      >
+        Generate Professional Estimate
+      </button>
+    </div>
+
+    <!-- Results Section (Digital Invoice Style) -->
+    <div id="estimate-result" class="mt-12 hidden animate-fade-in-up">
+      <!-- Dark Header with Total -->
+      <div class="bg-slate-900 rounded-t-3xl p-8 text-white relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-8 opacity-10">
+          <i class="fa-solid fa-file-invoice-dollar text-9xl"></i>
+        </div>
+        <h2 class="text-xl font-medium text-blue-200 mb-1" id="result-title">Project Estimate</h2>
+        <div class="flex items-baseline gap-3 mt-4">
+          <span class="text-4xl md:text-5xl font-bold tracking-tight" id="result-low">$0</span>
+          <span class="text-slate-400 text-2xl">-</span>
+          <span class="text-4xl md:text-5xl font-bold tracking-tight" id="result-high">$0</span>
+        </div>
+        <p class="text-sm text-slate-400 mt-2">
+          Estimated Market Range based on Zip <span id="result-zip"></span>
+        </p>
       </div>
-      <div class="action-buttons">
-        <button class="btn-primary" id="downloadPdfBtn">Download PDF</button>
-        <button class="btn-secondary" id="emailBtn">Email Estimate</button>
-        <button class="btn-primary" id="attachToBidBtn" style="display: none; background: #10b981;">✅ Attach to Bid & Return</button>
+
+      <!-- White Body with Breakdown -->
+      <div class="bg-white border-x border-b border-slate-200 p-8 rounded-b-3xl shadow-xl">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 border-b pb-2">
+          Itemized Breakdown
+        </h3>
+
+        <!-- Line Items List -->
+        <div id="breakdown-list" class="space-y-1"></div>
+
+        <!-- Totals -->
+        <div class="mt-8 pt-6 border-t-2 border-slate-100">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-slate-500">Subtotal</span>
+            <span class="font-mono font-semibold" id="res-subtotal">-</span>
+          </div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-slate-500" id="overhead-label">Overhead & Profit (20%)</span>
+            <span class="font-mono font-semibold text-slate-400">Included</span>
+          </div>
+          <div class="flex justify-between items-center mb-6">
+            <span class="text-slate-500" id="contingency-label">Contingency (10%)</span>
+            <span class="font-mono font-semibold text-slate-400">Included</span>
+          </div>
+
+          <!-- Disclaimers -->
+          <div id="disclaimers-section" class="hidden bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg mb-6">
+            <p class="font-semibold text-sm text-amber-900 mb-2">Important Notes:</p>
+            <ul id="disclaimers-list" class="text-xs text-amber-800 space-y-1 pl-4 list-disc"></ul>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-4 mt-8">
+            <button
+              onclick="downloadPDF()"
+              class="flex-1 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition flex items-center justify-center gap-2"
+            >
+              <i class="fa-solid fa-file-pdf"></i> Download Official PDF
+            </button>
+            <button
+              onclick="emailEstimate()"
+              class="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition"
+            >
+              <i class="fa-regular fa-envelope"></i>
+            </button>
+          </div>
+
+          <!-- Attach to Bid Button (shown only when coming from job board) -->
+          <button
+            id="attach-to-bid-btn"
+            onclick="attachToBid()"
+            class="hidden w-full mt-4 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
+          >
+            <i class="fa-solid fa-check-circle"></i> Attach to Bid & Return
+          </button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-const STORAGE_KEYS = {
-  AUTH_TOKEN: 'homeprohub_auth_token',
-  USERNAME: 'homeprohub_username',
-  USER_ROLE: 'homeprohub_user_role',
-  CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
-};
+  <script>
+    let currentEstimate = null;
+    let profile = null;
+    let estimatorJobData = null;
 
-(function() {
-  const form = document.getElementById('estimatorForm');
-  const generateBtn = document.getElementById('generateBtn');
-  const status = document.getElementById('status');
-  const resultSection = document.getElementById('resultSection');
-  const estimateContent = document.getElementById('estimateContent');
-  const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-  const emailBtn = document.getElementById('emailBtn');
-  const attachToBidBtn = document.getElementById('attachToBidBtn');
-
-  let currentEstimate = null;
-  let profile = null;
-  let estimatorJobData = null; // Data from job board
-
-  async function checkAuth() {
-    try {
-      // Wait for authService to be ready
-      if (!window.authService || !window.authService.initialized) {
-        await new Promise(resolve => {
-          const checkInterval = setInterval(() => {
-            if (window.authService && window.authService.initialized) {
+    /**
+     * Wait for auth service to initialize
+     */
+    async function checkAuth() {
+      try {
+        // Wait for authService to be ready
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+            // Timeout after 5 seconds
+            setTimeout(() => {
               clearInterval(checkInterval);
               resolve();
-            }
-          }, 100);
+            }, 5000);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        const userProfile = await window.authService.getUserProfile();
+        if (!userProfile || userProfile.role !== 'contractor') {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        profile = userProfile;
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = "index.html";
+        return false;
+      }
+    }
+
+    /**
+     * Check for job data from contractor dashboard
+     */
+    function checkForEstimatorJob() {
+      const jobDataStr = sessionStorage.getItem('estimatorJob');
+      if (jobDataStr) {
+        try {
+          estimatorJobData = JSON.parse(jobDataStr);
+          autoPopulateFromJob(estimatorJobData);
+        } catch (e) {
+          console.error('Error parsing estimator job data:', e);
+        }
+      }
+    }
+
+    /**
+     * Auto-populate form from job data
+     */
+    function autoPopulateFromJob(jobData) {
+      if (jobData.jobDescription) {
+        document.getElementById('job-description').value = jobData.jobDescription;
+      }
+      if (jobData.zipCode) {
+        document.getElementById('zip-code').value = jobData.zipCode;
+      }
+      if (jobData.budgetLow && jobData.budgetHigh) {
+        const avgBudget = (jobData.budgetLow + jobData.budgetHigh) / 2;
+        document.getElementById('project-size').placeholder = `Budget range: $${jobData.budgetLow.toLocaleString()} - $${jobData.budgetHigh.toLocaleString()}`;
+      }
+
+      // Show info banner
+      const banner = document.getElementById('auto-populate-banner');
+      const jobTitle = document.getElementById('loaded-job-title');
+      jobTitle.textContent = jobData.jobTitle || 'Job from dashboard';
+      banner.classList.remove('hidden');
+    }
+
+    /**
+     * Generate Estimate (Main Function)
+     */
+    async function generateEstimate() {
+      const jobDesc = document.getElementById('job-description').value.trim();
+      const jobZip = document.getElementById('zip-code').value.trim();
+      const finishLevel = document.getElementById('material-level').value;
+      const projectSize = document.getElementById('project-size').value.trim();
+
+      const statusEl = document.getElementById('status');
+      const generateBtn = document.getElementById('generate-btn');
+
+      if (!jobDesc || !jobZip) {
+        statusEl.textContent = 'Please fill in all required fields';
+        statusEl.className = 'text-sm text-center text-red-500';
+        return;
+      }
+
+      if (!/^\d{5}$/.test(jobZip)) {
+        statusEl.textContent = 'Please enter a valid 5-digit ZIP code';
+        statusEl.className = 'text-sm text-center text-red-500';
+        return;
+      }
+
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Generating...';
+      statusEl.textContent = 'AI is analyzing your job...';
+      statusEl.className = 'text-sm text-center text-slate-500';
+      document.getElementById('estimate-result').classList.add('hidden');
+
+      try {
+        const response = await window.authService.authenticatedFetch('/contractor-ask', {
+          method: 'POST',
+          body: JSON.stringify({
+            question: jobDesc,
+            focus: 'pricing',
+            zip: jobZip,
+            scopeLevel: finishLevel,
+            size: projectSize
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to generate estimate');
+
+        const data = await response.json();
+        currentEstimate = data.answer;
+
+        displayEstimate(currentEstimate, jobZip);
+
+        statusEl.textContent = 'Estimate generated successfully!';
+        statusEl.className = 'text-sm text-center text-green-600';
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + (err.message || 'Failed to generate estimate');
+        statusEl.className = 'text-sm text-center text-red-500';
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Generate Professional Estimate';
+      }
+    }
+
+    /**
+     * Display Estimate in Digital Invoice Format
+     */
+    function displayEstimate(est, zip) {
+      if (est.error) {
+        document.getElementById('breakdown-list').innerHTML = `<p class="text-red-500">${est.error}</p>`;
+        document.getElementById('estimate-result').classList.remove('hidden');
+        return;
+      }
+
+      // Update header
+      document.getElementById('result-title').textContent = est.project_title || 'Project Estimate';
+      document.getElementById('result-low').textContent = '$' + (est.total_projected_low || 0).toLocaleString();
+      document.getElementById('result-high').textContent = '$' + (est.total_projected_high || 0).toLocaleString();
+      document.getElementById('result-zip').textContent = zip;
+
+      // Render line items
+      const breakdownList = document.getElementById('breakdown-list');
+      breakdownList.innerHTML = '';
+
+      if (est.line_items && est.line_items.length > 0) {
+        est.line_items.forEach((item, idx) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'flex justify-between items-start py-3 border-b border-slate-100';
+
+          let itemHTML = `
+            <div class="flex-1">
+              <div class="font-medium text-slate-900">${item.item}</div>
+          `;
+
+          if (item.notes) {
+            itemHTML += `<div class="text-xs text-slate-500 mt-1">${item.notes}</div>`;
+          }
+
+          // Local insight
+          if (item.local_insight && item.local_insight.message) {
+            itemHTML += `
+              <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+                <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+              </div>
+            `;
+          }
+
+          itemHTML += `</div>`;
+          itemHTML += `<div class="text-right font-mono text-sm text-slate-700 whitespace-nowrap ml-4">$${(item.low || 0).toLocaleString()} - $${(item.high || 0).toLocaleString()}</div>`;
+
+          itemDiv.innerHTML = itemHTML;
+          breakdownList.appendChild(itemDiv);
         });
       }
 
-      const user = await window.authService.getCurrentUser();
-      if (!user) {
-        window.location.href = "index.html";
-        return false;
-      }
+      // Update totals
+      document.getElementById('res-subtotal').textContent = `$${(est.subtotal_low || 0).toLocaleString()} - $${(est.subtotal_high || 0).toLocaleString()}`;
+      document.getElementById('overhead-label').textContent = `Overhead & Profit (${est.overhead_profit_percent || 20}%)`;
+      document.getElementById('contingency-label').textContent = `Contingency (${est.contingency_percent || 10}%)`;
 
-      const userProfile = await window.authService.getUserProfile();
-      if (!userProfile || userProfile.role !== 'contractor') {
-        window.location.href = "index.html";
-        return false;
-      }
-
-      profile = userProfile;
-      return true;
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      window.location.href = "index.html";
-      return false;
-    }
-  }
-
-  // Check for job data from contractor dashboard
-  function checkForEstimatorJob() {
-    const jobDataStr = sessionStorage.getItem('estimatorJob');
-    if (jobDataStr) {
-      try {
-        estimatorJobData = JSON.parse(jobDataStr);
-        autoPopulateFromJob(estimatorJobData);
-      } catch (e) {
-        console.error('Error parsing estimator job data:', e);
-      }
-    }
-  }
-
-  // Auto-populate form from job data
-  function autoPopulateFromJob(jobData) {
-    if (jobData.jobDescription) {
-      document.getElementById('jobDescription').value = jobData.jobDescription;
-    }
-    if (jobData.zipCode) {
-      document.getElementById('jobZip').value = jobData.zipCode;
-    }
-    // Try to extract project size from description or use budget as hint
-    if (jobData.budgetLow && jobData.budgetHigh) {
-      const avgBudget = (jobData.budgetLow + jobData.budgetHigh) / 2;
-      // Add a helpful hint in the project size field
-      document.getElementById('projectSize').placeholder = `Budget range: $${jobData.budgetLow.toLocaleString()} - $${jobData.budgetHigh.toLocaleString()}`;
-    }
-
-    // Show info banner if we auto-populated
-    const banner = document.createElement('div');
-    banner.style.cssText = 'background: #dbeafe; border-left: 4px solid #2563eb; padding: 12px; margin-bottom: 16px; border-radius: 4px;';
-    banner.innerHTML = `
-      <p style="margin: 0; font-size: 14px; color: #1e40af;">
-        <strong>📋 Job Info Loaded:</strong> ${jobData.jobTitle || 'Job from dashboard'}
-      </p>
-    `;
-    document.querySelector('.form-card').insertBefore(banner, document.getElementById('estimatorForm'));
-  }
-
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const jobDesc = document.getElementById('jobDescription').value.trim();
-    const jobZip = document.getElementById('jobZip').value.trim();
-    const finishLevel = document.getElementById('finishLevel').value;
-    const projectSize = document.getElementById('projectSize').value.trim();
-
-    if (!jobDesc || !jobZip) {
-      status.textContent = 'Please fill in all required fields';
-      status.style.color = '#ef4444';
-      return;
-    }
-
-    if (!/^\d{5}$/.test(jobZip)) {
-      status.textContent = 'Please enter a valid 5-digit ZIP code';
-      status.style.color = '#ef4444';
-      return;
-    }
-
-    generateBtn.disabled = true;
-    generateBtn.textContent = 'Generating...';
-    status.textContent = 'AI is analyzing your job...';
-    status.style.color = '#6b7280';
-    resultSection.style.display = 'none';
-
-    try {
-      const response = await window.authService.authenticatedFetch('/contractor-ask', {
-        method: 'POST',
-        body: JSON.stringify({
-          question: jobDesc,
-          focus: 'pricing',
-          zip: jobZip,
-          scopeLevel: finishLevel,
-          size: projectSize
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to generate estimate');
-
-      const data = await response.json();
-      currentEstimate = data.answer;
-
-      if (data.format === 'json') {
-        displayEstimate(currentEstimate);
+      // Disclaimers
+      if (est.disclaimers && est.disclaimers.length > 0) {
+        const disclaimersList = document.getElementById('disclaimers-list');
+        disclaimersList.innerHTML = est.disclaimers.map(d => `<li>${d}</li>`).join('');
+        document.getElementById('disclaimers-section').classList.remove('hidden');
       } else {
-        estimateContent.textContent = data.answer;
-        resultSection.style.display = 'block';
+        document.getElementById('disclaimers-section').classList.add('hidden');
       }
 
-      status.textContent = 'Estimate generated successfully!';
-      status.style.color = '#10b981';
-    } catch (err) {
-      status.textContent = 'Error: ' + (err.message || 'Failed to generate estimate');
-      status.style.color = '#ef4444';
-    } finally {
-      generateBtn.disabled = false;
-      generateBtn.textContent = 'Generate Estimate';
-    }
-  });
+      // Show "Attach to Bid" button if we came from job board
+      if (estimatorJobData && estimatorJobData.returnToBid) {
+        document.getElementById('attach-to-bid-btn').classList.remove('hidden');
+      }
 
-  function displayEstimate(est) {
-    if (est.error) {
-      estimateContent.innerHTML = '<p style="color: #ef4444;">' + est.error + '</p>';
-      resultSection.style.display = 'block';
-      return;
+      // Show result section
+      document.getElementById('estimate-result').classList.remove('hidden');
     }
 
-    let html = '<div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 20px;">';
-    html += '<h3 style="margin:0 0 8px 0; color: #1f2937; font-size: 22px;">' + (est.project_title || 'Project Estimate') + '</h3>';
-    html += '<div style="font-size: 28px; font-weight: 700; color: #2563eb; margin-top: 12px;">$' + (est.total_projected_low || 0).toLocaleString() + ' - $' + (est.total_projected_high || 0).toLocaleString() + '</div>';
-    html += '<p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">Estimated Total Range</p>';
-    html += '</div>';
+    /**
+     * Download PDF
+     */
+    function downloadPDF() {
+      if (!currentEstimate) return;
 
-    if (est.line_items && est.line_items.length > 0) {
-      html += '<h4 style="margin: 0 0 12px 0; color: #374151;">Detailed Breakdown</h4>';
-      html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">';
-      html += '<thead><tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">';
-      html += '<th style="text-align: left; padding: 10px; font-size: 13px; color: #6b7280;">Item</th>';
-      html += '<th style="text-align: right; padding: 10px; font-size: 13px; color: #6b7280;">Low - High</th>';
-      html += '</tr></thead><tbody>';
+      const win = window.open('', '', 'height=900,width=800');
+      if (!win) {
+        alert('Please allow pop-ups to download PDF');
+        return;
+      }
 
-      est.line_items.forEach((item, idx) => {
-        const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
-        html += '<tr style="background: ' + bg + '; border-bottom: 1px solid #e5e7eb;">';
-        html += '<td style="padding: 12px;"><strong>' + item.item + '</strong>';
+      const companyName = profile && profile.companyName ? profile.companyName : 'HomeProHub Contractor';
+      const license = profile && profile.licenseNumber ? profile.licenseNumber : 'License Pending';
+      const address = profile && profile.city && profile.state ? `${profile.city}, ${profile.state} ${profile.zipCode || ''}` : '';
 
-        // Add lightbulb icon if local_insight exists
-        if (item.local_insight && item.local_insight.message) {
-          html += ' <span class="insight-icon" style="cursor: help; font-size: 16px; color: #f59e0b;" title="' + item.local_insight.message.replace(/"/g, '&quot;') + '">💡</span>';
-        }
+      let lineItemsHTML = '';
+      if (currentEstimate.line_items && currentEstimate.line_items.length > 0) {
+        currentEstimate.line_items.forEach((item, idx) => {
+          const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+          lineItemsHTML += `<tr style="background:${bg};">`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;">${item.item}`;
+          if (item.notes) lineItemsHTML += `<br><span style="font-size:11px;color:#6b7280;">${item.notes}</span>`;
+          if (item.local_insight && item.local_insight.message) {
+            lineItemsHTML += `<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">💡 ${item.local_insight.message}</div>`;
+          }
+          lineItemsHTML += `</td>`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.low || 0).toLocaleString()}</td>`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.high || 0).toLocaleString()}</td>`;
+          lineItemsHTML += `</tr>`;
+        });
+      }
 
-        if (item.notes) html += '<br><span style="font-size: 12px; color: #6b7280;">' + item.notes + '</span>';
+      let disclaimersHTML = '';
+      if (currentEstimate.disclaimers && currentEstimate.disclaimers.length > 0) {
+        disclaimersHTML = `<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin-top:20px;border-radius:8px;"><h4 style="margin:0 0 8px 0;color:#92400e;font-size:14px;">Important Notes</h4><ul style="margin:0;padding-left:20px;font-size:12px;color:#78350f;">`;
+        currentEstimate.disclaimers.forEach(d => {
+          disclaimersHTML += `<li style="margin:4px 0;">${d}</li>`;
+        });
+        disclaimersHTML += `</ul></div>`;
+      }
 
-        // Display local insight message in a subtle box below the item
-        if (item.local_insight && item.local_insight.message) {
-          html += '<br><div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px 10px; margin-top: 8px; border-radius: 4px; font-size: 12px; color: #92400e; font-style: italic;">';
-          html += '💡 ' + item.local_insight.message;
-          html += '</div>';
-        }
-
-        html += '</td>';
-        html += '<td style="padding: 12px; text-align: right; white-space: nowrap;">$' + (item.low || 0).toLocaleString() + ' - $' + (item.high || 0).toLocaleString() + '</td>';
-        html += '</tr>';
-      });
-
-      html += '<tr style="background: #f3f4f6; font-weight: 600; border-top: 2px solid #e5e7eb;">';
-      html += '<td style="padding: 12px;">Subtotal (Labor & Materials)</td>';
-      html += '<td style="padding: 12px; text-align: right;">$' + (est.subtotal_low || 0).toLocaleString() + ' - $' + (est.subtotal_high || 0).toLocaleString() + '</td>';
-      html += '</tr>';
-
-      html += '<tr style="background: #ffffff;"><td style="padding: 8px; padding-left: 24px; font-size: 13px; color: #6b7280;">Overhead & Profit (' + (est.overhead_profit_percent || 20) + '%)</td><td></td></tr>';
-      html += '<tr style="background: #ffffff;"><td style="padding: 8px; padding-left: 24px; font-size: 13px; color: #6b7280;">Contingency (' + (est.contingency_percent || 10) + '%)</td><td></td></tr>';
-
-      html += '<tr style="background: #dbeafe; font-weight: 700; font-size: 16px; border-top: 2px solid #2563eb;">';
-      html += '<td style="padding: 14px;">TOTAL PROJECT ESTIMATE</td>';
-      html += '<td style="padding: 14px; text-align: right; color: #2563eb;">$' + (est.total_projected_low || 0).toLocaleString() + ' - $' + (est.total_projected_high || 0).toLocaleString() + '</td>';
-      html += '</tr>';
-      html += '</tbody></table>';
-    }
-
-    if (est.disclaimers && est.disclaimers.length > 0) {
-      html += '<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 20px; border-radius: 4px;">';
-      html += '<p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: #92400e;">Important Notes:</p>';
-      html += '<ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #78350f;">';
-      est.disclaimers.forEach(d => {
-        html += '<li style="margin: 4px 0;">' + d + '</li>';
-      });
-      html += '</ul></div>';
-    }
-
-    estimateContent.innerHTML = html;
-    resultSection.style.display = 'block';
-
-    // Show "Attach to Bid" button if we came from job board
-    if (estimatorJobData && estimatorJobData.returnToBid) {
-      attachToBidBtn.style.display = 'inline-block';
-    }
-  }
-
-  downloadPdfBtn.addEventListener('click', function() {
-    if (!currentEstimate) return;
-
-    const win = window.open('', '', 'height=900,width=800');
-    if (!win) {
-      alert('Please allow pop-ups to download PDF');
-      return;
-    }
-
-    const companyName = profile && profile.companyName ? profile.companyName : 'HomeProHub Contractor';
-    const license = profile && profile.licenseNumber ? profile.licenseNumber : 'License Pending';
-    const address = profile && profile.city && profile.state ? `${profile.city}, ${profile.state} ${profile.zipCode || ''}` : '';
-
-    let lineItemsHtml = '';
-    if (currentEstimate.line_items && currentEstimate.line_items.length > 0) {
-      currentEstimate.line_items.forEach((item, idx) => {
-        const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
-        lineItemsHtml += '<tr style="background:' + bg + ';">';
-        lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;">' + item.item;
-        if (item.notes) lineItemsHtml += '<br><span style="font-size:11px;color:#6b7280;">' + item.notes + '</span>';
-
-        // Include local insights in PDF
-        if (item.local_insight && item.local_insight.message) {
-          lineItemsHtml += '<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">';
-          lineItemsHtml += '💡 ' + item.local_insight.message;
-          lineItemsHtml += '</div>';
-        }
-
-        lineItemsHtml += '</td>';
-        lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$' + (item.low || 0).toLocaleString() + '</td>';
-        lineItemsHtml += '<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$' + (item.high || 0).toLocaleString() + '</td>';
-        lineItemsHtml += '</tr>';
-      });
-    }
-
-    let disclaimersHtml = '';
-    if (currentEstimate.disclaimers && currentEstimate.disclaimers.length > 0) {
-      disclaimersHtml = '<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin-top:20px;"><h4 style="margin:0 0 8px 0;color:#92400e;font-size:14px;">Important Notes</h4><ul style="margin:0;padding-left:20px;font-size:12px;color:#78350f;">';
-      currentEstimate.disclaimers.forEach(d => {
-        disclaimersHtml += '<li style="margin:4px 0;">' + d + '</li>';
-      });
-      disclaimersHtml += '</ul></div>';
-    }
-
-    const html = `<!DOCTYPE html>
+      const html = `<!DOCTYPE html>
 <html><head>
   <title>${currentEstimate.project_title || 'Project Estimate'}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; color: #1f2937; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; color: #1f2937; }
     .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
     .header-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
     .company-name { font-size: 24px; font-weight: 700; color: #2563eb; }
     .project-title { font-size: 28px; font-weight: 700; margin: 20px 0 10px 0; }
-    .total-box { background: #dbeafe; border: 2px solid #2563eb; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center; }
+    .total-box { background: #dbeafe; border: 2px solid #2563eb; border-radius: 12px; padding: 16px; margin: 20px 0; text-align: center; }
     .total-label { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
     .total-amount { font-size: 32px; font-weight: 700; color: #2563eb; }
     table { width: 100%; border-collapse: collapse; margin: 20px 0; }
@@ -373,7 +480,7 @@ const STORAGE_KEYS = {
       <div>
         <div class="company-name">${companyName}</div>
         <div style="font-size:13px;color:#6b7280;margin-top:4px;">License: ${license}</div>
-        ${address ? '<div style="font-size:13px;color:#6b7280;">' + address + '</div>' : ''}
+        ${address ? `<div style="font-size:13px;color:#6b7280;">${address}</div>` : ''}
       </div>
       <div style="text-align:right;">
         <div style="font-size:13px;color:#6b7280;">Date: ${new Date().toLocaleDateString()}</div>
@@ -399,7 +506,7 @@ const STORAGE_KEYS = {
       </tr>
     </thead>
     <tbody>
-      ${lineItemsHtml}
+      ${lineItemsHTML}
       <tr class="subtotal-row">
         <td style="padding:12px;">Subtotal (Labor & Materials)</td>
         <td style="padding:12px;text-align:right;">$${(currentEstimate.subtotal_low || 0).toLocaleString()}</td>
@@ -421,66 +528,65 @@ const STORAGE_KEYS = {
     </tbody>
   </table>
 
-  ${disclaimersHtml}
+  ${disclaimersHTML}
 
   <div style="margin-top:40px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
     This estimate is preliminary and subject to change based on site conditions and final scope. Not a binding contract.
   </div>
 </body></html>`;
 
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => win.print(), 250);
-  });
-
-  emailBtn.addEventListener('click', function() {
-    if (!currentEstimate) return;
-
-    const subject = 'Estimate: ' + (currentEstimate.project_title || 'Your Project');
-    const body = 'Please see attached estimate.\n\nTotal Range: $' + (currentEstimate.total_projected_low || 0).toLocaleString() + ' - $' + (currentEstimate.total_projected_high || 0).toLocaleString() + '\n\nThis is a preliminary estimate. A formal quote will require a site visit.';
-
-    window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  });
-
-  // Attach estimate to bid and return to dashboard
-  attachToBidBtn.addEventListener('click', function() {
-    if (!currentEstimate || !estimatorJobData) return;
-
-    // Prepare estimate data to attach to bid
-    const estimateData = {
-      jobId: estimatorJobData.jobId,
-      total_low: currentEstimate.total_projected_low || 0,
-      total_high: currentEstimate.total_projected_high || 0,
-      project_title: currentEstimate.project_title || 'Estimate',
-      line_items: currentEstimate.line_items || [],
-      subtotal_low: currentEstimate.subtotal_low || 0,
-      subtotal_high: currentEstimate.subtotal_high || 0,
-      overhead_profit_percent: currentEstimate.overhead_profit_percent || 20,
-      contingency_percent: currentEstimate.contingency_percent || 10,
-      timestamp: new Date().toISOString()
-    };
-
-    // Store estimate data for the specific job
-    sessionStorage.setItem('attachedEstimate_' + estimatorJobData.jobId, JSON.stringify(estimateData));
-
-    // Clear the estimator job data
-    sessionStorage.removeItem('estimatorJob');
-
-    // Redirect back to contractor dashboard
-    window.location.href = 'contractor-dashboard.html';
-  });
-
-  // Initialize with async auth check
-  checkAuth().then(isAuthenticated => {
-    if (isAuthenticated) {
-      // Check for job data from contractor dashboard and auto-populate
-      checkForEstimatorJob();
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => win.print(), 250);
     }
-  });
-})();
-</script>
 
-<!-- Unified Navigation Component -->
-<script src="components/navigation.js"></script>
+    /**
+     * Email Estimate
+     */
+    function emailEstimate() {
+      if (!currentEstimate) return;
+
+      const subject = 'Estimate: ' + (currentEstimate.project_title || 'Your Project');
+      const body = `Please see attached estimate.\n\nTotal Range: $${(currentEstimate.total_projected_low || 0).toLocaleString()} - $${(currentEstimate.total_projected_high || 0).toLocaleString()}\n\nThis is a preliminary estimate. A formal quote will require a site visit.`;
+
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    /**
+     * Attach estimate to bid and return to dashboard
+     */
+    function attachToBid() {
+      if (!currentEstimate || !estimatorJobData) return;
+
+      const estimateData = {
+        jobId: estimatorJobData.jobId,
+        total_low: currentEstimate.total_projected_low || 0,
+        total_high: currentEstimate.total_projected_high || 0,
+        project_title: currentEstimate.project_title || 'Estimate',
+        line_items: currentEstimate.line_items || [],
+        subtotal_low: currentEstimate.subtotal_low || 0,
+        subtotal_high: currentEstimate.subtotal_high || 0,
+        overhead_profit_percent: currentEstimate.overhead_profit_percent || 20,
+        contingency_percent: currentEstimate.contingency_percent || 10,
+        timestamp: new Date().toISOString()
+      };
+
+      sessionStorage.setItem('attachedEstimate_' + estimatorJobData.jobId, JSON.stringify(estimateData));
+      sessionStorage.removeItem('estimatorJob');
+      window.location.href = 'contractor-dashboard.html';
+    }
+
+    /**
+     * Initialize
+     */
+    checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
+        checkForEstimatorJob();
+      }
+    });
+  </script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
 </body>
 </html>

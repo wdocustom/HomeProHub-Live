@@ -906,9 +906,33 @@
       }
     }
 
-    // Load pending reviews
+    // Load pending reviews (with auth check)
     async function loadPendingReviews() {
       try {
+        // Wait for authService to be ready
+        if (!window.authService || !window.authService.initialized) {
+          console.log('Auth not ready, waiting...');
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+            // Timeout after 5 seconds
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              resolve();
+            }, 5000);
+          });
+        }
+
+        // Check if still not ready
+        if (!window.authService || !window.authService.initialized) {
+          console.warn('Auth service not available after timeout');
+          return;
+        }
+
         const response = await window.authService.authenticatedFetch('/api/contractor/pending-reviews');
         if (!response.ok) {
           console.error('Failed to load pending reviews');
