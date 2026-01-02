@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Plan Takeoffs – HomeProHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #f8fafc;
+      margin: 0;
+      padding: 0;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    /* Ensure navigation emojis render in color */
+    .nav-icon,
+    .brand-icon,
+    .notification-icon {
+      font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
+      filter: none;
+      -webkit-filter: none;
+    }
+
+    /* Progress animation */
+    @keyframes progress {
+      0% { width: 10%; }
+      50% { width: 70%; }
+      100% { width: 90%; }
+    }
+
+    /* Fade in up animation */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Drop zone drag effects */
+    .drop-zone-active {
+      border-color: #3b82f6 !important;
+      background-color: rgba(59, 130, 246, 0.05) !important;
+    }
+  </style>
+  <link rel="stylesheet" href="components/footer.css" />
+</head>
+<body class="bg-slate-50">
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <main>
+    <!-- TASK 2: Upload Scanner Hero -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+      <!-- Header -->
+      <div class="text-center mb-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-100 shadow-sm mb-4">
+          <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+          <span class="text-xs font-bold uppercase tracking-wide">Beta Access</span>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+          AI Plan Takeoffs
+        </h1>
+        <p class="text-xl text-slate-500 max-w-2xl mx-auto">
+          Upload your blueprint PDF or image. We'll identify walls, fixtures, and square footage automatically.
+        </p>
+      </div>
+
+      <!-- Drop Zone -->
+      <div id="drop-zone" class="relative group cursor-pointer">
+        <!-- Glow effect -->
+        <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+
+        <!-- Main drop zone -->
+        <div class="relative bg-white rounded-[2rem] shadow-2xl border-2 border-dashed border-slate-200 p-12 text-center transition-all group-hover:border-blue-500 group-hover:bg-blue-50/10">
+
+          <!-- Icon -->
+          <div class="mb-6">
+            <div class="mx-auto h-20 w-20 bg-blue-50 rounded-3xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-cloud-arrow-up text-4xl"></i>
+            </div>
+          </div>
+
+          <!-- Text -->
+          <h3 class="text-2xl font-bold text-slate-900 mb-2">Drop Blueprints Here</h3>
+          <p class="text-slate-500 mb-8">Support for .PDF, .PNG, .JPG (Max 50MB)</p>
+
+          <!-- Button -->
+          <button onclick="document.getElementById('plan-upload').click()" class="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-blue-600 transition-colors">
+            Browse Files
+          </button>
+          <input type="file" id="plan-upload" class="hidden" accept=".pdf,image/*" onchange="simulateTakeoff()">
+        </div>
+      </div>
+
+      <!-- Processing State -->
+      <div id="processing-state" class="hidden mt-12 max-w-3xl mx-auto text-center">
+        <div class="w-full bg-slate-200 rounded-full h-2 mb-4 overflow-hidden">
+          <div class="bg-blue-600 h-2 rounded-full animate-[progress_2s_ease-in-out_infinite]" style="width: 50%"></div>
+        </div>
+        <p class="text-slate-900 font-bold animate-pulse">AI is measuring walls & calculating materials...</p>
+      </div>
+
+    </div>
+
+    <!-- TASK 3: Material Breakdown Results -->
+    <div id="takeoff-results" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 animate-fade-in-up">
+
+      <!-- Header with Actions -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h2 class="text-2xl font-bold text-slate-900">Material List</h2>
+        <div class="flex gap-3">
+          <button class="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+            <i class="fa-solid fa-download"></i> Export CSV
+          </button>
+          <button onclick="window.location.href='/pricing-estimator.html'" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-colors">
+            Send to Estimator <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Material Table -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200">
+                <th class="p-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Item / Material</th>
+                <th class="p-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
+                <th class="p-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Quantity</th>
+                <th class="p-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Unit</th>
+                <th class="p-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Waste Factor</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm">
+              <!-- Row 1 -->
+              <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="p-6 font-bold text-slate-900">2x4 Studs (8ft)</td>
+                <td class="p-6 text-slate-500"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">Framing</span></td>
+                <td class="p-6 font-mono font-bold text-blue-600">342</td>
+                <td class="p-6 text-slate-500">Count</td>
+                <td class="p-6 text-slate-400">10%</td>
+              </tr>
+              <!-- Row 2 -->
+              <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="p-6 font-bold text-slate-900">Drywall (4x8)</td>
+                <td class="p-6 text-slate-500"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">Finishes</span></td>
+                <td class="p-6 font-mono font-bold text-blue-600">4,200</td>
+                <td class="p-6 text-slate-500">Sq Ft</td>
+                <td class="p-6 text-slate-400">15%</td>
+              </tr>
+              <!-- Row 3 -->
+              <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="p-6 font-bold text-slate-900">R-13 Insulation</td>
+                <td class="p-6 text-slate-500"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">Insulation</span></td>
+                <td class="p-6 font-mono font-bold text-blue-600">12</td>
+                <td class="p-6 text-slate-500">Rolls</td>
+                <td class="p-6 text-slate-400">5%</td>
+              </tr>
+              <!-- Row 4 -->
+              <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="p-6 font-bold text-slate-900">1/2" Plywood Sheets</td>
+                <td class="p-6 text-slate-500"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">Structural</span></td>
+                <td class="p-6 font-mono font-bold text-blue-600">56</td>
+                <td class="p-6 text-slate-500">Sheets</td>
+                <td class="p-6 text-slate-400">8%</td>
+              </tr>
+              <!-- Row 5 -->
+              <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="p-6 font-bold text-slate-900">16d Framing Nails</td>
+                <td class="p-6 text-slate-500"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">Fasteners</span></td>
+                <td class="p-6 font-mono font-bold text-blue-600">8</td>
+                <td class="p-6 text-slate-500">Lbs</td>
+                <td class="p-6 text-slate-400">5%</td>
+              </tr>
+              <!-- Row 6 -->
+              <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="p-6 font-bold text-slate-900">Joint Compound</td>
+                <td class="p-6 text-slate-500"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">Finishes</span></td>
+                <td class="p-6 font-mono font-bold text-blue-600">24</td>
+                <td class="p-6 text-slate-500">Gallons</td>
+                <td class="p-6 text-slate-400">10%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-6 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <p class="text-xs text-slate-400">AI Confidence: 94%</p>
+          <button class="text-blue-600 font-bold text-sm hover:underline">Edit Line Items</button>
+        </div>
+      </div>
+
+      <!-- Summary Card -->
+      <div class="mt-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 shadow-xl text-white">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h3 class="text-2xl font-bold mb-2">Ready to Price This Job?</h3>
+            <p class="text-blue-100">Export this material list to the AI Pricing Estimator to get location-adjusted costs.</p>
+          </div>
+          <button onclick="window.location.href='/pricing-estimator.html'" class="px-8 py-4 bg-white text-blue-600 font-bold rounded-xl shadow-lg hover:scale-105 transition-transform flex items-center gap-2 whitespace-nowrap">
+            Open Estimator <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- TASK 4: Simulation Logic -->
+  <script>
+    function simulateTakeoff() {
+      const dropZone = document.getElementById('drop-zone');
+      const processing = document.getElementById('processing-state');
+      const results = document.getElementById('takeoff-results');
+
+      // 1. Hide Upload, Show Loading
+      dropZone.classList.add('hidden');
+      processing.classList.remove('hidden');
+
+      // 2. Wait 3 seconds (Simulate AI Vision)
+      setTimeout(() => {
+        processing.classList.add('hidden');
+        results.classList.remove('hidden');
+        // Scroll to results
+        results.scrollIntoView({ behavior: 'smooth' });
+      }, 3000);
+    }
+
+    // Drag and Drop functionality
+    const dropZone = document.getElementById('drop-zone');
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+      document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // Highlight drop zone when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+      dropZone.querySelector('div.relative').classList.add('drop-zone-active');
+    }
+
+    function unhighlight(e) {
+      dropZone.querySelector('div.relative').classList.remove('drop-zone-active');
+    }
+
+    // Handle dropped files
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+
+      if (files.length > 0) {
+        // Simulate file upload
+        simulateTakeoff();
+      }
+    }
+  </script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
+
+  <!-- Global Footer -->
+  <script src="components/footer.js"></script>
+</body>
+</html>
