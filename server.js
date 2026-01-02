@@ -1306,14 +1306,11 @@ app.post("/contractor-ask", async (req, res) => {
           title: "Master Plumber",
           prompt: "You are a licensed Master Plumber. Price jobs based on Fixture Units, pipe material costs (Copper/PEX/Galvanized), venting requirements, and slope calculations. Account for slab work if needed. Focus on fixture count, pipe runs, and labor hours."
         },
-        painter: {
-          title: "Professional Painter",
-          prompt: "You are an experienced professional painter. Price jobs based on wall surface area (sq ft), ceiling work, trim/door painting, number of coats, and prep work. Consider paint grade (budget/mid/premium) and surface condition."
-        },
         hvac: {
           title: "HVAC Technician",
           prompt: "You are a licensed HVAC technician. Price jobs based on system tonnage, equipment type (AC/Heat Pump/Furnace/Mini-Split), ductwork status, and installation complexity. Consider energy efficiency ratings and local climate requirements."
         }
+        // Painter removed - licensed trades only on platform
       };
 
       const selectedTrade = trade_persona && tradePersonas[trade_persona] ? trade_persona : 'gc';

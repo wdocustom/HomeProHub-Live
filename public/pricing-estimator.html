@@ -51,7 +51,6 @@
           <option value="gc">General Contractor / Remodeler</option>
           <option value="electrician">Electrician</option>
           <option value="plumber">Plumber</option>
-          <option value="painter">Painter</option>
           <option value="hvac">HVAC Tech</option>
         </select>
       </div>
@@ -222,16 +221,12 @@
         { id: 'pipe_type', label: 'Existing Pipe Material', type: 'select', options: ['Copper', 'PEX', 'Galvanized (Old)', 'Unknown'] },
         { id: 'slab', label: 'Concrete Slab Work?', type: 'select', options: ['No', 'Yes (Jackhammer required)'] }
       ],
-      painter: [
-        { id: 'wall_sqft', label: 'Wall Surface Area (Sq Ft)', placeholder: 'e.g. 800', type: 'text' },
-        { id: 'ceilings', label: 'Include Ceilings?', type: 'select', options: ['No', 'Yes'] },
-        { id: 'trim', label: 'Include Trim/Doors?', type: 'select', options: ['No', 'Yes'] }
-      ],
       hvac: [
         { id: 'tonnage', label: 'System Tonnage', type: 'select', options: ['1.5 Ton', '2 Ton', '2.5 Ton', '3 Ton', '3.5 Ton', '4 Ton', '5 Ton'] },
         { id: 'system_type', label: 'System Type', type: 'select', options: ['Central AC', 'Heat Pump', 'Furnace', 'Mini-Split', 'Package Unit'] },
         { id: 'ductwork', label: 'Ductwork Status', type: 'select', options: ['Existing (Good)', 'Repair Needed', 'New Installation Required'] }
       ]
+      // Painter removed - licensed trades only
     };
 
     /**
