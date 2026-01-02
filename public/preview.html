@@ -15,7 +15,7 @@
     }
 
     body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #f8fafc; /* bg-slate-50 */
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
       margin: 0;
       padding: 20px;
@@ -29,16 +29,40 @@
     }
 
     /* ============================================
-       1. RISK GAUGE - STATUS CENTER
+       GLOBAL CARD STYLE - "Soft Lift"
        ============================================ */
-    .status-center {
+    .soft-lift-card {
       background: white;
       border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-      padding: 48px;
-      margin-bottom: 32px;
-      text-align: center;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+      border: 1px solid #f1f5f9; /* border-slate-100 */
+      padding: 32px;
+      margin-bottom: 24px;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ============================================
+       TASK 1: RISK HERO - FLOATING STATUS CARD
+       ============================================ */
+    .risk-hero {
       position: relative;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
+      padding: 48px 40px;
+      text-align: center;
+      margin-bottom: 32px;
       overflow: hidden;
       animation: slideDown 0.5s ease-out;
     }
@@ -54,230 +78,191 @@
       }
     }
 
-    .risk-gauge {
-      width: 200px;
-      height: 200px;
-      margin: 0 auto 24px;
-      position: relative;
+    .risk-hero.critical {
+      border-top: 8px solid #ef4444; /* red-500 */
     }
 
-    .gauge-ring {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: conic-gradient(
-        from 180deg,
-        #10b981 0deg 120deg,
-        #f59e0b 120deg 240deg,
-        #dc2626 240deg 360deg
-      );
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      animation: gaugeRotate 1s ease-out;
+    .risk-hero.medium {
+      border-top: 8px solid #f59e0b; /* amber-500 */
     }
 
-    @keyframes gaugeRotate {
-      from {
-        transform: rotate(-180deg);
-      }
-      to {
-        transform: rotate(0deg);
-      }
+    .risk-hero.low {
+      border-top: 8px solid #10b981; /* green-500 */
     }
 
-    .gauge-inner {
-      width: 160px;
-      height: 160px;
-      background: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 64px;
-    }
-
-    .risk-indicator {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 4px;
-      height: 90px;
-      background: #111827;
-      transform-origin: bottom center;
-      border-radius: 2px;
-      margin-left: -2px;
-      margin-top: -90px;
-      transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    }
-
-    .risk-indicator::after {
-      content: '';
+    .risk-hero-watermark {
       position: absolute;
       top: 0;
-      left: 50%;
-      width: 12px;
-      height: 12px;
-      background: #111827;
-      border-radius: 50%;
-      transform: translateX(-50%);
-    }
-
-    .risk-indicator.low {
-      transform: rotate(-60deg);
-    }
-
-    .risk-indicator.medium {
-      transform: rotate(0deg);
-    }
-
-    .risk-indicator.high {
-      transform: rotate(60deg);
-    }
-
-    .status-label {
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #6b7280;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .status-title {
-      font-size: 32px;
-      font-weight: 900;
-      margin: 0 0 16px 0;
-      letter-spacing: -0.02em;
-    }
-
-    .status-title.high {
-      color: #dc2626;
-    }
-
-    .status-title.medium {
-      color: #f59e0b;
-    }
-
-    .status-title.low {
-      color: #10b981;
-    }
-
-    .status-subtitle {
-      font-size: 16px;
-      color: #6b7280;
-      line-height: 1.6;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    /* ============================================
-       SANCTUARY CARDS
-       ============================================ */
-    .sanctuary-card {
-      background: white;
-      border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1);
-      margin-bottom: 32px;
-      overflow: hidden;
-      animation: fadeIn 0.6s ease-out;
-      position: relative;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .card-header {
-      padding: 32px 40px;
-      border-bottom: 2px solid #e5e7eb;
-      position: relative;
-    }
-
-    /* 5. FIX ICON REPETITION - Single watermark icon */
-    .card-header::before {
-      content: attr(data-icon);
-      position: absolute;
-      top: 50%;
-      right: 40px;
-      transform: translateY(-50%);
-      font-size: 80px;
-      opacity: 0.08;
+      right: 0;
+      padding: 40px;
+      font-size: 144px;
+      opacity: 0.05;
       pointer-events: none;
     }
 
+    .severity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 20px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+    }
+
+    .severity-badge.critical {
+      background: #fef2f2; /* red-50 */
+      color: #b91c1c; /* red-700 */
+    }
+
+    .severity-badge.medium {
+      background: #fffbeb; /* amber-50 */
+      color: #b45309; /* amber-700 */
+    }
+
+    .severity-badge.low {
+      background: #f0fdf4; /* green-50 */
+      color: #15803d; /* green-700 */
+    }
+
+    .pulse-dot {
+      position: relative;
+      display: flex;
+      height: 12px;
+      width: 12px;
+    }
+
+    .pulse-dot-ping {
+      position: absolute;
+      display: inline-flex;
+      height: 100%;
+      width: 100%;
+      border-radius: 9999px;
+      opacity: 0.75;
+      animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    .pulse-dot-ping.critical {
+      background: #f87171; /* red-400 */
+    }
+
+    .pulse-dot-ping.medium {
+      background: #fbbf24; /* amber-400 */
+    }
+
+    .pulse-dot-ping.low {
+      background: #34d399; /* green-400 */
+    }
+
+    @keyframes ping {
+      75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+
+    .pulse-dot-core {
+      position: relative;
+      display: inline-flex;
+      border-radius: 9999px;
+      height: 12px;
+      width: 12px;
+    }
+
+    .pulse-dot-core.critical {
+      background: #ef4444; /* red-500 */
+    }
+
+    .pulse-dot-core.medium {
+      background: #f59e0b; /* amber-500 */
+    }
+
+    .pulse-dot-core.low {
+      background: #10b981; /* green-500 */
+    }
+
+    .risk-title {
+      font-size: 40px;
+      font-weight: 900;
+      color: #0f172a; /* slate-900 */
+      letter-spacing: -0.025em;
+      margin: 0 0 16px 0;
+    }
+
+    .risk-subtitle {
+      font-size: 18px;
+      color: #64748b; /* slate-500 */
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       TASK 4: ACTION CHECKLIST - INTERACTIVE
+       ============================================ */
+    .card-header {
+      margin-bottom: 24px;
+    }
+
     .card-title {
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 800;
-      color: #111827;
+      color: #0f172a;
       margin: 0 0 8px 0;
       letter-spacing: -0.02em;
     }
 
     .card-subtitle {
       font-size: 14px;
-      color: #6b7280;
+      color: #64748b;
       margin: 0;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       font-weight: 600;
     }
 
-    .card-body {
-      padding: 40px;
-    }
-
-    /* ============================================
-       4. ACTION CHECKLIST - INTERACTIVE
-       ============================================ */
     .action-list {
       display: grid;
-      gap: 16px;
+      gap: 12px;
     }
 
     .action-item {
       display: flex;
       align-items: flex-start;
       gap: 16px;
-      padding: 20px;
-      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-      border: 2px solid #fbbf24;
-      border-radius: 16px;
-      transition: all 0.3s;
+      padding: 18px 20px;
+      background: white;
+      border: 2px solid #f1f5f9;
+      border-radius: 12px;
+      transition: all 0.2s;
       cursor: pointer;
       user-select: none;
     }
 
     .action-item:hover {
-      transform: translateX(8px);
-      box-shadow: 0 8px 24px rgba(251, 191, 36, 0.3);
+      border-color: #cbd5e1;
+      transform: translateX(4px);
     }
 
     .action-item.checked {
-      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-      border-color: #10b981;
+      background: #f0fdf4;
+      border-color: #86efac;
       opacity: 0.7;
     }
 
     .action-checkbox {
-      width: 28px;
-      height: 28px;
-      border: 3px solid #f59e0b;
-      border-radius: 8px;
+      width: 24px;
+      height: 24px;
+      border: 2px solid #cbd5e1;
+      border-radius: 6px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      transition: all 0.3s;
+      font-size: 14px;
+      transition: all 0.2s;
       background: white;
     }
 
@@ -293,21 +278,20 @@
     }
 
     .action-text {
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.6;
-      color: #78350f;
+      color: #334155;
       font-weight: 500;
       flex: 1;
-      transition: all 0.3s;
     }
 
     .action-item.checked .action-text {
       text-decoration: line-through;
-      color: #059669;
+      color: #94a3b8;
     }
 
     /* ============================================
-       DIAGNOSTIC GRID (Clean Typography)
+       TASK 4: DIAGNOSTIC GRID - EDITORIAL NUMBERS
        ============================================ */
     .diagnostic-grid {
       display: grid;
@@ -316,149 +300,199 @@
     }
 
     .diagnostic-item {
-      padding: 32px;
-      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-      border: 2px solid #7dd3fc;
+      position: relative;
+      padding: 32px 28px;
+      background: white;
+      border: 1px solid #f1f5f9;
       border-radius: 16px;
       transition: all 0.3s;
+      overflow: hidden;
     }
 
     .diagnostic-item:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(59, 130, 246, 0.2);
+      border-color: #e2e8f0;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+
+    .diagnostic-number {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      font-size: 72px;
+      font-weight: 900;
+      color: #f8fafc;
+      line-height: 1;
+      pointer-events: none;
     }
 
     .diagnostic-label {
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #0369a1;
+      color: #94a3b8;
       font-weight: 700;
       margin-bottom: 12px;
     }
 
     .diagnostic-text {
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.6;
-      color: #0c4a6e;
+      color: #334155;
       font-weight: 500;
+      position: relative;
+      z-index: 1;
     }
 
     /* ============================================
-       3. COST METER - HORIZONTAL RANGE BAR
+       TASK 2: FINANCIAL SCOPE - STOCK TICKER
        ============================================ */
-    .cost-meter-container {
+    .financial-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
       margin-bottom: 32px;
+    }
+
+    .financial-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+
+    .financial-range {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .financial-value {
+      font-size: 40px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .financial-separator {
+      color: #cbd5e1;
+      font-weight: 300;
+      font-size: 28px;
+    }
+
+    .market-badge {
+      background: #dcfce7;
+      color: #15803d;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
     }
 
     .cost-range-bar {
       position: relative;
-      height: 80px;
-      background: #f3f4f6;
-      border-radius: 16px;
-      margin-bottom: 24px;
+      height: 12px;
+      background: #f1f5f9;
+      border-radius: 9999px;
+      width: 100%;
       overflow: hidden;
+      margin-bottom: 12px;
     }
 
     .cost-range-fill {
       position: absolute;
       top: 0;
-      left: 0;
-      height: 100%;
-      background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-      border-radius: 16px;
-      transition: width 1s ease-out;
-      animation: fillBar 1.5s ease-out;
+      bottom: 0;
+      background: linear-gradient(90deg, #34d399 0%, #059669 100%);
+      border-radius: 9999px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      animation: fillBar 1.2s ease-out;
     }
 
     @keyframes fillBar {
       from {
-        width: 0%;
+        width: 0% !important;
       }
     }
 
-    .cost-label {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      font-weight: 800;
-      font-size: 24px;
-      padding: 0 24px;
-      white-space: nowrap;
-    }
-
-    .cost-label.low {
-      left: 0;
-      color: #10b981;
-    }
-
-    .cost-label.high {
-      right: 0;
-      color: #374151;
+    .cost-range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 500;
+      margin-top: 8px;
     }
 
     .cost-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #f1f5f9;
     }
 
     .cost-tag {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 12px 20px;
-      background: white;
-      border: 2px solid #e5e7eb;
-      border-radius: 24px;
-      font-size: 14px;
-      color: #374151;
+      padding: 10px 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #475569;
       font-weight: 600;
-      transition: all 0.3s;
+      transition: all 0.2s;
     }
 
     .cost-tag:hover {
-      border-color: #10b981;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      background: white;
+      border-color: #cbd5e1;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
     .cost-tag::before {
-      content: '💰';
+      content: '•';
+      color: #94a3b8;
       font-size: 16px;
     }
 
     /* ============================================
-       RED FLAGS (VETERAN'S WARNING) - Watermark
+       TASK 3: VETERAN'S WARNING - DARK INSIGHT CARD
        ============================================ */
-    .red-flags-card {
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+    .dark-insight-card {
+      background: #0f172a; /* slate-900 */
       color: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      padding: 40px;
+      margin-bottom: 24px;
       position: relative;
+      overflow: hidden;
     }
 
-    .red-flags-card::before {
-      content: '🛡️';
+    .dark-insight-card::before {
+      content: '"';
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 300px;
-      opacity: 0.05;
+      top: 20px;
+      left: 30px;
+      font-size: 200px;
+      font-family: Georgia, serif;
+      color: rgba(255, 255, 255, 0.03);
+      line-height: 1;
       pointer-events: none;
     }
 
-    .red-flags-card .card-header {
-      border-bottom-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .red-flags-card .card-header::before {
-      display: none; /* Override watermark for this special card */
-    }
-
-    .red-flags-card .card-title,
-    .red-flags-card .card-subtitle {
+    .dark-insight-card .card-title {
       color: white;
+      margin-bottom: 24px;
+    }
+
+    .dark-insight-card .card-subtitle {
+      color: #94a3b8;
     }
 
     .red-flag-list {
@@ -467,107 +501,95 @@
     }
 
     .red-flag-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 16px;
+      position: relative;
+      padding: 20px 24px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-left: 3px solid #fbbf24;
+      border-radius: 8px;
+      transition: all 0.3s;
     }
 
-    .red-flag-icon {
-      font-size: 24px;
-      flex-shrink: 0;
-      margin-top: 2px;
+    .red-flag-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-left-color: #fcd34d;
     }
 
     .red-flag-text {
-      font-size: 16px;
-      line-height: 1.6;
+      font-size: 15px;
+      line-height: 1.7;
       color: rgba(255, 255, 255, 0.95);
     }
 
     /* ============================================
-       2. STRATEGY TIMELINE - VERTICAL STEPPER
+       STRATEGY TIMELINE
        ============================================ */
     .strategy-timeline {
       display: grid;
       gap: 0;
-      position: relative;
     }
 
     .timeline-step {
       display: flex;
       align-items: flex-start;
       gap: 24px;
-      padding: 32px 0;
+      padding: 28px 0;
       position: relative;
     }
 
     .timeline-step:not(:last-child)::after {
       content: '';
       position: absolute;
-      left: 19px;
-      top: 70px;
-      bottom: -32px;
-      width: 3px;
-      background: linear-gradient(180deg, #a855f7 0%, #e9d5ff 100%);
+      left: 15px;
+      top: 60px;
+      bottom: -28px;
+      width: 2px;
+      background: linear-gradient(180deg, #cbd5e1 0%, #f1f5f9 100%);
     }
 
     .timeline-dot {
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       background: white;
-      border: 4px solid #a855f7;
+      border: 3px solid #e2e8f0;
       border-radius: 50%;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 800;
-      color: #a855f7;
+      color: #64748b;
       position: relative;
       z-index: 1;
       transition: all 0.3s;
     }
 
     .timeline-step.active .timeline-dot {
-      background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+      background: #0f172a;
+      border-color: #0f172a;
       color: white;
-      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% {
-        box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4);
-      }
-      50% {
-        box-shadow: 0 4px 24px rgba(168, 85, 247, 0.6);
-      }
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
     }
 
     .timeline-content {
       flex: 1;
-      padding-top: 8px;
+      padding-top: 4px;
     }
 
     .timeline-label {
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #a855f7;
+      color: #94a3b8;
       font-weight: 700;
       margin-bottom: 8px;
     }
 
     .timeline-text {
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.6;
-      color: #581c87;
+      color: #334155;
       font-weight: 500;
     }
 
@@ -582,9 +604,9 @@
     .question-item {
       padding: 16px 20px;
       background: #fffbeb;
-      border-left: 4px solid #f59e0b;
+      border-left: 3px solid #f59e0b;
       border-radius: 8px;
-      font-size: 15px;
+      font-size: 14px;
       color: #78350f;
       line-height: 1.6;
     }
@@ -598,9 +620,9 @@
       left: 0;
       right: 0;
       background: white;
-      border-top: 2px solid #e5e7eb;
+      border-top: 1px solid #f1f5f9;
       padding: 20px 24px;
-      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
       z-index: 100;
     }
 
@@ -615,27 +637,28 @@
 
     .action-hint {
       font-size: 14px;
-      color: #6b7280;
+      color: #64748b;
       flex: 1;
     }
 
     .approve-button {
-      padding: 16px 48px;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      padding: 14px 40px;
+      background: #0f172a;
       color: white;
       border: none;
-      border-radius: 12px;
-      font-size: 17px;
+      border-radius: 10px;
+      font-size: 15px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
       transition: all 0.3s;
       white-space: nowrap;
     }
 
     .approve-button:hover {
+      background: #1e293b;
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
     }
 
     /* ============================================
@@ -644,14 +667,14 @@
     .loading {
       text-align: center;
       padding: 80px 24px;
-      color: white;
+      color: #64748b;
     }
 
     .loading-spinner {
-      width: 60px;
-      height: 60px;
-      border: 5px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f1f5f9;
+      border-top-color: #0f172a;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin: 0 auto 24px;
@@ -662,18 +685,19 @@
     }
 
     .loading-text {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 600;
+      color: #475569;
     }
 
     .error {
       background: #fef2f2;
-      border: 2px solid #fca5a5;
+      border: 1px solid #fca5a5;
       color: #991b1b;
       padding: 32px;
-      border-radius: 12px;
+      border-radius: 16px;
       text-align: center;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
     }
 
     /* ============================================
@@ -693,24 +717,18 @@
         width: 100%;
       }
 
-      .card-title {
-        font-size: 24px;
+      .risk-title {
+        font-size: 32px;
       }
 
-      .risk-gauge {
-        width: 150px;
-        height: 150px;
+      .financial-value {
+        font-size: 32px;
       }
 
-      .gauge-inner {
-        width: 120px;
-        height: 120px;
-        font-size: 48px;
-      }
-
-      .cost-label {
-        font-size: 18px;
-        padding: 0 16px;
+      .financial-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
       }
     }
   </style>
@@ -731,73 +749,61 @@
 
     <!-- Dashboard Content -->
     <div id="dashboardSection" style="display: none;">
-      <!-- 1. STATUS CENTER (Risk Gauge) -->
-      <div id="statusCenter"></div>
+      <!-- TASK 1: RISK HERO -->
+      <div id="riskHero"></div>
 
-      <!-- 4. ACTION PLAN (Interactive Checklist) -->
-      <div class="sanctuary-card" id="actionPlanCard" style="display: none;">
-        <div class="card-header" data-icon="⚡">
+      <!-- ACTION PLAN -->
+      <div class="soft-lift-card" id="actionPlanCard" style="display: none;">
+        <div class="card-header">
           <h2 class="card-title">The Action Plan</h2>
           <p class="card-subtitle">Click to check off completed items</p>
         </div>
-        <div class="card-body">
-          <div class="action-list" id="actionList"></div>
-        </div>
+        <div class="action-list" id="actionList"></div>
       </div>
 
-      <!-- DIAGNOSTIC GRID (Clean Typography) -->
-      <div class="sanctuary-card" id="diagnosticCard" style="display: none;">
-        <div class="card-header" data-icon="🔍">
+      <!-- TASK 4: DIAGNOSTIC GRID -->
+      <div class="soft-lift-card" id="diagnosticCard" style="display: none;">
+        <div class="card-header">
           <h2 class="card-title">Diagnostic Analysis</h2>
           <p class="card-subtitle">Likely causes of your issue</p>
         </div>
-        <div class="card-body">
-          <div class="diagnostic-grid" id="diagnosticGrid"></div>
-        </div>
+        <div class="diagnostic-grid" id="diagnosticGrid"></div>
       </div>
 
-      <!-- 3. COST METER (Horizontal Range Bar) -->
-      <div class="sanctuary-card" id="financialCard" style="display: none;">
-        <div class="card-header" data-icon="💰">
+      <!-- TASK 2: FINANCIAL SCOPE -->
+      <div class="soft-lift-card" id="financialCard" style="display: none;">
+        <div class="card-header">
           <h2 class="card-title">Financial Scope</h2>
-          <p class="card-subtitle">What this will cost</p>
+          <p class="card-subtitle">Estimated fair value range</p>
         </div>
-        <div class="card-body">
-          <div class="cost-meter-container" id="costMeterContainer"></div>
-        </div>
+        <div id="financialContent"></div>
       </div>
 
-      <!-- RED FLAGS (VETERAN'S WARNING) -->
-      <div class="sanctuary-card red-flags-card" id="redFlagsCard" style="display: none;">
+      <!-- TASK 3: VETERAN'S WARNING -->
+      <div class="dark-insight-card" id="redFlagsCard" style="display: none;">
         <div class="card-header">
           <h2 class="card-title">The Veteran's Warning</h2>
           <p class="card-subtitle">Insider tips & blind spots</p>
         </div>
-        <div class="card-body">
-          <div class="red-flag-list" id="redFlagList"></div>
-        </div>
+        <div class="red-flag-list" id="redFlagList"></div>
       </div>
 
-      <!-- 2. STRATEGY TIMELINE (Vertical Stepper) -->
-      <div class="sanctuary-card" id="strategyCard" style="display: none;">
-        <div class="card-header" data-icon="📋">
+      <!-- STRATEGY TIMELINE -->
+      <div class="soft-lift-card" id="strategyCard" style="display: none;">
+        <div class="card-header">
           <h2 class="card-title">Your Journey</h2>
           <p class="card-subtitle">Step-by-step strategy</p>
         </div>
-        <div class="card-body">
-          <div class="strategy-timeline" id="strategyTimeline"></div>
-        </div>
+        <div class="strategy-timeline" id="strategyTimeline"></div>
       </div>
 
-      <!-- CLARIFYING QUESTIONS -->
-      <div class="sanctuary-card" id="questionsCard" style="display: none;">
-        <div class="card-header" data-icon="❓">
+      <!-- QUESTIONS -->
+      <div class="soft-lift-card" id="questionsCard" style="display: none;">
+        <div class="card-header">
           <h2 class="card-title">Questions to Consider</h2>
           <p class="card-subtitle">Details that might affect your plan</p>
         </div>
-        <div class="card-body">
-          <div class="questions-list" id="questionsList"></div>
-        </div>
+        <div class="questions-list" id="questionsList"></div>
       </div>
     </div>
   </div>
@@ -860,8 +866,8 @@
         const parsed = parseTriageOutput(data.answer);
         window.triageData.parsed = parsed;
 
-        // Render the Sanctuary Dashboard
-        renderSanctuary(window.triageData.router, parsed);
+        // Render the dashboard
+        renderDashboard(window.triageData.router, parsed);
 
         // Hide loading, show dashboard
         document.getElementById('loadingSection').style.display = 'none';
@@ -877,9 +883,6 @@
       }
     }
 
-    /**
-     * THE MAGIC PARSER
-     */
     function parseTriageOutput(markdown) {
       const sections = {
         actions: [],
@@ -893,7 +896,6 @@
 
       if (!markdown) return sections;
 
-      // Split by section headers
       const lines = markdown.split('\n');
       let currentSection = null;
       let currentContent = [];
@@ -911,7 +913,6 @@
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
 
-        // Check if this line is a section header
         let foundSection = null;
         for (const [key, pattern] of Object.entries(sectionPatterns)) {
           if (pattern.test(line)) {
@@ -921,20 +922,16 @@
         }
 
         if (foundSection) {
-          // Save previous section
           if (currentSection && currentContent.length > 0) {
             saveSectionContent(sections, currentSection, currentContent);
           }
-          // Start new section
           currentSection = foundSection;
           currentContent = [];
         } else if (currentSection && line.length > 0) {
-          // Add content to current section
           currentContent.push(line);
         }
       }
 
-      // Save last section
       if (currentSection && currentContent.length > 0) {
         saveSectionContent(sections, currentSection, currentContent);
       }
@@ -946,10 +943,8 @@
       const content = lines.join('\n').trim();
 
       if (sectionKey === 'costs') {
-        // Costs section: keep as full text
         sections.costs = content;
       } else {
-        // Other sections: extract bullet points
         const bullets = extractBullets(content);
         sections[sectionKey] = bullets;
       }
@@ -961,8 +956,6 @@
 
       for (const line of lines) {
         const trimmed = line.trim();
-
-        // Match bullets (-, *, •) or numbered lists (1., 2., etc.)
         const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
         const numberMatch = trimmed.match(/^\d+\.\s+(.+)/);
 
@@ -971,7 +964,6 @@
         } else if (numberMatch) {
           bullets.push(numberMatch[1].trim());
         } else if (trimmed.length > 0 && !trimmed.startsWith('#')) {
-          // If it's not a header and not empty, treat as plain text item
           bullets.push(trimmed);
         }
       }
@@ -979,91 +971,82 @@
       return bullets;
     }
 
-    /**
-     * RENDER SANCTUARY DASHBOARD
-     */
-    function renderSanctuary(router, parsed) {
-      // 1. Status Center (Risk Gauge)
-      renderStatusCenter(router.risk_level || 'medium');
+    function renderDashboard(router, parsed) {
+      renderRiskHero(router.risk_level || 'medium');
 
-      // 4. Action Plan (Interactive Checklist)
       if (parsed.actions && parsed.actions.length > 0) {
         renderActionPlan(parsed.actions);
       }
 
-      // Diagnostic Grid
       if (parsed.causes && parsed.causes.length > 0) {
         renderDiagnosticGrid(parsed.causes);
       }
 
-      // 3. Cost Meter
       if (parsed.costs) {
-        renderCostMeter(parsed.costs, parsed.variables);
+        renderFinancialScope(parsed.costs, parsed.variables);
       }
 
-      // Red Flags
       if (parsed.redFlags && parsed.redFlags.length > 0) {
         renderRedFlags(parsed.redFlags);
       }
 
-      // 2. Strategy Timeline
       if (parsed.hiring && parsed.hiring.length > 0) {
         renderStrategyTimeline(parsed.hiring);
       }
 
-      // Questions
       if (parsed.questions && parsed.questions.length > 0) {
         renderQuestions(parsed.questions);
       }
     }
 
     /**
-     * 1. STATUS CENTER - RISK GAUGE
+     * TASK 1: RISK HERO
      */
-    function renderStatusCenter(riskLevel) {
+    function renderRiskHero(riskLevel) {
       const config = {
         high: {
-          class: 'high',
+          class: 'critical',
           icon: '🚨',
-          title: 'CRITICAL',
-          subtitle: 'This issue requires immediate professional attention'
+          badge: 'SEVERITY: CRITICAL',
+          title: 'Critical Safety Alert',
+          subtitle: 'This issue requires immediate professional attention to prevent serious damage or injury'
         },
         medium: {
           class: 'medium',
           icon: '⚠️',
-          title: 'ATTENTION REQUIRED',
-          subtitle: 'Schedule professional evaluation soon to prevent escalation'
+          badge: 'SEVERITY: ELEVATED',
+          title: 'Attention Required',
+          subtitle: 'Schedule professional evaluation soon to prevent escalation and additional costs'
         },
         low: {
           class: 'low',
           icon: '✅',
-          title: 'ROUTINE',
-          subtitle: 'Non-urgent issue – plan at your convenience'
+          badge: 'SEVERITY: ROUTINE',
+          title: 'Routine Maintenance',
+          subtitle: 'Non-urgent issue – plan at your convenience with standard contractor availability'
         }
       };
 
       const c = config[riskLevel] || config.medium;
 
-      document.getElementById('statusCenter').innerHTML = `
-        <div class="status-center">
-          <div class="risk-gauge">
-            <div class="gauge-ring">
-              <div class="gauge-inner">${c.icon}</div>
-              <div class="risk-indicator ${riskLevel}"></div>
-            </div>
+      document.getElementById('riskHero').innerHTML = `
+        <div class="risk-hero ${c.class}">
+          <div class="risk-hero-watermark">${c.icon}</div>
+          <div class="severity-badge ${c.class}">
+            <span class="pulse-dot">
+              <span class="pulse-dot-ping ${c.class}"></span>
+              <span class="pulse-dot-core ${c.class}"></span>
+            </span>
+            ${c.badge}
           </div>
-          <div class="status-label">Risk Level</div>
-          <h2 class="status-title ${c.class}">${c.title}</h2>
-          <p class="status-subtitle">${c.subtitle}</p>
+          <h1 class="risk-title">${c.title}</h1>
+          <p class="risk-subtitle">${c.subtitle}</p>
         </div>
       `;
     }
 
-    /**
-     * 4. ACTION PLAN - INTERACTIVE CHECKLIST
-     */
     function renderActionPlan(actions) {
-      const html = actions.map((action, index) => `
+      const html = actions.map(action => `
         <div class="action-item" onclick="toggleAction(this)">
           <div class="action-checkbox"></div>
           <div class="action-text">${escapeHtml(action)}</div>
@@ -1078,9 +1061,13 @@
       element.classList.toggle('checked');
     }
 
+    /**
+     * TASK 4: DIAGNOSTIC GRID
+     */
     function renderDiagnosticGrid(causes) {
       const html = causes.map((cause, index) => `
         <div class="diagnostic-item">
+          <div class="diagnostic-number">${String(index + 1).padStart(2, '0')}</div>
           <div class="diagnostic-label">Cause ${index + 1}</div>
           <div class="diagnostic-text">${escapeHtml(cause)}</div>
         </div>
@@ -1091,9 +1078,9 @@
     }
 
     /**
-     * 3. COST METER - HORIZONTAL RANGE BAR
+     * TASK 2: FINANCIAL SCOPE - STOCK TICKER
      */
-    function renderCostMeter(costsText, variables) {
+    function renderFinancialScope(costsText, variables) {
       const costMatch = costsText.match(/\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i);
 
       let lowCost = 500;
@@ -1108,9 +1095,9 @@
         highLabel = '$' + highCost.toLocaleString();
       }
 
-      // Calculate percentage for visual bar (cap at 100%)
-      const maxRange = Math.max(highCost, 10000);
-      const fillPercentage = Math.min((highCost / maxRange) * 100, 100);
+      // Calculate bar position (20% to 80% range)
+      const fillLeft = 20;
+      const fillRight = 40;
 
       let variablesHtml = '';
       if (variables && variables.length > 0) {
@@ -1121,11 +1108,27 @@
         `;
       }
 
-      document.getElementById('costMeterContainer').innerHTML = `
+      document.getElementById('financialContent').innerHTML = `
+        <div class="financial-header">
+          <div>
+            <div class="financial-label">Estimated Fair Value</div>
+            <div class="financial-range">
+              <span class="financial-value">${lowLabel}</span>
+              <span class="financial-separator">–</span>
+              <span class="financial-value">${highLabel}</span>
+            </div>
+          </div>
+          <div>
+            <div class="market-badge">MARKET AVERAGE</div>
+          </div>
+        </div>
         <div class="cost-range-bar">
-          <div class="cost-range-fill" style="width: ${fillPercentage}%"></div>
-          <div class="cost-label low">${lowLabel}</div>
-          <div class="cost-label high">${highLabel}</div>
+          <div class="cost-range-fill" style="left: ${fillLeft}%; right: ${fillRight}%;"></div>
+        </div>
+        <div class="cost-range-labels">
+          <span>DIY / Band-aid</span>
+          <span>Professional Standard</span>
+          <span>Premium / Structural</span>
         </div>
         ${variablesHtml}
       `;
@@ -1133,10 +1136,12 @@
       document.getElementById('financialCard').style.display = 'block';
     }
 
+    /**
+     * TASK 3: VETERAN'S WARNING
+     */
     function renderRedFlags(redFlags) {
       const html = redFlags.map(flag => `
         <div class="red-flag-item">
-          <span class="red-flag-icon">💡</span>
           <div class="red-flag-text">${escapeHtml(flag)}</div>
         </div>
       `).join('');
@@ -1145,9 +1150,6 @@
       document.getElementById('redFlagsCard').style.display = 'block';
     }
 
-    /**
-     * 2. STRATEGY TIMELINE - VERTICAL STEPPER
-     */
     function renderStrategyTimeline(steps) {
       const labels = ['Immediate', 'Planning', 'Execution', 'Follow-up'];
 
@@ -1207,7 +1209,6 @@
       };
 
       localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
-      console.log('✓ Saved hot_lead_draft:', hotLeadDraft);
 
       if (window.authService && window.authService.initialized) {
         const user = await window.authService.getCurrentUser();
