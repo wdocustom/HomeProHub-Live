@@ -202,6 +202,190 @@
       margin-top: 24px;
     }
 
+    /* Smart Composer Styles */
+    .photo-preview-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding: 8px 8px 12px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: thin;
+    }
+
+    .photo-preview-container::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .photo-preview-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+
+    .photo-preview-container::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .photo-preview-item {
+      position: relative;
+      flex-shrink: 0;
+      scroll-snap-align: start;
+    }
+
+    .photo-preview-item img {
+      height: 80px;
+      width: 80px;
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border: 2px solid white;
+    }
+
+    .photo-remove-btn {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      padding: 4px;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .photo-remove-btn:hover {
+      background: #dc2626;
+      transform: scale(1.1);
+    }
+
+    .smart-composer {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 9999px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.08), 0 0 1px rgba(15,23,42,0.05);
+      padding: 8px;
+      transition: all 0.3s;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .smart-composer:focus-within {
+      box-shadow: 0 20px 60px rgba(59,130,246,0.15), 0 0 0 2px #3b82f6;
+    }
+
+    .smart-composer input[type="text"] {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 16px 24px;
+      font-size: 16px;
+      color: #1e293b;
+      outline: none;
+    }
+
+    .smart-composer input[type="text"]::placeholder {
+      color: #94a3b8;
+    }
+
+    .composer-divider {
+      height: 32px;
+      width: 1px;
+      background: #e2e8f0;
+      margin: 0 8px;
+    }
+
+    .composer-photo-btn {
+      padding: 12px;
+      color: #64748b;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .composer-photo-btn:hover {
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .composer-photo-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .composer-submit-btn {
+      margin-left: 8px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border: none;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .composer-submit-btn:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+    }
+
+    .composer-submit-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .composer-submit-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      .smart-composer {
+        padding: 6px;
+      }
+
+      .smart-composer input[type="text"] {
+        padding: 12px 16px;
+        font-size: 15px;
+      }
+
+      .composer-submit-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+      }
+
+      .photo-preview-item img {
+        height: 64px;
+        width: 64px;
+      }
+    }
+
     /* SECTION C: HOW IT WORKS */
     .how-it-works {
       background: #f9fafb;
@@ -658,15 +842,51 @@
     </p>
 
     <div class="hero-actions">
-      <div class="hero-input-group">
+      <!-- Photo Preview Strip -->
+      <div id="photo-preview-container" class="photo-preview-container hidden"></div>
+
+      <!-- Smart Composer -->
+      <div class="smart-composer">
         <input
           type="text"
-          class="hero-input"
-          placeholder="Describe your issue (e.g., 'Water stain on ceiling after rain')"
-          id="heroIssueInput"
+          id="ai-input"
+          placeholder="Describe the issue (e.g., 'Cracked Foundation')..."
         />
-        <button class="btn-large" onclick="startFreeAICheck()">Try Free AI Check</button>
+
+        <div class="composer-divider"></div>
+
+        <button
+          onclick="document.getElementById('hidden-file-input').click()"
+          class="composer-photo-btn"
+          title="Add Photos (Max 5)"
+          type="button"
+        >
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+
+        <button
+          onclick="startAnalysis()"
+          class="composer-submit-btn"
+          type="button"
+        >
+          <span>Analyze</span>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+          </svg>
+        </button>
       </div>
+
+      <input
+        type="file"
+        id="hidden-file-input"
+        multiple
+        accept="image/*"
+        class="hidden"
+        onchange="handlePhotoSelection(this)"
+      />
 
       <a href="#" class="hero-secondary-link" onclick="event.preventDefault(); redirectToDirectory();">
         Free to browse verified contractors when you're ready
@@ -996,18 +1216,117 @@
       window.location.href = 'signin.html';
     }
 
-    function startFreeAICheck() {
-      const input = document.getElementById('heroIssueInput');
-      const question = input.value.trim();
+    // ========================================
+    // Smart Composer Logic
+    // ========================================
 
-      if (question.length < 10) {
+    const MAX_PHOTOS = 5;
+    let selectedFiles = [];
+
+    function handlePhotoSelection(input) {
+      const files = Array.from(input.files);
+
+      // Validate count
+      if (selectedFiles.length + files.length > MAX_PHOTOS) {
+        alert(`You can only upload up to ${MAX_PHOTOS} photos.`);
+        input.value = ''; // Reset input
+        return;
+      }
+
+      // Add new files
+      selectedFiles = [...selectedFiles, ...files];
+      updatePreviewUI();
+
+      // Reset file input so same file can be selected again
+      input.value = '';
+    }
+
+    function updatePreviewUI() {
+      const container = document.getElementById('photo-preview-container');
+      container.innerHTML = ''; // Clear current previews
+
+      if (selectedFiles.length > 0) {
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+        return;
+      }
+
+      selectedFiles.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          // Create thumbnail card
+          const div = document.createElement('div');
+          div.className = 'photo-preview-item';
+          div.innerHTML = `
+            <img src="${e.target.result}" alt="Preview ${index + 1}">
+            <button
+              onclick="removePhoto(${index})"
+              class="photo-remove-btn"
+              type="button"
+              aria-label="Remove photo"
+            >
+              <svg style="width: 12px; height: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          `;
+          container.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function removePhoto(index) {
+      selectedFiles.splice(index, 1);
+      updatePreviewUI();
+    }
+
+    function startAnalysis() {
+      const input = document.getElementById('ai-input');
+      const description = input.value.trim();
+
+      // Validate: need at least description OR photos
+      if (!description && selectedFiles.length === 0) {
+        alert('Please provide either a description or upload at least one photo');
+        return;
+      }
+
+      // If photos are provided, use new AI Check feature
+      if (selectedFiles.length > 0) {
+        // Store description and files for ai-check.html
+        sessionStorage.setItem('ai_check_description', description);
+
+        // Convert files to base64 and store
+        const promises = selectedFiles.map(file => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              resolve({
+                data: e.target.result.split(',')[1], // Base64 without prefix
+                type: file.type,
+                url: e.target.result // For preview
+              });
+            };
+            reader.readAsDataURL(file);
+          });
+        });
+
+        Promise.all(promises).then(images => {
+          sessionStorage.setItem('ai_check_images', JSON.stringify(images));
+          window.location.href = 'ai-check.html';
+        });
+
+        return;
+      }
+
+      // Text-only: Use old preview.html flow
+      if (description.length < 10) {
         alert('Please describe your issue in more detail (at least 10 characters)');
         return;
       }
 
-      // Store question and redirect to preview page (NO AUTH REQUIRED!)
-      // This allows users to see AI value BEFORE signing up
-      sessionStorage.setItem('pendingQuestion', question);
+      sessionStorage.setItem('pendingQuestion', description);
       window.location.href = 'preview.html';
     }
 

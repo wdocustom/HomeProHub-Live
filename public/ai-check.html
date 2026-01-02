@@ -357,6 +357,30 @@
 
       let selectedImages = [];
 
+      // Check for pre-populated data from Smart Composer (index.html)
+      const prePopulatedDescription = sessionStorage.getItem('ai_check_description');
+      const prePopulatedImages = sessionStorage.getItem('ai_check_images');
+
+      if (prePopulatedDescription) {
+        descriptionInput.value = prePopulatedDescription;
+        sessionStorage.removeItem('ai_check_description');
+      }
+
+      if (prePopulatedImages) {
+        try {
+          selectedImages = JSON.parse(prePopulatedImages);
+          renderImageGrid();
+          sessionStorage.removeItem('ai_check_images');
+
+          // Auto-submit if we have pre-populated data
+          setTimeout(() => {
+            submitBtn.click();
+          }, 500);
+        } catch (e) {
+          console.error('Error parsing pre-populated images:', e);
+        }
+      }
+
       // Handle file selection
       fileInput.addEventListener('change', function(e) {
         const files = Array.from(e.target.files);
