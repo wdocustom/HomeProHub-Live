@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HomeProHub – Your Home Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
   <!-- Supabase Auth -->
@@ -16,13 +17,15 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
       color: #1f2937;
-      background: #ffffff;
+      background: #f8fafc;
       margin: 0;
       padding: 0;
     }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
     /* Ensure navigation emojis render in color (not black) */
     .nav-icon,
@@ -745,99 +748,135 @@
 <body>
   <!-- Navigation component will be injected here by navigation.js -->
 
-  <main>
+  <main class="bg-slate-50">
     <!-- Main Dashboard Container -->
-    <div style="max-width: 1200px; margin: 0 auto; padding: 40px 20px;">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 
-      <!-- AI Help Section -->
-      <div class="relative bg-gradient-to-b from-blue-50/80 to-white py-16 px-4 sm:px-6 lg:px-8 rounded-3xl mb-10 border border-blue-50/50">
-        <div class="text-center max-w-3xl mx-auto space-y-4">
-          <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight sm:text-5xl">
-            What can we help you fix?
+      <!-- TASK 1: Concierge Hero (Greeting + Composer) -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 mb-8">
+        <div class="max-w-3xl mx-auto">
+          <!-- Personalized Greeting -->
+          <h1 class="text-3xl font-bold text-slate-900 mb-2">
+            Good <span id="timeOfDay">morning</span>, <span id="userName" class="text-blue-600">there</span>
           </h1>
-          <p class="text-lg text-slate-600">
-            Describe the issue (e.g., "Water stain on ceiling") or upload a photo for instant expert analysis.
-          </p>
-        </div>
+          <p class="text-lg text-slate-500 mb-8">What can we help you fix today?</p>
 
-        <!-- Smart Composer Component -->
-        <div class="max-w-3xl mx-auto relative mt-8 mb-12">
-          <!-- Photo Preview Container -->
-          <div id="photo-preview-container" class="hidden flex gap-2 mb-4 overflow-x-auto pb-2 px-2 snap-x">
-          </div>
+          <!-- Smart Composer Component -->
+          <div class="relative">
+            <!-- Photo Preview Container -->
+            <div id="photo-preview-container" class="hidden flex gap-2 mb-4 overflow-x-auto pb-2 px-2 snap-x">
+            </div>
 
-          <!-- Smart Composer Input -->
-          <div class="relative flex items-center bg-white rounded-full shadow-2xl ring-1 ring-slate-900/5 p-2 transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500">
+            <!-- Smart Composer Input -->
+            <div class="relative flex items-center bg-slate-50 rounded-full border border-slate-200 p-2 transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <input
+                type="text"
+                id="ai-input"
+                class="flex-1 border-0 bg-transparent py-4 pl-6 pr-2 text-slate-900 placeholder:text-slate-400 focus:ring-0 text-lg outline-none"
+                placeholder="Describe the issue (e.g., 'Cracked Foundation')..."
+              >
+
+              <div class="h-8 w-px bg-slate-200 mx-2"></div>
+
+              <button
+                onclick="document.getElementById('hidden-file-input').click()"
+                class="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors tooltip-trigger"
+                title="Add Photos (Max 5)"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+              </button>
+
+              <button
+                onclick="startAnalysis()"
+                class="ml-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+              >
+                <span>Analyze</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Hidden File Input -->
             <input
-              type="text"
-              id="ai-input"
-              class="flex-1 border-0 bg-transparent py-4 pl-6 pr-2 text-slate-900 placeholder:text-slate-400 focus:ring-0 text-lg outline-none"
-              placeholder="Describe the issue (e.g., 'Cracked Foundation')..."
+              type="file"
+              id="hidden-file-input"
+              multiple
+              accept="image/*"
+              class="hidden"
+              onchange="handlePhotoSelection(this)"
             >
-
-            <div class="h-8 w-px bg-slate-200 mx-2"></div>
-
-            <button
-              onclick="document.getElementById('hidden-file-input').click()"
-              class="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors tooltip-trigger"
-              title="Add Photos (Max 5)"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              </svg>
-            </button>
-
-            <button
-              onclick="startAnalysis()"
-              class="ml-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
-            >
-              <span>Analyze</span>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-              </svg>
-            </button>
           </div>
 
-          <!-- Hidden File Input -->
-          <input
-            type="file"
-            id="hidden-file-input"
-            multiple
-            accept="image/*"
-            class="hidden"
-            onchange="handlePhotoSelection(this)"
-          >
+          <div class="status-message text-center mt-4 text-sm text-slate-600" id="aiStatus"></div>
         </div>
-
-        <div class="status-message text-center mt-4 text-sm text-slate-600" id="aiStatus"></div>
       </div>
 
-      <!-- Quick Actions -->
-      <section style="margin-bottom: 32px;">
-        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Quick Actions</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+      <!-- TASK 2: Active Spotlight (Most Important Active Project) -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 mb-8" id="activeSpotlight" style="display: none;">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold mb-4 border border-blue-100">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
+              ACTION REQUIRED
+            </div>
+            <h3 class="text-2xl font-bold text-slate-900 mb-2" id="spotlightTitle">Kitchen Remodel</h3>
+            <p class="text-slate-500 mb-4" id="spotlightDescription">You have 3 new bids to review. Contractors are waiting for your response.</p>
+            <button onclick="window.location.href='homeowner-dashboard.html'" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-transform hover:scale-105 flex items-center gap-2">
+              Review Bids <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+          <div class="ml-6 p-4 bg-blue-50 rounded-2xl">
+            <i class="fa-solid fa-clipboard-list text-4xl text-blue-600"></i>
+          </div>
+        </div>
+      </div>
 
-          <a href="homeowner-dashboard.html" style="background: white; padding: 20px; border-radius: 10px; text-decoration: none; border: 2px solid #e5e7eb; transition: all 0.2s; display: block;">
-            <div style="font-size: 24px; margin-bottom: 8px;">📋</div>
-            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">My Projects</h3>
-            <p style="font-size: 14px; color: #6b7280; margin: 0;">View active and past projects</p>
+      <!-- TASK 3: Quick Access Bento Grid -->
+      <div class="mb-8">
+        <h2 class="text-xl font-bold text-slate-900 mb-6">Quick Access</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          <!-- My Projects Card -->
+          <a href="homeowner-dashboard.html" class="group bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:-translate-y-1 block">
+            <div class="p-3 bg-blue-50 text-blue-600 rounded-xl w-fit mb-4 group-hover:bg-blue-100 transition-colors">
+              <i class="fa-solid fa-clipboard-list text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">My Projects</h3>
+            <p class="text-slate-500">Track progress and manage active jobs</p>
           </a>
 
-          <a href="project-check-in.html" style="background: white; padding: 20px; border-radius: 10px; text-decoration: none; border: 2px solid #e5e7eb; transition: all 0.2s; display: block;">
-            <div style="font-size: 24px; margin-bottom: 8px;">📸</div>
-            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">Project Check-in</h3>
-            <p style="font-size: 14px; color: #6b7280; margin: 0;">Update progress with photos</p>
+          <!-- Messages Card -->
+          <a href="messages.html" class="group bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:-translate-y-1 block">
+            <div class="p-3 bg-green-50 text-green-600 rounded-xl w-fit mb-4 group-hover:bg-green-100 transition-colors">
+              <i class="fa-solid fa-messages text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Messages</h3>
+            <p class="text-slate-500">Chat with contractors and get updates</p>
           </a>
 
-          <a href="messages.html" style="background: white; padding: 20px; border-radius: 10px; text-decoration: none; border: 2px solid #e5e7eb; transition: all 0.2s; display: block;">
-            <div style="font-size: 24px; margin-bottom: 8px;">💬</div>
-            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">Messages</h3>
-            <p style="font-size: 14px; color: #6b7280; margin: 0;">Chat with contractors</p>
+          <!-- Check Prices Card (Dark Gradient) -->
+          <a href="/pricing-estimator.html" class="group relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 block">
+            <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fa-solid fa-calculator text-8xl text-white"></i>
+            </div>
+            <div class="relative z-10">
+              <div class="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl w-fit mb-4">
+                <i class="fa-solid fa-calculator text-2xl"></i>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-2">Check Prices</h3>
+              <p class="text-slate-300">Get instant AI-powered estimates</p>
+            </div>
           </a>
 
         </div>
-      </section>
+      </div>
 
       <!-- AI Response Section (Hidden by default) -->
       <section class="ai-response-section" id="aiResponseSection" style="display: none;">
@@ -860,6 +899,91 @@
   <script>
     // Note: Auth check is handled by navigation.js component
     // No need for redundant inline auth check that causes race conditions
+
+    // ========================================
+    // SANCTUARY GLASS: Personalization Logic
+    // ========================================
+
+    // Set personalized greeting based on time of day
+    (function setGreeting() {
+      const hour = new Date().getHours();
+      const timeOfDayElement = document.getElementById('timeOfDay');
+
+      if (hour >= 5 && hour < 12) {
+        timeOfDayElement.textContent = 'morning';
+      } else if (hour >= 12 && hour < 18) {
+        timeOfDayElement.textContent = 'afternoon';
+      } else {
+        timeOfDayElement.textContent = 'evening';
+      }
+    })();
+
+    // Load user name from auth service
+    (async function loadUserName() {
+      try {
+        if (window.authService) {
+          const user = await window.authService.getCurrentUser();
+          if (user) {
+            const userNameElement = document.getElementById('userName');
+            const displayName = user.user_metadata?.full_name ||
+                              user.user_metadata?.name ||
+                              user.email?.split('@')[0] ||
+                              'there';
+            userNameElement.textContent = displayName;
+          }
+        }
+      } catch (error) {
+        console.log('Could not load user name:', error);
+      }
+    })();
+
+    // Load Active Spotlight - Show most important active project
+    (async function loadActiveSpotlight() {
+      try {
+        if (window.authService) {
+          const user = await window.authService.getCurrentUser();
+          if (!user) return;
+
+          const { createClient } = window.supabase;
+          const supabase = createClient(
+            'https://kwkeqcdmzlowhlybohni.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a2VxY2Rtemxvd2hseWJvaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2NjA1NjAsImV4cCI6MjA1MDIzNjU2MH0.aJNnzICb5rrP8rXVbg2VGpF_PBL2zQFSqxpPOLJOWAw'
+          );
+
+          // Fetch active projects for homeowner
+          const { data: projects, error } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('homeowner_id', user.id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (error) throw error;
+
+          if (projects && projects.length > 0) {
+            const project = projects[0];
+
+            // Count pending bids for this project
+            const { count: bidCount } = await supabase
+              .from('bids')
+              .select('*', { count: 'exact', head: true })
+              .eq('project_id', project.id)
+              .eq('status', 'pending');
+
+            if (bidCount > 0) {
+              // Show Active Spotlight
+              document.getElementById('activeSpotlight').style.display = 'block';
+              document.getElementById('spotlightTitle').textContent = project.title;
+              document.getElementById('spotlightDescription').textContent =
+                `You have ${bidCount} new ${bidCount === 1 ? 'bid' : 'bids'} to review. Contractors are waiting for your response.`;
+            }
+          }
+        }
+      } catch (error) {
+        console.log('Could not load active spotlight:', error);
+      }
+    })();
 
     // Clear old draft data on page load if user is just browsing (not coming from AI analysis)
     (function() {
