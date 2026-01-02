@@ -17,6 +17,7 @@ const { v4: uuidv4 } = require('uuid');
 const { createProvider } = require('./triage/providers');
 const { runRouter } = require('./triage/router/router');
 const { runAnswer } = require('./triage/answer/answer');
+const { runAICheck } = require('./triage/ai-check');
 
 // ====== ENVIRONMENT VALIDATION ======
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -1091,6 +1092,109 @@ app.post("/api/ai/preview", async (req, res) => {
       error: "Internal server error processing your question.",
       code: 'INTERNAL_ERROR',
       request_id: requestId
+    });
+  }
+});
+
+/**
+ * POST /api/ai-check
+ * Photo-first homeowner diagnosis system
+ * Vision Extractor → Generator pipeline with structured JSON output
+ */
+app.post("/api/ai-check", async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { description, images } = req.body;
+
+    // Input validation
+    if (!description && (!images || images.length === 0)) {
+      return res.status(400).json({
+        error: "At least one of description or images must be provided.",
+        code: 'INVALID_INPUT'
+      });
+    }
+
+    if (images && images.length > 5) {
+      return res.status(400).json({
+        error: "Maximum 5 images allowed.",
+        code: 'TOO_MANY_IMAGES'
+      });
+    }
+
+    // Sanitize text description
+    const sanitizedDescription = description ? sanitizeInput(description, 2000) : '';
+
+    // Convert base64 images to provider format
+    const imageContent = [];
+    if (images && Array.isArray(images)) {
+      for (const img of images.slice(0, 5)) {
+        if (!img.data || !img.type) {
+          return res.status(400).json({
+            error: "Each image must have 'data' (base64) and 'type' (mime type) fields.",
+            code: 'INVALID_IMAGE_FORMAT'
+          });
+        }
+
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validImageTypes.includes(img.type)) {
+          return res.status(400).json({
+            error: `Invalid image type. Must be one of: ${validImageTypes.join(', ')}`,
+            code: 'INVALID_IMAGE_TYPE'
+          });
+        }
+
+        // Add image in Anthropic vision format
+        imageContent.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.type,
+            data: img.data
+          }
+        });
+      }
+    }
+
+    // Determine provider (only Anthropic supports vision currently)
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI Check requires Anthropic API key for vision support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    const provider = createProvider('anthropic', 'answer'); // Use answer model for vision
+
+    console.log(`🔍 AI Check request: description=${sanitizedDescription.substring(0, 50)}..., images=${imageContent.length}`);
+
+    // Run AI Check pipeline
+    const { output, metadata } = await runAICheck(
+      provider,
+      sanitizedDescription,
+      imageContent
+    );
+
+    const totalLatency = Date.now() - startTime;
+
+    console.log(`✓ AI Check complete: trade=${output.who_to_call.primary_trade}, diy=${output.diy_level}, confidence=${output.confidence}, latency=${totalLatency}ms`);
+
+    // Return structured response
+    res.json({
+      output,
+      metadata: {
+        ...metadata,
+        api_latency_ms: totalLatency
+      }
+    });
+
+  } catch (err) {
+    const errorLatency = Date.now() - startTime;
+    console.error(`❌ Error in /api/ai-check (${errorLatency}ms):`, err);
+    res.status(500).json({
+      error: "Internal server error processing AI Check request.",
+      code: 'INTERNAL_ERROR',
+      message: err.message
     });
   }
 });
