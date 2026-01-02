@@ -1205,7 +1205,7 @@ app.post("/api/ai-check", async (req, res) => {
  */
 app.post("/contractor-ask", async (req, res) => {
   try {
-    const { question, focus, zip, scopeLevel, size } = req.body;
+    const { question, focus, zip, scopeLevel, size, trade_persona, technical_specs } = req.body;
 
     // Input validation
     if (!question || typeof question !== 'string') {
@@ -1290,18 +1290,58 @@ app.post("/contractor-ask", async (req, res) => {
     if (selectedFocus === "pricing") {
       // For pricing, return ONLY JSON
       maxTokens = 1800;
-      contentText = `You are an experienced estimating expert for contractors. Analyze this job and create a detailed estimate with intelligent local design insights.
+
+      // === TRADE PERSONA SUPPORT ===
+      // Build trade-specific system prompts based on trade_persona
+      const tradePersonas = {
+        gc: {
+          title: "General Contractor / Remodeler",
+          prompt: "You are an experienced General Contractor specializing in residential remodeling. Focus on square footage, room types, and comprehensive project breakdowns. Consider labor from multiple trades, material costs, and project coordination."
+        },
+        electrician: {
+          title: "Master Electrician",
+          prompt: "You are a licensed Master Electrician. Price jobs based on Points (outlets/switches), wire runs, panel load calculations, and NEC code compliance. Factor in access difficulty and material costs for wire, boxes, and panels. Ignore square footage unless relevant to wire runs."
+        },
+        plumber: {
+          title: "Master Plumber",
+          prompt: "You are a licensed Master Plumber. Price jobs based on Fixture Units, pipe material costs (Copper/PEX/Galvanized), venting requirements, and slope calculations. Account for slab work if needed. Focus on fixture count, pipe runs, and labor hours."
+        },
+        painter: {
+          title: "Professional Painter",
+          prompt: "You are an experienced professional painter. Price jobs based on wall surface area (sq ft), ceiling work, trim/door painting, number of coats, and prep work. Consider paint grade (budget/mid/premium) and surface condition."
+        },
+        hvac: {
+          title: "HVAC Technician",
+          prompt: "You are a licensed HVAC technician. Price jobs based on system tonnage, equipment type (AC/Heat Pump/Furnace/Mini-Split), ductwork status, and installation complexity. Consider energy efficiency ratings and local climate requirements."
+        }
+      };
+
+      const selectedTrade = trade_persona && tradePersonas[trade_persona] ? trade_persona : 'gc';
+      const tradeInfo = tradePersonas[selectedTrade];
+
+      // Build technical specs context if provided
+      let techSpecsContext = '';
+      if (technical_specs && Object.keys(technical_specs).length > 0) {
+        techSpecsContext = '\n--- TRADE-SPECIFIC DETAILS ---\n';
+        for (const [key, value] of Object.entries(technical_specs)) {
+          techSpecsContext += `${key}: ${value}\n`;
+        }
+        techSpecsContext += '--- END TRADE-SPECIFIC DETAILS ---\n';
+      }
+
+      contentText = `${tradeInfo.prompt}
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
 Regional Multiplier for ZIP ${zip || 'N/A'}: ${ragData.regionalMultiplier}
 Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
 --- END RAG CONTEXT ---
-
+${techSpecsContext}
 JOB DESCRIPTION: ${sanitizedQuestion}
 ZIP CODE: ${zip || "Not provided"}
 SCOPE LEVEL: ${scopeLevel || 'mid'}
 PROJECT SIZE: ${size || 'Not specified'}
+TRADE PERSONA: ${tradeInfo.title}
 
 CRITICAL: Your response MUST be ONLY a valid JSON object. No explanatory text before or after.
 

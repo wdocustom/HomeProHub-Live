@@ -44,6 +44,18 @@
   <!-- Main Card -->
   <div class="max-w-3xl mx-auto px-4 pb-12">
     <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 space-y-6">
+      <!-- Trade Switcher -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">I am a...</label>
+        <select id="trade-selector" onchange="renderTradeFields()" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-bold text-slate-900 focus:border-blue-500 focus:ring-blue-500">
+          <option value="gc">General Contractor / Remodeler</option>
+          <option value="electrician">Electrician</option>
+          <option value="plumber">Plumber</option>
+          <option value="painter">Painter</option>
+          <option value="hvac">HVAC Tech</option>
+        </select>
+      </div>
+
       <!-- Project Description -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Project Description</label>
@@ -55,47 +67,38 @@
         ></textarea>
       </div>
 
-      <!-- Zip Code & Finish Quality -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Zip Code -->
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Zip Code</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <i class="fa-solid fa-location-dot"></i>
-            </div>
-            <input
-              type="text"
-              id="zip-code"
-              pattern="[0-9]{5}"
-              maxlength="5"
-              class="pl-10 w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
-              placeholder="12345"
-              required
-            >
+      <!-- Zip Code -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Zip Code</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <i class="fa-solid fa-location-dot"></i>
           </div>
-        </div>
-
-        <!-- Finish Quality -->
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Finish Quality</label>
-          <select id="material-level" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500">
-            <option value="mid">Standard (Mid-Range)</option>
-            <option value="budget">Economy (Budget)</option>
-            <option value="high">Premium (High-End)</option>
-          </select>
+          <input
+            type="text"
+            id="zip-code"
+            pattern="[0-9]{5}"
+            maxlength="5"
+            class="pl-10 w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
+            placeholder="12345"
+            required
+          >
         </div>
       </div>
 
-      <!-- Project Size -->
+      <!-- Finish Quality -->
       <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Approx. Size / Scope</label>
-        <input
-          type="text"
-          id="project-size"
-          class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
-          placeholder="e.g. 150 sq ft, 8x10 room, 12 windows"
-        >
+        <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Finish Quality</label>
+        <select id="material-level" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500">
+          <option value="mid">Standard (Mid-Range)</option>
+          <option value="budget">Economy (Budget)</option>
+          <option value="high">Premium (High-End)</option>
+        </select>
+      </div>
+
+      <!-- Dynamic Trade-Specific Fields -->
+      <div id="dynamic-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+        <!-- Fields will be dynamically inserted here based on trade selection -->
       </div>
 
       <!-- Auto-populate banner (hidden by default) -->
@@ -201,6 +204,66 @@
     let estimatorJobData = null;
 
     /**
+     * Trade-Specific Field Configurations
+     * Defines what inputs appear for each trade type
+     */
+    const tradeConfigs = {
+      gc: [
+        { id: 'sqft', label: 'Total Square Footage', placeholder: 'e.g. 150 sq ft', type: 'text' },
+        { id: 'room_type', label: 'Room Type', type: 'select', options: ['Bathroom', 'Kitchen', 'Basement', 'Addition', 'Living Room', 'Bedroom', 'Other'] }
+      ],
+      electrician: [
+        { id: 'points', label: 'Number of Points (Outlets/Switches)', placeholder: 'e.g. 15', type: 'text' },
+        { id: 'panel_upgrade', label: 'Panel Upgrade Needed?', type: 'select', options: ['No', 'Yes - 100 Amp', 'Yes - 200 Amp', 'Yes - 400 Amp'] },
+        { id: 'access', label: 'Access Difficulty', type: 'select', options: ['Easy (Open Wall)', 'Medium (Attic/Crawl)', 'Hard (Finished Wall)', 'Very Hard (Conduit Required)'] }
+      ],
+      plumber: [
+        { id: 'fixtures', label: 'Number of Fixtures (Sinks/Toilets)', placeholder: 'e.g. 3', type: 'text' },
+        { id: 'pipe_type', label: 'Existing Pipe Material', type: 'select', options: ['Copper', 'PEX', 'Galvanized (Old)', 'Unknown'] },
+        { id: 'slab', label: 'Concrete Slab Work?', type: 'select', options: ['No', 'Yes (Jackhammer required)'] }
+      ],
+      painter: [
+        { id: 'wall_sqft', label: 'Wall Surface Area (Sq Ft)', placeholder: 'e.g. 800', type: 'text' },
+        { id: 'ceilings', label: 'Include Ceilings?', type: 'select', options: ['No', 'Yes'] },
+        { id: 'trim', label: 'Include Trim/Doors?', type: 'select', options: ['No', 'Yes'] }
+      ],
+      hvac: [
+        { id: 'tonnage', label: 'System Tonnage', type: 'select', options: ['1.5 Ton', '2 Ton', '2.5 Ton', '3 Ton', '3.5 Ton', '4 Ton', '5 Ton'] },
+        { id: 'system_type', label: 'System Type', type: 'select', options: ['Central AC', 'Heat Pump', 'Furnace', 'Mini-Split', 'Package Unit'] },
+        { id: 'ductwork', label: 'Ductwork Status', type: 'select', options: ['Existing (Good)', 'Repair Needed', 'New Installation Required'] }
+      ]
+    };
+
+    /**
+     * Render Trade-Specific Fields Dynamically
+     * Called when trade selector changes
+     */
+    function renderTradeFields() {
+      const trade = document.getElementById('trade-selector').value;
+      const container = document.getElementById('dynamic-fields-container');
+      const fields = tradeConfigs[trade] || tradeConfigs.gc;
+
+      // Build HTML for dynamic fields
+      container.innerHTML = fields.map(field => `
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">${field.label}</label>
+          ${field.type === 'select' ? `
+            <select id="dynamic-${field.id}" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500">
+              ${field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+            </select>
+          ` : `
+            <input
+              type="text"
+              id="dynamic-${field.id}"
+              class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="${field.placeholder || ''}"
+            >
+          `}
+        </div>
+      `).join('');
+    }
+
+    /**
      * Wait for auth service to initialize
      */
     async function checkAuth() {
@@ -282,12 +345,13 @@
 
     /**
      * Generate Estimate (Main Function)
+     * Updated to support trade-specific personas and dynamic fields
      */
     async function generateEstimate() {
+      const trade = document.getElementById('trade-selector').value;
       const jobDesc = document.getElementById('job-description').value.trim();
       const jobZip = document.getElementById('zip-code').value.trim();
       const finishLevel = document.getElementById('material-level').value;
-      const projectSize = document.getElementById('project-size').value.trim();
 
       const statusEl = document.getElementById('status');
       const generateBtn = document.getElementById('generate-btn');
@@ -304,6 +368,16 @@
         return;
       }
 
+      // Gather Dynamic Trade-Specific Fields
+      const specs = {};
+      const fields = tradeConfigs[trade] || tradeConfigs.gc;
+      fields.forEach(field => {
+        const el = document.getElementById(`dynamic-${field.id}`);
+        if (el && el.value) {
+          specs[field.label] = el.value;
+        }
+      });
+
       generateBtn.disabled = true;
       generateBtn.textContent = 'Generating...';
       statusEl.textContent = 'AI is analyzing your job...';
@@ -318,7 +392,8 @@
             focus: 'pricing',
             zip: jobZip,
             scopeLevel: finishLevel,
-            size: projectSize
+            trade_persona: trade,          // NEW: Tell AI which trade perspective to use
+            technical_specs: specs          // NEW: Send trade-specific field values
           })
         });
 
@@ -582,6 +657,7 @@
     checkAuth().then(isAuthenticated => {
       if (isAuthenticated) {
         checkForEstimatorJob();
+        renderTradeFields(); // Initialize dynamic fields for default trade (GC)
       }
     });
   </script>
