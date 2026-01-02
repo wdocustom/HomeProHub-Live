@@ -393,6 +393,419 @@
       }
     }
 
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-content {
+      background: white;
+      padding: 48px 64px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .loading-spinner {
+      width: 56px;
+      height: 56px;
+      border: 5px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    /* AI Results Section */
+    .ai-results-section {
+      background: #f9fafb;
+      padding: 80px 24px;
+    }
+
+    .results-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .result-card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+
+    .result-header {
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .result-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .confidence-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .confidence-high {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .confidence-medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .confidence-low {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .diy-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-left: 12px;
+    }
+
+    .diy-safe {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .diy-inspection {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .diy-pro {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .diy-urgent {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .result-summary {
+      font-size: 18px;
+      line-height: 1.7;
+      color: #374151;
+      margin-bottom: 32px;
+    }
+
+    .result-section {
+      margin-bottom: 32px;
+    }
+
+    .result-section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .cause-card {
+      background: #f9fafb;
+      border-left: 4px solid #3b82f6;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+    }
+
+    .cause-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .cause-label {
+      font-weight: 600;
+      font-size: 16px;
+      color: #111827;
+    }
+
+    .likelihood-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .likelihood-most_likely {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .likelihood-possible {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .likelihood-less_likely {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .cause-why {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .action-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .action-list li {
+      padding: 12px 16px;
+      background: #f0fdf4;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: start;
+      gap: 12px;
+    }
+
+    .action-list li::before {
+      content: '✓';
+      font-size: 18px;
+      color: #10b981;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .dont-list li {
+      background: #fef2f2;
+    }
+
+    .dont-list li::before {
+      content: '✗';
+      color: #ef4444;
+    }
+
+    .trade-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .trade-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e40af;
+      margin-bottom: 8px;
+      text-transform: capitalize;
+    }
+
+    .trade-why {
+      font-size: 14px;
+      color: #1e3a8a;
+    }
+
+    .cost-card {
+      background: #f0fdf4;
+      border: 2px solid #10b981;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .cost-tier {
+      font-size: 24px;
+      font-weight: 700;
+      color: #065f46;
+      margin-bottom: 12px;
+    }
+
+    .cost-drivers {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .cost-drivers li {
+      font-size: 14px;
+      color: #047857;
+      padding: 6px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .cost-drivers li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+    }
+
+    .pro-message-box {
+      background: #f9fafb;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .pro-message-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #374151;
+      margin-bottom: 12px;
+    }
+
+    .copy-btn {
+      padding: 8px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: #2563eb;
+    }
+
+    .cta-section {
+      display: flex;
+      gap: 16px;
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 2px solid #e5e7eb;
+    }
+
+    .cta-primary {
+      flex: 1;
+      padding: 16px 32px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cta-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+    }
+
+    .cta-secondary {
+      padding: 16px 32px;
+      background: white;
+      color: #3b82f6;
+      border: 2px solid #3b82f6;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cta-secondary:hover {
+      background: #eff6ff;
+    }
+
+    .safety-flags {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .safety-flags-title {
+      font-weight: 700;
+      color: #991b1b;
+      margin-bottom: 8px;
+    }
+
+    .safety-flags ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .safety-flags li {
+      color: #991b1b;
+      font-size: 14px;
+      padding: 4px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .safety-flags li::before {
+      content: '⚠';
+      position: absolute;
+      left: 0;
+    }
+
+    .start-over-btn {
+      display: block;
+      margin: 24px auto 0;
+      padding: 12px 24px;
+      background: transparent;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      color: #6b7280;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .start-over-btn:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+    }
+
     /* SECTION C: HOW IT WORKS */
     .how-it-works {
       background: #f9fafb;
@@ -905,6 +1318,22 @@
     </p>
   </section>
 
+  <!-- AI RESULTS SECTION (Hidden by default, shown after analysis) -->
+  <section id="ai-results-section" class="ai-results-section" style="display: none;">
+    <div class="results-container">
+      <div id="ai-results-content"></div>
+    </div>
+  </section>
+
+  <!-- LOADING STATE -->
+  <div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Analyzing your issue...</p>
+      <p class="loading-subtext">This may take 15-30 seconds</p>
+    </div>
+  </div>
+
   <!-- SECTION C: HOW IT WORKS -->
   <section class="how-it-works" id="how-it-works">
     <div class="section-container">
@@ -1289,7 +1718,7 @@
       updatePreviewUI();
     }
 
-    function startAnalysis() {
+    async function startAnalysis() {
       const input = document.getElementById('ai-input');
       const description = input.value.trim();
 
@@ -1299,25 +1728,363 @@
         return;
       }
 
-      // If photos are provided, redirect to AI Check (user will re-upload there)
-      if (selectedFiles.length > 0) {
-        // Store just the description
-        if (description) {
-          sessionStorage.setItem('ai_check_description', description);
+      // Show loading overlay
+      document.getElementById('loading-overlay').style.display = 'flex';
+
+      try {
+        // Convert photos to base64
+        const images = [];
+        for (const file of selectedFiles) {
+          const base64 = await fileToBase64(file);
+          images.push({
+            data: base64.split(',')[1], // Remove data URL prefix
+            type: file.type
+          });
         }
-        // Redirect to AI Check page - user experience is seamless
-        window.location.href = 'ai-check.html';
-        return;
+
+        // Call AI Check API (NO AUTH REQUIRED!)
+        const response = await fetch('/api/ai-check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            description: description || undefined,
+            images: images.length > 0 ? images : undefined
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Analysis failed');
+        }
+
+        const result = await response.json();
+
+        // Store result in sessionStorage (for "Save Report" feature)
+        sessionStorage.setItem('ai_check_result', JSON.stringify({
+          description,
+          output: result.output,
+          timestamp: new Date().toISOString()
+        }));
+
+        // Render results inline
+        renderResults(result.output, description);
+
+        // Hide loading, show results
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('ai-results-section').style.display = 'block';
+
+        // Scroll to results
+        document.getElementById('ai-results-section').scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+
+      } catch (error) {
+        console.error('AI Check error:', error);
+        document.getElementById('loading-overlay').style.display = 'none';
+        alert(`Analysis failed: ${error.message}. Please try again.`);
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /**
+     * Render AI Check Results
+     * Displays comprehensive, structured diagnosis inline
+     */
+    function renderResults(output, description) {
+      const container = document.getElementById('ai-results-content');
+      if (!container) return;
+
+      // Build HTML for results
+      let html = '';
+
+      // Header with badges
+      html += '<div class="result-header">';
+      html += `<h2>${output.summary}</h2>`;
+      html += '<div class="result-badges">';
+
+      // Confidence badge
+      const confidenceColors = {
+        high: 'var(--success)',
+        medium: 'var(--warning)',
+        low: 'var(--error)'
+      };
+      html += `<span class="confidence-badge" style="background: ${confidenceColors[output.confidence]}20; color: ${confidenceColors[output.confidence]}">
+        ${output.confidence.toUpperCase()} CONFIDENCE
+      </span>`;
+
+      // DIY level badge
+      const diyLabels = {
+        safe_to_diy: 'SAFE TO DIY',
+        inspection_only: 'INSPECTION ONLY',
+        pro_recommended: 'PRO RECOMMENDED',
+        urgent: 'URGENT - GET HELP NOW'
+      };
+      const diyColors = {
+        safe_to_diy: 'var(--success)',
+        inspection_only: 'var(--info)',
+        pro_recommended: 'var(--warning)',
+        urgent: 'var(--error)'
+      };
+      html += `<span class="diy-badge" style="background: ${diyColors[output.diy_level]}; color: white">
+        ${diyLabels[output.diy_level]}
+      </span>`;
+
+      html += '</div>'; // result-badges
+      html += '</div>'; // result-header
+
+      // Safety Flags (if any)
+      if (output.safety_flags && output.safety_flags.length > 0) {
+        html += '<div class="safety-flags">';
+        output.safety_flags.forEach(flag => {
+          html += `<div class="safety-flag">⚠️ ${flag}</div>`;
+        });
+        html += '</div>';
       }
 
-      // Text-only: Use old preview.html flow
-      if (description.length < 10) {
-        alert('Please describe your issue in more detail (at least 10 characters)');
-        return;
+      // Likely Causes
+      html += '<div class="result-section">';
+      html += '<h3>Most Likely Causes</h3>';
+      html += '<div class="causes-grid">';
+
+      const likelihoodLabels = {
+        most_likely: 'MOST LIKELY',
+        possible: 'POSSIBLE',
+        less_likely: 'LESS LIKELY'
+      };
+      const likelihoodColors = {
+        most_likely: 'var(--error)',
+        possible: 'var(--warning)',
+        less_likely: 'var(--info)'
+      };
+
+      output.likely_causes.forEach(cause => {
+        html += '<div class="cause-card">';
+        html += `<div class="cause-header">
+          <h4>${cause.label}</h4>
+          <span class="likelihood-badge" style="background: ${likelihoodColors[cause.likelihood]}; color: white">
+            ${likelihoodLabels[cause.likelihood]}
+          </span>
+        </div>`;
+        html += `<p>${cause.why}</p>`;
+        html += '</div>';
+      });
+
+      html += '</div>'; // causes-grid
+      html += '</div>'; // result-section
+
+      // Do Now / Don't Do (side by side on desktop)
+      html += '<div class="actions-grid">';
+
+      // Do Now
+      html += '<div class="result-section">';
+      html += '<h3>✅ Do Now</h3>';
+      html += '<ul class="action-list do-list">';
+      output.do_now.forEach(action => {
+        html += `<li>${action}</li>`;
+      });
+      html += '</ul>';
+      html += '</div>';
+
+      // Don't Do
+      html += '<div class="result-section">';
+      html += '<h3>⛔ Don\'t Do</h3>';
+      html += '<ul class="action-list dont-list">';
+      output.dont_do.forEach(action => {
+        html += `<li>${action}</li>`;
+      });
+      html += '</ul>';
+      html += '</div>';
+
+      html += '</div>'; // actions-grid
+
+      // Who to Call
+      html += '<div class="result-section">';
+      html += '<h3>Who to Call</h3>';
+      html += '<div class="trade-card">';
+      html += `<div class="trade-name">${output.who_to_call.trade.replace(/_/g, ' ').toUpperCase()}</div>`;
+      html += `<div class="trade-why">${output.who_to_call.why}</div>`;
+      html += '</div>';
+      html += '</div>';
+
+      // Cost Estimate
+      html += '<div class="result-section">';
+      html += '<h3>Cost Estimate</h3>';
+      html += '<div class="cost-card">';
+
+      const costLabels = {
+        low: 'LOW (Under $500)',
+        medium: 'MEDIUM ($500 - $5,000)',
+        high: 'HIGH (Over $5,000)',
+        unknown: 'UNKNOWN (Needs Inspection)'
+      };
+      html += `<div class="cost-tier">${costLabels[output.cost_tier.tier]}</div>`;
+      html += '<div class="cost-drivers">';
+      html += '<strong>Cost Factors:</strong>';
+      html += '<ul>';
+      output.cost_tier.drivers.forEach(driver => {
+        html += `<li>${driver}</li>`;
+      });
+      html += '</ul>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      // Follow-up Question (if any)
+      if (output.one_question) {
+        html += '<div class="result-section">';
+        html += '<div class="follow-up-question">';
+        html += `<strong>Follow-up:</strong> ${output.one_question}`;
+        html += '</div>';
+        html += '</div>';
       }
 
-      sessionStorage.setItem('pendingQuestion', description);
-      window.location.href = 'preview.html';
+      // Pro Message (copy/paste ready)
+      html += '<div class="result-section">';
+      html += '<h3>Message for Contractors</h3>';
+      html += '<div class="pro-message-box">';
+      html += `<p>${output.pro_message}</p>`;
+      html += '<button class="copy-btn" onclick="copyProMessage()">📋 Copy Message</button>';
+      html += '</div>';
+      html += '</div>';
+
+      // CTA Buttons
+      html += '<div class="result-section">';
+      html += '<div class="cta-buttons">';
+
+      // Primary CTA
+      html += `<button class="cta-primary" onclick="handleCTA('${output.cta.primary.action}')">
+        ${output.cta.primary.label}
+      </button>`;
+
+      // Secondary CTA (if present)
+      if (output.cta.secondary) {
+        html += `<button class="cta-secondary" onclick="handleCTA('${output.cta.secondary.action}')">
+          ${output.cta.secondary.label}
+        </button>`;
+      }
+
+      html += '</div>';
+      html += '</div>';
+
+      // Start Over Button
+      html += '<div class="result-section">';
+      html += '<button class="start-over-btn" onclick="startOver()">↻ Start New Analysis</button>';
+      html += '</div>';
+
+      // Insert HTML
+      container.innerHTML = html;
+    }
+
+    /**
+     * Copy pro message to clipboard
+     */
+    function copyProMessage() {
+      const result = JSON.parse(sessionStorage.getItem('ai_check_result') || '{}');
+      if (result.output && result.output.pro_message) {
+        navigator.clipboard.writeText(result.output.pro_message).then(() => {
+          const btn = event.target;
+          const originalText = btn.textContent;
+          btn.textContent = '✓ Copied!';
+          btn.style.background = 'var(--success)';
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+          }, 2000);
+        }).catch(err => {
+          alert('Failed to copy. Please select and copy manually.');
+        });
+      }
+    }
+
+    /**
+     * Handle CTA button clicks
+     */
+    function handleCTA(action) {
+      switch(action) {
+        case 'browse_contractors':
+          window.location.href = 'contractor-directory.html';
+          break;
+        case 'get_matched':
+          window.location.href = 'contractor-matching.html';
+          break;
+        case 'request_quote':
+          window.location.href = 'request-quote.html';
+          break;
+        case 'save_report':
+          // Check if user is logged in
+          fetch('/api/auth/user', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+              if (data.user) {
+                // User is logged in, save the report
+                saveReport();
+              } else {
+                // Redirect to login with return URL
+                sessionStorage.setItem('return_after_login', window.location.pathname);
+                window.location.href = 'login.html?reason=save_report';
+              }
+            })
+            .catch(() => {
+              // Assume not logged in
+              sessionStorage.setItem('return_after_login', window.location.pathname);
+              window.location.href = 'login.html?reason=save_report';
+            });
+          break;
+        default:
+          console.log('Unknown CTA action:', action);
+      }
+    }
+
+    /**
+     * Save report (authenticated users only)
+     */
+    function saveReport() {
+      const result = JSON.parse(sessionStorage.getItem('ai_check_result') || '{}');
+
+      fetch('/api/ai-check/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(result)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert('Report saved! You can view it in your dashboard.');
+        window.location.href = 'homeowner-dashboard.html';
+      })
+      .catch(err => {
+        alert('Failed to save report. Please try again.');
+      });
+    }
+
+    /**
+     * Start over - reset the form
+     */
+    function startOver() {
+      // Hide results
+      document.getElementById('ai-results-section').style.display = 'none';
+
+      // Clear form
+      document.getElementById('ai-input').value = '';
+      selectedFiles = [];
+      updatePhotoPreview();
+
+      // Clear sessionStorage
+      sessionStorage.removeItem('ai_check_result');
+
+      // Scroll back to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function redirectToDirectory() {

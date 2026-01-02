@@ -31,29 +31,32 @@ const ObservationSchema = z.object({
 const OutputContractSchema = z.object({
   summary: z
     .string()
-    .min(20)
-    .max(200)
-    .describe('One calm sentence: "This looks like X, typically caused by Y"'),
+    .min(50)
+    .max(400)
+    .describe('2-3 sentences: What this is, what caused it, what it means'),
 
   likely_causes: z
     .array(
       z.object({
-        cause: z.string().max(100),
-        confidence: z.enum(['high', 'medium', 'low']),
+        label: z.string().max(80).describe('Short cause name'),
+        why: z.string().max(150).describe('One sentence explanation'),
+        likelihood: z.enum(['most_likely', 'possible', 'less_likely']).describe('Probability ranking'),
       })
     )
-    .min(1)
+    .min(2)
     .max(3)
-    .describe('Ranked probable causes'),
+    .describe('Ranked probable causes with explanations'),
 
   do_now: z
-    .array(z.string().max(100))
+    .array(z.string().max(120))
+    .min(1)
     .max(3)
     .describe('Immediate safe actions (turn off water, avoid area, etc.)'),
 
   dont_do: z
-    .array(z.string().max(100))
-    .max(3)
+    .array(z.string().max(120))
+    .min(2)
+    .max(4)
     .describe('What NOT to do (common mistakes)'),
 
   diy_level: z
@@ -61,7 +64,7 @@ const OutputContractSchema = z.object({
     .describe('DIY vs Pro routing'),
 
   who_to_call: z.object({
-    primary_trade: z
+    trade: z
       .enum([
         'general_contractor',
         'plumber',
@@ -69,27 +72,22 @@ const OutputContractSchema = z.object({
         'roofer',
         'hvac',
         'handyman',
-        'foundation_specialist',
+        'foundation',
         'mold_remediation',
-        'pest_control',
-        'other',
       ])
       .describe('Primary trade needed'),
-    secondary_trades: z
-      .array(z.string())
-      .max(2)
-      .optional()
-      .describe('Additional trades if multi-discipline'),
+    why: z.string().max(150).describe('Why this trade is needed'),
   }),
 
   cost_tier: z.object({
     tier: z
-      .enum(['under_500', '500_2k', '2k_10k', '10k_plus', 'unknown'])
-      .describe('Ballpark cost range'),
-    disclaimer: z
-      .string()
-      .max(150)
-      .describe('Why this could vary (accessibility, materials, permits)'),
+      .enum(['low', 'medium', 'high', 'unknown'])
+      .describe('Ballpark cost range: low (<$500), medium ($500-5k), high (>$5k), unknown'),
+    drivers: z
+      .array(z.string().max(100))
+      .min(2)
+      .max(4)
+      .describe('What affects the cost (accessibility, materials, permits, etc.)'),
   }),
 
   one_question: z
@@ -99,34 +97,33 @@ const OutputContractSchema = z.object({
     .describe('ONE follow-up question that changes diagnosis. Null if none needed.'),
 
   cta: z.object({
-    primary_action: z
-      .enum(['browse_contractors', 'post_project', 'schedule_inspection', 'learn_more'])
-      .describe('What should user do next'),
-    button_text: z.string().max(50).describe('CTA button text'),
-    route: z.string().max(100).describe('Where to send user (URL path or page name)'),
+    primary: z.object({
+      label: z.string().max(50).describe('Primary CTA button text'),
+      action: z
+        .enum(['browse_contractors', 'get_matched', 'request_quote', 'save_report'])
+        .describe('Primary action'),
+    }),
+    secondary: z
+      .object({
+        label: z.string().max(50).describe('Secondary CTA button text'),
+        action: z.string().max(50).nullable().describe('Secondary action or null'),
+      })
+      .nullable()
+      .describe('Optional secondary CTA'),
   }),
 
   pro_message: z
     .string()
-    .max(300)
-    .describe('Calm, helpful message for contractor browsing/matching'),
+    .min(100)
+    .max(500)
+    .describe('3-6 sentences: What to tell contractor, what to expect, copy/paste ready'),
 
   confidence: z.enum(['low', 'medium', 'high']).describe('Overall diagnosis confidence'),
 
   safety_flags: z
-    .array(
-      z.enum([
-        'electrical_hazard',
-        'water_damage_active',
-        'structural_concern',
-        'mold_suspected',
-        'gas_leak_possible',
-        'fire_risk',
-        'none',
-      ])
-    )
-    .max(3)
-    .describe('Safety warnings'),
+    .array(z.string().max(50))
+    .max(5)
+    .describe('Safety warnings (plain text, e.g. "Active water damage", "Electrical hazard")'),
 });
 
 module.exports = {

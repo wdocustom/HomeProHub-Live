@@ -23,64 +23,59 @@ OUTPUT CONTRACT:
 You MUST return valid JSON matching this exact structure:
 
 {
-  "summary": "One calm sentence: 'This looks like X, typically caused by Y'",
+  "summary": "2-3 sentences explaining what this is, what caused it, and what it means for the homeowner",
   "likely_causes": [
-    {"cause": "Most likely cause", "confidence": "high"},
-    {"cause": "Second possibility", "confidence": "medium"}
+    {"label": "Toilet wax ring failure", "why": "Water staining pattern indicates leak from above", "likelihood": "most_likely"},
+    {"label": "Shower pan breach", "why": "Could explain water damage if bathroom is above", "likelihood": "possible"}
   ],
-  "do_now": ["Safe action 1", "Safe action 2"],
-  "dont_do": ["Common mistake to avoid 1", "Mistake 2"],
-  "diy_level": "safe_to_diy|inspection_only|pro_recommended|urgent",
+  "do_now": ["Turn off water to bathroom above if accessible", "Place bucket under active drip"],
+  "dont_do": ["Don't ignore active drip - mold grows in 24-48 hours", "Don't patch ceiling until leak source is fixed"],
+  "diy_level": "pro_recommended",
   "who_to_call": {
-    "primary_trade": "plumber|electrician|roofer|general_contractor|...",
-    "secondary_trades": ["optional", "additional"]
+    "trade": "plumber",
+    "why": "Plumber can identify exact leak source and prevent further water damage"
   },
   "cost_tier": {
-    "tier": "under_500|500_2k|2k_10k|10k_plus|unknown",
-    "disclaimer": "Why this could vary"
+    "tier": "medium",
+    "drivers": ["Leak source location", "Extent of hidden water damage", "Ceiling drywall replacement", "Subfloor damage if present"]
   },
-  "one_question": "ONE follow-up question that changes diagnosis (or null)",
+  "one_question": "Is the bathroom directly above this spot currently in use?",
   "cta": {
-    "primary_action": "browse_contractors|post_project|schedule_inspection",
-    "button_text": "Find Local Plumbers",
-    "route": "browse-contractors?trade=plumber"
+    "primary": {"label": "Find Local Plumbers", "action": "browse_contractors"},
+    "secondary": {"label": "Save This Report", "action": "save_report"}
   },
-  "pro_message": "Calm message for contractor browsing: 'Local plumbers can diagnose leak sources...'",
-  "confidence": "low|medium|high",
-  "safety_flags": ["electrical_hazard", "water_damage_active", ...]
+  "pro_message": "When you contact a plumber, let them know you have an active ceiling leak with water staining. Ask them to inspect the bathroom above for toilet seal failure or shower pan issues. Request moisture detection to check for hidden damage in walls and subfloor. Get quotes for both leak repair and any necessary drywall/ceiling work.",
+  "confidence": "high",
+  "safety_flags": ["Active water damage", "Potential mold growth"]
 }
 
 RULES:
-1. summary: ONE sentence, calm tone, specific diagnosis
-2. likely_causes: Max 3, ranked by probability, with confidence levels
-3. do_now: Max 3 immediate SAFE actions (turn off water, avoid area, etc.)
-4. dont_do: Max 3 common mistakes (don't ignore, don't DIY electrical, etc.)
+1. summary: 2-3 sentences, calm and informative, explain diagnosis clearly
+2. likely_causes: 2-3 items with label, why, and likelihood (most_likely/possible/less_likely)
+3. do_now: 1-3 immediate SAFE actions that homeowner can take right now
+4. dont_do: 2-4 common mistakes homeowners make with this issue
 5. diy_level:
-   - safe_to_diy: Simple fix, homeowner can handle
+   - safe_to_diy: Simple fix, homeowner can handle safely
    - inspection_only: Need pro to assess, but not urgent
-   - pro_recommended: Hire a pro, but schedule normally
-   - urgent: Get help ASAP (safety risk)
-6. who_to_call: Route to correct trade (plumber, electrician, etc.)
-7. cost_tier: Ballpark range, explain what affects price
-8. one_question: Only if it MATERIALLY changes diagnosis. Otherwise null.
-9. cta: Route user to platform action (browse contractors, post project, etc.)
-10. pro_message: What to tell homeowner when browsing contractors
-11. safety_flags: ALWAYS include if electrical, water, structural, mold, gas, fire risks present
+   - pro_recommended: Hire a licensed pro, schedule normally
+   - urgent: Get help ASAP (active safety risk)
+6. who_to_call: Specify trade + why this trade is needed
+7. cost_tier: tier (low/medium/high/unknown) + 2-4 cost drivers
+   - low: Under $500 (minor repairs, handyman work)
+   - medium: $500-5k (single-trade repairs, moderate projects)
+   - high: Over $5k (major work, full remodels, structural)
+   - unknown: Cannot estimate without inspection
+8. one_question: Only ask if answer MATERIALLY changes diagnosis. Otherwise null.
+9. cta: Primary action (required) + optional secondary action
+10. pro_message: 3-6 sentences, copy/paste ready for homeowner to send to contractors
+11. confidence: Your overall confidence in this diagnosis (low/medium/high)
+12. safety_flags: Plain text warnings (e.g. "Active water damage", "Electrical hazard")
 
-COST TIER GUIDANCE:
-- under_500: Minor repairs, handyman work
-- 500_2k: Single-trade repairs (toilet, outlet, small roof patch)
-- 2k_10k: Moderate projects (water heater, small remodel)
-- 10k_plus: Major work (roof replacement, foundation, full remodel)
-- unknown: Truly can't estimate without inspection
+BE DECISIVE. Don't hedge with "might be" or "could be". Say "This is most likely X because Y."
+BE PRACTICAL. Focus on what the homeowner should DO, not just what's wrong.
+BE CALM. No fear-mongering. Reassure when appropriate, warn clearly when necessary.
 
-DIY LEVEL GUIDANCE:
-- safe_to_diy: Caulking, painting, minor repairs
-- inspection_only: Uncertain cause, need pro eyes (not urgent)
-- pro_recommended: Electrical, plumbing, structural, permits needed
-- urgent: Active leak, exposed wiring, structural failure, mold
-
-RETURN ONLY JSON. NO EXPLANATIONS OUTSIDE THE JSON OBJECT.`;
+RETURN ONLY JSON. NO MARKDOWN. NO EXPLANATIONS OUTSIDE THE JSON OBJECT.`;
 }
 
 /**
@@ -223,34 +218,47 @@ function getSafeDefaultOutput(observation, textDescription) {
   }
 
   return {
-    summary: 'This issue requires professional assessment to provide an accurate diagnosis.',
+    summary: 'This issue requires professional assessment to provide an accurate diagnosis. Based on the limited information available, a licensed contractor can inspect the problem in person and recommend the appropriate solution. Getting a professional opinion is the safest next step.',
     likely_causes: [
       {
-        cause: 'Issue requires in-person inspection',
-        confidence: 'low',
+        label: 'Requires in-person inspection',
+        why: 'Cannot determine exact cause from available information',
+        likelihood: 'most_likely',
+      },
+      {
+        label: 'Multiple potential factors',
+        why: 'Issue may involve several contributing causes',
+        likelihood: 'possible',
       },
     ],
-    do_now: ['Document the issue with photos', 'Note when the problem started'],
-    dont_do: ['Attempt repairs without professional assessment'],
+    do_now: ['Document the issue with additional photos', 'Note when the problem started and any changes over time'],
+    dont_do: ['Attempt repairs without professional assessment', 'Ignore the issue if it worsens'],
     diy_level: 'inspection_only',
     who_to_call: {
-      primary_trade: primaryTrade,
-      secondary_trades: [],
+      trade: primaryTrade,
+      why: 'Licensed professional can provide accurate diagnosis and repair recommendations',
     },
     cost_tier: {
       tier: 'unknown',
-      disclaimer: 'Cost depends on diagnosis after professional inspection',
+      drivers: ['Depends on diagnosis after inspection', 'Accessibility and complexity', 'Materials and labor required'],
     },
     one_question: null,
     cta: {
-      primary_action: 'browse_contractors',
-      button_text: 'Find Local Contractors',
-      route: 'browse-contractors',
+      primary: {
+        label: 'Find Local Contractors',
+        action: 'browse_contractors',
+      },
+      secondary: {
+        label: 'Save This Report',
+        action: 'save_report',
+      },
     },
     pro_message:
-      'A licensed contractor can inspect this issue and provide an accurate quote for repairs.',
+      'I have a home repair issue that needs professional inspection. The problem involves ' +
+      (textDescription || 'the area shown in the photos') +
+      '. I would like to schedule an inspection to get an accurate diagnosis and quote for repairs. Please let me know your availability and what information you need from me.',
     confidence: 'low',
-    safety_flags: observation.urgency_indicators.length > 0 ? ['none'] : ['none'],
+    safety_flags: observation.urgency_indicators.length > 0 ? observation.urgency_indicators : [],
   };
 }
 
