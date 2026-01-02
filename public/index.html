@@ -147,6 +147,8 @@
       gap: 16px;
       align-items: center;
       margin-bottom: 32px;
+      width: 100%;
+      max-width: 100%;
     }
 
     .hero-input-group {
@@ -211,6 +213,10 @@
       padding: 8px 8px 12px;
       scroll-snap-type: x mandatory;
       scrollbar-width: thin;
+      width: 100%;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .photo-preview-container::-webkit-scrollbar {
@@ -276,6 +282,7 @@
       padding: 8px;
       transition: all 0.3s;
       max-width: 700px;
+      width: 100%;
       margin: 0 auto;
     }
 
@@ -1292,31 +1299,14 @@
         return;
       }
 
-      // If photos are provided, use new AI Check feature
+      // If photos are provided, redirect to AI Check (user will re-upload there)
       if (selectedFiles.length > 0) {
-        // Store description and files for ai-check.html
-        sessionStorage.setItem('ai_check_description', description);
-
-        // Convert files to base64 and store
-        const promises = selectedFiles.map(file => {
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              resolve({
-                data: e.target.result.split(',')[1], // Base64 without prefix
-                type: file.type,
-                url: e.target.result // For preview
-              });
-            };
-            reader.readAsDataURL(file);
-          });
-        });
-
-        Promise.all(promises).then(images => {
-          sessionStorage.setItem('ai_check_images', JSON.stringify(images));
-          window.location.href = 'ai-check.html';
-        });
-
+        // Store just the description
+        if (description) {
+          sessionStorage.setItem('ai_check_description', description);
+        }
+        // Redirect to AI Check page - user experience is seamless
+        window.location.href = 'ai-check.html';
         return;
       }
 
