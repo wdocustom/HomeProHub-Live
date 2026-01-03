@@ -1153,6 +1153,82 @@
         </form>
       </div>
 
+      <!-- Homeowner Trust Score Card -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl shadow-sm border border-blue-100 p-8 mb-8">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="p-3 bg-white rounded-2xl shadow-sm">
+                <i class="fa-solid fa-shield-heart text-2xl text-blue-600"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-slate-900">Your Trust Score</h3>
+                <p class="text-sm text-slate-500">Based on contractor reviews</p>
+              </div>
+            </div>
+            <p class="text-slate-600 text-sm">
+              Contractors rate clients on payment speed, project clarity, and site conditions. A high score helps you attract top-rated pros.
+            </p>
+          </div>
+
+          <div class="flex flex-col items-center gap-3">
+            <div class="relative w-32 h-32">
+              <!-- Circular Progress -->
+              <svg class="w-32 h-32 transform -rotate-90">
+                <circle cx="64" cy="64" r="56" stroke="#e2e8f0" stroke-width="8" fill="none"></circle>
+                <circle id="trustScoreCircle" cx="64" cy="64" r="56" stroke="#3b82f6" stroke-width="8" fill="none"
+                  stroke-dasharray="352" stroke-dashoffset="352" stroke-linecap="round"
+                  style="transition: stroke-dashoffset 1s ease;"></circle>
+              </svg>
+              <!-- Score Display -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="text-center">
+                  <div id="trustScoreValue" class="text-3xl font-black text-blue-600">--</div>
+                  <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">Score</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grade Badge -->
+            <div id="trustGradeBadge" class="px-4 py-2 bg-white rounded-full shadow-md border-2 border-blue-200">
+              <span class="text-2xl font-black text-blue-600" id="trustGradeText">New</span>
+            </div>
+
+            <!-- Review Count -->
+            <p class="text-xs text-slate-500">
+              Based on <span id="trustReviewCount" class="font-bold text-slate-700">0</span> reviews
+            </p>
+          </div>
+        </div>
+
+        <!-- Breakdown (Hidden if no reviews) -->
+        <div id="trustScoreBreakdown" class="mt-6 pt-6 border-t border-blue-100 hidden">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-dollar-sign text-green-500 text-xl"></i>
+              <div>
+                <p class="text-xs font-bold text-slate-400 uppercase">Payment Speed</p>
+                <p class="text-lg font-bold text-slate-900"><span id="avgPayment">0.0</span>/5.0</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-clipboard-check text-blue-500 text-xl"></i>
+              <div>
+                <p class="text-xs font-bold text-slate-400 uppercase">Scope Adherence</p>
+                <p class="text-lg font-bold text-slate-900"><span id="avgScope">0.0</span>/5.0</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-home text-purple-500 text-xl"></i>
+              <div>
+                <p class="text-xs font-bold text-slate-400 uppercase">Site Conditions</p>
+                <p class="text-lg font-bold text-slate-900"><span id="avgSite">0.0</span>/5.0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Stats Grid -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -2423,7 +2499,70 @@
     // Initialize Home Profile on Page Load
     window.addEventListener('DOMContentLoaded', () => {
       loadHomeProfile();
+      loadTrustScore();
     });
+
+    // ========================================
+    // TRUST SCORE FUNCTIONS
+    // ========================================
+
+    // Load Homeowner Trust Score
+    async function loadTrustScore() {
+      try {
+        const user = await window.authService.getCurrentUser();
+        if (!user) return;
+
+        const response = await fetch('/api/homeowner-scores/me', {
+          headers: {
+            'Authorization': `Bearer ${user.access_token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.score) {
+            displayTrustScore(data.score);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading trust score:', error);
+      }
+    }
+
+    // Display Trust Score
+    function displayTrustScore(score) {
+      const trustScore = score.trust_score;
+      const grade = score.grade;
+      const reviewCount = score.total_reviews;
+
+      // Update score display
+      if (trustScore !== null) {
+        document.getElementById('trustScoreValue').textContent = Math.round(trustScore);
+
+        // Animate circular progress
+        const circle = document.getElementById('trustScoreCircle');
+        const circumference = 2 * Math.PI * 56; // radius = 56
+        const progress = (trustScore / 100) * circumference;
+        const offset = circumference - progress;
+        circle.style.strokeDashoffset = offset;
+
+        // Update grade badge
+        document.getElementById('trustGradeText').textContent = grade;
+
+        // Show breakdown
+        document.getElementById('trustScoreBreakdown').classList.remove('hidden');
+        document.getElementById('avgPayment').textContent = score.avg_payment.toFixed(1);
+        document.getElementById('avgScope').textContent = score.avg_scope.toFixed(1);
+        document.getElementById('avgSite').textContent = score.avg_site.toFixed(1);
+      } else {
+        // No reviews yet
+        document.getElementById('trustScoreValue').textContent = '--';
+        document.getElementById('trustGradeText').textContent = 'New';
+      }
+
+      // Update review count
+      document.getElementById('trustReviewCount').textContent = reviewCount;
+    }
   </script>
 
   <!-- Global Footer -->

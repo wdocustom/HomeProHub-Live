@@ -816,6 +816,226 @@ app.get('/api/home/fetch-details', async (req, res) => {
   }
 });
 
+// ========================================
+// CLIENT REVIEW ENDPOINTS
+// ========================================
+
+/**
+ * POST /api/client-reviews/submit
+ * Contractor submits a review for a homeowner client
+ * PRIVACY: Only the contractor can see their own reviews
+ */
+app.post('/api/client-reviews/submit', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const {
+      project_id,
+      homeowner_id,
+      rating_payment,
+      rating_scope,
+      rating_site,
+      tags
+    } = req.body;
+
+    // Validate required fields
+    if (!project_id || !homeowner_id) {
+      return res.status(400).json({ error: 'Project ID and Homeowner ID are required' });
+    }
+
+    // Validate ratings (1-5)
+    if (!rating_payment || !rating_scope || !rating_site) {
+      return res.status(400).json({ error: 'All three ratings are required' });
+    }
+
+    if (rating_payment < 1 || rating_payment > 5 ||
+        rating_scope < 1 || rating_scope > 5 ||
+        rating_site < 1 || rating_site > 5) {
+      return res.status(400).json({ error: 'Ratings must be between 1 and 5' });
+    }
+
+    // Verify contractor is associated with this project
+    const { data: project, error: projectError } = await req.supabase
+      .from('projects')
+      .select('*')
+      .eq('id', project_id)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Check if review already exists (prevent duplicates)
+    const { data: existingReview } = await req.supabase
+      .from('client_reviews')
+      .select('id')
+      .eq('contractor_id', contractorId)
+      .eq('project_id', project_id)
+      .single();
+
+    if (existingReview) {
+      return res.status(400).json({ error: 'You have already reviewed this client' });
+    }
+
+    // Insert review
+    const { data: review, error: insertError } = await req.supabase
+      .from('client_reviews')
+      .insert({
+        project_id,
+        contractor_id: contractorId,
+        homeowner_id,
+        rating_payment,
+        rating_scope,
+        rating_site,
+        tags: tags || [],
+        is_verified_transaction: true
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting client review:', insertError);
+      return res.status(500).json({ error: 'Failed to submit review' });
+    }
+
+    return res.json({
+      success: true,
+      review: review
+    });
+
+  } catch (error) {
+    console.error('Error in /api/client-reviews/submit:', error);
+    return res.status(500).json({ error: 'Failed to submit client review' });
+  }
+});
+
+/**
+ * GET /api/client-reviews/my-reviews
+ * Get all reviews submitted by the authenticated contractor
+ * PRIVACY: Contractors can only see their own reviews
+ */
+app.get('/api/client-reviews/my-reviews', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+
+    const { data: reviews, error } = await req.supabase
+      .from('client_reviews')
+      .select('*')
+      .eq('contractor_id', contractorId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching contractor reviews:', error);
+      return res.status(500).json({ error: 'Failed to fetch reviews' });
+    }
+
+    return res.json({
+      success: true,
+      reviews: reviews || []
+    });
+
+  } catch (error) {
+    console.error('Error in /api/client-reviews/my-reviews:', error);
+    return res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+/**
+ * GET /api/homeowner-scores/:homeownerId
+ * Get aggregated trust score for a homeowner
+ * PUBLIC: Any authenticated user can see aggregated scores (not individual reviews)
+ */
+app.get('/api/homeowner-scores/:homeownerId', optionalAuth, async (req, res) => {
+  try {
+    const { homeownerId } = req.params;
+
+    // Fetch aggregate score from view
+    const { data: score, error } = await req.supabase
+      .from('homeowner_scores')
+      .select('*')
+      .eq('homeowner_id', homeownerId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching homeowner score:', error);
+      return res.status(500).json({ error: 'Failed to fetch homeowner score' });
+    }
+
+    if (!score) {
+      // No reviews yet - return default values
+      return res.json({
+        success: true,
+        score: {
+          homeowner_id: homeownerId,
+          trust_score: null,
+          grade: 'New',
+          total_reviews: 0,
+          avg_payment: null,
+          avg_scope: null,
+          avg_site: null
+        }
+      });
+    }
+
+    return res.json({
+      success: true,
+      score: score
+    });
+
+  } catch (error) {
+    console.error('Error in /api/homeowner-scores:', error);
+    return res.status(500).json({ error: 'Failed to fetch homeowner score' });
+  }
+});
+
+/**
+ * GET /api/homeowner-scores/me
+ * Get trust score for authenticated homeowner
+ * PRIVACY: Homeowners see their aggregate score but NOT individual reviews
+ */
+app.get('/api/homeowner-scores/me', requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const homeownerId = req.user.id;
+
+    // Fetch aggregate score from view
+    const { data: score, error } = await req.supabase
+      .from('homeowner_scores')
+      .select('*')
+      .eq('homeowner_id', homeownerId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching homeowner score:', error);
+      return res.status(500).json({ error: 'Failed to fetch trust score' });
+    }
+
+    if (!score) {
+      // No reviews yet
+      return res.json({
+        success: true,
+        score: {
+          homeowner_id: homeownerId,
+          trust_score: null,
+          grade: 'New',
+          total_reviews: 0,
+          avg_payment: null,
+          avg_scope: null,
+          avg_site: null
+        },
+        message: 'No reviews yet. Complete a project to build your trust score!'
+      });
+    }
+
+    return res.json({
+      success: true,
+      score: score
+    });
+
+  } catch (error) {
+    console.error('Error in /api/homeowner-scores/me:', error);
+    return res.status(500).json({ error: 'Failed to fetch trust score' });
+  }
+});
+
 /**
  * GET /api/get-user-status (alias for get-full-user-status)
  * Returns user profile status (mock implementation - replace with database)

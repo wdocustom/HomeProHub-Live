@@ -1,0 +1,410 @@
+<!-- Rate Your Client Modal Component -->
+<!-- Include this in contractor dashboard pages where project completion occurs -->
+
+<style>
+  /* Rate Client Modal Styles */
+  .rate-client-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .rate-client-overlay.show {
+    display: flex;
+  }
+
+  .rate-client-modal {
+    background: white;
+    border-radius: 2rem;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+
+  .rate-client-header {
+    padding: 2rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .rate-client-body {
+    padding: 2rem;
+  }
+
+  .rate-client-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+
+  /* Star Rating */
+  .star-rating {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 2rem;
+  }
+
+  .star-rating input {
+    display: none;
+  }
+
+  .star-rating label {
+    cursor: pointer;
+    color: #cbd5e1;
+    transition: all 0.2s;
+  }
+
+  .star-rating label:hover,
+  .star-rating label:hover ~ label,
+  .star-rating input:checked ~ label {
+    color: #fbbf24;
+  }
+
+  /* Tag Pills */
+  .tag-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .tag-pill {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+
+  .tag-pill.positive {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #bbf7d0;
+  }
+
+  .tag-pill.positive:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+  }
+
+  .tag-pill.positive.selected {
+    background: #22c55e;
+    color: white;
+    border-color: #16a34a;
+  }
+
+  .tag-pill.negative {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+  }
+
+  .tag-pill.negative:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  .tag-pill.negative.selected {
+    background: #ef4444;
+    color: white;
+    border-color: #dc2626;
+  }
+
+  /* Question Block */
+  .question-block {
+    margin-bottom: 2rem;
+  }
+
+  .question-label {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+  }
+
+  .question-sublabel {
+    display: block;
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+  }
+
+  .rating-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+</style>
+
+<!-- Modal HTML -->
+<div id="rateClientOverlay" class="rate-client-overlay">
+  <div class="rate-client-modal">
+    <!-- Header -->
+    <div class="rate-client-header">
+      <h2 class="text-2xl font-bold text-slate-900 mb-2">Project Wrap-Up</h2>
+      <p class="text-slate-500">Help the community by sharing your experience with this client</p>
+    </div>
+
+    <!-- Body -->
+    <div class="rate-client-body">
+      <form id="rateClientForm">
+        <!-- Hidden Fields -->
+        <input type="hidden" id="reviewProjectId" name="project_id">
+        <input type="hidden" id="reviewHomeownerId" name="homeowner_id">
+
+        <!-- Question 1: Payment Speed -->
+        <div class="question-block">
+          <label class="question-label">Payment Speed</label>
+          <span class="question-sublabel">How quickly did the client process payments?</span>
+          <div class="star-rating" id="rating-payment">
+            <input type="radio" name="rating_payment" value="5" id="payment-5">
+            <label for="payment-5">★</label>
+            <input type="radio" name="rating_payment" value="4" id="payment-4">
+            <label for="payment-4">★</label>
+            <input type="radio" name="rating_payment" value="3" id="payment-3">
+            <label for="payment-3">★</label>
+            <input type="radio" name="rating_payment" value="2" id="payment-2">
+            <label for="payment-2">★</label>
+            <input type="radio" name="rating_payment" value="1" id="payment-1">
+            <label for="payment-1">★</label>
+          </div>
+          <div class="rating-labels">
+            <span>Late/Chased</span>
+            <span>Instant/On-Time</span>
+          </div>
+        </div>
+
+        <!-- Question 2: Scope Adherence -->
+        <div class="question-block">
+          <label class="question-label">Scope Adherence</label>
+          <span class="question-sublabel">Did the client stick to the original plan?</span>
+          <div class="star-rating" id="rating-scope">
+            <input type="radio" name="rating_scope" value="5" id="scope-5">
+            <label for="scope-5">★</label>
+            <input type="radio" name="rating_scope" value="4" id="scope-4">
+            <label for="scope-4">★</label>
+            <input type="radio" name="rating_scope" value="3" id="scope-3">
+            <label for="scope-3">★</label>
+            <input type="radio" name="rating_scope" value="2" id="scope-2">
+            <label for="scope-2">★</label>
+            <input type="radio" name="rating_scope" value="1" id="scope-1">
+            <label for="scope-1">★</label>
+          </div>
+          <div class="rating-labels">
+            <span>Constant Changes</span>
+            <span>Stuck to Plan</span>
+          </div>
+        </div>
+
+        <!-- Question 3: Site Conditions -->
+        <div class="question-block">
+          <label class="question-label">Site Conditions</label>
+          <span class="question-sublabel">Was the work site ready and accessible?</span>
+          <div class="star-rating" id="rating-site">
+            <input type="radio" name="rating_site" value="5" id="site-5">
+            <label for="site-5">★</label>
+            <input type="radio" name="rating_site" value="4" id="site-4">
+            <label for="site-4">★</label>
+            <input type="radio" name="rating_site" value="3" id="site-3">
+            <label for="site-3">★</label>
+            <input type="radio" name="rating_site" value="2" id="site-2">
+            <label for="site-2">★</label>
+            <input type="radio" name="rating_site" value="1" id="site-1">
+            <label for="site-1">★</label>
+          </div>
+          <div class="rating-labels">
+            <span>Inaccessible/Messy</span>
+            <span>Ready to Work</span>
+          </div>
+        </div>
+
+        <!-- Tags Section -->
+        <div class="question-block">
+          <label class="question-label">Client Highlights</label>
+          <span class="question-sublabel">Select all that apply (optional)</span>
+          <div class="tag-pills">
+            <!-- Positive Tags -->
+            <div class="tag-pill positive" data-tag="Fast Payer">
+              <i class="fa-solid fa-check-circle mr-1"></i> Fast Payer
+            </div>
+            <div class="tag-pill positive" data-tag="Clear Communicator">
+              <i class="fa-solid fa-comments mr-1"></i> Clear Communicator
+            </div>
+            <div class="tag-pill positive" data-tag="Hospitality">
+              <i class="fa-solid fa-mug-hot mr-1"></i> Hospitality
+            </div>
+            <!-- Negative Tags -->
+            <div class="tag-pill negative" data-tag="Delayed Access">
+              <i class="fa-solid fa-clock mr-1"></i> Delayed Access
+            </div>
+            <div class="tag-pill negative" data-tag="Scope Creep">
+              <i class="fa-solid fa-expand mr-1"></i> Scope Creep
+            </div>
+            <div class="tag-pill negative" data-tag="Unsafe Pets">
+              <i class="fa-solid fa-dog mr-1"></i> Unsafe Pets
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div class="rate-client-footer">
+      <button type="button" onclick="closeRateClientModal()" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors">
+        Skip for Now
+      </button>
+      <button type="button" onclick="submitClientReview()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg transition-all hover:scale-105 flex items-center gap-2">
+        <i class="fa-solid fa-paper-plane"></i> Submit Review
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========================================
+  // RATE CLIENT MODAL LOGIC
+  // ========================================
+
+  let selectedTags = [];
+
+  // Open modal for a specific project
+  function openRateClientModal(projectId, homeownerId) {
+    document.getElementById('reviewProjectId').value = projectId;
+    document.getElementById('reviewHomeownerId').value = homeownerId;
+    document.getElementById('rateClientOverlay').classList.add('show');
+    selectedTags = [];
+
+    // Reset form
+    document.getElementById('rateClientForm').reset();
+    document.querySelectorAll('.tag-pill.selected').forEach(pill => {
+      pill.classList.remove('selected');
+    });
+  }
+
+  // Close modal
+  function closeRateClientModal() {
+    document.getElementById('rateClientOverlay').classList.remove('show');
+  }
+
+  // Handle tag selection
+  document.querySelectorAll('.tag-pill').forEach(pill => {
+    pill.addEventListener('click', function() {
+      const tag = this.dataset.tag;
+
+      if (this.classList.contains('selected')) {
+        // Deselect
+        this.classList.remove('selected');
+        selectedTags = selectedTags.filter(t => t !== tag);
+      } else {
+        // Select
+        this.classList.add('selected');
+        selectedTags.push(tag);
+      }
+    });
+  });
+
+  // Submit review
+  async function submitClientReview() {
+    const form = document.getElementById('rateClientForm');
+    const formData = new FormData(form);
+
+    // Validate ratings
+    const paymentRating = formData.get('rating_payment');
+    const scopeRating = formData.get('rating_scope');
+    const siteRating = formData.get('rating_site');
+
+    if (!paymentRating || !scopeRating || !siteRating) {
+      alert('Please rate all three questions before submitting.');
+      return;
+    }
+
+    const reviewData = {
+      project_id: formData.get('project_id'),
+      homeowner_id: formData.get('homeowner_id'),
+      rating_payment: parseInt(paymentRating),
+      rating_scope: parseInt(scopeRating),
+      rating_site: parseInt(siteRating),
+      tags: selectedTags
+    };
+
+    try {
+      const user = await window.authService.getCurrentUser();
+
+      const response = await fetch('/api/client-reviews/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.access_token}`
+        },
+        body: JSON.stringify(reviewData)
+      });
+
+      if (response.ok) {
+        // Show success message
+        showToast('Client review submitted successfully!', 'success');
+        closeRateClientModal();
+
+        // Refresh page to update UI
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        const error = await response.json();
+        showToast(error.error || 'Failed to submit review', 'error');
+      }
+    } catch (error) {
+      console.error('Error submitting client review:', error);
+      showToast('An error occurred. Please try again.', 'error');
+    }
+  }
+
+  // Toast notification helper
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-8 right-8 px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 z-[10000] ${
+      type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } text-white font-semibold animate-fade-in-up`;
+    toast.innerHTML = `
+      <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+      <span>${message}</span>
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+
+  // Close modal on overlay click
+  document.getElementById('rateClientOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeRateClientModal();
+    }
+  });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeRateClientModal();
+    }
+  });
+
+  // Make functions globally available
+  window.openRateClientModal = openRateClientModal;
+  window.closeRateClientModal = closeRateClientModal;
+  window.submitClientReview = submitClientReview;
+</script>
