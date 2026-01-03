@@ -387,78 +387,41 @@
 <body>
   <!-- Navigation component will be injected here -->
 
-  <div class="directory-container">
+  <div class="directory-container" id="directory-container">
     <div class="directory-header">
       <h1>Find Verified Contractors</h1>
       <p>Search local contractors and trades. Every pro is graded based on transparent criteria: license verification, profile completeness, and verified reviews.</p>
     </div>
 
-    <div class="search-filter-section">
-      <div class="search-bar">
-        <input
-          type="text"
-          id="searchInput"
-          class="search-input"
-          placeholder="Search by contractor name, trade, or service (e.g., 'Smith Builders', 'Plumber', 'HVAC')"
-        />
-        <button class="search-btn" onclick="applyFilters()">🔍 Search</button>
+    <!-- Floating Search Bar (Sanctuary Glass 2.0) -->
+    <div class="relative z-10 -mt-8 mb-12 max-w-4xl mx-auto px-4">
+      <div class="bg-white rounded-full shadow-xl ring-1 ring-slate-900/5 p-2 flex flex-col md:flex-row items-center gap-2">
+
+        <div class="flex-1 flex items-center px-4 w-full">
+          <i class="fa-solid fa-magnifying-glass text-slate-400 mr-3"></i>
+          <input type="text" id="searchInput" placeholder="Search by trade (e.g. Plumber) or name..." class="w-full border-0 bg-transparent focus:ring-0 text-slate-900 placeholder:text-slate-400 font-medium h-12" style="outline: none;">
+        </div>
+
+        <div class="hidden md:block w-px h-8 bg-slate-200 mx-2"></div>
+
+        <div class="w-full md:w-48 flex items-center px-4">
+          <i class="fa-solid fa-location-dot text-slate-400 mr-3"></i>
+          <input type="text" id="zipFilter" placeholder="Zip Code" maxlength="5" pattern="[0-9]{5}" class="w-full border-0 bg-transparent focus:ring-0 text-slate-900 placeholder:text-slate-400 font-medium h-12" style="outline: none;">
+        </div>
+
+        <button onclick="applyFilters()" class="w-full md:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full shadow-lg shadow-blue-500/30 transition-all">
+          Search
+        </button>
       </div>
 
-      <div class="filters-row">
-        <div class="filter-group">
-          <label for="tradeFilter">Trade</label>
-          <select id="tradeFilter" class="filter-select" onchange="applyFilters()">
-            <option value="all">All Trades</option>
-            <option value="general_contractor">General Contractor</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="hvac">HVAC</option>
-            <option value="roofing">Roofing</option>
-            <option value="painting">Painting</option>
-            <option value="landscaping">Landscaping</option>
-            <option value="flooring">Flooring</option>
-            <option value="carpentry">Carpentry</option>
-            <option value="masonry">Masonry</option>
-            <option value="concrete">Concrete</option>
-            <option value="drywall">Drywall</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="gradeFilter">Minimum Grade</label>
-          <select id="gradeFilter" class="filter-select" onchange="applyFilters()">
-            <option value="">Any Grade</option>
-            <option value="A">A or Better</option>
-            <option value="B">B or Better</option>
-            <option value="C">C or Better</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="zipFilter">Your ZIP Code</label>
-          <input
-            type="text"
-            id="zipFilter"
-            class="filter-select"
-            placeholder="Enter ZIP"
-            maxlength="5"
-            pattern="[0-9]{5}"
-          />
-        </div>
-
-        <div class="filter-group">
-          <label for="distanceFilter">Max Distance</label>
-          <select id="distanceFilter" class="filter-select" onchange="applyFilters()">
-            <option value="">Any Distance</option>
-            <option value="5">Within 5 miles</option>
-            <option value="10">Within 10 miles</option>
-            <option value="25">Within 25 miles</option>
-            <option value="50">Within 50 miles</option>
-          </select>
-        </div>
+      <!-- Quick Filter Buttons -->
+      <div class="flex flex-wrap justify-center gap-2 mt-6">
+        <button onclick="filterByTrade('plumbing')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">💧 Plumbers</button>
+        <button onclick="filterByTrade('electrical')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">⚡ Electricians</button>
+        <button onclick="filterByTrade('hvac')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">❄️ HVAC</button>
+        <button onclick="filterByTrade('general_contractor')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">🏠 Remodelers</button>
+        <button onclick="filterByTrade('all')" class="px-4 py-2 bg-slate-900 border border-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors">All Trades</button>
       </div>
-
-      <div id="activeFilters" class="active-filters" style="display: none;"></div>
     </div>
 
     <div class="results-header">
@@ -534,45 +497,21 @@
 
     function applyFilters() {
       currentFilters.searchTerm = document.getElementById('searchInput').value.trim();
-      currentFilters.trade = document.getElementById('tradeFilter').value;
-      currentFilters.minGrade = document.getElementById('gradeFilter').value;
       currentFilters.zip = document.getElementById('zipFilter').value.trim();
-      currentFilters.maxDistance = document.getElementById('distanceFilter').value;
+      // Trade filter is now set by filterByTrade() function
+      // Remove grade and distance filters (simplified UI)
 
       loadContractors();
     }
 
+    function filterByTrade(trade) {
+      currentFilters.trade = trade;
+      loadContractors();
+    }
+
     function updateActiveFilters() {
-      const activeFiltersDiv = document.getElementById('activeFilters');
-      const filters = [];
-
-      if (currentFilters.searchTerm) {
-        filters.push({ label: `Search: "${currentFilters.searchTerm}"`, key: 'searchTerm' });
-      }
-      if (currentFilters.trade && currentFilters.trade !== 'all') {
-        filters.push({ label: `Trade: ${formatTrade(currentFilters.trade)}`, key: 'trade' });
-      }
-      if (currentFilters.minGrade) {
-        filters.push({ label: `Grade: ${currentFilters.minGrade}+`, key: 'minGrade' });
-      }
-      if (currentFilters.zip) {
-        filters.push({ label: `ZIP: ${currentFilters.zip}`, key: 'zip' });
-      }
-      if (currentFilters.maxDistance && currentFilters.zip) {
-        filters.push({ label: `Within ${currentFilters.maxDistance} mi`, key: 'maxDistance' });
-      }
-
-      if (filters.length > 0) {
-        activeFiltersDiv.style.display = 'flex';
-        activeFiltersDiv.innerHTML = filters.map(f => `
-          <div class="filter-tag">
-            ${f.label}
-            <button onclick="removeFilter('${f.key}')">&times;</button>
-          </div>
-        `).join('');
-      } else {
-        activeFiltersDiv.style.display = 'none';
-      }
+      // Active filters display removed in new design
+      // Filters are now shown via quick filter buttons
     }
 
     function removeFilter(key) {
@@ -580,17 +519,10 @@
         document.getElementById('searchInput').value = '';
         currentFilters.searchTerm = '';
       } else if (key === 'trade') {
-        document.getElementById('tradeFilter').value = 'all';
         currentFilters.trade = 'all';
-      } else if (key === 'minGrade') {
-        document.getElementById('gradeFilter').value = '';
-        currentFilters.minGrade = '';
       } else if (key === 'zip') {
         document.getElementById('zipFilter').value = '';
         currentFilters.zip = '';
-      } else if (key === 'maxDistance') {
-        document.getElementById('distanceFilter').value = '';
-        currentFilters.maxDistance = '';
       }
 
       loadContractors();
@@ -602,9 +534,10 @@
 
       if (allContractors.length === 0) {
         container.innerHTML = `
-          <div class="no-results">
-            <h3>No Contractors Found</h3>
-            <p>Try adjusting your filters or search term to find contractors in your area.</p>
+          <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 24px; border: 1px solid #e5e7eb;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+            <h3 style="font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 8px;">No Contractors Found</h3>
+            <p style="color: #6b7280;">Try adjusting your filters or search term to find contractors in your area.</p>
           </div>
         `;
         count.textContent = '0 contractors found';
@@ -613,49 +546,71 @@
 
       count.textContent = `${allContractors.length} contractor${allContractors.length === 1 ? '' : 's'} found`;
 
-      container.innerHTML = allContractors.map(contractor => `
-        <div class="contractor-card" onclick="viewContractorProfile('${contractor.email}')">
-          <div class="card-header">
-            <div class="contractor-avatar">
-              ${getInitials(contractor.contractor_name)}
-            </div>
-            <div class="card-info">
-              <h2 class="contractor-name">${escapeHtml(contractor.contractor_name)}</h2>
-              <div class="card-badges">
-                <span class="grade-badge" style="background-color: ${contractor.grade_color}">
-                  ${contractor.grade}
-                </span>
-                ${contractor.has_verified_license ? '<span class="verified-badge">✓ Verified License</span>' : ''}
-                ${contractor.trade ? `<span class="info-badge">${formatTrade(contractor.trade)}</span>` : ''}
-                ${contractor.years_in_business ? `<span class="info-badge">${contractor.years_in_business} Years</span>` : ''}
-              </div>
-              <div class="card-meta">
-                ${contractor.review_count > 0 ? `
-                  <div class="meta-item">
-                    <span class="rating-stars">${renderStars(contractor.average_rating)}</span>
-                    <span>${contractor.average_rating.toFixed(1)} (${contractor.review_count} ${contractor.review_count === 1 ? 'review' : 'reviews'})</span>
-                  </div>
-                ` : '<div class="meta-item">No reviews yet</div>'}
-                ${contractor.city && contractor.state ? `
-                  <div class="meta-item">📍 ${escapeHtml(contractor.city)}, ${contractor.state}</div>
-                ` : ''}
-                ${contractor.distance_miles !== null ? `
-                  <div class="meta-item">🚗 ${contractor.distance_miles} mi away</div>
-                ` : ''}
-              </div>
-            </div>
-          </div>
+      container.innerHTML = allContractors.map(contractor => {
+        const avatarUrl = contractor.avatar_url || '/default-avatar.png';
+        const companyName = escapeHtml(contractor.contractor_name || contractor.company_name || 'Unknown Contractor');
+        const grade = contractor.grade || 'B';
+        const city = escapeHtml(contractor.city || '');
+        const state = contractor.state || '';
+        const rating = contractor.average_rating || 0;
+        const reviewCount = contractor.review_count || 0;
+        const trade = contractor.trade || '';
+        const trades = trade ? [formatTrade(trade)] : ['General'];
 
-          <div class="card-actions">
-            <button class="btn-view-profile" onclick="event.stopPropagation(); viewContractorProfile('${contractor.email}')">
-              View Profile & Reviews
-            </button>
-            <button class="btn-contact" onclick="event.stopPropagation(); contactContractor('${contractor.email}')">
-              Contact
-            </button>
+        return `
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all group flex flex-col md:flex-row gap-6" onclick="viewContractorProfile('${contractor.email}')">
+
+            <div class="shrink-0 relative">
+              <div class="h-24 w-24 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-3xl font-bold text-slate-600 shadow-sm">
+                ${getInitials(companyName)}
+              </div>
+              ${contractor.has_verified_license ? `
+                <div class="absolute -bottom-2 -right-2 bg-white p-1 rounded-full shadow-sm">
+                  <i class="fa-solid fa-circle-check text-2xl text-blue-500"></i>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="flex-1">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">${companyName}</h3>
+                  ${city && state ? `
+                    <p class="text-slate-500 text-sm mb-2"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i> ${city}, ${state}</p>
+                  ` : ''}
+                </div>
+                <div class="text-center bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
+                  <span class="block text-2xl font-black text-slate-900">${grade}</span>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Grade</span>
+                </div>
+              </div>
+
+              <div class="flex gap-2 mb-4 mt-2">
+                ${trades.map(t => `<span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg uppercase tracking-wide">${t}</span>`).join('')}
+              </div>
+
+              <div class="flex items-center gap-6 text-sm text-slate-500 border-t border-slate-50 pt-4">
+                ${contractor.has_verified_license ? `
+                  <span class="flex items-center gap-1"><i class="fa-solid fa-shield-halved text-emerald-500"></i> Licensed & Insured</span>
+                ` : `
+                  <span class="flex items-center gap-1"><i class="fa-solid fa-circle-info text-slate-400"></i> License Pending</span>
+                `}
+                ${reviewCount > 0 ? `
+                  <span class="flex items-center gap-1"><i class="fa-solid fa-star text-yellow-400"></i> ${rating.toFixed(1)} (${reviewCount})</span>
+                ` : `
+                  <span class="flex items-center gap-1"><i class="fa-regular fa-star text-slate-300"></i> No reviews yet</span>
+                `}
+              </div>
+            </div>
+
+            <div class="flex flex-col justify-center border-l border-slate-50 pl-6 border-0 md:border-l">
+              <button onclick="event.stopPropagation(); viewContractorProfile('${contractor.email}')" class="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-blue-600 transition-colors whitespace-nowrap">
+                View Profile
+              </button>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function getInitials(name) {
