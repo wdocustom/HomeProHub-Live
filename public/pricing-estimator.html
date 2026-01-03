@@ -380,8 +380,12 @@
       document.getElementById('estimate-result').classList.add('hidden');
 
       try {
-        const response = await window.authService.authenticatedFetch('/contractor-ask', {
+        // Use public API - no authentication required for estimates
+        const response = await fetch('/contractor-ask', {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
             question: jobDesc,
             focus: 'pricing',
@@ -487,8 +491,20 @@
     /**
      * Download PDF
      */
-    function downloadPDF() {
+    async function downloadPDF() {
       if (!currentEstimate) return;
+
+      // Check if user is authenticated
+      const isAuth = await isUserAuthenticated();
+      if (!isAuth) {
+        const shouldSignUp = confirm('Sign up for a free HomeProHub account to download this estimate as a professional PDF.\n\nWould you like to create an account now?');
+        if (shouldSignUp) {
+          // Save estimate to session storage for after signup
+          sessionStorage.setItem('savedEstimate', JSON.stringify(currentEstimate));
+          window.location.href = '/signup.html';
+        }
+        return;
+      }
 
       const win = window.open('', '', 'height=900,width=800');
       if (!win) {
@@ -647,13 +663,28 @@
     }
 
     /**
-     * Initialize
+     * Helper function to check if user is authenticated
+     */
+    async function isUserAuthenticated() {
+      try {
+        if (!window.authService || !window.authService.initialized) return false;
+        const user = await window.authService.getCurrentUser();
+        return !!user;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    /**
+     * Initialize - Now works for both authenticated and guest users
      */
     checkAuth().then(isAuthenticated => {
+      // Always check for estimator job from contractor dashboard
       if (isAuthenticated) {
         checkForEstimatorJob();
-        renderTradeFields(); // Initialize dynamic fields for default trade (GC)
       }
+      // Always render trade fields for public use
+      renderTradeFields();
     });
   </script>
 
