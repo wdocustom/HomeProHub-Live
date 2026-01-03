@@ -482,14 +482,32 @@
       const details = data.details || {};
       const boostItems = [];
 
+      // Import Past Job - NEW
+      boostItems.push({
+        icon: '📋',
+        title: 'Import Past Job',
+        points: '+5 pts per review',
+        action: 'Import',
+        onclick: () => window.location.href = '/add-past-project.html'
+      });
+
+      // Get Reviews - Uses copyReviewLink function
+      boostItems.push({
+        icon: '⭐',
+        title: 'Get Reviews',
+        points: '+10 pts per review',
+        action: 'Copy Link',
+        onclick: () => copyReviewLink()
+      });
+
       // Verification boosts
       if (!details.has_verified_license) {
         boostItems.push({
           icon: '🎓',
-          title: 'Upload License Verification',
+          title: 'Upload License',
           points: '+28 pts',
           action: 'Upload',
-          onclick: () => window.location.href = 'contractor-profile.html#licenses'
+          onclick: () => window.location.href = '/contractor-profile.html#verification'
         });
       }
 
@@ -499,18 +517,39 @@
           title: 'Upload Insurance Info',
           points: '+12 pts',
           action: 'Upload',
-          onclick: () => window.location.href = 'contractor-profile.html#insurance'
+          onclick: () => window.location.href = '/contractor-profile.html#verification'
         });
       }
 
-      // Reputation boosts
-      if ((details.review_count || 0) < 5) {
+      // Portfolio boost
+      if ((details.portfolio_count || 0) < 5) {
         boostItems.push({
-          icon: '⭐',
-          title: 'Get More Reviews',
-          points: `+${Math.round((5 - (details.review_count || 0)) * 2)} pts`,
-          action: 'Share Link',
-          onclick: () => alert('Review link: https://homeprohub.today/review/[your-id]')
+          icon: '🖼️',
+          title: 'Add Portfolio',
+          points: `+${(5 - (details.portfolio_count || 0)) * 3} pts`,
+          action: 'Upload',
+          onclick: () => window.location.href = '/contractor-profile.html#gallery'
+        });
+      }
+
+      // Profile boosts
+      if (!details.has_bio) {
+        boostItems.push({
+          icon: '📝',
+          title: 'Write Your Bio',
+          points: '+4 pts',
+          action: 'Write',
+          onclick: () => window.location.href = '/contractor-profile.html#bio'
+        });
+      }
+
+      if (!details.has_profile_photo) {
+        boostItems.push({
+          icon: '📸',
+          title: 'Add Profile Photo',
+          points: '+3 pts',
+          action: 'Upload',
+          onclick: () => window.location.href = '/contractor-profile.html#photo'
         });
       }
 
@@ -523,37 +562,6 @@
           action: 'Tips',
           secondary: true,
           onclick: () => alert('Tip: Enable push notifications and check messages daily!')
-        });
-      }
-
-      // Profile boosts
-      if (!details.has_bio) {
-        boostItems.push({
-          icon: '📝',
-          title: 'Write Your Bio',
-          points: '+4 pts',
-          action: 'Write',
-          onclick: () => window.location.href = 'contractor-profile.html#bio'
-        });
-      }
-
-      if (!details.has_profile_photo) {
-        boostItems.push({
-          icon: '📸',
-          title: 'Add Profile Photo',
-          points: '+3 pts',
-          action: 'Upload',
-          onclick: () => window.location.href = 'contractor-profile.html#photo'
-        });
-      }
-
-      if ((details.portfolio_count || 0) === 0) {
-        boostItems.push({
-          icon: '🖼️',
-          title: 'Add Portfolio Photos',
-          points: '+3 pts',
-          action: 'Upload',
-          onclick: () => window.location.href = 'contractor-profile.html#portfolio'
         });
       }
 
@@ -581,6 +589,42 @@
           <button class="boost-action ${item.secondary ? 'secondary' : ''}" onclick='${item.onclick.toString().replace(/^[^{]*{/, '').replace(/}[^}]*$/, '')}'>${item.action}</button>
         </div>
       `).join('');
+    }
+
+    // Copy review link function
+    async function copyReviewLink() {
+      try {
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          alert('Please log in to get your review link');
+          return;
+        }
+
+        // Fetch contractor profile to get review link slug
+        const response = await window.authService.authenticatedFetch('/api/profile/me');
+        if (!response.ok) {
+          throw new Error('Could not fetch profile');
+        }
+
+        const data = await response.json();
+        const slug = data.contractorProfile?.review_link_slug;
+
+        if (!slug) {
+          alert('Your review link is being generated. Please refresh the page in a moment.');
+          return;
+        }
+
+        const reviewLink = `${window.location.origin}/rate-pro.html?contractor=${slug}`;
+
+        // Copy to clipboard
+        await navigator.clipboard.writeText(reviewLink);
+
+        // Show success message
+        alert(`Review link copied to clipboard!\n\n${reviewLink}\n\nShare this link with your clients to collect reviews.`);
+      } catch (error) {
+        console.error('Error copying review link:', error);
+        alert('Failed to copy review link. Please try again.');
+      }
     }
 
     // Initialize
