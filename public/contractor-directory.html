@@ -710,6 +710,69 @@
         applyFilters();
       }
     });
+
+    // AUTH GATE: Check if user is logged in
+    (async function checkAuth() {
+      // Wait for authService to initialize
+      let attempts = 0;
+      while (!window.authService && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+
+      if (!window.authService) {
+        showSignupGate();
+        return;
+      }
+
+      // Wait for authService to be initialized
+      while (!window.authService.initialized && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+
+      const user = await window.authService.getCurrentUser();
+
+      if (!user) {
+        showSignupGate();
+      }
+    })();
+
+    function showSignupGate() {
+      // Hide the directory content
+      document.getElementById('directory-container').style.display = 'none';
+
+      // Show signup gate message
+      const gateHTML = `
+        <div style="max-width: 600px; margin: 100px auto; padding: 40px; text-align: center;">
+          <div style="background: white; border-radius: 24px; padding: 48px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-radius: 20px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 40px;">
+              🔒
+            </div>
+            <h2 style="font-size: 32px; font-weight: 800; color: #111827; margin-bottom: 16px; letter-spacing: -0.02em;">
+              Directory Access
+            </h2>
+            <p style="font-size: 18px; color: #6b7280; margin-bottom: 32px; line-height: 1.6;">
+              We safeguard contractor information to ensure quality connections. Create a free account to access our verified directory of licensed professionals.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 12px; max-width: 400px; margin: 0 auto;">
+              <a href="/signup.html" style="display: block; padding: 16px 32px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; font-size: 16px; font-weight: 700; border-radius: 12px; text-decoration: none; transition: all 0.2s;">
+                Create Free Account
+              </a>
+              <a href="/signin.html" style="display: block; padding: 16px 32px; background: transparent; color: #6b7280; font-size: 16px; font-weight: 600; border-radius: 12px; text-decoration: none; transition: all 0.2s;">
+                Already have an account? Sign In
+              </a>
+            </div>
+            <p style="font-size: 14px; color: #9ca3af; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+              <strong style="color: #6b7280;">Why we require signup:</strong><br>
+              We verify all users to maintain a trusted marketplace. This protects both homeowners and contractors from spam and ensures serious connections.
+            </p>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', gateHTML);
+    }
   </script>
 
   <!-- Unified Navigation Component -->
