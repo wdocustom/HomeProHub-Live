@@ -1036,6 +1036,351 @@ app.get('/api/homeowner-scores/me', requireAuth, requireRole('homeowner'), async
   }
 });
 
+// ========================================
+// PUBLIC REVIEW ENDPOINTS
+// ========================================
+
+/**
+ * GET /api/public/contractor/:slug
+ * Get public contractor profile by review link slug
+ * PUBLIC: No authentication required
+ */
+app.get('/api/public/contractor/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Contractor slug is required' });
+    }
+
+    // Query contractor profile by review_link_slug
+    const { data: profile, error } = await db.supabase
+      .from('contractor_profiles')
+      .select(`
+        user_id,
+        company_name,
+        display_name,
+        bio,
+        avatar_url,
+        gallery_urls,
+        license_verified,
+        insurance_verified,
+        created_at
+      `)
+      .eq('review_link_slug', slug)
+      .single();
+
+    if (error || !profile) {
+      return res.status(404).json({ error: 'Contractor not found' });
+    }
+
+    // Calculate member_since_year
+    const memberSinceYear = profile.created_at
+      ? new Date(profile.created_at).getFullYear()
+      : new Date().getFullYear();
+
+    return res.json({
+      ...profile,
+      member_since_year: memberSinceYear
+    });
+
+  } catch (error) {
+    console.error('Error in /api/public/contractor/:slug:', error);
+    return res.status(500).json({ error: 'Failed to fetch contractor profile' });
+  }
+});
+
+/**
+ * POST /api/public/reviews/submit
+ * Submit a public review for a contractor
+ * PUBLIC: No authentication required
+ */
+app.post('/api/public/reviews/submit', async (req, res) => {
+  try {
+    const {
+      contractor_slug,
+      reviewer_name,
+      reviewer_email,
+      overall_rating,
+      review_text
+    } = req.body;
+
+    // Validate required fields
+    if (!contractor_slug || !reviewer_name || !reviewer_email || !overall_rating || !review_text) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Validate rating (1-5)
+    if (overall_rating < 1 || overall_rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    // Get contractor by slug
+    const { data: contractor, error: contractorError } = await db.supabase
+      .from('contractor_profiles')
+      .select('user_id')
+      .eq('review_link_slug', contractor_slug)
+      .single();
+
+    if (contractorError || !contractor) {
+      return res.status(404).json({ error: 'Contractor not found' });
+    }
+
+    // Check for duplicate review from same email
+    const { data: existingReview } = await db.supabase
+      .from('public_reviews')
+      .select('id')
+      .eq('contractor_id', contractor.user_id)
+      .eq('reviewer_email', reviewer_email)
+      .single();
+
+    if (existingReview) {
+      return res.status(400).json({ error: 'You have already submitted a review for this contractor' });
+    }
+
+    // Insert public review
+    const { data: review, error: insertError } = await db.supabase
+      .from('public_reviews')
+      .insert({
+        contractor_id: contractor.user_id,
+        reviewer_name,
+        reviewer_email,
+        overall_rating,
+        review_text,
+        verification_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting public review:', insertError);
+      return res.status(500).json({ error: 'Failed to submit review' });
+    }
+
+    return res.json({
+      success: true,
+      review: review
+    });
+
+  } catch (error) {
+    console.error('Error in /api/public/reviews/submit:', error);
+    return res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+/**
+ * POST /api/client-reviews/import
+ * Import an external (off-platform) client review with proof of work
+ * AUTHENTICATION: Contractor only
+ */
+app.post('/api/client-reviews/import', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const {
+      client_name,
+      client_email,
+      client_phone,
+      rating_payment,
+      rating_scope,
+      rating_site,
+      proof_document
+    } = req.body;
+
+    // Validate required fields
+    if (!client_name || !client_email || !client_phone) {
+      return res.status(400).json({ error: 'Client name, email, and phone are required' });
+    }
+
+    if (!rating_payment || !rating_scope || !rating_site) {
+      return res.status(400).json({ error: 'All three ratings are required' });
+    }
+
+    if (!proof_document) {
+      return res.status(400).json({ error: 'Proof of work document is required' });
+    }
+
+    // Validate ratings (1-5)
+    if (rating_payment < 1 || rating_payment > 5 ||
+        rating_scope < 1 || rating_scope > 5 ||
+        rating_site < 1 || rating_site > 5) {
+      return res.status(400).json({ error: 'Ratings must be between 1 and 5' });
+    }
+
+    // Check for duplicate import with same client email
+    const { data: existingImport } = await db.supabase
+      .from('client_reviews')
+      .select('id')
+      .eq('contractor_id', contractorId)
+      .eq('client_email', client_email)
+      .eq('is_external_import', true)
+      .single();
+
+    if (existingImport) {
+      return res.status(400).json({ error: 'You have already imported a review for this client' });
+    }
+
+    // TODO: Upload proof_document to storage and get URL
+    // For now, we'll store it as base64 or handle via FormData separately
+    const proofDocumentUrl = proof_document; // Placeholder - implement file upload
+
+    // Insert external review
+    const { data: review, error: insertError } = await db.supabase
+      .from('client_reviews')
+      .insert({
+        contractor_id: contractorId,
+        client_name,
+        client_email,
+        client_phone,
+        rating_payment,
+        rating_scope,
+        rating_site,
+        proof_document_url: proofDocumentUrl,
+        is_external_import: true,
+        verification_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting external review:', insertError);
+      return res.status(500).json({ error: 'Failed to import review' });
+    }
+
+    return res.json({
+      success: true,
+      review: review,
+      message: 'Review submitted for verification. You will be notified within 24 hours.'
+    });
+
+  } catch (error) {
+    console.error('Error in /api/client-reviews/import:', error);
+    return res.status(500).json({ error: 'Failed to import external review' });
+  }
+});
+
+/**
+ * POST /api/profile/gallery/upload
+ * Upload photos to contractor gallery (max 10)
+ * AUTHENTICATION: Contractor only
+ */
+app.post('/api/profile/gallery/upload', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const { photos } = req.body; // Array of base64 encoded images or FormData
+
+    if (!photos || !Array.isArray(photos) || photos.length === 0) {
+      return res.status(400).json({ error: 'At least one photo is required' });
+    }
+
+    // Get current gallery
+    const { data: profile, error: profileError } = await db.supabase
+      .from('contractor_profiles')
+      .select('gallery_urls')
+      .eq('user_id', contractorId)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      return res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+
+    const currentGallery = profile?.gallery_urls || [];
+
+    // Validate max 10 photos
+    if (currentGallery.length + photos.length > 10) {
+      return res.status(400).json({
+        error: `Maximum 10 photos allowed. You have ${currentGallery.length}, trying to add ${photos.length}.`
+      });
+    }
+
+    // TODO: Upload photos to storage (Supabase Storage or S3) and get URLs
+    // For now, we'll just append the base64 or assume they're URLs
+    const newPhotoUrls = photos; // Placeholder - implement actual file upload
+
+    const updatedGallery = [...currentGallery, ...newPhotoUrls];
+
+    // Update contractor profile
+    const { error: updateError } = await db.supabase
+      .from('contractor_profiles')
+      .update({ gallery_urls: updatedGallery })
+      .eq('user_id', contractorId);
+
+    if (updateError) {
+      console.error('Error updating gallery:', updateError);
+      return res.status(500).json({ error: 'Failed to update gallery' });
+    }
+
+    return res.json({
+      success: true,
+      gallery_urls: updatedGallery,
+      message: `${photos.length} photo(s) uploaded successfully`
+    });
+
+  } catch (error) {
+    console.error('Error in /api/profile/gallery/upload:', error);
+    return res.status(500).json({ error: 'Failed to upload gallery photos' });
+  }
+});
+
+/**
+ * POST /api/profile/gallery/remove
+ * Remove a photo from contractor gallery by index
+ * AUTHENTICATION: Contractor only
+ */
+app.post('/api/profile/gallery/remove', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const { index } = req.body;
+
+    if (index === undefined || index === null || typeof index !== 'number') {
+      return res.status(400).json({ error: 'Photo index is required' });
+    }
+
+    // Get current gallery
+    const { data: profile, error: profileError } = await db.supabase
+      .from('contractor_profiles')
+      .select('gallery_urls')
+      .eq('user_id', contractorId)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      return res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+
+    const currentGallery = profile?.gallery_urls || [];
+
+    // Validate index
+    if (index < 0 || index >= currentGallery.length) {
+      return res.status(400).json({ error: 'Invalid photo index' });
+    }
+
+    // Remove photo at index
+    const updatedGallery = currentGallery.filter((_, i) => i !== index);
+
+    // Update contractor profile
+    const { error: updateError } = await db.supabase
+      .from('contractor_profiles')
+      .update({ gallery_urls: updatedGallery })
+      .eq('user_id', contractorId);
+
+    if (updateError) {
+      console.error('Error updating gallery:', updateError);
+      return res.status(500).json({ error: 'Failed to remove photo' });
+    }
+
+    return res.json({
+      success: true,
+      gallery_urls: updatedGallery,
+      message: 'Photo removed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error in /api/profile/gallery/remove:', error);
+    return res.status(500).json({ error: 'Failed to remove photo' });
+  }
+});
+
 /**
  * GET /api/get-user-status (alias for get-full-user-status)
  * Returns user profile status (mock implementation - replace with database)
