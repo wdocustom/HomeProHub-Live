@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contractor Dashboard – HomeProHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+  <link rel="stylesheet" href="components/license-badge.css" />
+  <style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    body { background: #f8fafc; }
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .dashboard-header {
+      margin-bottom: 40px;
+    }
+
+    .dashboard-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+    }
+
+    .dashboard-header p {
+      color: #6b7280;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .tabs-container {
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 32px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 32px;
+    }
+
+    .tab {
+      padding: 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: #2563eb;
+    }
+
+    .tab.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .stat-change {
+      font-size: 13px;
+      color: #10b981;
+    }
+
+    .filters {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filters label {
+      font-size: 14px;
+      color: #6b7280;
+      margin-right: 8px;
+    }
+
+    .filters input,
+    .filters select {
+      padding: 8px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .job-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+
+    .job-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .job-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+    }
+
+    .job-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 14px;
+      color: #6b7280;
+      flex-wrap: wrap;
+    }
+
+    .job-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .urgency-badge {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .urgency-badge.flexible {
+      background: #e5e7eb;
+      color: #4b5563;
+    }
+
+    .urgency-badge.soon {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .urgency-badge.urgent {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .job-description {
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .job-budget {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2563eb;
+      margin-bottom: 16px;
+    }
+
+    .job-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-bid {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-bid:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-view {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: white;
+      color: #2563eb;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-view:hover {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .btn-estimator {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: #10b981;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-estimator:hover {
+      background: #059669;
+    }
+
+    /* Homeowner Grade Badges */
+    .grade-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
+      padding: 0 8px;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: 700;
+      border: 2px solid;
+    }
+
+    .grade-A {
+      background: #d1fae5;
+      color: #065f46;
+      border-color: #10b981;
+    }
+
+    .grade-B {
+      background: #dbeafe;
+      color: #1e40af;
+      border-color: #3b82f6;
+    }
+
+    .grade-C {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+
+    .grade-D {
+      background: #fed7aa;
+      color: #9a3412;
+      border-color: #ea580c;
+    }
+
+    .grade-F {
+      background: #fecaca;
+      color: #991b1b;
+      border-color: #ef4444;
+    }
+
+    .homeowner-grade-info {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .homeowner-grade-info .info-text {
+      flex: 1;
+    }
+
+    .homeowner-grade-info .info-label {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .homeowner-grade-info .info-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .bid-status {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .bid-status.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .bid-status.accepted {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .bid-status.rejected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .no-jobs {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9ca3af;
+    }
+
+    .no-jobs h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+
+    /* Bid Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      margin-bottom: 24px;
+    }
+
+    .modal-header h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-cancel {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: white;
+      color: #6b7280;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-submit {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .btn-submit:hover {
+      background: #1d4ed8;
+    }
+  </style>
+  <link rel="stylesheet" href="components/footer.css" />
+</head>
+<body>
+  <!-- Navigation component will be injected here by navigation.js -->
+
+  <main>
+    <!-- Command Center Hero -->
+    <div class="bg-white border-b border-slate-200 pb-8 pt-8 px-4 sm:px-6 mb-8">
+      <div class="max-w-5xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Opportunity Feed</h1>
+            <p class="text-slate-500 mt-1">
+              Matching jobs for <span class="font-semibold text-blue-600" id="userTradeDisplay">General Contractor</span> in <span class="font-semibold text-slate-700" id="userZipDisplay">Your Area</span>.
+            </p>
+          </div>
+
+          <div class="flex gap-3">
+            <div class="px-5 py-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+              <span class="block text-2xl font-black text-slate-900" id="activeBidsStat">0</span>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Bids</span>
+            </div>
+            <div class="px-5 py-3 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+              <span class="block text-2xl font-black text-blue-600" id="newLeadsStat">0</span>
+              <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">New Leads</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Buttons -->
+        <div class="flex gap-2 mt-8 overflow-x-auto pb-2">
+          <button class="tab-btn px-6 py-2 bg-slate-900 text-white rounded-full text-sm font-semibold shadow-lg shadow-slate-900/20 active" data-tab="available">New Leads</button>
+          <button class="tab-btn px-6 py-2 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:bg-slate-50" data-tab="mybids">Active Bids</button>
+          <button class="tab-btn px-6 py-2 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:bg-slate-50" data-tab="saved">Saved</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Content Container -->
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <!-- Available Jobs Tab -->
+      <div class="tab-content active" id="availableTab">
+        <div class="filters">
+          <div>
+            <label>ZIP Code:</label>
+            <input type="text" id="zipFilter" placeholder="90210" maxlength="5" />
+          </div>
+          <div>
+            <label>Urgency:</label>
+            <select id="urgencyFilter">
+              <option value="">All</option>
+              <option value="flexible">Flexible</option>
+              <option value="soon">Soon</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <button class="btn-bid" onclick="applyFilters()">Apply Filters</button>
+        </div>
+
+        <div id="availableJobsContainer">
+          <div class="loading">Loading available jobs...</div>
+        </div>
+      </div>
+
+      <!-- My Bids Tab -->
+      <div class="tab-content" id="mybidsTab">
+        <div id="myBidsContainer">
+          <div class="loading">Loading your bids...</div>
+        </div>
+      </div>
+
+      <!-- Active Projects Tab -->
+      <div class="tab-content" id="activeTab">
+        <div id="activeProjectsContainer">
+          <div class="loading">Loading active projects...</div>
+        </div>
+      </div>
+
+      <!-- Saved Jobs Tab -->
+      <div class="tab-content" id="savedTab">
+        <div class="text-center py-16">
+          <h3 class="text-2xl font-bold text-slate-900 mb-2">Saved Jobs</h3>
+          <p class="text-slate-500">Coming soon!</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bid Submission Modal -->
+  <div class="modal" id="bidModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Submit Your Bid</h2>
+        <p id="bidModalJobTitle" style="color: #6b7280; font-size: 14px;"></p>
+      </div>
+
+      <!-- Homeowner Grade Info -->
+      <div class="homeowner-grade-info" id="homeownerGradeInfo" style="display: none;">
+        <div class="info-text">
+          <div class="info-label">Homeowner Reliability Grade</div>
+          <div class="info-value" id="homeownerGradeText">Grade reflects payment history and project clarity</div>
+        </div>
+        <span class="grade-badge" id="homeownerGradeBadge">B</span>
+      </div>
+
+      <form id="bidForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bid Amount (Low) <span style="color: #ef4444;">*</span></label>
+            <input type="number" id="bidLow" required min="0" step="100" placeholder="5000" />
+          </div>
+          <div class="form-group">
+            <label>Bid Amount (High) <span style="color: #ef4444;">*</span></label>
+            <input type="number" id="bidHigh" required min="0" step="100" placeholder="7000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Estimated Duration</label>
+          <input type="text" id="bidDuration" placeholder="e.g., 3-5 days" />
+        </div>
+
+        <div class="form-group">
+          <label>Start Availability</label>
+          <input type="text" id="bidAvailability" placeholder="e.g., Next week, ASAP" />
+        </div>
+
+        <div class="form-group">
+          <label>Message to Homeowner</label>
+          <textarea id="bidMessage" placeholder="Introduce yourself and explain why you're the right contractor for this job..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeBidModal()">Cancel</button>
+          <button type="submit" class="btn-submit" id="submitBidBtn">Submit Bid</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sub-Hunter Modal (Crew Connect) -->
+  <div class="modal" id="subHunterModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🔨 Need Subs for This Project?</h2>
+        <button class="modal-close" onclick="closeSubHunterModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 20px;">Find verified trades in your area to help complete this project.</p>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 8px;">Which trades do you need?</label>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="electrical" style="width: 18px; height: 18px;">
+              <span>⚡ Electrician</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="plumbing" style="width: 18px; height: 18px;">
+              <span>🔧 Plumber</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="hvac" style="width: 18px; height: 18px;">
+              <span>❄️ HVAC</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="roofing" style="width: 18px; height: 18px;">
+              <span>🏠 Roofer</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="flooring" style="width: 18px; height: 18px;">
+              <span>🪵 Flooring</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="painting" style="width: 18px; height: 18px;">
+              <span>🎨 Painter</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="carpentry" style="width: 18px; height: 18px;">
+              <span>🔨 Carpenter</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" name="trade" value="landscaping" style="width: 18px; height: 18px;">
+              <span>🌳 Landscaping</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="subSearchResults" style="margin-top: 20px; display: none;">
+          <h3 style="font-size: 16px; margin-bottom: 12px;">Available Contractors Nearby</h3>
+          <div id="subsList" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeSubHunterModal()">Cancel</button>
+        <button class="btn-bid" id="findSubsBtn" onclick="findSubs()">🔍 Find Subs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Job Details Modal -->
+  <div class="modal" id="jobDetailsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="jobDetailsTitle">Job Details</h2>
+        <button class="modal-close" onclick="closeJobDetailsModal()">×</button>
+      </div>
+
+      <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+        <!-- Job Category & Urgency -->
+        <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+          <span id="jobDetailsCategoryBadge" class="status-badge" style="background: #dbeafe; color: #1e40af;">Category</span>
+          <span id="jobDetailsUrgencyBadge" class="status-badge">Urgency</span>
+        </div>
+
+        <!-- Budget (Prominent) -->
+        <div style="background: #eff6ff; border: 2px solid #2563eb; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <div style="font-size: 13px; color: #2563eb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Budget Range</div>
+          <div id="jobDetailsBudget" style="font-size: 32px; font-weight: 700; color: #2563eb;">$5,000 - $10,000</div>
+        </div>
+
+        <!-- Summary -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 12px;">📋 Issue Summary</h3>
+          <div id="jobDetailsSummary" style="font-size: 14px; color: #4b5563; line-height: 1.6; background: #f9fafb; padding: 16px; border-radius: 8px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- Location & Timeline -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">📍 Location</div>
+            <div id="jobDetailsLocation" style="font-size: 15px; font-weight: 600; color: #111827;">ZIP Code</div>
+          </div>
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">📅 Posted</div>
+            <div id="jobDetailsPosted" style="font-size: 15px; font-weight: 600; color: #111827;">Date</div>
+          </div>
+        </div>
+
+        <!-- AI Analysis (if available) -->
+        <div id="jobDetailsAISection" style="display: none; margin-bottom: 24px;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 12px;">🤖 AI Analysis</h3>
+          <div id="jobDetailsAIAnalysis" style="font-size: 14px; color: #4b5563; line-height: 1.6; background: linear-gradient(135deg, #f0f9ff 0%, #f9fafb 100%); padding: 16px; border-radius: 8px; border-left: 3px solid #2563eb; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- Homeowner Grade -->
+        <div id="jobDetailsHomeownerGrade" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Homeowner Reliability Grade</div>
+            <div id="jobDetailsGradeText" style="font-size: 15px; font-weight: 600; color: #111827;">Grade reflects payment history and project clarity</div>
+          </div>
+          <span class="grade-badge grade-B" id="jobDetailsGradeBadge">B</span>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <button type="button" class="btn-cancel" onclick="closeJobDetailsModal()">Close</button>
+        <button type="button" class="btn-secondary" onclick="messageFromDetails()" id="jobDetailsMessageBtn" style="background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+          💬 Message Homeowner
+        </button>
+        <button type="button" class="btn-submit" onclick="submitBidFromDetails()" id="jobDetailsBidBtn" style="padding: 12px 32px;">
+          Submit Bid
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Constants
+    const STORAGE_KEYS = {
+      USERNAME: 'homeprohub_username',
+      AUTH_TOKEN: 'homeprohub_auth_token',
+      USER_ROLE: 'homeprohub_user_role',
+      CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
+    };
+
+    // State
+    let availableJobs = [];
+    let myBids = [];
+    let contractorEmail = '';
+    let currentJob = null;
+
+    // Auth - Wait for authService to be ready
+    async function checkAuth() {
+      try {
+        // Wait for authService to initialize
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        // Check if user is authenticated
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        // Get profile to check role
+        const profile = await window.authService.getUserProfile();
+        if (!profile || profile.role !== 'contractor') {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        // Set contractor email for API calls
+        contractorEmail = user.email;
+
+        // Update profile link if it exists
+        const profileLink = document.getElementById('profileLink');
+        if (profileLink) {
+          profileLink.textContent = profile.company_name || profile.full_name || user.email;
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = "index.html";
+        return false;
+      }
+    }
+
+    // Initialize after auth check
+    checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
+        loadAvailableJobs();
+        loadMyBids();
+      }
+    });
+
+    // Format currency
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+    }
+
+    // Format date
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // Escape HTML
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Load available jobs
+    async function loadAvailableJobs() {
+      try {
+        const params = new URLSearchParams({ status: 'open', limit: '50' });
+        const response = await window.authService.authenticatedFetch(`/api/jobs?${params}`);
+
+        if (!response.ok) throw new Error('Failed to load jobs');
+
+        const data = await response.json();
+        availableJobs = data.jobs || [];
+
+        renderAvailableJobs();
+        updateStats();
+
+        // Check for attached estimate from pricing estimator
+        checkForAttachedEstimate();
+
+      } catch (error) {
+        console.error('Error loading jobs:', error);
+        document.getElementById('availableJobsContainer').innerHTML = '<div class="no-jobs"><h3>Failed to load jobs</h3></div>';
+      }
+    }
+
+    // Check for attached estimate from pricing estimator and auto-open bid modal
+    function checkForAttachedEstimate() {
+      // Check all sessionStorage keys for attached estimates
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('attachedEstimate_')) {
+          const jobId = key.replace('attachedEstimate_', '');
+          const attachedEstimate = sessionStorage.getItem(key);
+
+          if (attachedEstimate) {
+            try {
+              const estimate = JSON.parse(attachedEstimate);
+              console.log('✓ Found attached estimate for job:', jobId, estimate);
+
+              // Small delay to ensure DOM is ready
+              setTimeout(() => {
+                // Show a notification
+                if (confirm(
+                  `🎉 Your AI estimate is ready!\n\n` +
+                  `Estimated Range: $${Math.round(estimate.total_low || 0).toLocaleString()} - $${Math.round(estimate.total_high || 0).toLocaleString()}\n\n` +
+                  `Would you like to submit your bid now with this estimate?`
+                )) {
+                  openBidModal(jobId);
+                } else {
+                  // Clear the estimate if they decline
+                  sessionStorage.removeItem(key);
+                }
+              }, 500);
+
+              // Only process the first one found
+              break;
+            } catch (err) {
+              console.error('Error processing attached estimate:', err);
+              sessionStorage.removeItem(key);
+            }
+          }
+        }
+      }
+    }
+
+    // Load my bids
+    async function loadMyBids() {
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/contractor/bids?email=${encodeURIComponent(contractorEmail)}`
+        );
+
+        if (!response.ok) throw new Error('Failed to load bids');
+
+        const data = await response.json();
+        myBids = data.bids || [];
+
+        renderMyBids();
+        updateStats();
+
+      } catch (error) {
+        console.error('Error loading bids:', error);
+        document.getElementById('myBidsContainer').innerHTML = '<div class="no-jobs"><h3>Failed to load bids</h3></div>';
+      }
+    }
+
+    // Helper: Calculate time ago
+    function timeAgo(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+
+    // Helper: Get match badge
+    function getMatchBadge(job) {
+      if (job.urgency === 'urgent') return '<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide">Urgent</span>';
+      if (job.bid_count < 2) return '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide">High Match</span>';
+      return '<span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide">Good Match</span>';
+    }
+
+    // Dismiss job with animation
+    function dismissJob(cardId) {
+      // 1. Find the card
+      const card = document.getElementById(cardId);
+      if (!card) return;
+
+      // 2. Animate it out (Shrink & Fade)
+      card.style.transition = "all 0.3s ease";
+      card.style.opacity = "0";
+      card.style.transform = "scale(0.95)";
+
+      setTimeout(() => {
+        // 3. Remove from DOM
+        card.remove();
+
+        // 4. (Optional) Save to LocalStorage so it stays hidden on refresh
+        // const hiddenJobs = JSON.parse(localStorage.getItem('hidden_jobs') || '[]');
+        // hiddenJobs.push(cardId);
+        // localStorage.setItem('hidden_jobs', JSON.stringify(hiddenJobs));
+
+        console.log(`Job ${cardId} dismissed.`);
+      }, 300);
+    }
+    window.dismissJob = dismissJob;
+
+    // Render available jobs with Sanctuary 2.0 design
+    function renderAvailableJobs() {
+      const container = document.getElementById('availableJobsContainer');
+
+      if (availableJobs.length === 0) {
+        container.innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">No jobs available</h3><p class="text-slate-500">Check back later for new opportunities</p></div>';
+        return;
+      }
+
+      container.innerHTML = availableJobs.map(job => `
+        <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300" id="job-card-${job.id}">
+          <!-- Header -->
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                ${getMatchBadge(job)}
+                <span class="text-slate-400 text-xs font-medium">• ${timeAgo(job.posted_at)}</span>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">${escapeHtml(job.title)}</h3>
+            </div>
+
+            <!-- Dismiss Button -->
+            <button
+              onclick="dismissJob('job-card-${job.id}')"
+              class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              title="Pass on this job"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+
+          <!-- Description -->
+          <p class="text-slate-600 mb-6 line-clamp-2">${escapeHtml(job.description.substring(0, 200))}${job.description.length > 200 ? '...' : ''}</p>
+
+          <!-- Info Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            ${job.budget_low && job.budget_high ? `
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Budget</span>
+                <span class="block text-slate-900 font-bold">${formatCurrency(job.budget_low)} - ${formatCurrency(job.budget_high)}</span>
+              </div>
+            ` : `
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Budget</span>
+                <span class="block text-slate-900 font-bold">Not Specified</span>
+              </div>
+            `}
+            <div class="bg-slate-50 rounded-xl p-3">
+              <span class="block text-xs text-slate-400 uppercase font-bold">Timeline</span>
+              <span class="block text-slate-900 font-bold">${job.urgency === 'urgent' ? 'ASAP' : job.urgency === 'soon' ? '1-2 Weeks' : 'Flexible'}</span>
+            </div>
+            <div class="bg-slate-50 rounded-xl p-3">
+              <span class="block text-xs text-slate-400 uppercase font-bold">Location</span>
+              <span class="block text-slate-900 font-bold">${job.zip_code || 'N/A'}</span>
+            </div>
+            <div class="bg-slate-50 rounded-xl p-3">
+              <span class="block text-xs text-slate-400 uppercase font-bold">Bids</span>
+              <span class="block text-slate-900 font-bold">${job.bid_count || 0} Submitted</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-4 border-t border-slate-100 pt-6">
+            <button onclick="openBidModal('${job.id}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+              View Project & Bid <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button onclick="useEstimator('${job.id}')" class="px-6 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition" title="Use AI Estimator">
+              <i class="fa-solid fa-calculator"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Render my bids with Sanctuary 2.0 design
+    function renderMyBids() {
+      const container = document.getElementById('myBidsContainer');
+
+      if (myBids.length === 0) {
+        container.innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">No bids yet</h3><p class="text-slate-500">Browse available jobs and submit your first bid!</p></div>';
+        return;
+      }
+
+      container.innerHTML = myBids.map(bid => {
+        const job = bid.job;
+
+        // Status badge styling
+        let statusBadge = '';
+        if (bid.status === 'pending') {
+          statusBadge = '<span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Pending</span>';
+        } else if (bid.status === 'accepted') {
+          statusBadge = '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Accepted</span>';
+        } else if (bid.status === 'rejected') {
+          statusBadge = '<span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Declined</span>';
+        }
+
+        return `
+          <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300 mb-4">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  ${statusBadge}
+                  <span class="text-slate-400 text-xs font-medium">• Submitted ${timeAgo(bid.submitted_at)}</span>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(job.title)}</h3>
+              </div>
+            </div>
+
+            <!-- Your Bid Amount -->
+            <div class="bg-blue-50 rounded-xl p-4 mb-4">
+              <span class="block text-xs text-blue-600 uppercase font-bold mb-1">Your Bid</span>
+              <span class="block text-2xl font-black text-blue-600">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</span>
+            </div>
+
+            <!-- Info Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Location</span>
+                <span class="block text-slate-900 font-bold">${job.zip_code || 'N/A'}</span>
+              </div>
+              ${bid.estimated_duration ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Duration</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.estimated_duration)}</span>
+                </div>
+              ` : ''}
+              ${bid.start_availability ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Start</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.start_availability)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            ${bid.message ? `
+              <p class="text-slate-600 mb-4 text-sm italic border-l-4 border-slate-200 pl-4">"${escapeHtml(bid.message.substring(0, 150))}${bid.message.length > 150 ? '...' : ''}"</p>
+            ` : ''}
+
+            <!-- Actions -->
+            ${bid.status === 'accepted' ? `
+              <div class="flex items-center gap-4 border-t border-slate-100 pt-4">
+                <button onclick="contactHomeowner('${bid.job_id}', '${bid.homeowner_email}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-message"></i> Contact Homeowner
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Update stats in Command Center Hero
+    function updateStats() {
+      // Active Bids = all my bids
+      const activeBidsEl = document.getElementById('activeBidsStat');
+      if (activeBidsEl) {
+        activeBidsEl.textContent = myBids.length;
+      }
+
+      // New Leads = available jobs
+      const newLeadsEl = document.getElementById('newLeadsStat');
+      if (newLeadsEl) {
+        newLeadsEl.textContent = availableJobs.length;
+      }
+
+      // Update user trade and ZIP in hero if profile data is available
+      const updateUserDisplay = async () => {
+        try {
+          if (window.authService && window.authService.initialized) {
+            const profile = await window.authService.getUserProfile();
+            if (profile) {
+              const tradeDisplay = document.getElementById('userTradeDisplay');
+              const zipDisplay = document.getElementById('userZipDisplay');
+
+              if (tradeDisplay && profile.trade_type) {
+                tradeDisplay.textContent = profile.trade_type.charAt(0).toUpperCase() + profile.trade_type.slice(1);
+              }
+
+              if (zipDisplay && profile.zip_code) {
+                zipDisplay.textContent = profile.zip_code;
+              }
+            }
+          }
+        } catch (err) {
+          console.log('Could not load user profile for display:', err);
+        }
+      };
+      updateUserDisplay();
+    }
+
+    // Apply filters
+    function applyFilters() {
+      const zipFilter = document.getElementById('zipFilter').value.trim();
+      const urgencyFilter = document.getElementById('urgencyFilter').value;
+
+      let filtered = availableJobs;
+
+      if (zipFilter) {
+        filtered = filtered.filter(job => job.zip_code === zipFilter);
+      }
+
+      if (urgencyFilter) {
+        filtered = filtered.filter(job => job.urgency === urgencyFilter);
+      }
+
+      // Re-render with filtered list
+      const temp = availableJobs;
+      availableJobs = filtered;
+      renderAvailableJobs();
+      availableJobs = temp;
+    }
+    window.applyFilters = applyFilters;
+
+    // Calculate homeowner grade (A-F) based on homeowner data
+    // TODO: Replace with actual backend grading when available
+    function getHomeownerGrade(homeowner) {
+      if (!homeowner) return 'C';
+
+      let score = 0;
+
+      // Payment history (0-40 points)
+      const paymentScore = homeowner.payment_score || 50; // 0-100
+      score += (paymentScore / 100) * 40;
+
+      // Jobs completed (0-20 points)
+      const jobsCompleted = homeowner.jobs_completed || 0;
+      score += Math.min(jobsCompleted * 5, 20);
+
+      // Response time (0-20 points)
+      if (homeowner.avg_response_hours <= 24) {
+        score += 20;
+      } else if (homeowner.avg_response_hours <= 48) {
+        score += 15;
+      } else if (homeowner.avg_response_hours <= 72) {
+        score += 10;
+      }
+
+      // Project clarity score (0-20 points)
+      const clarityScore = homeowner.clarity_score || 50; // 0-100
+      score += (clarityScore / 100) * 20;
+
+      // Convert score to grade
+      if (score >= 90) return 'A';
+      if (score >= 80) return 'B';
+      if (score >= 70) return 'C';
+      if (score >= 60) return 'D';
+      return 'F';
+    }
+
+    // Open bid modal
+    async function openBidModal(jobId) {
+      currentJob = availableJobs.find(j => j.id === jobId);
+      if (!currentJob) return;
+
+      // Check contractor license status from Supabase before opening modal
+      try {
+        const contractorProfile = await window.authService.getUserProfile();
+        const verificationStatus = getContractorVerificationStatus(contractorProfile);
+
+        // Only show Get Licensed prompt if not licensed AND not verified
+        // Skip modal if contractor is verified
+        if (verificationStatus === 'none' && contractorProfile.license_verified !== 'verified') {
+          const proceed = confirm(
+            '📜 Get Licensed to Win More Bids!\n\n' +
+            'Homeowners strongly prefer licensed contractors. Getting licensed will:\n' +
+            '✓ Increase your chances of winning bids\n' +
+            '✓ Allow you to charge premium rates\n' +
+            '✓ Give you the Verified badge\n' +
+            '✓ Prioritize your bids in the system\n\n' +
+            'You can still submit bids without a license, but we recommend getting licensed through our partner ContractorTrainingCenter.com.\n\n' +
+            'Do you want to submit a bid anyway?'
+          );
+
+          if (!proceed) {
+            // Open profile page to licensing tab
+            if (confirm('Would you like to learn more about getting licensed?')) {
+              window.location.href = 'contractor-profile.html';
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error checking license status:', err);
+        // Continue anyway if check fails
+      }
+
+      document.getElementById('bidModalJobTitle').textContent = currentJob.title;
+
+      // FEATURE 3: Smart Proposal Builder - Pre-fill bid form
+      // Priority 1: Check for attached estimate from pricing estimator
+      const attachedEstimateKey = 'attachedEstimate_' + jobId;
+      const attachedEstimate = sessionStorage.getItem(attachedEstimateKey);
+
+      let formPreFilled = false;
+
+      if (attachedEstimate) {
+        try {
+          const estimate = JSON.parse(attachedEstimate);
+          // Pre-populate bid amounts from estimate - preserve exact values, no rounding
+          document.getElementById('bidLow').value = estimate.total_low || estimate.subtotal_low || 0;
+          document.getElementById('bidHigh').value = estimate.total_high || estimate.subtotal_high || 0;
+
+          // Add visual indicator that estimate is attached
+          const bidMessage = document.getElementById('bidMessage');
+          if (bidMessage && estimate.project_title) {
+            bidMessage.value = `Professional estimate attached: ${estimate.project_title}\n\nDetailed breakdown included with this bid.`;
+          }
+
+          // Store estimate data for submission
+          window.currentEstimateData = estimate;
+          formPreFilled = true;
+
+          console.log('✓ Estimate pre-loaded into bid form', estimate);
+        } catch (err) {
+          console.error('Error loading attached estimate:', err);
+        }
+      }
+
+      // Priority 2: If no estimator data, check for AI analysis with draft proposal
+      if (!formPreFilled && currentJob.ai_analysis) {
+        try {
+          const aiAnalysis = typeof currentJob.ai_analysis === 'string'
+            ? JSON.parse(currentJob.ai_analysis)
+            : currentJob.ai_analysis;
+
+          // Pre-fill with AI-suggested data if available
+          if (aiAnalysis.draft_proposal) {
+            const draft = aiAnalysis.draft_proposal;
+
+            // Pre-fill budget from AI draft
+            if (draft.budget_range) {
+              document.getElementById('bidLow').value = draft.budget_range.low || currentJob.budget_low || 0;
+              document.getElementById('bidHigh').value = draft.budget_range.high || currentJob.budget_high || 0;
+            }
+
+            // Pre-fill timeline
+            if (draft.timeline && document.getElementById('bidDuration')) {
+              document.getElementById('bidDuration').value = draft.timeline;
+            }
+
+            // Pre-fill message with AI scope
+            if (draft.scope && document.getElementById('bidMessage')) {
+              document.getElementById('bidMessage').value = draft.scope;
+            }
+
+            formPreFilled = true;
+            console.log('✓ AI draft proposal pre-loaded into bid form');
+          }
+        } catch (err) {
+          console.error('Error parsing AI analysis:', err);
+        }
+      }
+
+      // Priority 3: If still no data, pre-fill with job posting defaults
+      if (!formPreFilled) {
+        document.getElementById('bidLow').value = currentJob.budget_low || 0;
+        document.getElementById('bidHigh').value = currentJob.budget_high || 0;
+        console.log('✓ Job budget pre-loaded into bid form');
+      }
+
+      // Clear estimate data if not used
+      if (!attachedEstimate) {
+        window.currentEstimateData = null;
+      }
+
+      // Show homeowner grade if available
+      const homeownerGrade = getHomeownerGrade(currentJob.homeowner);
+      const gradeInfo = document.getElementById('homeownerGradeInfo');
+      const gradeBadge = document.getElementById('homeownerGradeBadge');
+      const gradeText = document.getElementById('homeownerGradeText');
+
+      if (gradeInfo && gradeBadge && gradeText) {
+        gradeBadge.textContent = homeownerGrade;
+        gradeBadge.className = 'grade-badge grade-' + homeownerGrade;
+
+        // Update grade description
+        const gradeDescriptions = {
+          'A': 'Excellent payment history and clear communication',
+          'B': 'Good payment history and responsive communication',
+          'C': 'Average reliability - standard risk',
+          'D': 'Below average reliability - proceed with caution',
+          'F': 'Poor history - high risk project'
+        };
+        gradeText.textContent = gradeDescriptions[homeownerGrade] || 'Grade reflects payment history and project clarity';
+
+        gradeInfo.style.display = 'flex';
+      }
+
+      document.getElementById('bidModal').classList.add('active');
+    }
+    window.openBidModal = openBidModal;
+
+    // Close bid modal
+    function closeBidModal() {
+      document.getElementById('bidModal').classList.remove('active');
+      document.getElementById('bidForm').reset();
+      currentJob = null;
+    }
+    window.closeBidModal = closeBidModal;
+
+    // Handle estimate attachment from pricing estimator
+    window.attachEstimateToBid = function(estimateData) {
+      if (!currentJob) {
+        alert('No job selected. Please select a job first.');
+        return;
+      }
+
+      // Store estimate data to be included with bid
+      sessionStorage.setItem('attachedEstimate_' + currentJob, JSON.stringify(estimateData));
+
+      // Show confirmation
+      alert(`Estimate attached!\n\nEstimate Range: $${estimateData.total_low.toLocaleString()} - $${estimateData.total_high.toLocaleString()}\n\nThis estimate will be included when you submit your bid.`);
+
+      // Optionally pre-fill bid amounts from estimate
+      document.getElementById('bidAmountLow').value = estimateData.total_low;
+      document.getElementById('bidAmountHigh').value = estimateData.total_high;
+    };
+
+    // View job details
+    let currentDetailsJob = null;
+
+    function viewJobDetails(jobId) {
+      const job = availableJobs.find(j => j.id === jobId);
+      if (!job) {
+        alert('Job not found');
+        return;
+      }
+
+      currentDetailsJob = job;
+
+      // Format job title to be concise (max 60 chars)
+      const conciseTitle = job.title.length > 60
+        ? job.title.substring(0, 57) + '...'
+        : job.title;
+      document.getElementById('jobDetailsTitle').textContent = conciseTitle;
+
+      // Category badge
+      const categoryBadge = document.getElementById('jobDetailsCategoryBadge');
+      categoryBadge.textContent = (job.category || 'general').replace('_', ' ').toUpperCase();
+
+      // Urgency badge
+      const urgencyBadge = document.getElementById('jobDetailsUrgencyBadge');
+      const urgencyText = job.urgency || 'flexible';
+      urgencyBadge.textContent = urgencyText.replace('_', ' ').toUpperCase();
+
+      // Style urgency badge based on urgency level
+      if (urgencyText === 'urgent' || urgencyText === 'emergency') {
+        urgencyBadge.style.background = '#fecaca';
+        urgencyBadge.style.color = '#991b1b';
+      } else if (urgencyText === 'soon') {
+        urgencyBadge.style.background = '#fef3c7';
+        urgencyBadge.style.color = '#92400e';
+      } else {
+        urgencyBadge.style.background = '#d1fae5';
+        urgencyBadge.style.color = '#065f46';
+      }
+
+      // Budget
+      const budget = job.budget_low && job.budget_high
+        ? `${formatCurrency(job.budget_low)} - ${formatCurrency(job.budget_high)}`
+        : 'Budget not specified';
+      document.getElementById('jobDetailsBudget').textContent = budget;
+
+      // Summary - keep it concise (first 300 chars)
+      let summary = job.description;
+      if (summary.length > 300) {
+        summary = summary.substring(0, 297) + '...';
+      }
+      document.getElementById('jobDetailsSummary').textContent = summary;
+
+      // Location
+      document.getElementById('jobDetailsLocation').textContent = `ZIP ${job.zip_code}`;
+
+      // Posted date
+      document.getElementById('jobDetailsPosted').textContent = formatDate(job.posted_at);
+
+      // AI Analysis (if available)
+      if (job.ai_analysis) {
+        document.getElementById('jobDetailsAISection').style.display = 'block';
+        let aiAnalysis = job.ai_analysis;
+        if (aiAnalysis.length > 400) {
+          aiAnalysis = aiAnalysis.substring(0, 397) + '...';
+        }
+        document.getElementById('jobDetailsAIAnalysis').textContent = aiAnalysis;
+      } else {
+        document.getElementById('jobDetailsAISection').style.display = 'none';
+      }
+
+      // Homeowner Grade (calculate based on homeowner data if available)
+      const homeownerGrade = getHomeownerGrade(job.homeowner);
+      const gradeBadge = document.getElementById('jobDetailsGradeBadge');
+      gradeBadge.textContent = homeownerGrade;
+      gradeBadge.className = `grade-badge grade-${homeownerGrade}`;
+
+      const gradeDescriptions = {
+        'A': 'Excellent history - reliable payment and clear communication',
+        'B': 'Good history - dependable with minor delays',
+        'C': 'Average reliability - standard risk',
+        'D': 'Below average reliability - proceed with caution',
+        'F': 'Poor history - high risk project'
+      };
+      document.getElementById('jobDetailsGradeText').textContent = gradeDescriptions[homeownerGrade] || 'New homeowner - no history available';
+
+      // Show modal
+      document.getElementById('jobDetailsModal').classList.add('active');
+    }
+    window.viewJobDetails = viewJobDetails;
+
+    // Close job details modal
+    function closeJobDetailsModal() {
+      document.getElementById('jobDetailsModal').classList.remove('active');
+      currentDetailsJob = null;
+    }
+    window.closeJobDetailsModal = closeJobDetailsModal;
+
+    // Message homeowner from details modal
+    async function messageFromDetails() {
+      if (!currentDetailsJob) return;
+
+      closeJobDetailsModal();
+      await contactHomeowner(currentDetailsJob.id, currentDetailsJob.homeowner_email);
+    }
+    window.messageFromDetails = messageFromDetails;
+
+    // Submit bid from details modal
+    function submitBidFromDetails() {
+      if (!currentDetailsJob) return;
+
+      // Save job ID before closing modal (which sets currentDetailsJob to null)
+      const jobId = currentDetailsJob.id;
+      closeJobDetailsModal();
+      openBidModal(jobId);
+    }
+    window.submitBidFromDetails = submitBidFromDetails;
+
+    // Calculate homeowner grade (A-F)
+    function getHomeownerGrade(homeowner) {
+      if (!homeowner) return 'C'; // Default grade if no data
+
+      let score = 0;
+
+      // Payment history (0-40 points)
+      if (homeowner.payment_rating) {
+        score += (homeowner.payment_rating / 5) * 40;
+      } else {
+        score += 20; // Neutral if no data
+      }
+
+      // Communication (0-30 points)
+      if (homeowner.communication_rating) {
+        score += (homeowner.communication_rating / 5) * 30;
+      } else {
+        score += 15; // Neutral if no data
+      }
+
+      // Project count (0-20 points)
+      const projectCount = homeowner.total_projects || 0;
+      score += Math.min(projectCount * 4, 20);
+
+      // Responsiveness (0-10 points)
+      if (homeowner.decision_speed_rating) {
+        score += (homeowner.decision_speed_rating / 5) * 10;
+      } else {
+        score += 5;
+      }
+
+      // Convert score to grade
+      if (score >= 90) return 'A';
+      if (score >= 80) return 'B';
+      if (score >= 70) return 'C';
+      if (score >= 60) return 'D';
+      return 'F';
+    }
+
+    // Contact homeowner - create conversation and go to messages
+    async function contactHomeowner(jobId, homeownerEmail) {
+      try {
+        const response = await window.authService.authenticatedFetch('/api/conversations/create', {
+          method: 'POST',
+          body: JSON.stringify({
+            job_id: jobId,
+            homeowner_email: homeownerEmail,
+            contractor_email: contractorEmail
+          })
+        });
+
+        window.location.href = 'messages.html';
+      } catch (error) {
+        console.error('Error creating conversation:', error);
+        window.location.href = 'messages.html';
+      }
+    }
+    window.contactHomeowner = contactHomeowner;
+
+    // Use Estimator - pass job data to pricing estimator
+    function useEstimator(jobId) {
+      const job = availableJobs.find(j => j.id === jobId);
+      if (!job) {
+        alert('Job not found');
+        return;
+      }
+
+      // Store job data for estimator to use
+      sessionStorage.setItem('estimatorJob', JSON.stringify({
+        jobId: job.id,
+        jobTitle: job.title,
+        jobDescription: job.description,
+        jobCategory: job.category,
+        budgetLow: job.budget_low,
+        budgetHigh: job.budget_high,
+        zipCode: job.zip_code,
+        returnToBid: true
+      }));
+
+      // Redirect to estimator
+      window.location.href = 'pricing-estimator.html';
+    }
+    window.useEstimator = useEstimator;
+
+    // Submit bid
+    document.getElementById('bidForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!currentJob) return;
+
+      const bidData = {
+        jobId: currentJob.id,
+        contractorEmail: contractorEmail,
+        bidAmountLow: parseInt(document.getElementById('bidLow').value),
+        bidAmountHigh: parseInt(document.getElementById('bidHigh').value),
+        estimatedDuration: document.getElementById('bidDuration').value.trim(),
+        startAvailability: document.getElementById('bidAvailability').value.trim(),
+        message: document.getElementById('bidMessage').value.trim()
+      };
+
+      // Include estimate data if available
+      if (window.currentEstimateData) {
+        bidData.estimate = window.currentEstimateData;
+        console.log('✓ Including estimate with bid submission');
+      }
+
+      const submitBtn = document.getElementById('submitBidBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        const response = await window.authService.authenticatedFetch('/api/submit-bid', {
+          method: 'POST',
+          body: JSON.stringify(bidData)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to submit bid');
+        }
+
+        // Clear attached estimate from sessionStorage after successful submission
+        if (window.currentEstimateData) {
+          sessionStorage.removeItem('attachedEstimate_' + currentJob.id);
+          window.currentEstimateData = null;
+        }
+
+        alert('Bid submitted successfully! The homeowner has been notified.');
+        closeBidModal();
+        await loadMyBids(); // Reload bids
+
+      } catch (error) {
+        console.error('Error submitting bid:', error);
+        alert(`Failed to submit bid: ${error.message}`);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Bid';
+      }
+    });
+
+    // FEATURE 2: Sub-Hunter (Crew Connect) Functions
+    let currentProjectForSubs = null;
+
+    // Load active projects (accepted bids) into the Active Projects tab
+    async function loadActiveProjects() {
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/contractor/bids?email=${encodeURIComponent(contractorEmail)}&status=accepted`
+        );
+
+        if (!response.ok) throw new Error('Failed to load active projects');
+
+        const data = await response.json();
+        const activeProjects = data.bids || [];
+
+        renderActiveProjects(activeProjects);
+      } catch (error) {
+        console.error('Error loading active projects:', error);
+        document.getElementById('activeProjectsContainer').innerHTML =
+          '<div class="no-jobs"><h3>Failed to load active projects</h3></div>';
+      }
+    }
+
+    // Render active projects with Sanctuary 2.0 design
+    function renderActiveProjects(projects) {
+      const container = document.getElementById('activeProjectsContainer');
+
+      if (projects.length === 0) {
+        container.innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">No active projects yet</h3><p class="text-slate-500">Submit bids to get started!</p></div>';
+        return;
+      }
+
+      container.innerHTML = projects.map(bid => {
+        const job = bid.job;
+        return `
+          <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300 mb-4">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Active Project</span>
+                  <span class="text-slate-400 text-xs font-medium">• Started ${timeAgo(bid.submitted_at)}</span>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(job.title)}</h3>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <p class="text-slate-600 mb-6 line-clamp-2">${escapeHtml(job.description.substring(0, 200))}${job.description.length > 200 ? '...' : ''}</p>
+
+            <!-- Your Bid Amount -->
+            <div class="bg-emerald-50 rounded-xl p-4 mb-4">
+              <span class="block text-xs text-emerald-600 uppercase font-bold mb-1">Your Winning Bid</span>
+              <span class="block text-2xl font-black text-emerald-600">${formatCurrency(bid.bid_amount_low)} - ${formatCurrency(bid.bid_amount_high)}</span>
+            </div>
+
+            <!-- Info Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-slate-50 rounded-xl p-3">
+                <span class="block text-xs text-slate-400 uppercase font-bold">Location</span>
+                <span class="block text-slate-900 font-bold">${job.zip_code || escapeHtml(job.address) || 'N/A'}</span>
+              </div>
+              ${bid.estimated_duration ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Duration</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.estimated_duration)}</span>
+                </div>
+              ` : ''}
+              ${bid.start_availability ? `
+                <div class="bg-slate-50 rounded-xl p-3">
+                  <span class="block text-xs text-slate-400 uppercase font-bold">Start Date</span>
+                  <span class="block text-slate-900 font-bold">${escapeHtml(bid.start_availability)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-6">
+              <button onclick="contactHomeowner('${job.id}', '${job.homeowner_email}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-message"></i> Contact Homeowner
+              </button>
+              <button onclick="openSubHunterModal('${job.id}')" class="px-6 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition" title="Find Subcontractors">
+                <i class="fa-solid fa-users"></i> Find Subs
+              </button>
+              <button onclick="viewTeam('${job.id}')" class="px-6 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition" title="View Project Team">
+                <i class="fa-solid fa-people-group"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Open Sub-Hunter modal
+    function openSubHunterModal(jobId) {
+      currentProjectForSubs = jobId;
+      document.getElementById('subHunterModal').classList.add('active');
+      document.getElementById('subSearchResults').style.display = 'none';
+      document.getElementById('subsList').innerHTML = '';
+      // Uncheck all checkboxes
+      document.querySelectorAll('#subHunterModal input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
+    window.openSubHunterModal = openSubHunterModal;
+
+    // Close Sub-Hunter modal
+    function closeSubHunterModal() {
+      document.getElementById('subHunterModal').classList.remove('active');
+      currentProjectForSubs = null;
+    }
+    window.closeSubHunterModal = closeSubHunterModal;
+
+    // Find subs based on selected trades
+    async function findSubs() {
+      if (!currentProjectForSubs) return;
+
+      const selectedTrades = Array.from(
+        document.querySelectorAll('#subHunterModal input[name="trade"]:checked')
+      ).map(cb => cb.value);
+
+      if (selectedTrades.length === 0) {
+        alert('Please select at least one trade.');
+        return;
+      }
+
+      const findBtn = document.getElementById('findSubsBtn');
+      findBtn.disabled = true;
+      findBtn.textContent = '🔍 Searching...';
+
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/find-subs`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId: currentProjectForSubs,
+              trades: selectedTrades
+            })
+          }
+        );
+
+        if (!response.ok) throw new Error('Failed to find subs');
+
+        const data = await response.json();
+        displaySubResults(data.contractors || []);
+
+      } catch (error) {
+        console.error('Error finding subs:', error);
+        alert('Failed to find subs. Please try again.');
+      } finally {
+        findBtn.disabled = false;
+        findBtn.textContent = '🔍 Find Subs';
+      }
+    }
+    window.findSubs = findSubs;
+
+    // Display sub search results
+    function displaySubResults(contractors) {
+      const resultsDiv = document.getElementById('subSearchResults');
+      const subsList = document.getElementById('subsList');
+
+      if (contractors.length === 0) {
+        subsList.innerHTML = '<p style="color: #6b7280;">No verified contractors found in your area.</p>';
+        resultsDiv.style.display = 'block';
+        return;
+      }
+
+      subsList.innerHTML = contractors.map(contractor => `
+        <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+              <div style="font-weight: 600; margin-bottom: 4px;">${escapeHtml(contractor.company_name || contractor.full_name)}</div>
+              <div style="font-size: 13px; color: #6b7280;">
+                ${contractor.trade_type} • ${contractor.years_in_business || 0} years experience
+              </div>
+              <div style="font-size: 13px; color: #6b7280;">
+                📍 ${contractor.zip_code}
+              </div>
+            </div>
+            <button
+              class="btn-bid"
+              style="padding: 6px 12px; font-size: 13px;"
+              onclick="inviteSub('${contractor.email}', '${contractor.trade_type}')">
+              Invite
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      resultsDiv.style.display = 'block';
+    }
+
+    // Invite a sub to the project
+    async function inviteSub(contractorEmail, tradeType) {
+      if (!currentProjectForSubs) return;
+
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/invite-sub`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId: currentProjectForSubs,
+              contractorEmail: contractorEmail,
+              tradeType: tradeType
+            })
+          }
+        );
+
+        if (!response.ok) throw new Error('Failed to invite sub');
+
+        alert('✓ Invitation sent! The contractor will be notified.');
+
+      } catch (error) {
+        console.error('Error inviting sub:', error);
+        alert('Failed to send invitation. Please try again.');
+      }
+    }
+    window.inviteSub = inviteSub;
+
+    // View team for a project
+    function viewTeam(jobId) {
+      alert('Team view coming soon!');
+      // TODO: Implement team view modal
+    }
+    window.viewTeam = viewTeam;
+
+    // Contact homeowner
+    function contactHomeowner(jobId, homeownerEmail) {
+      window.location.href = `mailto:${homeownerEmail}?subject=Regarding Your Project`;
+    }
+    window.contactHomeowner = contactHomeowner;
+
+    // Tab switching with Sanctuary 2.0 button styling
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const tabName = this.dataset.tab;
+
+        // Update button states
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('active', 'bg-slate-900', 'text-white', 'shadow-lg', 'shadow-slate-900/20');
+          b.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+        });
+
+        // Activate clicked button
+        this.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+        this.classList.add('active', 'bg-slate-900', 'text-white', 'shadow-lg', 'shadow-slate-900/20');
+
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(tabName + 'Tab').classList.add('active');
+
+        // Load data for the tab
+        if (tabName === 'mybids' && myBids.length === 0) {
+          loadMyBids();
+        }
+        if (tabName === 'saved') {
+          // TODO: Implement saved jobs feature
+          document.getElementById('savedTab').innerHTML = '<div class="text-center py-16"><h3 class="text-2xl font-bold text-slate-900 mb-2">Saved Jobs</h3><p class="text-slate-500">Coming soon!</p></div>';
+        }
+        if (tabName === 'active') {
+          loadActiveProjects();
+        }
+      });
+    });
+  </script>
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <!-- License Badge Component -->
+  <script src="components/license-badge.js"></script>
+
+  <!-- Unified Navigation Component -->
+  <script src="components/navigation.js"></script>
+
+  <!-- Global Footer -->
+  <script src="components/footer.js"></script>
+</body>
+</html>

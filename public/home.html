@@ -757,7 +757,7 @@
         <div class="max-w-3xl mx-auto">
           <!-- Personalized Greeting -->
           <h1 class="text-3xl font-bold text-slate-900 mb-2">
-            Good <span id="timeOfDay">morning</span>, <span id="userName" class="text-blue-600">there</span>
+            Good <span id="timeOfDay">morning</span>!
           </h1>
           <p class="text-lg text-slate-500 mb-8">What can we help you fix today?</p>
 
@@ -841,7 +841,7 @@
       <!-- TASK 3: Quick Access Bento Grid -->
       <div class="mb-8">
         <h2 class="text-xl font-bold text-slate-900 mb-6">Quick Access</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <!-- My Projects Card -->
           <a href="homeowner-dashboard.html" class="group bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:-translate-y-1 block">
@@ -859,20 +859,6 @@
             </div>
             <h3 class="text-xl font-bold text-slate-900 mb-2">Messages</h3>
             <p class="text-slate-500">Chat with contractors and get updates</p>
-          </a>
-
-          <!-- Check Prices Card (Dark Gradient) -->
-          <a href="/pricing-estimator.html" class="group relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 block">
-            <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-              <i class="fa-solid fa-calculator text-8xl text-white"></i>
-            </div>
-            <div class="relative z-10">
-              <div class="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl w-fit mb-4">
-                <i class="fa-solid fa-calculator text-2xl"></i>
-              </div>
-              <h3 class="text-xl font-bold text-white mb-2">Check Prices</h3>
-              <p class="text-slate-300">Get instant AI-powered estimates</p>
-            </div>
           </a>
 
         </div>
@@ -918,24 +904,6 @@
       }
     })();
 
-    // Load user name from auth service
-    (async function loadUserName() {
-      try {
-        if (window.authService) {
-          const user = await window.authService.getCurrentUser();
-          if (user) {
-            const userNameElement = document.getElementById('userName');
-            const displayName = user.user_metadata?.full_name ||
-                              user.user_metadata?.name ||
-                              user.email?.split('@')[0] ||
-                              'there';
-            userNameElement.textContent = displayName;
-          }
-        }
-      } catch (error) {
-        console.log('Could not load user name:', error);
-      }
-    })();
 
     // Load Active Spotlight - Show most important active project
     (async function loadActiveSpotlight() {

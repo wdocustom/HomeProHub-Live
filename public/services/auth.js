@@ -181,7 +181,7 @@ class AuthService {
           // 6. Redirect based on role
           console.log(`Auth Debug: Redirecting ${role} to dashboard...`);
           if (role === 'contractor') {
-            window.location.href = '/contractor.html';
+            window.location.href = '/contractor-dashboard.html';
           } else {
             window.location.href = '/home.html';
           }
@@ -568,7 +568,7 @@ class AuthService {
         console.log(`No draft project - redirecting ${role} to dashboard`);
 
         if (role === 'contractor') {
-          window.location.href = '/contractor.html';
+          window.location.href = '/contractor-dashboard.html';
         } else {
           window.location.href = '/home.html';
         }
@@ -607,7 +607,7 @@ class AuthService {
     console.log(`No draft project found - redirecting to ${role} dashboard`);
 
     if (role === 'contractor') {
-      window.location.href = 'contractor.html';
+      window.location.href = 'contractor-dashboard.html';
     } else {
       window.location.href = 'home.html';
     }

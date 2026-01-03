@@ -21,9 +21,9 @@
       { label: 'Messages', href: 'messages.html', icon: '💬', badge: 'messages' }
     ],
     contractor: [
-      { label: 'Home', href: 'contractor.html', icon: '🏠' },
+      { label: 'Dashboard', href: 'contractor-dashboard.html', icon: '🏠' },
       { label: 'Tools', href: 'pricing-estimator.html', icon: '🔧' },
-      { label: 'Job Board', href: 'contractor-dashboard.html', icon: '📋' },
+      { label: 'Job Board', href: 'job-board.html', icon: '📋' },
       { label: 'Messages', href: 'messages.html', icon: '💬', badge: 'messages' }
     ]
   };
@@ -34,6 +34,7 @@
       this.profile = null;
       this.notificationCount = 0;
       this.messageCount = 0;
+      this.isLoggingOut = false;
       this.initAuth();
     }
 
@@ -210,7 +211,7 @@
         </a>
       `).join('');
 
-      const brandHref = userRole === 'contractor' ? 'contractor.html' : 'home.html';
+      const brandHref = userRole === 'contractor' ? 'contractor-dashboard.html' : 'home.html';
 
       return `
         <nav class="unified-nav">
@@ -401,12 +402,22 @@
     }
 
     async logout() {
+      // Prevent multiple simultaneous logout attempts
+      if (this.isLoggingOut) {
+        console.log('Logout already in progress...');
+        return;
+      }
+
+      this.isLoggingOut = true;
+
       try {
+        console.log('Logging out...');
         // Use authService to sign out
         await window.authService.signOut();
         // authService.signOut() will handle the redirect
       } catch (e) {
         console.error('Error during logout:', e);
+        this.isLoggingOut = false;
         // Fallback: redirect to home
         window.location.href = 'index.html';
       }
