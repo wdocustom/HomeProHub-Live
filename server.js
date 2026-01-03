@@ -2266,10 +2266,16 @@ IMPORTANT NOTES:
 - If intent_type is "ISSUE", NO line items should have local_insight
 - Preserve ALL existing calculation logic exactly as before
 
-CALCULATION RULES (UNCHANGED):
+CALCULATION RULES:
 1. Use the provided labor rates and multiply by regional multiplier ${ragData.regionalMultiplier}
-2. Break down labor by trade (e.g., Electrician, Plumber, Carpenter)
-3. Include material costs as separate line items
+2. TRADE-SPECIFIC LINE ITEMS:
+   - If TRADE PERSONA is "${tradeInfo.title}":
+     ${selectedTrade === 'gc'
+       ? '* Include ALL trades needed for this project (Electrician, Plumber, Carpenter, HVAC, etc.)'
+       : `* ONLY include line items for ${tradeInfo.title} work
+     * DO NOT include other trades (e.g., if you are Electrician, do NOT include plumber or carpenter items)
+     * Focus exclusively on ${selectedTrade} scope of work`}
+3. Include material costs as separate line items relevant to ${selectedTrade === 'gc' ? 'all trades involved' : tradeInfo.title}
 4. Subtotal = sum of all line item lows/highs
 5. Total = Subtotal + (Subtotal * overhead_profit_percent/100) + (Subtotal * contingency_percent/100)
 6. All values in whole dollars (no decimals)`;
