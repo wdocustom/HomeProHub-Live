@@ -309,7 +309,7 @@
 
           // CRITICAL FIX: Use role from signin response for correct safety timeout redirect
           const userRole = result.profile?.role || 'homeowner';
-          const dashboardUrl = userRole === 'contractor' ? '/contractor.html' : '/home.html';
+          const dashboardUrl = userRole === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
           console.log(`Sign-in success - role: ${userRole}, will redirect to: ${dashboardUrl}`);
 
           // Safety timeout to prevent infinite "Signing In..." spinner
