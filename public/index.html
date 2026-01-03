@@ -1232,42 +1232,32 @@
     </div>
   </div>
 
-  <!-- SECTION A: TOP NAV -->
-  <nav class="top-nav">
-    <div class="nav-container">
-      <a href="/" class="logo">HomeProHub</a>
-
-      <div class="nav-links">
-        <a href="#homeowners">Homeowners</a>
-        <a href="/contractors.html">Contractors</a>
-        <a href="#how-it-works">How it Works</a>
-        <a href="#faq">FAQ</a>
-      </div>
-
-      <div class="nav-cta">
-        <button class="btn-secondary" onclick="showSignIn()">Sign in</button>
-        <button class="btn-primary" onclick="showRoleSelection()">Get started</button>
-      </div>
+  <!-- SECTION A: TOP NAV (Desktop Only) -->
+  <nav class="hidden md:flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50">
+    <div class="flex items-center gap-2">
+      <img src="logo.png" class="h-8" alt="HomeProHub">
+      <span class="text-xl font-extrabold text-slate-900 tracking-tight">HomeProHub</span>
+    </div>
+    <div class="flex gap-8">
+      <a href="#how-it-works" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">How it Works</a>
+      <a href="/contractor-grade.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">The Grade</a>
+      <a href="/browse-contractors.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Reviews</a>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="/contractor.html" class="text-sm font-bold text-slate-500 hover:text-slate-900">For Contractors</a>
+      <a href="/signin.html" class="px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-full hover:bg-slate-800 transition-transform hover:scale-105">Sign In</a>
     </div>
   </nav>
 
-  <!-- SECTION B: HERO WRAPPER (Sanctuary Glass) -->
-  <div class="relative bg-gradient-to-b from-blue-50/50 to-slate-50 pt-20 pb-16 px-4 sm:px-6 lg:px-8" id="homeowners">
-    <div class="text-center max-w-3xl mx-auto mb-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm mb-6">
-        <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-        </span>
-        <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">AI-Powered Home Care</span>
-      </div>
-      <h1 class="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
-        Your home, <span class="text-blue-600">handled.</span>
+  <!-- SECTION B: SANCTUARY HERO -->
+  <div class="relative bg-gradient-to-b from-blue-50 to-slate-50 pt-24 pb-20 px-4">
+    <div class="max-w-3xl mx-auto text-center">
+      <h1 class="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6">
+        Expert home care,<br> <span class="text-blue-600">simplified.</span>
       </h1>
-      <p class="text-xl text-slate-500">
-        Diagnose issues, get fair price estimates, and hire verified pros—all in one place.
+      <p class="text-lg text-slate-500 mb-10 max-w-xl mx-auto leading-relaxed">
+        Diagnose issues with AI, get fair price estimates, and hire verified pros. Start by telling us what's wrong.
       </p>
-    </div>
 
     <!-- Photo Preview Strip -->
     <div id="photo-preview-container" class="photo-preview-container hidden"></div>
@@ -1314,6 +1304,7 @@
       class="hidden"
       onchange="handlePhotoSelection(this)"
     />
+    </div>
   </div>
 
   <!-- AI RESULTS SECTION (Hidden by default, shown after analysis) -->
@@ -1332,71 +1323,49 @@
     </div>
   </div>
 
-  <!-- ACTION GRID (Bento Layout) -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 mb-24 relative z-10">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <!-- TRUST & FEATURES SHOWCASE -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-      <!-- Post a Project - Hero Card (2 columns) -->
-      <a href="/post-project.html" class="col-span-1 md:col-span-2 bg-white rounded-3xl p-8 shadow-sm border border-blue-100 hover:shadow-lg hover:border-blue-200 transition-all group relative overflow-hidden flex flex-col md:flex-row items-start md:items-center gap-6">
-
-        <!-- Soft blue glow background -->
-        <div class="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
-
-        <!-- Icon Box -->
-        <div class="relative z-10 p-4 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform flex-shrink-0">
-          <i class="fa-solid fa-clipboard-check text-3xl"></i>
+      <!-- Card 1: AI Issue Analyzer -->
+      <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+        <div class="h-14 w-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-6">
+          <i class="fa-solid fa-microchip"></i>
         </div>
-
-        <!-- Text Content -->
-        <div class="relative z-10 flex-1">
-          <h3 class="text-2xl font-bold text-slate-900 mb-2">Ready to hire?</h3>
-          <p class="text-slate-500 text-lg">Post your project to get bids from verified pros. We handle the vetting.</p>
-        </div>
-
-        <!-- CTA Button -->
-        <div class="relative z-10 mt-4 md:mt-0 flex-shrink-0">
-          <div class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 group-hover:bg-blue-700 transition-all group-hover:gap-3">
-            <span>Post Project</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </div>
-
-      </a>
-
-      <!-- Price Estimator -->
-      <a href="/pricing-estimator.html" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group">
-        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-          <i class="fa-solid fa-calculator text-2xl"></i>
-        </div>
-        <h3 class="text-2xl font-bold text-slate-900 mb-2">Price Estimator</h3>
-        <p class="text-slate-500 mb-6">Don't guess. Get a fair market cost range for your zip code instantly.</p>
-        <span class="text-blue-600 font-semibold flex items-center gap-2 group-hover:gap-3 transition-all">
-          Calculate Cost <i class="fa-solid fa-arrow-right"></i>
-        </span>
-      </a>
-
-      <!-- Find a Pro -->
-      <a href="/browse-contractors.html" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group">
-        <div class="p-3 bg-purple-50 text-purple-600 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
-          <i class="fa-solid fa-magnifying-glass text-2xl"></i>
-        </div>
-        <h3 class="text-2xl font-bold text-slate-900 mb-2">Find a Pro</h3>
-        <p class="text-slate-500 mb-6">Browse our directory of graded, licensed, and insured contractors.</p>
-        <span class="text-blue-600 font-semibold flex items-center gap-2 group-hover:gap-3 transition-all">
-          Search Directory <i class="fa-solid fa-arrow-right"></i>
-        </span>
-      </a>
-
-      <!-- HomeProHub Grade Banner (2 columns) -->
-      <div class="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-50 to-white rounded-3xl p-8 shadow-sm border border-blue-100 flex items-center justify-between">
-        <div>
-          <h3 class="text-xl font-bold text-slate-900 mb-1">The HomeProHub Grade™</h3>
-          <p class="text-slate-500">We grade every contractor on Licenses, Insurance, and Reviews. If they aren't an A or B, they aren't here.</p>
-        </div>
-        <div class="hidden md:block text-5xl font-black text-blue-200">
-          A+
-        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-3">AI Issue Analyzer</h3>
+        <p class="text-slate-500 mb-6 leading-relaxed">Don't know a soffit from a fascia? Upload a photo. Our AI identifies the problem, severity, and likely repair cost instantly.</p>
+        <ul class="space-y-2 text-sm font-semibold text-slate-700">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> Instant Diagnostics</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> Fair Price Ranges</li>
+        </ul>
       </div>
+
+      <!-- Card 2: The HomeProHub Grade -->
+      <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+        <div class="h-14 w-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-2xl mb-6">
+          <i class="fa-solid fa-medal"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-3">The HomeProHub Grade™</h3>
+        <p class="text-slate-500 mb-6 leading-relaxed">We score every contractor on an A-F scale based on verified licenses, insurance, and client history.</p>
+        <ul class="space-y-2 text-sm font-semibold text-slate-700">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-purple-500"></i> Transparent Scoring</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-purple-500"></i> Performance History</li>
+        </ul>
+      </div>
+
+      <!-- Card 3: Verified Directory -->
+      <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+        <div class="h-14 w-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-3">Verified Directory</h3>
+        <p class="text-slate-500 mb-6 leading-relaxed">No randoms. We strictly verify active licensure and insurance before a pro can ever bid on your project.</p>
+        <ul class="space-y-2 text-sm font-semibold text-slate-700">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> License Verification</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Insurance Validation</li>
+        </ul>
+      </div>
+
     </div>
   </div>
 
@@ -1675,6 +1644,32 @@
       <div class="modal-close">
         <button onclick="closeModal()">Cancel</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Mobile App Dock (Bottom Navigation - Mobile Only) -->
+  <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 pb-safe pt-2 z-50">
+    <div class="flex justify-around items-center px-2">
+      <a href="/index.html" class="flex flex-col items-center p-2 text-blue-600">
+        <i class="fa-solid fa-house text-xl mb-1"></i>
+        <span class="text-[10px] font-bold">Home</span>
+      </a>
+      <a href="/ai-check.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
+        <i class="fa-solid fa-wand-magic-sparkles text-xl mb-1"></i>
+        <span class="text-[10px] font-bold">Analyze</span>
+      </a>
+      <a href="/projects.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
+        <i class="fa-solid fa-list-check text-xl mb-1"></i>
+        <span class="text-[10px] font-bold">Projects</span>
+      </a>
+      <a href="/messages.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
+        <i class="fa-solid fa-comment-dots text-xl mb-1"></i>
+        <span class="text-[10px] font-bold">Messages</span>
+      </a>
+      <a href="/profile.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
+        <i class="fa-regular fa-user text-xl mb-1"></i>
+        <span class="text-[10px] font-bold">Profile</span>
+      </a>
     </div>
   </div>
 
