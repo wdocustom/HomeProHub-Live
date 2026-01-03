@@ -716,6 +716,40 @@ app.post('/api/profile/update', requireAuth, async (req, res) => {
 
     // Update contractor profile
     if (userRole === 'contractor' && Object.keys(contractorProfile).length > 0) {
+      // Check if contractor already has a review_link_slug
+      const { data: existingProfile } = await req.supabase
+        .from('contractor_profiles')
+        .select('review_link_slug')
+        .eq('user_id', userId)
+        .single();
+
+      // Generate review link slug if not exists
+      let reviewLinkSlug = existingProfile?.review_link_slug;
+      if (!reviewLinkSlug) {
+        // Create slug from company name or user email
+        const baseName = contractorProfile.company_name || contractorProfile.display_name || req.user.email.split('@')[0];
+        const baseSlug = baseName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+          .replace(/^-+|-+$/g, '');      // Remove leading/trailing hyphens
+
+        // Add random suffix to ensure uniqueness
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        reviewLinkSlug = `${baseSlug}-${randomSuffix}`;
+
+        // Verify uniqueness (though collision is extremely unlikely)
+        const { data: collision } = await req.supabase
+          .from('contractor_profiles')
+          .select('user_id')
+          .eq('review_link_slug', reviewLinkSlug)
+          .single();
+
+        if (collision) {
+          // Highly unlikely, but add another suffix if collision occurs
+          reviewLinkSlug = `${baseSlug}-${Date.now().toString(36)}`;
+        }
+      }
+
       const profileData = {
         user_id: userId,
         company_name: contractorProfile.company_name,
@@ -726,7 +760,8 @@ app.post('/api/profile/update', requireAuth, async (req, res) => {
         trades: contractorProfile.trades || [],
         service_area_zipcodes: contractorProfile.service_area_zipcodes || [],
         avatar_url: contractorProfile.avatar_url,
-        gallery_urls: contractorProfile.gallery_urls || []
+        gallery_urls: contractorProfile.gallery_urls || [],
+        review_link_slug: reviewLinkSlug
       };
 
       const { data, error } = await req.supabase
