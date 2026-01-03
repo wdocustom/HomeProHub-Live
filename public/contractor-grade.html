@@ -605,21 +605,14 @@
           return;
         }
 
-        // Fetch contractor profile to get review link slug
-        const response = await window.authService.authenticatedFetch('/api/profile/me');
+        // Get or generate review link from dedicated endpoint
+        const response = await window.authService.authenticatedFetch('/api/contractor/review-link');
         if (!response.ok) {
-          throw new Error('Could not fetch profile');
+          throw new Error('Could not generate review link');
         }
 
         const data = await response.json();
-        const slug = data.contractorProfile?.review_link_slug;
-
-        if (!slug) {
-          alert('Your review link is being generated. Please refresh the page in a moment.');
-          return;
-        }
-
-        const reviewLink = `${window.location.origin}/rate-pro.html?contractor=${slug}`;
+        const reviewLink = data.review_link;
 
         // Copy to clipboard
         await navigator.clipboard.writeText(reviewLink);

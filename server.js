@@ -1071,6 +1071,87 @@ app.get('/api/homeowner-scores/me', requireAuth, requireRole('homeowner'), async
   }
 });
 
+/**
+ * GET /api/contractor/review-link
+ * Get or generate review link for authenticated contractor
+ * AUTHENTICATION: Contractor only
+ */
+app.get('/api/contractor/review-link', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+
+    // Check if contractor already has a review_link_slug
+    const { data: profile, error: fetchError } = await db.supabase
+      .from('contractor_profiles')
+      .select('review_link_slug, company_name, display_name')
+      .eq('user_id', contractorId)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching contractor profile:', fetchError);
+      return res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+
+    // If slug already exists, return it
+    if (profile?.review_link_slug) {
+      const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?contractor=${profile.review_link_slug}`;
+      return res.json({
+        success: true,
+        review_link_slug: profile.review_link_slug,
+        review_link: reviewLink
+      });
+    }
+
+    // Generate new slug
+    const baseName = profile?.company_name || profile?.display_name || req.user.email.split('@')[0];
+    const baseSlug = baseName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    let reviewLinkSlug = `${baseSlug}-${randomSuffix}`;
+
+    // Verify uniqueness
+    const { data: collision } = await db.supabase
+      .from('contractor_profiles')
+      .select('user_id')
+      .eq('review_link_slug', reviewLinkSlug)
+      .single();
+
+    if (collision) {
+      reviewLinkSlug = `${baseSlug}-${Date.now().toString(36)}`;
+    }
+
+    // Update or insert contractor profile with slug
+    const { error: updateError } = await db.supabase
+      .from('contractor_profiles')
+      .upsert({
+        user_id: contractorId,
+        review_link_slug: reviewLinkSlug,
+        company_name: profile?.company_name,
+        display_name: profile?.display_name
+      }, { onConflict: 'user_id' });
+
+    if (updateError) {
+      console.error('Error updating contractor profile:', updateError);
+      return res.status(500).json({ error: 'Failed to generate review link' });
+    }
+
+    const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?contractor=${reviewLinkSlug}`;
+
+    return res.json({
+      success: true,
+      review_link_slug: reviewLinkSlug,
+      review_link: reviewLink
+    });
+
+  } catch (error) {
+    console.error('Error in /api/contractor/review-link:', error);
+    return res.status(500).json({ error: 'Failed to generate review link' });
+  }
+});
+
 // ========================================
 // PUBLIC REVIEW ENDPOINTS
 // ========================================
