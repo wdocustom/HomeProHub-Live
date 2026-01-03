@@ -893,6 +893,18 @@ document.getElementById('bio')?.addEventListener('input', function() {
 // Load bio and gallery from profile
 async function loadBioAndGallery() {
   try {
+    // Wait for auth service to be ready
+    if (!window.authService || !window.authService.initialized) {
+      await new Promise(resolve => {
+        const checkInterval = setInterval(() => {
+          if (window.authService && window.authService.initialized) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+
     const user = await window.authService.getCurrentUser();
     if (!user) return;
 
@@ -957,6 +969,18 @@ async function handleGalleryUpload(files) {
   const statusMessage = document.getElementById('galleryStatusMessage');
 
   if (!files || files.length === 0) return;
+
+  // Wait for auth service to be ready
+  if (!window.authService || !window.authService.initialized) {
+    await new Promise(resolve => {
+      const checkInterval = setInterval(() => {
+        if (window.authService && window.authService.initialized) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
 
   // Check current gallery count
   const user = await window.authService.getCurrentUser();
@@ -1079,6 +1103,18 @@ function clearInsuranceUpload() {
 async function checkLicenseStatus() {
   const statusBanner = document.getElementById('licenseStatusBanner');
   const getLicensedPrompt = document.getElementById('getLicensedPrompt');
+
+  // Wait for auth service to be ready
+  if (!window.authService || !window.authService.initialized) {
+    await new Promise(resolve => {
+      const checkInterval = setInterval(() => {
+        if (window.authService && window.authService.initialized) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
 
   // Get user email from authService
   const user = await window.authService.getCurrentUser();
