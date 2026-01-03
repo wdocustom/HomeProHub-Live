@@ -235,6 +235,7 @@
 
   <div class="tabs">
     <button class="tab active" onclick="switchTab('basic')">Basic Info</button>
+    <button class="tab" onclick="switchTab('biogallery')">Bio & Gallery</button>
     <button class="tab" onclick="switchTab('licensing')">Licensing & Verification</button>
     <button class="tab" onclick="switchTab('social')">Social Media</button>
     <button class="tab" onclick="switchTab('notifications')">Notifications & Service Area</button>
@@ -301,8 +302,68 @@
     </form>
   </div>
 
+  <div id="biogalleryTab" class="tab-content">
+    <h2 id="bio" style="margin-top: 0;">Professional Bio</h2>
+    <p style="color: #6b7280; margin-bottom: 24px;">Tell clients about your experience and what makes you stand out. This will appear on your public review page.</p>
+
+    <form id="bioForm" novalidate>
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label for="bio">Your Bio</label>
+        <textarea
+          id="bio"
+          rows="6"
+          placeholder="Example: I've been in the construction industry for over 15 years, specializing in residential remodels and custom home builds. My team and I pride ourselves on clear communication, attention to detail, and delivering projects on time and within budget."
+          maxlength="500"
+          style="resize: vertical; min-height: 120px;"
+        ></textarea>
+        <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">
+          <span id="bioCharCount">0</span>/500 characters
+        </p>
+      </div>
+
+      <button type="submit" class="btn-primary" id="saveBioButton">Save Bio</button>
+      <p id="bioStatusMessage" style="margin-top: 12px; font-size: 14px;"></p>
+    </form>
+
+    <hr style="margin: 48px 0; border: none; border-top: 1px solid #e5e7eb;" />
+
+    <h2 id="gallery" style="margin-top: 0;">Portfolio Gallery</h2>
+    <p style="color: #6b7280; margin-bottom: 24px;">Showcase your best work. Upload up to 10 project photos to display on your profile.</p>
+
+    <!-- Gallery Grid -->
+    <div id="galleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <!-- Gallery items will be loaded here -->
+    </div>
+
+    <!-- Upload Zone -->
+    <div
+      id="uploadZone"
+      style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.2s;"
+      onclick="document.getElementById('galleryFileInput').click()"
+    >
+      <i class="fa-solid fa-cloud-upload" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;"></i>
+      <p style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 8px;">
+        Click to upload or drag and drop
+      </p>
+      <p style="font-size: 14px; color: #6b7280;">
+        PNG, JPG up to 10MB (Max 10 photos)
+      </p>
+    </div>
+
+    <input
+      type="file"
+      id="galleryFileInput"
+      accept="image/*"
+      multiple
+      style="display: none;"
+      onchange="handleGalleryUpload(this.files)"
+    />
+
+    <p id="galleryStatusMessage" style="margin-top: 12px; font-size: 14px;"></p>
+  </div>
+
   <div id="licensingTab" class="tab-content">
-    <h2 style="margin-top: 0;">Professional Licensing & Verification</h2>
+    <h2 id="verification" style="margin-top: 0;">Professional Licensing & Verification</h2>
 
     <!-- License Status Banner -->
     <div id="licenseStatusBanner" style="margin-bottom: 24px; padding: 20px; border-radius: 8px; display: none;">
@@ -792,17 +853,211 @@ function switchTab(tabName) {
   if (tabName === 'basic') {
     document.querySelector('.tab:nth-child(1)').classList.add('active');
     document.getElementById('basicTab').classList.add('active');
-  } else if (tabName === 'licensing') {
+  } else if (tabName === 'biogallery') {
     document.querySelector('.tab:nth-child(2)').classList.add('active');
+    document.getElementById('biogalleryTab').classList.add('active');
+    loadBioAndGallery();
+  } else if (tabName === 'licensing') {
+    document.querySelector('.tab:nth-child(3)').classList.add('active');
     document.getElementById('licensingTab').classList.add('active');
     checkLicenseStatus();
   } else if (tabName === 'social') {
-    document.querySelector('.tab:nth-child(3)').classList.add('active');
+    document.querySelector('.tab:nth-child(4)').classList.add('active');
     document.getElementById('socialTab').classList.add('active');
   } else if (tabName === 'notifications') {
-    document.querySelector('.tab:nth-child(4)').classList.add('active');
+    document.querySelector('.tab:nth-child(5)').classList.add('active');
     document.getElementById('notificationsTab').classList.add('active');
     loadNotificationPreferences();
+  }
+}
+
+// Handle anchor navigation (#bio, #gallery, #verification)
+function handleAnchorNavigation() {
+  const hash = window.location.hash.substring(1); // Remove #
+  if (hash === 'bio' || hash === 'gallery') {
+    switchTab('biogallery');
+    setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  } else if (hash === 'verification') {
+    switchTab('licensing');
+  }
+}
+
+// Bio character counter
+document.getElementById('bio')?.addEventListener('input', function() {
+  const count = this.value.length;
+  document.getElementById('bioCharCount').textContent = count;
+});
+
+// Load bio and gallery from profile
+async function loadBioAndGallery() {
+  try {
+    const user = await window.authService.getCurrentUser();
+    if (!user) return;
+
+    const response = await window.authService.authenticatedFetch('/api/profile/me');
+    if (response.ok) {
+      const data = await response.json();
+      const profile = data.contractorProfile;
+
+      // Load bio
+      if (profile?.bio) {
+        document.getElementById('bio').value = profile.bio;
+        document.getElementById('bioCharCount').textContent = profile.bio.length;
+      }
+
+      // Load gallery
+      if (profile?.gallery_urls && Array.isArray(profile.gallery_urls)) {
+        renderGallery(profile.gallery_urls);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading bio and gallery:', error);
+  }
+}
+
+// Save bio
+document.getElementById('bioForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const saveBtn = document.getElementById('saveBioButton');
+  const statusMessage = document.getElementById('bioStatusMessage');
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+
+  try {
+    const bio = document.getElementById('bio').value.trim();
+
+    const response = await window.authService.authenticatedFetch('/api/profile/update', {
+      method: 'POST',
+      body: JSON.stringify({ bio })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save bio');
+    }
+
+    statusMessage.textContent = '✅ Bio saved successfully!';
+    statusMessage.style.color = '#10b981';
+
+  } catch (error) {
+    console.error('Error saving bio:', error);
+    statusMessage.textContent = '❌ Error: ' + error.message;
+    statusMessage.style.color = '#ef4444';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Bio';
+  }
+});
+
+// Handle gallery uploads
+async function handleGalleryUpload(files) {
+  const statusMessage = document.getElementById('galleryStatusMessage');
+
+  if (!files || files.length === 0) return;
+
+  // Check current gallery count
+  const user = await window.authService.getCurrentUser();
+  const response = await window.authService.authenticatedFetch('/api/profile/me');
+  const data = await response.json();
+  const currentGallery = data.contractorProfile?.gallery_urls || [];
+
+  if (currentGallery.length + files.length > 10) {
+    statusMessage.textContent = `❌ Maximum 10 photos allowed. You have ${currentGallery.length}, trying to add ${files.length}.`;
+    statusMessage.style.color = '#ef4444';
+    return;
+  }
+
+  statusMessage.textContent = 'Uploading...';
+  statusMessage.style.color = '#3b82f6';
+
+  try {
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      // Check file size (10MB max)
+      if (files[i].size > 10 * 1024 * 1024) {
+        throw new Error(`File "${files[i].name}" is too large. Maximum size is 10MB.`);
+      }
+      formData.append('photos', files[i]);
+    }
+
+    const uploadResponse = await window.authService.authenticatedFetch('/api/profile/gallery/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const result = await uploadResponse.json();
+
+    statusMessage.textContent = `✅ Uploaded ${files.length} photo(s) successfully!`;
+    statusMessage.style.color = '#10b981';
+
+    // Reload gallery
+    loadBioAndGallery();
+
+    // Clear file input
+    document.getElementById('galleryFileInput').value = '';
+
+  } catch (error) {
+    console.error('Error uploading photos:', error);
+    statusMessage.textContent = '❌ Error: ' + error.message;
+    statusMessage.style.color = '#ef4444';
+  }
+}
+
+// Render gallery
+function renderGallery(urls) {
+  const grid = document.getElementById('galleryGrid');
+  if (!urls || urls.length === 0) {
+    grid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #9ca3af;">No photos yet. Upload your best work!</p>';
+    return;
+  }
+
+  grid.innerHTML = urls.map((url, index) => `
+    <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;">
+      <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;" />
+      <button
+        onclick="removeGalleryPhoto(${index})"
+        style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-center;"
+        title="Remove photo"
+      >
+        <i class="fa-solid fa-trash" style="font-size: 12px;"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+// Remove gallery photo
+async function removeGalleryPhoto(index) {
+  if (!confirm('Remove this photo from your gallery?')) return;
+
+  try {
+    const response = await window.authService.authenticatedFetch('/api/profile/gallery/remove', {
+      method: 'POST',
+      body: JSON.stringify({ index })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to remove photo');
+    }
+
+    const statusMessage = document.getElementById('galleryStatusMessage');
+    statusMessage.textContent = '✅ Photo removed successfully!';
+    statusMessage.style.color = '#10b981';
+
+    // Reload gallery
+    loadBioAndGallery();
+
+  } catch (error) {
+    console.error('Error removing photo:', error);
+    const statusMessage = document.getElementById('galleryStatusMessage');
+    statusMessage.textContent = '❌ Error: ' + error.message;
+    statusMessage.style.color = '#ef4444';
   }
 }
 
@@ -1588,6 +1843,12 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   });
+
+  // Handle anchor navigation on page load
+  handleAnchorNavigation();
+
+  // Listen for hash changes
+  window.addEventListener('hashchange', handleAnchorNavigation);
 });
 
 async function confirmDeleteAccount() {
