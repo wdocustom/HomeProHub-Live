@@ -579,16 +579,21 @@
         return;
       }
 
-      container.innerHTML = boostItems.map(item => `
+      container.innerHTML = boostItems.map((item, index) => `
         <div class="boost-item">
           <div class="boost-icon">${item.icon}</div>
           <div class="boost-content">
             <div class="boost-content-title">${item.title}</div>
             <div class="boost-points">${item.points}</div>
           </div>
-          <button class="boost-action ${item.secondary ? 'secondary' : ''}" onclick='${item.onclick.toString().replace(/^[^{]*{/, '').replace(/}[^}]*$/, '')}'>${item.action}</button>
+          <button class="boost-action ${item.secondary ? 'secondary' : ''}" data-action-index="${index}">${item.action}</button>
         </div>
       `).join('');
+
+      // Attach event listeners to all boost action buttons
+      container.querySelectorAll('.boost-action').forEach((button, index) => {
+        button.addEventListener('click', boostItems[index].onclick);
+      });
     }
 
     // Copy review link function
