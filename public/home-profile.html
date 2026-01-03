@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Home Profile | HomeProHub</title>
+
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <!-- Navigation Bar -->
+  <nav class="bg-white shadow-sm border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          <a href="/homeowner-dashboard.html" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span class="font-semibold">Back to Dashboard</span>
+          </a>
+        </div>
+
+        <!-- User Menu -->
+        <div class="flex items-center gap-4">
+          <span class="text-sm text-slate-600" id="userEmail"></span>
+          <button onclick="handleLogout()" class="text-sm text-slate-500 hover:text-red-600 transition-colors">
+            <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <!-- Page Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-slate-900 mb-2">My Home Profile</h1>
+      <p class="text-slate-500">Add details about your property to help contractors understand your project better.</p>
+    </div>
+
+    <!-- Home Profile Form -->
+    <form id="homeProfileForm" class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+
+      <!-- Location Section -->
+      <div class="p-8 border-b border-slate-200">
+        <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+          <i class="fa-solid fa-location-dot text-blue-600"></i>
+          Location
+        </h2>
+        <p class="text-sm text-slate-500 mb-6">Where is your property located?</p>
+
+        <div class="space-y-4">
+          <!-- Street Address -->
+          <div>
+            <label for="addressLine1" class="block text-sm font-semibold text-slate-700 mb-2">
+              Street Address
+            </label>
+            <input
+              type="text"
+              id="addressLine1"
+              name="addressLine1"
+              placeholder="123 Main Street"
+              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <!-- City, State, Zip -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label for="city" class="block text-sm font-semibold text-slate-700 mb-2">
+                City
+              </label>
+              <input
+                type="text"
+                id="city"
+                name="city"
+                placeholder="Denver"
+                class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label for="state" class="block text-sm font-semibold text-slate-700 mb-2">
+                State
+              </label>
+              <input
+                type="text"
+                id="state"
+                name="state"
+                placeholder="CO"
+                maxlength="2"
+                class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all uppercase"
+              />
+            </div>
+
+            <div>
+              <label for="zipCode" class="block text-sm font-semibold text-slate-700 mb-2">
+                Zip Code
+              </label>
+              <input
+                type="text"
+                id="zipCode"
+                name="zipCode"
+                placeholder="80202"
+                maxlength="5"
+                class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Property Specs Section -->
+      <div class="p-8">
+        <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+          <i class="fa-solid fa-house text-blue-600"></i>
+          Property Specs
+        </h2>
+        <p class="text-sm text-slate-500 mb-6">Tell us about your home (all optional).</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Property Type -->
+          <div>
+            <label for="propertyType" class="block text-sm font-semibold text-slate-700 mb-2">
+              Property Type
+            </label>
+            <select
+              id="propertyType"
+              name="propertyType"
+              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            >
+              <option value="">Select Type</option>
+              <option value="Single Family">Single Family</option>
+              <option value="Condo">Condo</option>
+              <option value="Townhouse">Townhouse</option>
+              <option value="Multi-Family">Multi-Family</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <!-- Year Built -->
+          <div>
+            <label for="yearBuilt" class="block text-sm font-semibold text-slate-700 mb-2">
+              Year Built
+            </label>
+            <input
+              type="number"
+              id="yearBuilt"
+              name="yearBuilt"
+              placeholder="1995"
+              min="1800"
+              max="2030"
+              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <!-- Sq. Footage -->
+          <div>
+            <label for="sqft" class="block text-sm font-semibold text-slate-700 mb-2">
+              Sq. Footage
+            </label>
+            <input
+              type="number"
+              id="sqft"
+              name="sqft"
+              placeholder="2000"
+              min="0"
+              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <!-- Lot Sq. Footage -->
+          <div>
+            <label for="lotSqft" class="block text-sm font-semibold text-slate-700 mb-2">
+              Lot Sq. Footage
+            </label>
+            <input
+              type="number"
+              id="lotSqft"
+              name="lotSqft"
+              placeholder="5000"
+              min="0"
+              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <!-- Bedrooms -->
+          <div>
+            <label for="beds" class="block text-sm font-semibold text-slate-700 mb-2">
+              Bedrooms
+            </label>
+            <input
+              type="number"
+              id="beds"
+              name="beds"
+              placeholder="3"
+              min="0"
+              max="20"
+              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <!-- Bathrooms -->
+          <div>
+            <label for="baths" class="block text-sm font-semibold text-slate-700 mb-2">
+              Bathrooms
+            </label>
+            <input
+              type="number"
+              id="baths"
+              name="baths"
+              placeholder="2.5"
+              min="0"
+              max="20"
+              step="0.5"
+              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-8 py-6 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+        <a
+          href="/homeowner-dashboard.html"
+          class="px-6 py-3 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+        >
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all hover:scale-105 shadow-lg flex items-center gap-2"
+        >
+          <i class="fa-solid fa-save"></i>
+          Save Details
+        </button>
+      </div>
+    </form>
+
+  </div>
+
+  <!-- Auth & Profile Service -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const supabaseUrl = 'https://lsnwptwdazjqekhzbkqw.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzbndwdHdkYXpqcWVraHpia3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU3NTYxNDQsImV4cCI6MjA1MTMzMjE0NH0.HMIFt0eUCJKNKVuZ-d4O4oE90zE2lLm7Y0-P-sefXhE';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Auth Service
+    window.authService = {
+      async getCurrentUser() {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          window.location.href = '/login.html';
+          return null;
+        }
+        return session.user;
+      },
+
+      async logout() {
+        await supabase.auth.signOut();
+        window.location.href = '/login.html';
+      }
+    };
+
+    // Load user info
+    async function loadUserInfo() {
+      const user = await window.authService.getCurrentUser();
+      if (user) {
+        document.getElementById('userEmail').textContent = user.email;
+        await loadHomeProfile(user.id);
+      }
+    }
+
+    // Load existing home profile
+    async function loadHomeProfile(userId) {
+      try {
+        const { data, error } = await supabase
+          .from('home_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (data) {
+          // Populate form with existing data
+          document.getElementById('addressLine1').value = data.address_line1 || '';
+          document.getElementById('city').value = data.city || '';
+          document.getElementById('state').value = data.state || '';
+          document.getElementById('zipCode').value = data.zip_code || '';
+          document.getElementById('propertyType').value = data.property_type || '';
+          document.getElementById('yearBuilt').value = data.year_built || '';
+          document.getElementById('sqft').value = data.sqft || '';
+          document.getElementById('lotSqft').value = data.lot_sqft || '';
+          document.getElementById('beds').value = data.beds || '';
+          document.getElementById('baths').value = data.baths || '';
+        }
+      } catch (error) {
+        console.error('Error loading home profile:', error);
+      }
+    }
+
+    // Save home profile
+    async function saveHomeProfile(event) {
+      event.preventDefault();
+
+      const user = await window.authService.getCurrentUser();
+      if (!user) return;
+
+      const formData = {
+        user_id: user.id,
+        address_line1: document.getElementById('addressLine1').value,
+        city: document.getElementById('city').value,
+        state: document.getElementById('state').value.toUpperCase(),
+        zip_code: document.getElementById('zipCode').value,
+        property_type: document.getElementById('propertyType').value,
+        year_built: document.getElementById('yearBuilt').value ? parseInt(document.getElementById('yearBuilt').value) : null,
+        sqft: document.getElementById('sqft').value ? parseInt(document.getElementById('sqft').value) : null,
+        lot_sqft: document.getElementById('lotSqft').value ? parseInt(document.getElementById('lotSqft').value) : null,
+        beds: document.getElementById('beds').value ? parseInt(document.getElementById('beds').value) : null,
+        baths: document.getElementById('baths').value ? parseFloat(document.getElementById('baths').value) : null,
+        data_source: 'User'
+      };
+
+      try {
+        const { data, error } = await supabase
+          .from('home_profiles')
+          .upsert(formData, { onConflict: 'user_id' })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Show success message
+        showToast('Home profile saved successfully!', 'success');
+
+        // Redirect back to dashboard after short delay
+        setTimeout(() => {
+          window.location.href = '/homeowner-dashboard.html';
+        }, 1500);
+
+      } catch (error) {
+        console.error('Error saving home profile:', error);
+        showToast('Failed to save home profile. Please try again.', 'error');
+      }
+    }
+
+    // Toast notification helper
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `fixed bottom-8 right-8 px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 z-[10000] ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+      } text-white font-semibold animate-fade-in-up`;
+      toast.innerHTML = `
+        <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+        <span>${message}</span>
+      `;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Logout handler
+    window.handleLogout = async function() {
+      await window.authService.logout();
+    };
+
+    // Form submit handler
+    document.getElementById('homeProfileForm').addEventListener('submit', saveHomeProfile);
+
+    // Initialize page
+    loadUserInfo();
+
+    // Make functions globally available
+    window.showToast = showToast;
+  </script>
+
+  <style>
+    @keyframes fade-in-up {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fade-in-up 0.3s ease-out;
+    }
+  </style>
+
+</body>
+</html>
