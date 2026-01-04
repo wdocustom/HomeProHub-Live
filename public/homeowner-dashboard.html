@@ -1040,7 +1040,7 @@
         <div class="stale-project-alert-icon">⏰</div>
         <div class="stale-project-alert-content" style="flex: 1;">
           <h3 id="staleProjectTitle">Is the Bathroom Remodel finished?</h3>
-          <p id="staleProjectMessage">This project has been in progress for over 30 days. Mark it complete to boost your homeowner grade.</p>
+          <p id="staleProjectMessage">This project has been in progress for over 30 days. Mark it complete to keep your project history accurate.</p>
           <div class="stale-project-alert-actions">
             <button class="btn-alert btn-alert-primary" id="staleProjectCompleteBtn">
               ✅ Mark Complete
@@ -1052,77 +1052,56 @@
         </div>
       </div>
 
-      <!-- Homeowner Trust Score Card -->
+      <!-- Homeowner Project History Card -->
       <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl shadow-sm border border-blue-100 p-8 mb-8">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div class="flex-1">
             <div class="flex items-center gap-3 mb-3">
               <div class="p-3 bg-white rounded-2xl shadow-sm">
-                <i class="fa-solid fa-shield-heart text-2xl text-blue-600"></i>
+                <i class="fa-solid fa-clipboard-check text-2xl text-blue-600"></i>
               </div>
               <div>
-                <h3 class="text-xl font-bold text-slate-900">Your Trust Score</h3>
-                <p class="text-sm text-slate-500">Based on contractor reviews</p>
+                <h3 class="text-xl font-bold text-slate-900">Your Project History</h3>
+                <p class="text-sm text-slate-500">Built through completed work</p>
               </div>
             </div>
-            <p class="text-slate-600 text-sm">
-              Contractors rate clients on payment speed, scope adherence, and site access/cooperation. A high score helps you attract top-rated pros.
-            </p>
-          </div>
 
-          <div class="flex flex-col items-center gap-3">
-            <div class="relative w-32 h-32">
-              <!-- Circular Progress -->
-              <svg class="w-32 h-32 transform -rotate-90">
-                <circle cx="64" cy="64" r="56" stroke="#e2e8f0" stroke-width="8" fill="none"></circle>
-                <circle id="trustScoreCircle" cx="64" cy="64" r="56" stroke="#3b82f6" stroke-width="8" fill="none"
-                  stroke-dasharray="352" stroke-dashoffset="352" stroke-linecap="round"
-                  style="transition: stroke-dashoffset 1s ease;"></circle>
-              </svg>
-              <!-- Score Display -->
-              <div class="absolute inset-0 flex items-center justify-center">
-                <div class="text-center">
-                  <div id="trustScoreValue" class="text-3xl font-black text-blue-600">--</div>
-                  <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">Score</div>
+            <!-- Empty State (0 projects) -->
+            <div id="projectHistoryEmpty">
+              <p class="text-slate-600 text-sm leading-relaxed mb-4">
+                Your project history builds automatically as you complete work with contractors. This helps future contractors understand your experience level and set accurate timelines.
+              </p>
+              <div class="bg-white rounded-xl p-4 border border-blue-200">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  <strong class="text-slate-700">What contractors see:</strong> After accepting your bid, contractors see completion count and average project details—helping them prepare materials and schedules. No information is shared before you choose to work together.
+                </p>
+              </div>
+            </div>
+
+            <!-- Established State (1+ projects) -->
+            <div id="projectHistoryEstablished" class="hidden">
+              <p class="text-slate-600 text-sm mb-4">
+                After accepting a bid, contractors see structured indicators that help them prepare for your project efficiently.
+              </p>
+              <div class="flex gap-4 flex-wrap text-sm">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-check-circle text-emerald-500"></i>
+                  <span class="text-slate-700"><span id="completedCount" class="font-bold">0</span> completed projects</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-clock text-blue-500"></i>
+                  <span class="text-slate-700">Avg. response: <span id="avgResponse" class="font-bold">--</span></span>
                 </div>
               </div>
             </div>
-
-            <!-- Grade Badge -->
-            <div id="trustGradeBadge" class="px-4 py-2 bg-white rounded-full shadow-md border-2 border-blue-200">
-              <span class="text-2xl font-black text-blue-600" id="trustGradeText">New</span>
-            </div>
-
-            <!-- Review Count -->
-            <p class="text-xs text-slate-500">
-              Based on <span id="trustReviewCount" class="font-bold text-slate-700">0</span> reviews
-            </p>
           </div>
-        </div>
 
-        <!-- Breakdown (Hidden if no reviews) -->
-        <div id="trustScoreBreakdown" class="mt-6 pt-6 border-t border-blue-100 hidden">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="flex items-center gap-3">
-              <i class="fa-solid fa-dollar-sign text-green-500 text-xl"></i>
-              <div>
-                <p class="text-xs font-bold text-slate-400 uppercase">Payment Speed</p>
-                <p class="text-lg font-bold text-slate-900"><span id="avgPayment">0.0</span>/5.0</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <i class="fa-solid fa-clipboard-check text-blue-500 text-xl"></i>
-              <div>
-                <p class="text-xs font-bold text-slate-400 uppercase">Scope Adherence</p>
-                <p class="text-lg font-bold text-slate-900"><span id="avgScope">0.0</span>/5.0</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <i class="fa-solid fa-handshake text-purple-500 text-xl"></i>
-              <div>
-                <p class="text-xs font-bold text-slate-400 uppercase">Site Access</p>
-                <p class="text-lg font-bold text-slate-900"><span id="avgSite">0.0</span>/5.0</p>
-              </div>
+          <!-- Milestone Badge (only show for established users) -->
+          <div id="projectMilestoneBadge" class="hidden flex-shrink-0">
+            <div class="bg-white rounded-2xl p-6 border-2 border-blue-200 text-center">
+              <div class="text-4xl mb-2">🏆</div>
+              <div class="text-2xl font-black text-blue-600" id="milestoneCount">0</div>
+              <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">Projects</div>
             </div>
           </div>
         </div>
