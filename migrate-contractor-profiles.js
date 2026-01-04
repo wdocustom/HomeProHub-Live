@@ -15,7 +15,7 @@ const { Client } = require('pg');
 const sql = `
 -- 1. Create the Missing Table
 CREATE TABLE IF NOT EXISTS public.contractor_profiles (
-  id UUID REFERENCES auth.users(id) PRIMARY KEY, -- Links to Login
+  user_id UUID REFERENCES auth.users(id) PRIMARY KEY, -- Links to Login
   company_name TEXT,
   display_name TEXT,
   email TEXT,
@@ -76,7 +76,7 @@ BEGIN
     CREATE POLICY "Users can update own profile"
     ON public.contractor_profiles
     FOR UPDATE
-    USING (auth.uid() = id);
+    USING (auth.uid() = user_id);
   END IF;
 END $$;
 
@@ -92,21 +92,21 @@ BEGIN
     CREATE POLICY "Users can insert own profile"
     ON public.contractor_profiles
     FOR INSERT
-    WITH CHECK (auth.uid() = id);
+    WITH CHECK (auth.uid() = user_id);
   END IF;
 END $$;
 
 -- 3. SYNC & FIX (Critical)
 -- Create profiles for existing users who are contractors but have no profile
-INSERT INTO public.contractor_profiles (id, email, review_link_slug)
+INSERT INTO public.contractor_profiles (user_id, email, review_link_slug)
 SELECT
   id,
   email,
   -- Auto-generate the missing slug so links work immediately
   lower(split_part(email, '@', 1)) || '-' || substr(md5(random()::text), 1, 4)
 FROM auth.users
-WHERE id NOT IN (SELECT id FROM public.contractor_profiles)
-ON CONFLICT (id) DO NOTHING;
+WHERE id NOT IN (SELECT user_id FROM public.contractor_profiles)
+ON CONFLICT (user_id) DO NOTHING;
 `;
 
 async function runMigration() {
