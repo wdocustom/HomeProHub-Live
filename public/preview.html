@@ -6,7 +6,7 @@
   <title>Analysis Complete – HomeProHub</title>
 
   <!-- Sanctuary Glass 2.0 Design System -->
-  <link rel="stylesheet" href="/styles/sanctuary-glass.css">
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -834,9 +834,25 @@
       parsed: {}
     };
 
-    // Get question from sessionStorage or URL
+    // Get question from localStorage (hot_lead_draft), sessionStorage, or URL
     const urlParams = new URLSearchParams(window.location.search);
-    const question = sessionStorage.getItem('pendingQuestion') || urlParams.get('q') || '';
+    let question = '';
+
+    // First try to get from hot_lead_draft (saved by home.html)
+    const hotLeadDraft = localStorage.getItem('hot_lead_draft');
+    if (hotLeadDraft) {
+      try {
+        const draft = JSON.parse(hotLeadDraft);
+        question = draft.description || draft.question || '';
+      } catch (e) {
+        console.error('Error parsing hot_lead_draft:', e);
+      }
+    }
+
+    // Fallback to sessionStorage or URL param
+    if (!question) {
+      question = sessionStorage.getItem('pendingQuestion') || urlParams.get('q') || '';
+    }
 
     if (!question || question.length < 10) {
       showError('No question provided. Please go back to the homepage and describe your issue.');
@@ -1246,12 +1262,10 @@
   </script>
 
   <!-- Unified Navigation System -->
-  <script src="/js/unified-navigation.js"></script>
+  <script src="/components/unified-navigation.js"></script>
   <script>
-    // Initialize Zone C navigation
-    if (typeof unifiedNav !== 'undefined') {
-      unifiedNav.init('C');
-    }
+    // Initialize Zone C navigation (Homeowner App)
+    window.SanctuaryNavigation.init('C');
   </script>
 </body>
 </html>
