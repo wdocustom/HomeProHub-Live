@@ -4,13 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Projects – HomeProHub</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Sanctuary Glass 2.0 Design System -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="components/navigation.css" />
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
   <style>
     body {
-      background: #f9fafb;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
@@ -1025,8 +1031,8 @@
   </style>
   <link rel="stylesheet" href="components/footer.css" />
 </head>
-<body>
-  <!-- Navigation will be injected here -->
+<body class="zone-c app-page">
+  <!-- Navigation will be auto-injected by unified-navigation.js -->
 
   <main>
     <div class="dashboard-container">
@@ -1321,9 +1327,12 @@
   </div>
 
   <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/services/auth.js"></script>
-  <script src="components/navigation.js"></script>
+  <!-- Sanctuary Glass 2.0 Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+  <script>
+    // Initialize Zone C navigation (Homeowner App - Protected)
+    window.SanctuaryNavigation.init('C');
+  </script>
 
   <script>
     // State
