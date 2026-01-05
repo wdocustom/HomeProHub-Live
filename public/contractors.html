@@ -6,8 +6,10 @@
   <title>For Contractors – HomeProHub</title>
   <meta name="description" content="Better clients. Faster estimates. Less chaos. The only platform that grades homeowners, helps you write veteran-level estimates in seconds, and rewards your license with priority placement.">
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Sanctuary Glass 2.0 Design System -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
     * {
@@ -18,52 +20,14 @@
     }
 
     body {
-      background: #f8fafc;
       color: #1f2937;
       line-height: 1.6;
     }
   </style>
 </head>
-<body>
+<body class="zone-b public-page">
 
-  <!-- NAVIGATION -->
-  <nav class="hidden md:flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50">
-    <div class="flex items-center gap-2">
-      <img src="logo.png" class="h-8" alt="HomeProHub">
-      <span class="text-xl font-extrabold text-slate-900 tracking-tight">HomeProHub</span>
-    </div>
-    <div class="flex gap-8">
-      <a href="/index.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">For Homeowners</a>
-      <a href="/contractors.html" class="text-sm font-semibold text-blue-600">For Contractors</a>
-      <a href="/grading-details.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Verification</a>
-    </div>
-    <div class="flex items-center gap-4">
-      <a href="/signin.html" class="text-sm font-bold text-slate-500 hover:text-slate-900">Sign In</a>
-      <button onclick="signUpContractor()" class="px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-full hover:bg-slate-800 transition-transform hover:scale-105">Get Started</button>
-    </div>
-  </nav>
-
-  <!-- Mobile App Dock -->
-  <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 pb-safe pt-2 z-50">
-    <div class="flex justify-around items-center px-2">
-      <a href="/index.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-solid fa-house text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Homeowners</span>
-      </a>
-      <a href="/contractors.html" class="flex flex-col items-center p-2 text-blue-600">
-        <i class="fa-solid fa-hard-hat text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Contractors</span>
-      </a>
-      <a href="/grading-details.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-solid fa-shield-halved text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Verify</span>
-      </a>
-      <a href="/signin.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-solid fa-right-to-bracket text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Sign In</span>
-      </a>
-    </div>
-  </div>
+  <!-- Navigation will be auto-injected by unified-navigation.js -->
 
   <!-- HERO SECTION -->
   <div class="relative bg-gradient-to-b from-amber-50 to-slate-50 pt-24 pb-20 px-4">
@@ -251,6 +215,13 @@
   <footer class="bg-slate-900 text-center py-12 px-4">
     <p class="text-slate-400">© 2025 HomeProHub. Building trust through transparency.</p>
   </footer>
+
+  <!-- Sanctuary Glass 2.0 Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+  <script>
+    // Initialize Zone B navigation (Public Contractor)
+    window.SanctuaryNavigation.init('B');
+  </script>
 
   <script>
     function signUpContractor() {
