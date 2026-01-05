@@ -9,6 +9,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
+  <!-- Sanctuary Glass 2.0 -->
+  <link rel="stylesheet" href="/css/sanctuary-glass.css">
+
   <style>
     * {
       margin: 0;
@@ -230,7 +233,7 @@
     }
   </style>
 </head>
-<body>
+<body class="zone-a public-page">
   <div class="auth-container">
     <div class="logo">
       <a href="/">HomeProHub</a>
@@ -561,6 +564,12 @@
         setLoading(false);
       }
     });
+  </script>
+
+  <!-- Sanctuary Glass 2.0 Navigation -->
+  <script src="/js/unified-navigation.js"></script>
+  <script>
+    unifiedNav.init('A');
   </script>
 </body>
 </html>

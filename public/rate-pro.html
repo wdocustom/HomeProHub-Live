@@ -10,13 +10,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+  <link rel="stylesheet" href="./css/sanctuary-glass.css">
+
   <style>
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="zone-c app-page">
 
   <!-- Header -->
   <header class="bg-white border-b border-slate-200">
@@ -229,7 +231,11 @@
     </div>
   </footer>
 
+  <script src="./js/unified-navigation.js"></script>
   <script>
+    // Initialize Zone C navigation
+    unifiedNav.init('C');
+
     let contractorSlug = null;
     let contractorId = null;
 

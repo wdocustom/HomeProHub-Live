@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Proposals – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="components/navigation.css" />
+  <link rel="stylesheet" href="styles/sanctuary-glass.css" />
   <link rel="stylesheet" href="components/footer.css" />
   <style>
     body {
@@ -324,7 +324,7 @@
     }
   </style>
 </head>
-<body>
+<body class="zone-c app-page">
   <!-- Navigation will be injected here -->
 
   <div class="main-container">
@@ -347,8 +347,15 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
-  <script src="components/navigation.js"></script>
+  <script src="components/unified-navigation.js"></script>
   <script src="components/footer.js"></script>
+
+  <script>
+    // Initialize Sanctuary Glass 2.0 navigation
+    if (window.initNavigation) {
+      window.initNavigation('C');
+    }
+  </script>
 
   <script>
     // Get project ID from URL

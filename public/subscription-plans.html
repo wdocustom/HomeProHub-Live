@@ -4,8 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manage Subscription – HomeProHub</title>
+
+  <!-- Sanctuary Glass 2.0 Design System -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="components/navigation.css" />
+
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
@@ -318,8 +321,8 @@
     }
   </style>
 </head>
-<body>
-  <!-- Navigation component will be injected here by navigation.js -->
+<body class="zone-b public-page">
+  <!-- Navigation will be auto-injected by unified-navigation.js -->
 
   <div class="page-container">
     <div class="page-header">
@@ -416,7 +419,13 @@
     </div>
   </div>
 
-  <script src="components/navigation.js"></script>
+  <!-- Sanctuary Glass 2.0 Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+  <script>
+    // Initialize Zone B navigation (Public Contractor)
+    window.SanctuaryNavigation.init('B');
+  </script>
+
   <script>
     let currentTier = 'pro'; // Default to pro, will be fetched from API
 

@@ -9,6 +9,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+  <!-- Sanctuary Glass 2.0 Design System -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+
   <style>
     * {
       margin: 0;
@@ -18,57 +21,13 @@
     }
 
     body {
-      background: #f8fafc;
       color: #1f2937;
       line-height: 1.6;
       padding-bottom: 80px;
     }
   </style>
 </head>
-<body>
-
-  <!-- NAVIGATION -->
-  <nav class="hidden md:flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50">
-    <div class="flex items-center gap-2">
-      <img src="logo.png" class="h-8" alt="HomeProHub">
-      <span class="text-xl font-extrabold text-slate-900 tracking-tight">HomeProHub</span>
-    </div>
-    <div class="flex gap-8">
-      <a href="/index.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Home</a>
-      <a href="/index.html#how-it-works" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">How it Works</a>
-      <a href="/browse-contractors.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Directory</a>
-    </div>
-    <div class="flex items-center gap-4">
-      <a href="/contractors.html" class="text-sm font-bold text-slate-500 hover:text-slate-900">For Contractors</a>
-      <a href="/signin.html" class="px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-full hover:bg-slate-800 transition-transform hover:scale-105">Sign In</a>
-    </div>
-  </nav>
-
-  <!-- Mobile App Dock (Bottom Navigation - Mobile Only) -->
-  <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 pb-safe pt-2 z-50">
-    <div class="flex justify-around items-center px-2">
-      <a href="/index.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-solid fa-house text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Home</span>
-      </a>
-      <a href="/ai-check.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-solid fa-wand-magic-sparkles text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Analyze</span>
-      </a>
-      <a href="/projects.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-solid fa-list-check text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Projects</span>
-      </a>
-      <a href="/messages.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-solid fa-comment-dots text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Messages</span>
-      </a>
-      <a href="/profile.html" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-900">
-        <i class="fa-regular fa-user text-xl mb-1"></i>
-        <span class="text-[10px] font-bold">Profile</span>
-      </a>
-    </div>
-  </div>
+<body class="zone-a public-page">
 
   <!-- HERO SECTION -->
   <div class="relative bg-gradient-to-b from-purple-50 to-slate-50 pt-24 pb-16 px-4">
@@ -306,6 +265,13 @@
       </div>
     </div>
   </div>
+
+  <!-- Sanctuary Glass 2.0 Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+  <script>
+    // Initialize Zone A navigation (Public Homeowner)
+    window.SanctuaryNavigation.init('A');
+  </script>
 
 </body>
 </html>

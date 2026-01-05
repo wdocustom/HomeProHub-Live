@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HomeProHub – My Profile</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="components/navigation.css">
+  <link rel="stylesheet" href="sanctuary-glass.css">
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
@@ -236,8 +236,8 @@
     }
   </style>
 </head>
-<body>
-  <!-- Navigation component will be injected here by navigation.js -->
+<body class="zone-c app-page">
+  <!-- Navigation component will be injected here by unified-navigation.js -->
 
 <div class="profile-container">
   <div class="profile-header">
@@ -1086,6 +1086,13 @@ async function confirmDeleteAccount() {
 </script>
 
 <!-- Unified Navigation Component -->
-<script src="components/navigation.js"></script>
+<script src="components/unified-navigation.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.UnifiedNavigation) {
+      window.UnifiedNavigation.init('C');
+    }
+  });
+</script>
 </body>
 </html>
