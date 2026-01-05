@@ -1130,6 +1130,11 @@
         max-width: none;
       }
     }
+
+    /* Rolling Text Animation */
+    #changing-text {
+      transition: opacity 0.5s ease;
+    }
   </style>
 </head>
 <body class="zone-a public-page">
@@ -1152,7 +1157,7 @@
   <div class="relative bg-gradient-to-b from-blue-50 to-slate-50 pt-24 pb-20 px-4">
     <div class="max-w-3xl mx-auto text-center">
       <h1 class="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6">
-        Expert home care,<br> <span class="text-blue-600">simplified.</span>
+        Expert home <span id="changing-text" class="text-blue-600">care</span>,<br> <span class="text-blue-600">simplified.</span>
       </h1>
       <p class="text-lg text-slate-500 mb-10 max-w-xl mx-auto leading-relaxed">
         Diagnose issues with AI, get fair price estimates, and hire verified pros. Start by telling us what's wrong.
@@ -1551,6 +1556,20 @@
   <script>
     // Initialize Zone A navigation (Public Homeowner)
     window.SanctuaryNavigation.init('A');
+
+    // Rolling Text Animation
+    const words = ["care", "analysis", "diagnosis", "advice"];
+    let i = 0;
+    const el = document.getElementById('changing-text');
+
+    setInterval(() => {
+      el.style.opacity = '0'; // Fade out
+      setTimeout(() => {
+        i = (i + 1) % words.length;
+        el.innerText = words[i];
+        el.style.opacity = '1'; // Fade in
+      }, 500); // Wait for fade out
+    }, 3000); // Change every 3 seconds
   </script>
 
   <script>
