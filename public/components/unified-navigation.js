@@ -19,7 +19,7 @@
       desktop: {
         logo: { text: 'HomeProHub', href: '/index.html' },
         centerLinks: [
-          { text: 'How it Works', href: '/for-homeowners.html' },
+          { text: 'How it Works', href: '/index.html#how-it-works' },
           { text: 'Verification', href: '/grading-details.html' },
           { text: 'Directory', href: '/contractor-directory.html' }
         ],
@@ -27,7 +27,7 @@
       },
       mobile: {
         items: [
-          { label: 'How it Works', icon: 'fa-circle-info', href: '/for-homeowners.html' },
+          { label: 'How it Works', icon: 'fa-circle-info', href: '/index.html#how-it-works' },
           { label: 'Verification', icon: 'fa-certificate', href: '/grading-details.html' },
           { label: 'Directory', icon: 'fa-users', href: '/contractor-directory.html' },
           { label: 'Sign In', icon: 'fa-arrow-right', href: '/signin.html' }
@@ -59,10 +59,10 @@
       requiresAuth: true,
       userRole: 'homeowner',
       desktop: {
-        logo: { text: 'HomeProHub', href: '/homeowner-dashboard.html' },
+        logo: { text: 'HomeProHub', href: '/home.html' },
         centerLinks: [
-          { text: 'Dashboard', href: '/homeowner-dashboard.html' },
-          { text: 'Projects', href: '/home.html' },
+          { text: 'Dashboard', href: '/home.html' },
+          { text: 'Projects', href: '/homeowner-dashboard.html' },
           { text: 'Progress', href: '/project-check-in.html' },
           { text: 'Messages', href: '/messages.html' }
         ],
@@ -70,8 +70,8 @@
       },
       mobile: {
         items: [
-          { label: 'Dashboard', icon: 'fa-home', href: '/homeowner-dashboard.html' },
-          { label: 'Projects', icon: 'fa-list', href: '/home.html' },
+          { label: 'Dashboard', icon: 'fa-home', href: '/home.html' },
+          { label: 'Projects', icon: 'fa-list', href: '/homeowner-dashboard.html' },
           { label: 'Progress', icon: 'fa-chart-line', href: '/project-check-in.html' },
           { label: 'Messages', icon: 'fa-message', href: '/messages.html' },
           { label: 'Profile', icon: 'fa-user', href: '/homeowner-profile.html' }
