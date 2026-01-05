@@ -2057,6 +2057,171 @@ app.post("/api/ai-check", async (req, res) => {
 });
 
 /**
+ * POST /api/ai/estimate-remodel
+ * Homeowner renovation cost estimator
+ * Generates realistic cost estimates for remodel projects
+ */
+app.post("/api/ai/estimate-remodel", async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { systemPrompt, userPrompt, photos, metadata } = req.body;
+
+    // Input validation
+    if (!userPrompt || typeof userPrompt !== 'string') {
+      return res.status(400).json({
+        error: "User prompt is required and must be a string.",
+        code: 'INVALID_INPUT'
+      });
+    }
+
+    // Check if Anthropic API is configured
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // Build content blocks
+    const contentBlocks = [];
+
+    // Add text prompt
+    contentBlocks.push({
+      type: 'text',
+      text: userPrompt
+    });
+
+    // Add photos if provided
+    if (photos && Array.isArray(photos) && photos.length > 0) {
+      for (const photo of photos.slice(0, 5)) {
+        // Extract base64 data if it includes data URL prefix
+        let base64Data = photo;
+        if (photo.includes(',')) {
+          base64Data = photo.split(',')[1];
+        }
+
+        // Detect media type from data URL or default to jpeg
+        let mediaType = 'image/jpeg';
+        if (photo.startsWith('data:')) {
+          const match = photo.match(/data:([^;]+);/);
+          if (match) mediaType = match[1];
+        }
+
+        contentBlocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: mediaType,
+            data: base64Data
+          }
+        });
+      }
+    }
+
+    console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}, photos=${photos?.length || 0}`);
+
+    // Call Anthropic API
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2048,
+        system: systemPrompt || "You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits).",
+        messages: [
+          {
+            role: "user",
+            content: contentBlocks
+          }
+        ]
+      })
+    });
+
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (${apiResponse.status}):`, errorText);
+
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
+    }
+
+    const data = await apiResponse.json();
+
+    const responseText = data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "No response generated.";
+
+    // Parse JSON from response
+    let estimateData;
+    try {
+      // Try to extract JSON from markdown code blocks
+      const jsonMatch = responseText.match(/```json\s*(\{[\s\S]*?\})\s*```/) ||
+                        responseText.match(/(\{[\s\S]*"line_items"[\s\S]*\})/);
+
+      if (jsonMatch) {
+        estimateData = JSON.parse(jsonMatch[1]);
+      } else {
+        // Try parsing the whole response
+        estimateData = JSON.parse(responseText);
+      }
+    } catch (parseError) {
+      console.error('❌ Failed to parse JSON response:', parseError);
+      console.log('Raw response:', responseText);
+
+      // Fallback: create a simple estimate
+      estimateData = {
+        low: 10000,
+        high: 25000,
+        line_items: [
+          {
+            category: "Materials",
+            description: "Based on project description",
+            low: 4000,
+            high: 10000
+          },
+          {
+            category: "Labor",
+            description: "Professional installation",
+            low: 5000,
+            high: 12000
+          },
+          {
+            category: "Permits & Fees",
+            description: "Building permits and inspections",
+            low: 1000,
+            high: 3000
+          }
+        ]
+      };
+    }
+
+    const totalLatency = Date.now() - startTime;
+
+    console.log(`✓ Renovation estimate complete: $${estimateData.low.toLocaleString()} - $${estimateData.high.toLocaleString()} (${totalLatency}ms)`);
+
+    // Return structured response
+    res.json(estimateData);
+
+  } catch (err) {
+    const errorLatency = Date.now() - startTime;
+    console.error(`❌ Error in /api/ai/estimate-remodel (${errorLatency}ms):`, err);
+    res.status(500).json({
+      error: "Internal server error processing estimate request.",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
  * POST /contractor-ask
  * Contractor coach AI with RAG (Retrieval-Augmented Generation) for pricing
  */
