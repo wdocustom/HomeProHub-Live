@@ -2089,7 +2089,7 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
       });
     }
 
-    const defaultSystemPrompt = "You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits). Return ONLY valid JSON with these fields: 'low' (number), 'high' (number), and 'line_items' (array of objects with category, description, low, high).";
+    const defaultSystemPrompt = "You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits). Return ONLY valid JSON with these fields: 'low' (number), 'high' (number), 'line_items' (array of objects with category, description, low, high), and 'designer_note' (string with one professional insight or pro tip about the project - keep it concise and actionable).";
 
     console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}, photos=${photos?.length || 0}`);
 
@@ -2266,7 +2266,8 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
             low: 1000,
             high: 3000
           }
-        ]
+        ],
+        designer_note: "Get at least 3 detailed quotes before starting. Material prices can vary 20-30% between suppliers, and contractor availability affects timeline significantly."
       };
     }
 

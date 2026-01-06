@@ -67,6 +67,44 @@
       justify-center: center;
       font-size: 14px;
     }
+
+    /* Designer Note Card */
+    .designer-note-card {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: start;
+      gap: 16px;
+    }
+
+    .designer-note-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .designer-note-content {
+      flex: 1;
+    }
+
+    .designer-note-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1e40af;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .designer-note-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #1e3a8a;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body class="zone-a public-page">
@@ -152,6 +190,17 @@
         <span class="text-5xl md:text-6xl font-black tracking-tight" id="total-high">$22,000</span>
       </div>
       <p class="text-sm text-slate-400">*Based on labor & material rates in <span id="display-zip" class="text-white font-bold">68105</span></p>
+    </div>
+
+    <!-- Designer Note (if available) -->
+    <div id="designer-note-section" style="display: none;">
+      <div class="designer-note-card">
+        <span class="designer-note-icon">💡</span>
+        <div class="designer-note-content">
+          <div class="designer-note-label">Pro Tip</div>
+          <div class="designer-note-text" id="designer-note-text"></div>
+        </div>
+      </div>
     </div>
 
     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 mb-8">
@@ -317,6 +366,14 @@
         `;
         container.appendChild(lineItem);
       });
+
+      // Display designer note if available
+      if (data.designer_note && typeof data.designer_note === 'string' && data.designer_note.trim().length > 0) {
+        document.getElementById('designer-note-text').textContent = data.designer_note;
+        document.getElementById('designer-note-section').style.display = 'block';
+      } else {
+        document.getElementById('designer-note-section').style.display = 'none';
+      }
 
       // Store estimate data for later use
       window.currentEstimate = {
