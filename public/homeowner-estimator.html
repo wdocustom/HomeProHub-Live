@@ -355,15 +355,30 @@
       data.line_items.forEach(item => {
         const lineItem = document.createElement('div');
         lineItem.className = 'flex justify-between items-start py-4 border-b border-slate-100 last:border-0';
-        lineItem.innerHTML = `
+
+        let itemHTML = `
           <div class="flex-1">
             <div class="font-bold text-slate-900">${item.category}</div>
             <div class="text-sm text-slate-500 mt-1">${item.description}</div>
+        `;
+
+        // Add local insight if available
+        if (item.local_insight && item.local_insight.message) {
+          itemHTML += `
+            <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+              <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+            </div>
+          `;
+        }
+
+        itemHTML += `
           </div>
           <div class="text-right ml-4">
             <div class="font-bold text-slate-900">$${item.low.toLocaleString()} - $${item.high.toLocaleString()}</div>
           </div>
         `;
+
+        lineItem.innerHTML = itemHTML;
         container.appendChild(lineItem);
       });
 
@@ -416,9 +431,131 @@
       }
     };
 
-    function downloadPDF() {
-      // TODO: Implement PDF generation
-      alert('PDF download feature coming soon! Your estimate will be saved to your account.');
+    async function downloadPDF() {
+      if (!window.currentEstimate) {
+        alert('No estimate available to download. Please generate an estimate first.');
+        return;
+      }
+
+      // Auth is already checked by checkAuthAndAction, so user is logged in at this point
+      // Get user profile for PDF header
+      let userProfile = null;
+      try {
+        userProfile = await window.authService.getUserProfile();
+      } catch (err) {
+        console.error('Error getting user profile:', err);
+      }
+
+      const estimate = window.currentEstimate.estimate;
+      const zipCode = window.currentEstimate.zipCode;
+      const finishLevel = window.currentEstimate.finishLevel;
+
+      const win = window.open('', '', 'height=900,width=800');
+      if (!win) {
+        alert('Please allow pop-ups to download PDF');
+        return;
+      }
+
+      // Build user info for header
+      const userName = userProfile?.fullName || 'Homeowner';
+      const userEmail = userProfile?.email || '';
+
+      // Build line items HTML
+      let lineItemsHTML = '';
+      if (estimate.line_items && estimate.line_items.length > 0) {
+        estimate.line_items.forEach((item, idx) => {
+          const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+          lineItemsHTML += `<tr style="background:${bg};">`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;">${item.category}`;
+          if (item.description) lineItemsHTML += `<br><span style="font-size:11px;color:#6b7280;">${item.description}</span>`;
+          if (item.local_insight && item.local_insight.message) {
+            lineItemsHTML += `<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">💡 ${item.local_insight.message}</div>`;
+          }
+          lineItemsHTML += `</td>`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.low || 0).toLocaleString()}</td>`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.high || 0).toLocaleString()}</td>`;
+          lineItemsHTML += `</tr>`;
+        });
+      }
+
+      // Build designer note HTML
+      let designerNoteHTML = '';
+      if (estimate.designer_note) {
+        designerNoteHTML = `<div style="background:#dbeafe;border-left:4px solid #2563eb;padding:12px;margin-top:20px;border-radius:8px;">
+          <h4 style="margin:0 0 8px 0;color:#1e40af;font-size:14px;">💡 Pro Tip</h4>
+          <p style="margin:0;font-size:13px;color:#1e3a8a;line-height:1.6;">${estimate.designer_note}</p>
+        </div>`;
+      }
+
+      const html = `<!DOCTYPE html>
+<html><head>
+  <title>Renovation Estimate - ${finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)} Finish</title>
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; color: #1f2937; }
+    .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+    .header-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .company-name { font-size: 24px; font-weight: 700; color: #2563eb; }
+    .project-title { font-size: 28px; font-weight: 700; margin: 20px 0 10px 0; }
+    .total-box { background: #dbeafe; border: 2px solid #2563eb; border-radius: 12px; padding: 16px; margin: 20px 0; text-align: center; }
+    .total-label { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
+    .total-amount { font-size: 32px; font-weight: 700; color: #2563eb; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th { background: #f3f4f6; padding: 12px; text-align: left; font-size: 13px; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
+    .total-row { background: #dbeafe; font-weight: 700; font-size: 16px; border-top: 2px solid #2563eb; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head><body>
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <div class="company-name">HomeProHub</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px;">Renovation Estimate</div>
+        ${userEmail ? `<div style="font-size:13px;color:#6b7280;">${userEmail}</div>` : ''}
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;color:#6b7280;">Date: ${new Date().toLocaleDateString()}</div>
+        <div style="font-size:13px;color:#6b7280;">Estimate ID: HPH-${Math.floor(Math.random() * 90000) + 10000}</div>
+        <div style="font-size:13px;color:#6b7280;">ZIP: ${zipCode}</div>
+      </div>
+    </div>
+  </div>
+
+  <h1 class="project-title">Renovation Project - ${finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)} Finish</h1>
+
+  <div class="total-box">
+    <div class="total-label">Estimated Total Range</div>
+    <div class="total-amount">$${(estimate.low || 0).toLocaleString()} - $${(estimate.high || 0).toLocaleString()}</div>
+  </div>
+
+  <h3 style="margin:30px 0 10px 0;color:#374151;">Detailed Breakdown</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Category / Item</th>
+        <th style="text-align:right;width:120px;">Low Estimate</th>
+        <th style="text-align:right;width:120px;">High Estimate</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${lineItemsHTML}
+      <tr class="total-row">
+        <td style="padding:14px;">TOTAL PROJECT ESTIMATE</td>
+        <td style="padding:14px;text-align:right;color:#2563eb;">$${(estimate.low || 0).toLocaleString()}</td>
+        <td style="padding:14px;text-align:right;color:#2563eb;">$${(estimate.high || 0).toLocaleString()}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  ${designerNoteHTML}
+
+  <div style="margin-top:40px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+    This estimate is preliminary and subject to change based on site conditions, material availability, and final scope. Not a binding contract.
+  </div>
+</body></html>`;
+
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => win.print(), 250);
     }
 
     function postProject() {

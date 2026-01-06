@@ -2089,18 +2089,83 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
       });
     }
 
-    const defaultSystemPrompt = "You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits). Return ONLY valid JSON with these fields: 'low' (number), 'high' (number), 'line_items' (array of objects with category, description, low, high), and 'designer_note' (string with one professional insight or pro tip about the project - keep it concise and actionable).";
+    // --- RAG IMPLEMENTATION: LOAD COST DATA ---
+    const zipCode = metadata?.zipCode || '';
+    let ragData = {
+      laborRates: 'unavailable',
+      permits: 'unavailable',
+      regionalMultiplier: 1.0
+    };
+
+    const laborData = loadJsonFile('labor-rates.json');
+    const permitData = loadJsonFile('permit-fees.json');
+
+    if (laborData && permitData) {
+      // Determine regional multiplier based on ZIP prefix
+      const zipPrefix = zipCode ? zipCode.substring(0, 3) : 'other';
+      const multiplier = laborData.regional_multipliers?.[zipPrefix]
+        || laborData.regional_multipliers?.['other']
+        || 1.0;
+
+      ragData = {
+        laborRates: laborData.rates_by_trade || {},
+        regionalMultiplier: multiplier,
+        samplePermitFees: permitData.projects || []
+      };
+
+      console.log(`✓ RAG data loaded for homeowner estimate: ZIP ${zipCode || 'N/A'}, Multiplier ${multiplier}`);
+    } else {
+      console.warn('⚠️  RAG data unavailable, using AI general knowledge');
+    }
+    // --- END RAG IMPLEMENTATION ---
+
+    const defaultSystemPrompt = `You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits).
+
+--- BEGIN RAG CONTEXT ---
+Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
+Regional Multiplier for ZIP ${zipCode || 'N/A'}: ${ragData.regionalMultiplier}
+Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
+--- END RAG CONTEXT ---
+
+Use the RAG context above to provide accurate, location-adjusted pricing.
+
+CRITICAL: Return ONLY valid JSON with these fields:
+- 'low' (number): Total low estimate
+- 'high' (number): Total high estimate
+- 'line_items' (array): Each item must have:
+  * 'category' (string): Materials, Labor, Permits, etc.
+  * 'description' (string): Brief description
+  * 'low' (number): Low estimate for this item
+  * 'high' (number): High estimate for this item
+  * 'local_insight' (object, optional): Only for material items in renovation projects
+    - 'type': "design_trend" or "sourcing_tip"
+    - 'message': Modest, helpful tip about local design trends or sourcing (under 2 sentences)
+- 'designer_note' (string): One professional insight or pro tip about the project (concise and actionable)
+
+Guidelines for local_insight:
+- Only add to material line items (flooring, countertops, fixtures, cabinets, etc.)
+- Reference the specific city/region from ZIP ${zipCode || 'unknown'}
+- Match the finish level (${metadata?.finishLevel || 'mid-range'})
+- Mention real local distributors if known, or describe vendor type
+- Keep messages under 2 sentences
+- Use modest, consultative tone (e.g., "Design Note:" or "Local sourcing tip:")
+- Only add if genuinely helpful - not every item needs one`;
 
     console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}, photos=${photos?.length || 0}`);
 
     let responseText = null;
     let usedProvider = null;
 
+    // Build enhanced user prompt with RAG context
+    const enhancedUserPrompt = systemPrompt ? userPrompt : `${userPrompt}
+
+Use the labor rates, regional multiplier, and permit costs provided in the RAG context to calculate realistic estimates for ZIP ${zipCode}.`;
+
     // Try Anthropic first if available
     if (ANTHROPIC_API_KEY) {
       try {
         // Build content blocks for Anthropic
-        const contentBlocks = [{ type: 'text', text: userPrompt }];
+        const contentBlocks = [{ type: 'text', text: enhancedUserPrompt }];
 
         // Add photos if provided
         if (photos && Array.isArray(photos) && photos.length > 0) {
@@ -2177,7 +2242,7 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
           },
           {
             role: "user",
-            content: userPrompt
+            content: enhancedUserPrompt
           }
         ];
 
@@ -2243,16 +2308,20 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
       console.error('❌ Failed to parse JSON response:', parseError);
       console.log('Raw response:', responseText.substring(0, 500));
 
-      // Fallback: create a simple estimate
+      // Fallback: create a simple estimate with local insights
       estimateData = {
         low: 10000,
         high: 25000,
         line_items: [
           {
             category: "Materials",
-            description: "Based on project description",
+            description: "Flooring, fixtures, and finishes",
             low: 4000,
-            high: 10000
+            high: 10000,
+            local_insight: {
+              type: "sourcing_tip",
+              message: `Local sourcing tip: Check regional home centers and specialty suppliers for ${metadata?.finishLevel || 'mid-range'} finish materials that match local design preferences.`
+            }
           },
           {
             category: "Labor",
