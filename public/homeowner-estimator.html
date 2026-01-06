@@ -14,6 +14,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
+  <!-- html2pdf.js for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <style>
     @keyframes fade-in-up {
       from {
@@ -382,6 +385,69 @@
         container.appendChild(lineItem);
       });
 
+      // Add financial breakdown rows
+      const subtotalLow = data.subtotal_low || data.low || 0;
+      const subtotalHigh = data.subtotal_high || data.high || 0;
+      const overheadProfitLow = data.overhead_profit_low || 0;
+      const overheadProfitHigh = data.overhead_profit_high || 0;
+      const contingencyLow = data.contingency_low || 0;
+      const contingencyHigh = data.contingency_high || 0;
+
+      // Subtotal row
+      const subtotalRow = document.createElement('div');
+      subtotalRow.className = 'flex justify-between items-center py-4 border-t-2 border-slate-300 mt-2';
+      subtotalRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-bold text-slate-900">Subtotal</div>
+          <div class="text-xs text-slate-500 mt-1">Materials + Labor + Permits</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-bold text-slate-900">$${subtotalLow.toLocaleString()} - $${subtotalHigh.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(subtotalRow);
+
+      // Overhead & Profit row
+      const overheadRow = document.createElement('div');
+      overheadRow.className = 'flex justify-between items-center py-4 border-b border-slate-100';
+      overheadRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-semibold text-slate-700">Overhead & Profit (${data.overhead_profit_percent || 20}%)</div>
+          <div class="text-xs text-slate-500 mt-1">Business operations & margin</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-semibold text-slate-700">$${overheadProfitLow.toLocaleString()} - $${overheadProfitHigh.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(overheadRow);
+
+      // Contingency row
+      const contingencyRow = document.createElement('div');
+      contingencyRow.className = 'flex justify-between items-center py-4 border-b border-slate-100';
+      contingencyRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-semibold text-slate-700">Contingency (${data.contingency_percent || 10}%)</div>
+          <div class="text-xs text-slate-500 mt-1">Unexpected costs & changes</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-semibold text-slate-700">$${contingencyLow.toLocaleString()} - $${contingencyHigh.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(contingencyRow);
+
+      // Total row
+      const totalRow = document.createElement('div');
+      totalRow.className = 'flex justify-between items-center py-4 bg-blue-50 rounded-xl px-4 mt-2';
+      totalRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-black text-slate-900 text-lg">TOTAL PROJECT COST</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-black text-blue-600 text-lg">$${data.low.toLocaleString()} - $${data.high.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(totalRow);
+
       // Display designer note if available
       if (data.designer_note && typeof data.designer_note === 'string' && data.designer_note.trim().length > 0) {
         document.getElementById('designer-note-text').textContent = data.designer_note;
@@ -450,12 +516,6 @@
       const zipCode = window.currentEstimate.zipCode;
       const finishLevel = window.currentEstimate.finishLevel;
 
-      const win = window.open('', '', 'height=900,width=800');
-      if (!win) {
-        alert('Please allow pop-ups to download PDF');
-        return;
-      }
-
       // Build user info for header
       const userName = userProfile?.fullName || 'Homeowner';
       const userEmail = userProfile?.email || '';
@@ -477,6 +537,32 @@
           lineItemsHTML += `</tr>`;
         });
       }
+
+      // Add financial breakdown rows
+      const subtotalLow = estimate.subtotal_low || estimate.low || 0;
+      const subtotalHigh = estimate.subtotal_high || estimate.high || 0;
+      const overheadProfitLow = estimate.overhead_profit_low || 0;
+      const overheadProfitHigh = estimate.overhead_profit_high || 0;
+      const contingencyLow = estimate.contingency_low || 0;
+      const contingencyHigh = estimate.contingency_high || 0;
+
+      lineItemsHTML += `
+        <tr style="background:#f3f4f6;border-top:2px solid #cbd5e1;">
+          <td style="padding:12px;font-weight:700;">Subtotal</td>
+          <td style="padding:12px;text-align:right;font-weight:700;">$${subtotalLow.toLocaleString()}</td>
+          <td style="padding:12px;text-align:right;font-weight:700;">$${subtotalHigh.toLocaleString()}</td>
+        </tr>
+        <tr style="background:#ffffff;">
+          <td style="padding:12px;">Overhead & Profit (${estimate.overhead_profit_percent || 20}%)</td>
+          <td style="padding:12px;text-align:right;">$${overheadProfitLow.toLocaleString()}</td>
+          <td style="padding:12px;text-align:right;">$${overheadProfitHigh.toLocaleString()}</td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Contingency (${estimate.contingency_percent || 10}%)</td>
+          <td style="padding:12px;text-align:right;border-bottom:1px solid #e5e7eb;">$${contingencyLow.toLocaleString()}</td>
+          <td style="padding:12px;text-align:right;border-bottom:1px solid #e5e7eb;">$${contingencyHigh.toLocaleString()}</td>
+        </tr>
+      `;
 
       // Build designer note HTML
       let designerNoteHTML = '';
@@ -553,9 +639,39 @@
   </div>
 </body></html>`;
 
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => win.print(), 250);
+      // Create temporary element for PDF generation
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      document.body.appendChild(tempDiv);
+
+      // Show loading feedback on button
+      const downloadBtn = document.querySelector('button[onclick*="download"]');
+      const originalText = downloadBtn.innerHTML;
+      downloadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-500 text-xl"></i> Generating PDF...';
+      downloadBtn.disabled = true;
+
+      // Generate PDF using html2pdf
+      const opt = {
+        margin: 0.5,
+        filename: `HomeProHub-Estimate-${zipCode}-${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      try {
+        await html2pdf().set(opt).from(tempDiv).save();
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        alert('Failed to generate PDF. Please try again.');
+      } finally {
+        // Clean up
+        document.body.removeChild(tempDiv);
+        downloadBtn.innerHTML = originalText;
+        downloadBtn.disabled = false;
+      }
     }
 
     function postProject() {

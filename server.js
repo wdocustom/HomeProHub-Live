@@ -8,6 +8,9 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./database/db');
 
+// OpenAI SDK for vision-enabled estimates
+const OpenAI = require('openai');
+
 // node-fetch v3 for CommonJS
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
@@ -2065,7 +2068,7 @@ app.post("/api/ai-check", async (req, res) => {
  * POST /api/ai/estimate-remodel
  * Homeowner renovation cost estimator
  * Generates realistic cost estimates for remodel projects
- * Uses Anthropic Claude (primary) with OpenAI fallback
+ * Uses OpenAI GPT-4o (primary with vision) with Anthropic fallback
  */
 app.post("/api/ai/estimate-remodel", async (req, res) => {
   const startTime = Date.now();
@@ -2119,7 +2122,7 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
     }
     // --- END RAG IMPLEMENTATION ---
 
-    const defaultSystemPrompt = `You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits).
+    const defaultSystemPrompt = `You are a Master General Contractor giving a preliminary budget to a homeowner. Analyze the project description and photos carefully. Be realistic, not optimistic.
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
@@ -2130,8 +2133,8 @@ Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
 Use the RAG context above to provide accurate, location-adjusted pricing.
 
 CRITICAL: Return ONLY valid JSON with these fields:
-- 'low' (number): Total low estimate
-- 'high' (number): Total high estimate
+- 'subtotal_low' (number): Subtotal low estimate (labor + materials only)
+- 'subtotal_high' (number): Subtotal high estimate (labor + materials only)
 - 'line_items' (array): Each item must have:
   * 'category' (string): Materials, Labor, Permits, etc.
   * 'description' (string): Brief description
@@ -2149,21 +2152,72 @@ Guidelines for local_insight:
 - Mention real local distributors if known, or describe vendor type
 - Keep messages under 2 sentences
 - Use modest, consultative tone (e.g., "Design Note:" or "Local sourcing tip:")
-- Only add if genuinely helpful - not every item needs one`;
 
-    console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}, photos=${photos?.length || 0}`);
+IMPORTANT: Do NOT calculate overhead, profit, or contingency - just return subtotal. Server will add those.`;
+
+    console.log(`🤖 ESTIMATOR: Using OpenAI GPT-4o (Primary) with ${photos?.length || 0} images...`);
+    console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}`);
 
     let responseText = null;
     let usedProvider = null;
 
     // Build enhanced user prompt with RAG context
-    const enhancedUserPrompt = systemPrompt ? userPrompt : `${userPrompt}
+    const enhancedUserPrompt = `${userPrompt}
 
-Use the labor rates, regional multiplier, and permit costs provided in the RAG context to calculate realistic estimates for ZIP ${zipCode}.`;
+Use the labor rates, regional multiplier, and permit costs provided in the RAG context to calculate realistic estimates for ZIP ${zipCode}. Analyze any provided photos for scope details.`;
 
-    // Try Anthropic first if available
-    if (ANTHROPIC_API_KEY) {
+    // Try OpenAI FIRST (with vision support)
+    if (OPENAI_API_KEY) {
       try {
+        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+        // Build message content with text and images
+        let userContent = [{ type: "text", text: enhancedUserPrompt }];
+
+        // Add photos with vision support
+        if (photos && Array.isArray(photos) && photos.length > 0) {
+          photos.slice(0, 5).forEach(photo => {
+            // Clean base64 string
+            let cleanBase64 = photo;
+            if (photo.includes(',')) {
+              cleanBase64 = photo.split(',')[1];
+            }
+
+            userContent.push({
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${cleanBase64}`,
+                detail: "high"
+              }
+            });
+          });
+          console.log(`📸 Added ${userContent.length - 1} photos to vision analysis`);
+        }
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt || defaultSystemPrompt },
+            { role: "user", content: userContent }
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 2048,
+          temperature: 0.7
+        });
+
+        responseText = completion.choices[0].message.content;
+        usedProvider = 'OpenAI (GPT-4o with Vision)';
+
+      } catch (openaiError) {
+        console.warn(`⚠️  OpenAI primary failed, attempting Anthropic fallback:`, openaiError.message);
+      }
+    }
+
+    // Try Anthropic as fallback if OpenAI failed
+    if (!responseText && ANTHROPIC_API_KEY) {
+      try {
+        console.log(`🔄 Fallback to Anthropic Claude...`);
+
         // Build content blocks for Anthropic
         const contentBlocks = [{ type: 'text', text: enhancedUserPrompt }];
 
@@ -2217,69 +2271,15 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
           responseText = data.content && data.content[0]?.text
             ? data.content[0].text
             : null;
-          usedProvider = 'Anthropic';
+          usedProvider = 'Anthropic (Fallback)';
         } else {
           const errorText = await apiResponse.text();
-          console.warn(`⚠️  Anthropic API error (${apiResponse.status}):`, errorText);
-
-          // If Anthropic fails, try OpenAI fallback
-          if (!OPENAI_API_KEY) {
-            throw new Error(`Anthropic API error: ${apiResponse.status}`);
-          }
+          console.error(`❌ Anthropic fallback error (${apiResponse.status}):`, errorText);
+          throw new Error(`Anthropic API error: ${apiResponse.status}`);
         }
       } catch (anthropicError) {
-        console.warn(`⚠️  Anthropic failed, attempting OpenAI fallback:`, anthropicError.message);
-      }
-    }
-
-    // Try OpenAI if Anthropic failed or wasn't available
-    if (!responseText && OPENAI_API_KEY) {
-      try {
-        const messages = [
-          {
-            role: "system",
-            content: systemPrompt || defaultSystemPrompt
-          },
-          {
-            role: "user",
-            content: enhancedUserPrompt
-          }
-        ];
-
-        // Note: OpenAI image support would require different handling
-        // For now, we'll just use text
-        if (photos && photos.length > 0) {
-          console.warn(`⚠️  Photos provided but OpenAI fallback doesn't support images in this endpoint`);
-        }
-
-        const apiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${OPENAI_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: messages,
-            max_tokens: 2048,
-            temperature: 0.7
-          })
-        });
-
-        if (!apiResponse.ok) {
-          const errorText = await apiResponse.text();
-          console.error(`❌ OpenAI API error (${apiResponse.status}):`, errorText);
-          throw new Error(`OpenAI API error: ${apiResponse.status}`);
-        }
-
-        const data = await apiResponse.json();
-        responseText = data.choices && data.choices[0]?.message?.content
-          ? data.choices[0].message.content
-          : null;
-        usedProvider = 'OpenAI';
-      } catch (openaiError) {
-        console.error(`❌ OpenAI fallback failed:`, openaiError.message);
-        throw openaiError;
+        console.error(`❌ Anthropic fallback failed:`, anthropicError.message);
+        throw anthropicError;
       }
     }
 
@@ -2310,8 +2310,8 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
 
       // Fallback: create a simple estimate with local insights
       estimateData = {
-        low: 10000,
-        high: 25000,
+        subtotal_low: 10000,
+        subtotal_high: 25000,
         line_items: [
           {
             category: "Materials",
@@ -2340,12 +2340,44 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
       };
     }
 
+    // --- CALCULATE FINANCIAL BREAKDOWN ---
+    // Add overhead, profit, and contingency
+    const overheadProfitPercent = 20;
+    const contingencyPercent = 10;
+
+    const subtotalLow = estimateData.subtotal_low || estimateData.low || 0;
+    const subtotalHigh = estimateData.subtotal_high || estimateData.high || 0;
+
+    const overheadProfitLow = Math.round(subtotalLow * (overheadProfitPercent / 100));
+    const overheadProfitHigh = Math.round(subtotalHigh * (overheadProfitPercent / 100));
+
+    const contingencyLow = Math.round(subtotalLow * (contingencyPercent / 100));
+    const contingencyHigh = Math.round(subtotalHigh * (contingencyPercent / 100));
+
+    const totalLow = subtotalLow + overheadProfitLow + contingencyLow;
+    const totalHigh = subtotalHigh + overheadProfitHigh + contingencyHigh;
+
+    // Build enhanced response with financial breakdown
+    const enhancedEstimate = {
+      ...estimateData,
+      subtotal_low: subtotalLow,
+      subtotal_high: subtotalHigh,
+      overhead_profit_percent: overheadProfitPercent,
+      overhead_profit_low: overheadProfitLow,
+      overhead_profit_high: overheadProfitHigh,
+      contingency_percent: contingencyPercent,
+      contingency_low: contingencyLow,
+      contingency_high: contingencyHigh,
+      low: totalLow,
+      high: totalHigh
+    };
+
     const totalLatency = Date.now() - startTime;
 
-    console.log(`✓ Renovation estimate complete (${usedProvider}): $${estimateData.low.toLocaleString()} - $${estimateData.high.toLocaleString()} (${totalLatency}ms)`);
+    console.log(`✓ Renovation estimate complete (${usedProvider}): $${totalLow.toLocaleString()} - $${totalHigh.toLocaleString()} (${totalLatency}ms)`);
 
-    // Return structured response
-    res.json(estimateData);
+    // Return enhanced response
+    res.json(enhancedEstimate);
 
   } catch (err) {
     const errorLatency = Date.now() - startTime;
