@@ -422,8 +422,35 @@
     }
 
     function postProject() {
-      // Save estimate to localStorage and redirect to post-project
-      localStorage.setItem('remodel_draft', JSON.stringify(window.currentEstimate));
+      // Transform estimator data to post-project format
+      const estimate = window.currentEstimate;
+
+      // Convert line_items to scopeItems format
+      const scopeItems = estimate.estimate.line_items.map(item =>
+        `${item.category}: ${item.description} ($${item.low.toLocaleString()} - $${item.high.toLocaleString()})`
+      );
+
+      // Create project draft in format expected by post-project.html
+      const projectDraft = {
+        title: `Renovation Project - ${estimate.finishLevel.charAt(0).toUpperCase() + estimate.finishLevel.slice(1)} Finish`,
+        description: estimate.vision,
+        budgetMin: estimate.estimate.low,
+        budgetMax: estimate.estimate.high,
+        timeline: '4-8 weeks', // Default timeline for renovation projects
+        tradeType: 'general', // Renovations typically need general contractor
+        scopeItems: scopeItems,
+        designerNote: estimate.estimate.designer_note || '',
+        aiAnalysis: `AI-generated estimate for ${estimate.zipCode}. ${estimate.finishLevel.charAt(0).toUpperCase() + estimate.finishLevel.slice(1)} finish quality.`,
+        zipCode: estimate.zipCode,
+        photos: estimate.photos || []
+      };
+
+      // Save to hot_lead_draft (the key post-project.html looks for)
+      localStorage.setItem('hot_lead_draft', JSON.stringify(projectDraft));
+
+      console.log('✓ Saved project draft for posting:', projectDraft);
+
+      // Redirect to post-project page
       window.location.href = '/post-project.html?source=estimator';
     }
 
