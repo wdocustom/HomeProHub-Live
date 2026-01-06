@@ -21,12 +21,17 @@ const { runAICheck } = require('./triage/ai-check');
 
 // ====== ENVIRONMENT VALIDATION ======
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-if (!ANTHROPIC_API_KEY) {
-  console.error("❌ CRITICAL: ANTHROPIC_API_KEY is not set in environment variables.");
-  console.error("   Please add it to your .env file to enable AI features.");
+if (!ANTHROPIC_API_KEY && !OPENAI_API_KEY) {
+  console.error("❌ CRITICAL: No AI API keys configured.");
+  console.error("   Please add ANTHROPIC_API_KEY or OPENAI_API_KEY to your .env file.");
+} else if (!ANTHROPIC_API_KEY) {
+  console.warn("⚠️  WARNING: ANTHROPIC_API_KEY not set. Using OpenAI as primary provider.");
+} else if (!OPENAI_API_KEY) {
+  console.warn("⚠️  WARNING: OPENAI_API_KEY not set. No fallback provider available.");
 }
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -2060,6 +2065,7 @@ app.post("/api/ai-check", async (req, res) => {
  * POST /api/ai/estimate-remodel
  * Homeowner renovation cost estimator
  * Generates realistic cost estimates for remodel projects
+ * Uses Anthropic Claude (primary) with OpenAI fallback
  */
 app.post("/api/ai/estimate-remodel", async (req, res) => {
   const startTime = Date.now();
@@ -2075,89 +2081,150 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
       });
     }
 
-    // Check if Anthropic API is configured
-    if (!ANTHROPIC_API_KEY) {
+    // Check if at least one AI API is configured
+    if (!ANTHROPIC_API_KEY && !OPENAI_API_KEY) {
       return res.status(503).json({
         error: "AI service is not configured. Please contact support.",
         code: 'SERVICE_UNAVAILABLE'
       });
     }
 
-    // Build content blocks
-    const contentBlocks = [];
-
-    // Add text prompt
-    contentBlocks.push({
-      type: 'text',
-      text: userPrompt
-    });
-
-    // Add photos if provided
-    if (photos && Array.isArray(photos) && photos.length > 0) {
-      for (const photo of photos.slice(0, 5)) {
-        // Extract base64 data if it includes data URL prefix
-        let base64Data = photo;
-        if (photo.includes(',')) {
-          base64Data = photo.split(',')[1];
-        }
-
-        // Detect media type from data URL or default to jpeg
-        let mediaType = 'image/jpeg';
-        if (photo.startsWith('data:')) {
-          const match = photo.match(/data:([^;]+);/);
-          if (match) mediaType = match[1];
-        }
-
-        contentBlocks.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: mediaType,
-            data: base64Data
-          }
-        });
-      }
-    }
+    const defaultSystemPrompt = "You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits). Return ONLY valid JSON with these fields: 'low' (number), 'high' (number), and 'line_items' (array of objects with category, description, low, high).";
 
     console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}, photos=${photos?.length || 0}`);
 
-    // Call Anthropic API
-    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 2048,
-        system: systemPrompt || "You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits).",
-        messages: [
-          {
-            role: "user",
-            content: contentBlocks
+    let responseText = null;
+    let usedProvider = null;
+
+    // Try Anthropic first if available
+    if (ANTHROPIC_API_KEY) {
+      try {
+        // Build content blocks for Anthropic
+        const contentBlocks = [{ type: 'text', text: userPrompt }];
+
+        // Add photos if provided
+        if (photos && Array.isArray(photos) && photos.length > 0) {
+          for (const photo of photos.slice(0, 5)) {
+            let base64Data = photo;
+            if (photo.includes(',')) {
+              base64Data = photo.split(',')[1];
+            }
+
+            let mediaType = 'image/jpeg';
+            if (photo.startsWith('data:')) {
+              const match = photo.match(/data:([^;]+);/);
+              if (match) mediaType = match[1];
+            }
+
+            contentBlocks.push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64Data
+              }
+            });
           }
-        ]
-      })
-    });
+        }
 
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error(`❌ Anthropic API error (${apiResponse.status}):`, errorText);
+        const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01"
+          },
+          body: JSON.stringify({
+            model: "claude-3-5-sonnet-latest",
+            max_tokens: 2048,
+            system: systemPrompt || defaultSystemPrompt,
+            messages: [
+              {
+                role: "user",
+                content: contentBlocks
+              }
+            ]
+          })
+        });
 
-      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
-        error: "AI service error. Please try again.",
-        code: 'AI_SERVICE_ERROR',
-        status: apiResponse.status
-      });
+        if (apiResponse.ok) {
+          const data = await apiResponse.json();
+          responseText = data.content && data.content[0]?.text
+            ? data.content[0].text
+            : null;
+          usedProvider = 'Anthropic';
+        } else {
+          const errorText = await apiResponse.text();
+          console.warn(`⚠️  Anthropic API error (${apiResponse.status}):`, errorText);
+
+          // If Anthropic fails, try OpenAI fallback
+          if (!OPENAI_API_KEY) {
+            throw new Error(`Anthropic API error: ${apiResponse.status}`);
+          }
+        }
+      } catch (anthropicError) {
+        console.warn(`⚠️  Anthropic failed, attempting OpenAI fallback:`, anthropicError.message);
+      }
     }
 
-    const data = await apiResponse.json();
+    // Try OpenAI if Anthropic failed or wasn't available
+    if (!responseText && OPENAI_API_KEY) {
+      try {
+        const messages = [
+          {
+            role: "system",
+            content: systemPrompt || defaultSystemPrompt
+          },
+          {
+            role: "user",
+            content: userPrompt
+          }
+        ];
 
-    const responseText = data.content && data.content[0]?.text
-      ? data.content[0].text
-      : "No response generated.";
+        // Note: OpenAI image support would require different handling
+        // For now, we'll just use text
+        if (photos && photos.length > 0) {
+          console.warn(`⚠️  Photos provided but OpenAI fallback doesn't support images in this endpoint`);
+        }
+
+        const apiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: messages,
+            max_tokens: 2048,
+            temperature: 0.7
+          })
+        });
+
+        if (!apiResponse.ok) {
+          const errorText = await apiResponse.text();
+          console.error(`❌ OpenAI API error (${apiResponse.status}):`, errorText);
+          throw new Error(`OpenAI API error: ${apiResponse.status}`);
+        }
+
+        const data = await apiResponse.json();
+        responseText = data.choices && data.choices[0]?.message?.content
+          ? data.choices[0].message.content
+          : null;
+        usedProvider = 'OpenAI';
+      } catch (openaiError) {
+        console.error(`❌ OpenAI fallback failed:`, openaiError.message);
+        throw openaiError;
+      }
+    }
+
+    // If both providers failed
+    if (!responseText) {
+      return res.status(503).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR'
+      });
+    }
 
     // Parse JSON from response
     let estimateData;
@@ -2174,7 +2241,7 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
       }
     } catch (parseError) {
       console.error('❌ Failed to parse JSON response:', parseError);
-      console.log('Raw response:', responseText);
+      console.log('Raw response:', responseText.substring(0, 500));
 
       // Fallback: create a simple estimate
       estimateData = {
@@ -2205,7 +2272,7 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
 
     const totalLatency = Date.now() - startTime;
 
-    console.log(`✓ Renovation estimate complete: $${estimateData.low.toLocaleString()} - $${estimateData.high.toLocaleString()} (${totalLatency}ms)`);
+    console.log(`✓ Renovation estimate complete (${usedProvider}): $${estimateData.low.toLocaleString()} - $${estimateData.high.toLocaleString()} (${totalLatency}ms)`);
 
     // Return structured response
     res.json(estimateData);
