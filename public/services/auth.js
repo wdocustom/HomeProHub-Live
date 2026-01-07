@@ -46,9 +46,30 @@ class AuthService {
       console.log('✓ Supabase client created');
 
       console.log('🔄 Auth init step 4: Getting current session...');
-      // Get current session and validate it
-      const { data: { session } } = await this.supabase.auth.getSession();
-      console.log('✓ Session check complete:', session ? 'Existing session found' : 'No existing session');
+      // Get current session and validate it (with timeout to prevent hanging)
+      let session = null;
+      try {
+        const sessionPromise = this.supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('getSession() timeout - clearing localStorage and retrying')), 3000)
+        );
+
+        const result = await Promise.race([sessionPromise, timeoutPromise]);
+        session = result.data.session;
+        console.log('✓ Session check complete:', session ? 'Existing session found' : 'No existing session');
+      } catch (err) {
+        console.warn('⚠️ getSession() failed or timed out:', err.message);
+        console.log('🔄 Clearing potentially corrupt localStorage and continuing...');
+        // Clear Supabase localStorage to fix corruption
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-')) {
+            localStorage.removeItem(key);
+            console.log('Removed:', key);
+          }
+        });
+        session = null;
+        console.log('✓ localStorage cleared, continuing with no session');
+      }
 
       if (session) {
         // CRITICAL FIX: Validate the session on init to catch stale sessions
