@@ -439,7 +439,7 @@
     }
   </style>
 </head>
-<body class="zone-c app-page">
+<body class="app-page">
 
   <div class="messages-container">
     <!-- Conversations List Panel -->
@@ -958,8 +958,37 @@
   <!-- Sanctuary Glass 2.0 Navigation System -->
   <script src="/components/unified-navigation.js"></script>
   <script>
-    // Initialize Zone C navigation (Homeowner App - Protected)
-    window.SanctuaryNavigation.init('C');
+    // Initialize navigation based on user role (detect dynamically)
+    async function initMessageNavigation() {
+      try {
+        // Wait for authService to initialize
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const profile = await window.authService.getUserProfile();
+        const zone = profile?.role === 'contractor' ? 'D' : 'C';
+
+        // Add zone class to body
+        document.body.classList.add(`zone-${zone.toLowerCase()}`);
+
+        // Initialize navigation with correct zone
+        window.SanctuaryNavigation.init(zone);
+      } catch (error) {
+        console.error('Failed to initialize navigation:', error);
+        // Default to Zone C if error
+        window.SanctuaryNavigation.init('C');
+      }
+    }
+
+    initMessageNavigation();
   </script>
 
   <!-- Global Footer -->

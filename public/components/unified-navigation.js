@@ -317,10 +317,58 @@
   };
 
   /**
-   * Toggle Mobile Menu (for fallback)
+   * Toggle Mobile Menu
    */
   window.toggleMobileMenu = function() {
-    alert('Mobile menu toggle - implement if needed');
+    let mobileMenu = document.getElementById('mobileMenuOverlay');
+
+    if (!mobileMenu) {
+      // Create mobile menu overlay
+      const zone = document.body.className.match(/zone-([a-d])/i)?.[1].toUpperCase() || 'A';
+      const config = ZONE_CONFIG[zone];
+
+      if (!config) return;
+
+      mobileMenu = document.createElement('div');
+      mobileMenu.id = 'mobileMenuOverlay';
+      mobileMenu.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden md:hidden';
+      mobileMenu.innerHTML = `
+        <div class="absolute right-0 top-0 h-full w-80 bg-white shadow-2xl">
+          <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-slate-900">Menu</h2>
+            <button onclick="toggleMobileMenu()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+              <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+          </div>
+          <nav class="p-6 space-y-2">
+            ${config.desktop.centerLinks.map(link => `
+              <a href="${link.href}"
+                 class="block px-4 py-3 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-semibold transition-colors">
+                ${link.text}
+              </a>
+            `).join('')}
+            ${config.rightButton ? `
+              <a href="${config.rightButton.href}"
+                 class="block px-4 py-3 bg-blue-600 text-white text-center rounded-xl font-bold mt-4 hover:bg-blue-700 transition-colors">
+                ${config.rightButton.text}
+              </a>
+            ` : ''}
+          </nav>
+        </div>
+      `;
+
+      document.body.appendChild(mobileMenu);
+
+      // Close on overlay click
+      mobileMenu.addEventListener('click', (e) => {
+        if (e.target === mobileMenu) {
+          toggleMobileMenu();
+        }
+      });
+    }
+
+    // Toggle visibility
+    mobileMenu.classList.toggle('hidden');
   };
 
   // Export to global scope
