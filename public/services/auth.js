@@ -311,12 +311,20 @@ class AuthService {
       this.cachedProfile = data.profile;
       console.log('Auth Debug: Cached profile during signin:', data.profile?.role);
 
-      // Set session in Supabase client
+      // Try to set session in Supabase client (non-blocking, optional)
+      // The backend has already authenticated us, so this is just for convenience
       if (data.session && this.supabase) {
-        await this.supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token
-        });
+        try {
+          console.log('🔄 Attempting to set session in Supabase client...');
+          await this.supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token
+          });
+          console.log('✓ Session set in Supabase client');
+        } catch (sessionError) {
+          console.warn('⚠️ Could not set session in Supabase client (non-critical):', sessionError.message);
+          console.log('✓ Continuing anyway - backend authentication succeeded');
+        }
       }
 
       return { success: true, user: data.user, profile: data.profile };
