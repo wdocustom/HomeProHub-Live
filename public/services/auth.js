@@ -714,15 +714,35 @@ class AuthService {
   }
 }
 
-// Create singleton instance
-const authService = new AuthService();
-
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => authService.init());
-} else {
-  authService.init();
+// Create singleton instance with error handling
+let authService;
+try {
+  authService = new AuthService();
+  console.log('✓ AuthService instance created');
+} catch (error) {
+  console.error('❌ Failed to create AuthService:', error);
+  authService = null;
 }
 
-// Export for use in other scripts
+// Export for use in other scripts IMMEDIATELY (before init)
 window.authService = authService;
+console.log('✓ window.authService exported:', !!window.authService);
+
+// Auto-initialize when DOM is ready
+if (authService) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('✓ DOM loaded, initializing auth...');
+      authService.init().catch(err => {
+        console.error('❌ Auth init failed:', err);
+      });
+    });
+  } else {
+    console.log('✓ DOM already ready, initializing auth...');
+    authService.init().catch(err => {
+      console.error('❌ Auth init failed:', err);
+    });
+  }
+} else {
+  console.error('❌ Cannot initialize authService - instance creation failed');
+}
