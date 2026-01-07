@@ -8,7 +8,6 @@
   <!-- Sanctuary Glass 2.0 -->
   <link rel="stylesheet" href="/components/sanctuary-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -312,23 +311,16 @@
         if (result.success) {
           displaySuccess('Sign in successful! Redirecting...');
 
-          // CRITICAL FIX: Use role from signin response for correct safety timeout redirect
+          // Get correct dashboard URL based on user role
           const userRole = result.profile?.role || 'homeowner';
           const dashboardUrl = userRole === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
-          console.log(`Sign-in success - role: ${userRole}, will redirect to: ${dashboardUrl}`);
+          console.log(`✓ Sign-in success - role: ${userRole}, redirecting to: ${dashboardUrl}`);
 
-          // Safety timeout to prevent infinite "Signing In..." spinner
-          // Now redirects to correct dashboard based on user role
-          const safetyTimeout = setTimeout(() => {
-            console.warn('⚠️  Safety timeout triggered - forcing redirect to', dashboardUrl);
-            setLoading(false);
+          // IMMEDIATE REDIRECT: Don't wait for auth state change, redirect now
+          // This prevents the hanging "Signing In..." issue
+          setTimeout(() => {
             window.location.href = dashboardUrl;
-          }, 3000);
-
-          // Clear safety timeout if redirect happens (auth state change runs automatically)
-          window.addEventListener('beforeunload', () => {
-            clearTimeout(safetyTimeout);
-          });
+          }, 500);
         } else {
           displayError(result.error || 'Sign in failed. Please check your credentials.');
           setLoading(false);
