@@ -294,19 +294,26 @@
       setLoading(true);
 
       try {
-        // Wait for auth service to be ready
+        // Wait for auth service to be ready (with 10s timeout)
         if (!window.authService || !window.authService.initialized) {
-          await new Promise(resolve => {
+          console.log('⏳ Waiting for auth service to initialize...');
+          await new Promise((resolve, reject) => {
+            let elapsed = 0;
             const checkAuth = setInterval(() => {
+              elapsed += 100;
               if (window.authService && window.authService.initialized) {
+                console.log('✓ Auth service ready after', elapsed, 'ms');
                 clearInterval(checkAuth);
                 resolve();
+              } else if (elapsed >= 10000) {
+                clearInterval(checkAuth);
+                reject(new Error('Auth service failed to initialize within 10 seconds. Check console for errors.'));
               }
             }, 100);
           });
         }
 
-        console.log('Calling authService.signIn...');
+        console.log('✓ Auth service ready, calling signIn...');
         const result = await window.authService.signIn(email, password);
         console.log('SignIn result:', result);
 

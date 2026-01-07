@@ -20,12 +20,17 @@ class AuthService {
    * Call this once when the page loads
    */
   async init() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      console.log('✓ Auth already initialized, skipping');
+      return;
+    }
 
     try {
+      console.log('🔄 Auth init step 1: Handling URL errors...');
       // PART 1: Handle Supabase errors in URL hash (e.g., otp_expired from cross-device verification)
       this.handleURLErrors();
 
+      console.log('🔄 Auth init step 2: Fetching config from /api/config...');
       // Get Supabase config from server
       const response = await fetch('/api/config');
       if (!response.ok) {
@@ -33,15 +38,22 @@ class AuthService {
       }
 
       const config = await response.json();
+      console.log('✓ Config received:', { url: config.supabaseUrl?.substring(0, 30) + '...', hasKey: !!config.supabaseAnonKey });
 
+      console.log('🔄 Auth init step 3: Creating Supabase client...');
       // Initialize Supabase client
       this.supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      console.log('✓ Supabase client created');
 
+      console.log('🔄 Auth init step 4: Getting current session...');
       // Get current session and validate it
       const { data: { session } } = await this.supabase.auth.getSession();
+      console.log('✓ Session check complete:', session ? 'Existing session found' : 'No existing session');
+
       if (session) {
         // CRITICAL FIX: Validate the session on init to catch stale sessions
         // Don't just trust localStorage - verify with the server
+        console.log('🔄 Validating existing session...');
         try {
           const { data: { user }, error } = await this.supabase.auth.getUser();
           if (error || !user) {
@@ -49,6 +61,7 @@ class AuthService {
             await this.supabase.auth.signOut();
             this.currentUser = null;
           } else {
+            console.log('✓ Session validated for user:', user.email);
             this.currentUser = session.user;
           }
         } catch (err) {
@@ -58,6 +71,7 @@ class AuthService {
         }
       }
 
+      console.log('🔄 Auth init step 5: Setting up auth state change listener...');
       // PART 2: Master Auth Listener - Page Guard to prevent homepage hijacking
       this.supabase.auth.onAuthStateChange(async (event, session) => {
         // 1. Debugging
@@ -188,10 +202,12 @@ class AuthService {
         }
       });
 
+      console.log('🔄 Auth init step 6: Marking as initialized...');
       this.initialized = true;
-      console.log('✓ AuthService initialized');
+      console.log('✅ AuthService fully initialized and ready!');
     } catch (error) {
-      console.error('Failed to initialize AuthService:', error);
+      console.error('❌ Failed to initialize AuthService:', error);
+      console.error('Error stack:', error.stack);
       throw error;
     }
   }
