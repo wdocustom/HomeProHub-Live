@@ -385,14 +385,40 @@ app.post('/api/auth/signin', async (req, res) => {
       });
     }
 
-    // Sign in with Supabase
-    const { data, error } = await supabaseAuth.auth.signInWithPassword({
-      email,
-      password
-    });
+    console.log(`🔐 Signin attempt for: ${email}`);
+
+    // Sign in with Supabase (with 10s timeout)
+    let data, error;
+    try {
+      const signInPromise = supabaseAuth.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase signIn timeout after 10 seconds')), 10000)
+      );
+
+      const result = await Promise.race([signInPromise, timeoutPromise]);
+      data = result.data;
+      error = result.error;
+
+      console.log('✓ Supabase signIn call completed');
+    } catch (timeoutError) {
+      console.error('❌ Supabase signIn timeout:', timeoutError.message);
+      return res.status(504).json({
+        error: 'Authentication service timeout. Please try again.',
+        code: 'SUPABASE_TIMEOUT',
+        details: timeoutError.message
+      });
+    }
 
     if (error) {
-      console.error('Signin error:', error);
+      console.error('❌ Signin error from Supabase:', {
+        message: error.message,
+        status: error.status,
+        code: error.code || error.error_code
+      });
       return res.status(401).json({
         error: error.message,
         code: 'SIGNIN_FAILED'
@@ -403,11 +429,12 @@ app.post('/api/auth/signin', async (req, res) => {
     let profile = null;
     try {
       profile = await db.getUserProfile(email);
+      console.log('✓ User profile fetched:', profile ? 'Found' : 'Not found');
     } catch (dbError) {
-      console.error('Error fetching user profile:', dbError);
+      console.error('⚠️ Error fetching user profile:', dbError);
     }
 
-    console.log('✅ User signed in:', email);
+    console.log('✅ User signed in successfully:', email);
 
     res.json({
       user: data.user,
@@ -417,10 +444,11 @@ app.post('/api/auth/signin', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Signin endpoint error:', error);
+    console.error('❌ Signin endpoint error:', error);
     return res.status(500).json({
       error: 'Internal server error during signin',
-      code: 'SIGNIN_ERROR'
+      code: 'SIGNIN_ERROR',
+      details: error.message
     });
   }
 });
