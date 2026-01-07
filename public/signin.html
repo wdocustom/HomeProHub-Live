@@ -306,7 +306,9 @@
           });
         }
 
+        console.log('Calling authService.signIn...');
         const result = await window.authService.signIn(email, password);
+        console.log('SignIn result:', result);
 
         if (result.success) {
           displaySuccess('Sign in successful! Redirecting...');
@@ -319,9 +321,11 @@
           // IMMEDIATE REDIRECT: Don't wait for auth state change, redirect now
           // This prevents the hanging "Signing In..." issue
           setTimeout(() => {
+            console.log('Executing redirect now...');
             window.location.href = dashboardUrl;
           }, 500);
         } else {
+          console.error('SignIn failed:', result.error);
           displayError(result.error || 'Sign in failed. Please check your credentials.');
           setLoading(false);
         }
