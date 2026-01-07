@@ -287,6 +287,7 @@ class AuthService {
    */
   async signIn(email, password) {
     try {
+      console.log('🔐 Signing in via backend endpoint...');
       // Use backend endpoint for signin
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
@@ -297,9 +298,11 @@ class AuthService {
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('❌ Backend signin error:', data);
         throw new Error(data.error || 'Sign in failed');
       }
 
+      console.log('✅ Backend signin successful');
       // Update local state
       this.currentUser = data.user;
 
@@ -318,8 +321,20 @@ class AuthService {
 
       return { success: true, user: data.user, profile: data.profile };
     } catch (error) {
-      console.error('Sign in error:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Sign in error:', error);
+
+      // Provide helpful error messages based on error type
+      let userMessage = error.message;
+
+      if (error.message.includes('signal is aborted') || error.message.includes('AbortError')) {
+        userMessage = 'Authentication service unavailable. Your Supabase project may be paused. Check your Supabase dashboard and resume the project if needed.';
+      } else if (error.message.includes('Invalid login credentials')) {
+        userMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        userMessage = 'Network error. Please check your internet connection and try again.';
+      }
+
+      return { success: false, error: userMessage };
     }
   }
 
