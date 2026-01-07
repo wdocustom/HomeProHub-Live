@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth Debug - HomeProHub</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    .test {
+      margin: 10px 0;
+      padding: 10px;
+      border-left: 3px solid #666;
+      background: #252526;
+    }
+    .pass { border-color: #4ec9b0; }
+    .fail { border-color: #f48771; }
+    .warn { border-color: #dcdcaa; }
+    pre {
+      background: #1e1e1e;
+      padding: 10px;
+      overflow-x: auto;
+      margin: 5px 0;
+    }
+    h2 { color: #4ec9b0; }
+    .status { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🔍 HomeProHub Auth Diagnostic</h1>
+  <div id="results"></div>
+
+  <script>
+    const results = document.getElementById('results');
+
+    function log(title, status, message, details = null) {
+      const div = document.createElement('div');
+      div.className = `test ${status}`;
+      div.innerHTML = `
+        <strong>${title}</strong>
+        <div class="status">${status.toUpperCase()}: ${message}</div>
+        ${details ? `<pre>${JSON.stringify(details, null, 2)}</pre>` : ''}
+      `;
+      results.appendChild(div);
+    }
+
+    async function runDiagnostics() {
+      log('Environment', 'info', `Testing from: ${window.location.origin}`);
+
+      // Test 1: API Config Endpoint
+      try {
+        log('API Config', 'info', 'Testing /api/config endpoint...');
+        const response = await fetch('/api/config');
+        const data = await response.json();
+
+        if (response.ok) {
+          log('API Config', 'pass', 'Config endpoint responded', {
+            status: response.status,
+            supabaseUrl: data.supabaseUrl,
+            hasAnonKey: data.supabaseAnonKey ? 'Yes (length: ' + data.supabaseAnonKey.length + ')' : 'No'
+          });
+
+          // Check if credentials are placeholders
+          if (data.supabaseUrl.includes('your-project') || data.supabaseUrl.includes('example')) {
+            log('API Config', 'fail', 'Supabase URL is a placeholder!', {
+              url: data.supabaseUrl,
+              fix: 'Update SUPABASE_URL in your .env file with real Supabase project URL'
+            });
+          }
+
+          if (data.supabaseAnonKey.includes('your-') || data.supabaseAnonKey.includes('example')) {
+            log('API Config', 'fail', 'Supabase Anon Key is a placeholder!', {
+              key: data.supabaseAnonKey.substring(0, 50) + '...',
+              fix: 'Update SUPABASE_ANON_KEY in your .env file with real key'
+            });
+          }
+        } else {
+          log('API Config', 'fail', 'Config endpoint returned error', {
+            status: response.status,
+            error: data.error || 'Unknown error'
+          });
+        }
+      } catch (error) {
+        log('API Config', 'fail', 'Cannot reach /api/config', {
+          error: error.message,
+          possibleCauses: [
+            'Backend server is not running',
+            'Backend is not deployed to production',
+            'CORS policy blocking request',
+            'Network/firewall issue'
+          ]
+        });
+      }
+
+      // Test 2: Supabase CDN
+      try {
+        log('Supabase CDN', 'info', 'Checking if Supabase JS library loaded...');
+        if (typeof supabase !== 'undefined') {
+          log('Supabase CDN', 'pass', 'Supabase library loaded from CDN');
+        } else {
+          log('Supabase CDN', 'fail', 'Supabase library not found', {
+            error: 'The @supabase/supabase-js library did not load from CDN',
+            check: 'Look for CDN script tag in HTML'
+          });
+        }
+      } catch (error) {
+        log('Supabase CDN', 'fail', 'Error checking Supabase library', { error: error.message });
+      }
+
+      // Test 3: Auth Service
+      try {
+        log('Auth Service', 'info', 'Checking auth service status...');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s for init
+
+        if (window.authService) {
+          log('Auth Service', window.authService.initialized ? 'pass' : 'warn',
+            window.authService.initialized ? 'Auth service initialized' : 'Auth service exists but not initialized', {
+            initialized: window.authService.initialized,
+            hasSupabase: !!window.authService.supabase,
+            currentUser: window.authService.currentUser ? 'Logged in' : 'Not logged in'
+          });
+        } else {
+          log('Auth Service', 'fail', 'Auth service not found', {
+            error: 'window.authService is undefined',
+            check: 'Verify /services/auth.js is loaded'
+          });
+        }
+      } catch (error) {
+        log('Auth Service', 'fail', 'Error checking auth service', { error: error.message });
+      }
+
+      // Test 4: Test signin endpoint
+      try {
+        log('Signin Endpoint', 'info', 'Testing /api/auth/signin availability...');
+        const response = await fetch('/api/auth/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'test@test.com', password: 'test123' })
+        });
+        const data = await response.json();
+
+        if (response.status === 401 || response.status === 400) {
+          log('Signin Endpoint', 'pass', 'Signin endpoint is responding (expected auth error for fake credentials)', {
+            status: response.status,
+            error: data.error
+          });
+        } else if (response.ok) {
+          log('Signin Endpoint', 'warn', 'Signin unexpectedly succeeded with test credentials', data);
+        } else {
+          log('Signin Endpoint', 'fail', 'Signin endpoint error', {
+            status: response.status,
+            data
+          });
+        }
+      } catch (error) {
+        log('Signin Endpoint', 'fail', 'Cannot reach /api/auth/signin', {
+          error: error.message,
+          possibleCause: 'Backend server not running or not accessible'
+        });
+      }
+
+      log('Summary', 'info', 'Diagnostic complete! Check results above.');
+    }
+
+    // Load Supabase from CDN for testing
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.onload = runDiagnostics;
+    script.onerror = () => {
+      log('Supabase CDN', 'fail', 'Could not load Supabase from CDN');
+      runDiagnostics();
+    };
+    document.head.appendChild(script);
+  </script>
+</body>
+</html>
