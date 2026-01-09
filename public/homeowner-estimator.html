@@ -547,24 +547,34 @@
 
         // CRITICAL: Verify currentEstimate exists before saving
         console.log('📊 window.currentEstimate exists?', !!window.currentEstimate);
-        if (window.currentEstimate) {
-          console.log('📊 window.currentEstimate contents:', {
-            hasVision: !!window.currentEstimate.vision,
-            hasFinishLevel: !!window.currentEstimate.finishLevel,
-            hasZipCode: !!window.currentEstimate.zipCode,
-            hasEstimate: !!window.currentEstimate.estimate,
-            photoCount: window.currentEstimate.photos?.length || 0
-          });
-        } else {
-          console.error('❌ CRITICAL: window.currentEstimate is undefined! Cannot save to localStorage.');
+        if (!window.currentEstimate || !window.currentEstimate.estimate) {
+          console.error('❌ CRITICAL: window.currentEstimate is undefined or missing estimate! Cannot save to localStorage.');
           alert('Error: No estimate data found. Please generate an estimate first.');
           return;
         }
 
-        // Save to localStorage
-        const estimateJSON = JSON.stringify(window.currentEstimate);
-        console.log('💾 Saving to localStorage.pending_estimate, size:', (estimateJSON.length / 1024).toFixed(2), 'KB');
-        localStorage.setItem('pending_estimate', estimateJSON);
+        console.log('📊 window.currentEstimate contents:', {
+          hasVision: !!window.currentEstimate.vision,
+          hasFinishLevel: !!window.currentEstimate.finishLevel,
+          hasZipCode: !!window.currentEstimate.zipCode,
+          hasEstimate: !!window.currentEstimate.estimate,
+          photoCount: window.currentEstimate.photos?.length || 0
+        });
+
+        // CRITICAL FIX: Transform estimate data to match post-project.html expected format
+        const projectDraft = transformEstimateToProjectDraft(window.currentEstimate);
+
+        console.log('🔄 Transformed estimate to project draft format:', {
+          budgetRange: `$${projectDraft.budgetMin} - $${projectDraft.budgetMax}`,
+          timeline: projectDraft.timeline,
+          title: projectDraft.title,
+          scopeItemCount: projectDraft.scopeItems.length
+        });
+
+        // Save to localStorage in the format post-project.html expects
+        const projectJSON = JSON.stringify(projectDraft);
+        console.log('💾 Saving to localStorage.pending_estimate, size:', (projectJSON.length / 1024).toFixed(2), 'KB');
+        localStorage.setItem('pending_estimate', projectJSON);
 
         // Verify it was saved
         const verification = localStorage.getItem('pending_estimate');
@@ -589,6 +599,79 @@
         postProject();
       }
     };
+
+    // Helper function to estimate timeline based on budget
+    function estimateTimeline(budget) {
+      if (budget < 10000) return '1-2 weeks';
+      if (budget < 30000) return '2-4 weeks';
+      if (budget < 75000) return '4-8 weeks';
+      if (budget < 150000) return '2-4 months';
+      return '4-6 months';
+    }
+
+    // SHARED TRANSFORMATION: Convert estimate data to post-project format
+    function transformEstimateToProjectDraft(currentEstimate) {
+      const estimate = currentEstimate.estimate;
+      const vision = currentEstimate.vision;
+
+      // Extract work packages into scope items
+      const scopeItems = [];
+      if (estimate.work_packages && estimate.work_packages.length > 0) {
+        estimate.work_packages.forEach(pkg => {
+          scopeItems.push(pkg.category);
+        });
+      } else if (estimate.line_items && estimate.line_items.length > 0) {
+        // Legacy format fallback
+        estimate.line_items.forEach(item => {
+          scopeItems.push(item.category);
+        });
+      }
+
+      // Generate a title from the vision (first sentence or first 50 chars)
+      let title = vision.split('.')[0].trim();
+      if (title.length > 60) {
+        title = title.substring(0, 57) + '...';
+      }
+
+      // Get budget values (prefer total_projected if available, otherwise use low/high)
+      const budgetMin = estimate.total_projected_low || estimate.low || 0;
+      const budgetMax = estimate.total_projected_high || estimate.high || 0;
+
+      // Transform to post-project format
+      return {
+        // Budget from estimate totals
+        budgetMin: budgetMin,
+        budgetMax: budgetMax,
+
+        // Timeline - estimate based on budget
+        timeline: estimateTimeline(budgetMax),
+
+        // Trade type
+        tradeType: 'general',
+
+        // Project details
+        title: title || 'Home Renovation Project',
+        description: vision,
+
+        // Scope items from work packages
+        scopeItems: scopeItems.length > 0 ? scopeItems : ['Full project scope'],
+
+        // Optional fields
+        designerNote: estimate.designer_note || '',
+        zipCode: currentEstimate.zipCode || '',
+
+        // Store original estimate data for reference
+        _estimateData: {
+          work_packages: estimate.work_packages || [],
+          subtotal_low: estimate.subtotal_low,
+          subtotal_high: estimate.subtotal_high,
+          overhead_profit_percent: estimate.overhead_profit_percent,
+          contingency_percent: estimate.contingency_percent,
+          finishLevel: currentEstimate.finishLevel,
+          photos: currentEstimate.photos || []
+        }
+      };
+    }
 
     async function downloadPDF() {
       // Validate estimate exists
@@ -741,40 +824,8 @@
         return;
       }
 
-      // Transform estimator data to post-project format
-      const estimate = window.currentEstimate;
-
-      // Convert to scopeItems format (support both work_packages and legacy line_items)
-      let scopeItems = [];
-
-      if (estimate.estimate.work_packages && estimate.estimate.work_packages.length > 0) {
-        // NEW FORMAT: Work packages with grouped items
-        estimate.estimate.work_packages.forEach(pkg => {
-          pkg.items.forEach(item => {
-            scopeItems.push(`${pkg.category} - ${item.type}: ${item.description} (${item.cost_range})`);
-          });
-        });
-      } else if (estimate.estimate.line_items && estimate.estimate.line_items.length > 0) {
-        // LEGACY FORMAT: Flat line items
-        scopeItems = estimate.estimate.line_items.map(item =>
-          `${item.category}: ${item.description} ($${item.low.toLocaleString()} - $${item.high.toLocaleString()})`
-        );
-      }
-
-      // Create project draft in format expected by post-project.html
-      const projectDraft = {
-        title: `Renovation Project - ${estimate.finishLevel.charAt(0).toUpperCase() + estimate.finishLevel.slice(1)} Finish`,
-        description: estimate.vision,
-        budgetMin: estimate.estimate.low,
-        budgetMax: estimate.estimate.high,
-        timeline: '4-8 weeks', // Default timeline for renovation projects
-        tradeType: 'general', // Renovations typically need general contractor
-        scopeItems: scopeItems,
-        designerNote: estimate.estimate.designer_note || '',
-        aiAnalysis: `AI-generated estimate for ${estimate.zipCode}. ${estimate.finishLevel.charAt(0).toUpperCase() + estimate.finishLevel.slice(1)} finish quality.`,
-        zipCode: estimate.zipCode,
-        photos: estimate.photos || []
-      };
+      // Use shared transformation function
+      const projectDraft = transformEstimateToProjectDraft(window.currentEstimate);
 
       // CRITICAL FIX: Save to hot_lead_draft (the key post-project.html looks for)
       // This ensures data persists across page navigation
