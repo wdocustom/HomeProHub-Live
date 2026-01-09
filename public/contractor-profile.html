@@ -260,8 +260,11 @@
           <input id="businessName" type="text" placeholder="ABC Construction Inc." maxlength="100" />
         </div>
         <div class="form-group">
-          <label for="yearsInBusiness">Years in Business</label>
-          <input id="yearsInBusiness" type="number" placeholder="5" min="0" max="100" />
+          <label for="businessStartDate">Business Start Date <span style="color: #ef4444;">*</span></label>
+          <input id="businessStartDate" type="month" required />
+          <small style="color: #6b7280; display: block; margin-top: 4px;">
+            <span id="yearsInBusinessDisplay"></span>
+          </small>
         </div>
         <div class="form-group">
           <label for="phone">Phone Number</label>
@@ -847,6 +850,40 @@ const STORAGE_KEYS = {
   PROFILE_COMPLETE: 'homeprohub_profile_complete',
   CONTRACTOR_PROFILE: 'homeprohub_contractor_profile'
 };
+
+// Calculate years in business from start date (rounded down to minimum years)
+function calculateYearsFromDate(startDate) {
+  if (!startDate) return 0;
+
+  const [year, month] = startDate.split('-').map(Number);
+  const startDateObj = new Date(year, month - 1, 1);
+  const today = new Date();
+
+  const diffMs = today - startDateObj;
+  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
+
+  // Round down to get minimum complete years
+  return Math.floor(diffYears);
+}
+
+// Update years in business display
+function updateYearsInBusiness() {
+  const startDate = document.getElementById('businessStartDate').value;
+  const yearsDisplay = document.getElementById('yearsInBusinessDisplay');
+
+  if (startDate) {
+    const years = calculateYearsFromDate(startDate);
+    if (years === 0) {
+      yearsDisplay.textContent = 'Less than 1 year in business';
+    } else if (years === 1) {
+      yearsDisplay.textContent = '1 year in business';
+    } else {
+      yearsDisplay.textContent = `${years} years in business`;
+    }
+  } else {
+    yearsDisplay.textContent = '';
+  }
+}
 
 function switchTab(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1505,7 +1542,10 @@ function cancelVerification() {
                 if (profile.first_name) document.getElementById('firstName').value = profile.first_name;
                 if (profile.last_name) document.getElementById('lastName').value = profile.last_name;
                 if (profile.business_name) document.getElementById('businessName').value = profile.business_name;
-                if (profile.years_in_business) document.getElementById('yearsInBusiness').value = profile.years_in_business;
+                if (profile.business_start_date) {
+                    document.getElementById('businessStartDate').value = profile.business_start_date;
+                    updateYearsInBusiness();
+                }
                 if (profile.phone) document.getElementById('phone').value = profile.phone;
                 if (profile.license_number) document.getElementById('licenseNumber').value = profile.license_number;
                 if (profile.trade) document.getElementById('trade').value = profile.trade;
@@ -1536,12 +1576,17 @@ function cancelVerification() {
                 throw new Error('Not logged in');
             }
 
+            // Calculate years in business from start date
+            const businessStartDate = document.getElementById('businessStartDate').value;
+            const yearsInBusiness = businessStartDate ? calculateYearsFromDate(businessStartDate) : null;
+
             const profileData = {
                 first_name: document.getElementById('firstName').value.trim(),
                 last_name: document.getElementById('lastName').value.trim(),
                 business_name: document.getElementById('businessName').value.trim(),
                 company_name: document.getElementById('businessName').value.trim(),
-                years_in_business: parseInt(document.getElementById('yearsInBusiness').value) || null,
+                business_start_date: businessStartDate,
+                years_in_business: yearsInBusiness,
                 phone: document.getElementById('phone').value.trim(),
                 license_number: document.getElementById('licenseNumber').value.trim(),
                 trade: document.getElementById('trade').value,
@@ -1571,6 +1616,7 @@ function cancelVerification() {
                 lastName: profileData.last_name,
                 businessName: profileData.business_name,
                 companyName: profileData.company_name,
+                businessStartDate: profileData.business_start_date,
                 yearsInBusiness: profileData.years_in_business,
                 licenseNumber: profileData.license_number,
                 license: profileData.license_number,
@@ -1909,6 +1955,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Listen for hash changes
   window.addEventListener('hashchange', handleAnchorNavigation);
+
+  // Update years in business when date changes
+  const businessStartDateField = document.getElementById('businessStartDate');
+  if (businessStartDateField) {
+    businessStartDateField.addEventListener('change', updateYearsInBusiness);
+    businessStartDateField.addEventListener('input', updateYearsInBusiness);
+  }
 });
 
 async function confirmDeleteAccount() {
@@ -1970,7 +2023,10 @@ async function confirmDeleteAccount() {
 <!-- Unified Navigation Component -->
 <script src="/components/unified-navigation.js"></script>
 <script>
-  unifiedNav.init('D');
+  // Initialize navigation for contractor zone
+  if (window.SanctuaryNavigation) {
+    window.SanctuaryNavigation.init('D');
+  }
 </script>
 </body>
 </html>
