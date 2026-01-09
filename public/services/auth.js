@@ -226,6 +226,35 @@ class AuthService {
       console.log('🔄 Auth init step 6: Marking as initialized...');
       this.initialized = true;
       console.log('✅ AuthService fully initialized and ready!');
+
+      // CRITICAL: Check for pending draft data after initialization
+      // This handles the case where user signed in from estimator/blueprint flow
+      // and was redirected to dashboard, but draft wasn't picked up
+      if (session && session.user) {
+        console.log('🔍 Checking for pending project draft...');
+
+        // Check for draft data (multiple possible keys)
+        let draftData = localStorage.getItem('hot_lead_draft');
+        const pendingEstimate = localStorage.getItem('pending_estimate');
+
+        // If we have a pending_estimate but no hot_lead_draft, convert it
+        if (!draftData && pendingEstimate) {
+          console.log('✅ Found pending estimate! Converting to project draft...');
+          localStorage.setItem('hot_lead_draft', pendingEstimate);
+          localStorage.removeItem('pending_estimate');
+          draftData = pendingEstimate;
+        }
+
+        if (draftData) {
+          console.log('✅ Draft data ready! Redirecting to post-project page...');
+          // Give a moment for the page to settle, then redirect
+          setTimeout(() => {
+            window.location.href = '/post-project.html';
+          }, 500);
+        } else {
+          console.log('✓ No draft data found - normal flow');
+        }
+      }
     } catch (error) {
       console.error('❌ Failed to initialize AuthService:', error);
       console.error('Error stack:', error.stack);
