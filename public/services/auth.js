@@ -13,6 +13,7 @@ class AuthService {
     this.currentUser = null;
     this.cachedProfile = null;  // Cache profile from signin to avoid redundant API calls
     this.initialized = false;
+    this.initPromise = null;  // Track ongoing initialization
   }
 
   /**
@@ -20,11 +21,29 @@ class AuthService {
    * Call this once when the page loads
    */
   async init() {
+    // Prevent multiple simultaneous init() calls (race condition fix)
     if (this.initialized) {
       console.log('✓ Auth already initialized, skipping');
       return;
     }
 
+    // If initialization is already in progress, wait for it to complete
+    if (this.initPromise) {
+      console.log('⏳ Auth initialization already in progress, waiting...');
+      return this.initPromise;
+    }
+
+    // Create and store the initialization promise
+    this.initPromise = this._doInit();
+
+    try {
+      await this.initPromise;
+    } finally {
+      this.initPromise = null;
+    }
+  }
+
+  async _doInit() {
     try {
       console.log('🔄 Auth init step 1: Handling URL errors...');
       // PART 1: Handle Supabase errors in URL hash (e.g., otp_expired from cross-device verification)
@@ -41,9 +60,19 @@ class AuthService {
       console.log('✓ Config received:', { url: config.supabaseUrl?.substring(0, 30) + '...', hasKey: !!config.supabaseAnonKey });
 
       console.log('🔄 Auth init step 3: Creating Supabase client...');
-      // Initialize Supabase client
-      this.supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-      console.log('✓ Supabase client created');
+      // Initialize Supabase client (wrap in try-catch to handle AbortError)
+      try {
+        this.supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+        console.log('✓ Supabase client created');
+      } catch (clientError) {
+        // Handle client creation errors (including AbortError)
+        if (clientError.name === 'AbortError') {
+          console.warn('⚠️ Supabase client creation aborted (likely page navigation)');
+          throw clientError; // Let outer handler deal with it
+        }
+        console.error('❌ Failed to create Supabase client:', clientError);
+        throw new Error('Supabase client creation failed: ' + clientError.message);
+      }
 
       console.log('🔄 Auth init step 4: Getting current session...');
       // Get current session and validate it (with timeout to prevent hanging)
@@ -288,9 +317,27 @@ class AuthService {
         console.log('✓ Already on post-project page - skipping redirect check');
       }
     } catch (error) {
+      // Handle AbortError gracefully (happens when page navigation interrupts initialization)
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ Auth initialization was aborted (page navigation or multiple init calls)');
+        console.log('Auth will retry on next page load');
+        this.initialized = false;
+        return; // Don't throw - allow graceful degradation
+      }
+
       console.error('❌ Failed to initialize AuthService:', error);
-      console.error('Error stack:', error.stack);
-      throw error;
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+
+      // For other errors, mark as not initialized so it can retry
+      this.initialized = false;
+
+      // Don't throw - this prevents the entire page from breaking
+      // Auth features will be disabled but page will still load
+      console.log('⚠️ Auth features disabled due to initialization error');
     }
   }
 
