@@ -1692,6 +1692,7 @@ function cancelVerification() {
 
     licenseForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        console.log('📋 License form submission started...');
         saveLicenseButton.disabled = true;
         saveLicenseButton.textContent = 'Submitting...';
 
@@ -1702,6 +1703,7 @@ function cancelVerification() {
                 throw new Error('Not logged in');
             }
             const contractorEmail = user.email;
+            console.log('✓ User authenticated:', contractorEmail);
 
             // Gather form data
             const licState = document.getElementById('licState').value.trim().toUpperCase();
@@ -1713,18 +1715,25 @@ function cancelVerification() {
             const insuranceExpiration = document.getElementById('insuranceExpiration').value;
             const insuranceCoverage = document.getElementById('insuranceCoverage').value;
 
+            console.log('✓ Form data gathered:', { licState, licNumber, licType });
+
             // Convert files to base64 if present
             let licenseDocument = null;
             let insuranceDocument = null;
 
             if (licenseFile) {
+                console.log('📄 Converting license file to base64...', licenseFile.name);
                 licenseDocument = await fileToBase64(licenseFile);
+                console.log('✓ License file converted:', (licenseDocument.length / 1024).toFixed(2), 'KB');
             }
             if (insuranceFile) {
+                console.log('📄 Converting insurance file to base64...', insuranceFile.name);
                 insuranceDocument = await fileToBase64(insuranceFile);
+                console.log('✓ Insurance file converted:', (insuranceDocument.length / 1024).toFixed(2), 'KB');
             }
 
             // Submit to API
+            console.log('🚀 Sending request to /api/license/submit...');
             const response = await window.authService.authenticatedFetch('/api/license/submit', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -1742,7 +1751,9 @@ function cancelVerification() {
                 })
             });
 
+            console.log('📡 Response received, status:', response.status);
             const data = await response.json();
+            console.log('📦 Response data:', data);
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to submit license');
@@ -1777,10 +1788,21 @@ function cancelVerification() {
             clearInsuranceUpload();
 
         } catch (err) {
-            console.error('License submission error:', err);
-            licenseStatusMsg.textContent = `❌ Error: ${err.message}`;
+            console.error('❌ License submission error:', err);
+            console.error('Error stack:', err.stack);
+
+            let errorMsg = err.message;
+            if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                errorMsg = 'Network error - please check your connection and try again';
+            } else if (err.message.includes('timeout')) {
+                errorMsg = 'Request timed out - your files may be too large. Please try smaller files (under 2MB each)';
+            }
+
+            licenseStatusMsg.textContent = `❌ Error: ${errorMsg}`;
             licenseStatusMsg.style.color = '#ef4444';
+            licenseStatusMsg.style.display = 'block';
         } finally {
+            console.log('🏁 Form submission complete, resetting button...');
             saveLicenseButton.disabled = false;
             saveLicenseButton.textContent = 'Save & Submit for Verification';
         }
