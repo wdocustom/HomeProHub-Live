@@ -307,17 +307,16 @@
       document.getElementById('estimate-result').classList.add('hidden');
 
       try {
-        // SYSTEM PROMPT: Master General Contractor giving preliminary budget
-        const systemPrompt = `You are a Master General Contractor giving a preliminary budget to a homeowner. Be realistic, not optimistic. Break costs down by category (Materials, Labor, Permits). Return JSON data with 'low', 'high', and 'line_items'. Each line item should have: 'category', 'description', 'low', 'high'.`;
-
+        // DON'T pass systemPrompt - let server use its default work_packages prompt
+        // The server has a comprehensive prompt with RAG data and work packages structure
         const userPrompt = `Project Description: ${vision}\n\nFinish Quality: ${finishLevel}\nZip Code: ${zipCode}\n\nProvide a realistic cost estimate broken down by category. Include materials, labor, and permits if applicable.`;
 
-        // Call AI API
+        // Call AI API (server will use its default system prompt)
         const response = await fetch('/api/ai/estimate-remodel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            systemPrompt: systemPrompt,
+            // systemPrompt removed - server will use its comprehensive default
             userPrompt: userPrompt,
             photos: selectedPhotos.length > 0 ? selectedPhotos : null,
             metadata: {

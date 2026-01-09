@@ -2223,6 +2223,15 @@ Example Structure:
   "designer_note": "Consider phasing the project: start with structural work and flooring, then finish with cabinets and fixtures to minimize damage risk."
 }
 
+CRITICAL JSON FORMATTING RULES:
+- ONLY use double quotes for strings, NEVER single quotes
+- Do NOT include trailing commas after last items in arrays or objects
+- Ensure all strings are properly closed with matching double quotes
+- Escape any quotes within strings using backslash (e.g., "6\\" planks")
+- cost_range must be a STRING: "$X,XXX - $Y,YYY"
+- type must be exactly: "Material" or "Labor" or "Permit"
+- All numbers (subtotal_low, subtotal_high) must be integers with no quotes
+
 Guidelines for local_insight:
 - Only add to material items (flooring, countertops, fixtures, cabinets, etc.)
 - Reference the specific city/region from ZIP ${zipCode || 'unknown'}
@@ -2596,37 +2605,47 @@ IF intent_type == "PROJECT":
 Otherwise, return a JSON object with this EXACT structure:
 {
   "status": "ok",
-  "intent_type": "PROJECT" or "ISSUE",
+  "intent_type": "PROJECT",
   "project_title": "Brief descriptive title",
   "work_packages": [
     {
-      "category": "Work Package Name (e.g., 'Flooring', 'Electrical', 'Plumbing')",
+      "category": "Flooring",
       "items": [
         {
-          "description": "Specific description (e.g., 'Romex 12/2 wire - 300 ft')",
-          "type": "Material" or "Labor" or "Permit",
-          "cost_range": "$X,XXX - $Y,YYY",
-          "notes": "Brief technical notes if needed",
-          "local_insight": {
-            "type": "design_trend" or "sourcing_tip",
-            "message": "Modest local design note or sourcing tip (PROJECTS only)"
-          }
+          "description": "Wide plank oak flooring - 800 sq ft",
+          "type": "Material",
+          "cost_range": "$8,000 - $12,000",
+          "notes": "Optional technical notes"
+        },
+        {
+          "description": "Installation and finishing labor",
+          "type": "Labor",
+          "cost_range": "$3,500 - $5,000"
         }
       ]
     }
   ],
-  "subtotal_low": 0,
-  "subtotal_high": 0,
+  "subtotal_low": 11500,
+  "subtotal_high": 17000,
   "overhead_profit_percent": 20,
   "contingency_percent": 10,
-  "total_projected_low": 0,
-  "total_projected_high": 0,
+  "total_projected_low": 14950,
+  "total_projected_high": 22100,
   "disclaimers": [
     "This is a preliminary budget estimate based on typical costs",
     "Final pricing requires site visit and detailed scope review",
     "Costs adjusted for ZIP ${zip} using regional multiplier ${ragData.regionalMultiplier}"
   ]
 }
+
+CRITICAL JSON FORMATTING RULES:
+- Do NOT use single quotes - only double quotes for strings
+- Do NOT include trailing commas after last array/object items
+- Ensure all strings are properly closed with matching quotes
+- Escape any quotes within strings using backslash
+- cost_range must be a STRING in format: "$X,XXX - $Y,YYY"
+- type must be exactly: "Material" or "Labor" or "Permit" (no variations)
+- intent_type must be exactly: "PROJECT" or "ISSUE" (no variations)
 
 STRUCTURE REQUIREMENTS:
 - Group related work into packages (e.g., "Electrical Rough-In", "Kitchen Plumbing", "Flooring")
