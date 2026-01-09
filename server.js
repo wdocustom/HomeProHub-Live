@@ -4551,7 +4551,10 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
   try {
     const { bidId, jobId, homeownerEmail } = req.body;
 
+    console.log('📨 Received bid accept request:', { bidId, jobId, homeownerEmail });
+
     if (!bidId || !jobId || !homeownerEmail) {
+      console.error('❌ Missing required fields:', { bidId, jobId, homeownerEmail });
       return res.status(400).json({
         error: "Missing required fields",
         code: 'VALIDATION_ERROR'
@@ -4559,8 +4562,12 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
     }
 
     // Verify job belongs to homeowner
+    console.log('🔍 Verifying job ownership...');
     const job = await db.getJobById(jobId);
+    console.log('✓ Job fetched:', { id: job.id, homeowner: job.homeowner_email });
+
     if (job.homeowner_email !== homeownerEmail) {
+      console.error('❌ Unauthorized: Job does not belong to homeowner');
       return res.status(403).json({
         error: "Unauthorized",
         code: 'UNAUTHORIZED'
@@ -4568,12 +4575,17 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
     }
 
     // Accept bid (this also rejects other bids and updates job status)
+    console.log('🔄 Calling db.acceptBid...');
     const acceptedBid = await db.acceptBid(bidId, jobId);
+    console.log('✓ Bid accepted successfully:', { bidId: acceptedBid.id, status: acceptedBid.status });
 
     // Get contractor details
+    console.log('🔍 Fetching contractor details...');
     const contractor = await db.getUserProfile(acceptedBid.contractor_email);
+    console.log('✓ Contractor fetched:', { email: contractor.email, name: contractor.business_name });
 
     // Create notification for contractor
+    console.log('📧 Creating contractor notification...');
     await db.createNotification({
       user_email: acceptedBid.contractor_email,
       user_id: contractor.id,
@@ -4584,9 +4596,12 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
       bid_id: bidId,
       action_url: `/contractor-dashboard.html?job=${jobId}`
     });
+    console.log('✓ Contractor notification created');
 
     // Notify other contractors that their bids were rejected
+    console.log('🔍 Notifying rejected bidders...');
     const allBids = await db.getBidsByJob(jobId);
+    let rejectedCount = 0;
     for (const bid of allBids) {
       if (bid.id !== bidId && bid.status === 'rejected') {
         const otherContractor = await db.getUserProfile(bid.contractor_email);
@@ -4599,14 +4614,17 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
           job_id: jobId,
           bid_id: bid.id
         });
+        rejectedCount++;
       }
     }
+    console.log(`✓ Notified ${rejectedCount} rejected bidders`);
 
-    console.log(`✓ Bid accepted: ${bidId} for job ${jobId}`);
+    console.log(`✅ Bid accepted successfully: ${bidId} for job ${jobId}`);
     res.json({ success: true, bid: acceptedBid });
 
   } catch (err) {
     console.error("❌ Error in /api/bid/accept:", err);
+    console.error("Error stack:", err.stack);
     res.status(500).json({
       error: "Failed to accept bid",
       code: 'INTERNAL_ERROR',
