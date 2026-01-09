@@ -230,7 +230,11 @@ class AuthService {
       // CRITICAL: Check for pending draft data after initialization
       // This handles the case where user signed in from estimator/blueprint flow
       // and was redirected to dashboard, but draft wasn't picked up
-      if (session && session.user) {
+      // IMPORTANT: Only do this if we're NOT already on post-project page (prevents infinite loop!)
+      const currentPath = window.location.pathname.replace(/\/$/, "") || "/";
+      const isPostProjectPage = currentPath.includes('post-project');
+
+      if (session && session.user && !isPostProjectPage) {
         console.log('🔍 Checking for pending project draft...');
 
         // Check for draft data (multiple possible keys)
@@ -254,6 +258,8 @@ class AuthService {
         } else {
           console.log('✓ No draft data found - normal flow');
         }
+      } else if (isPostProjectPage) {
+        console.log('✓ Already on post-project page - skipping redirect check');
       }
     } catch (error) {
       console.error('❌ Failed to initialize AuthService:', error);
