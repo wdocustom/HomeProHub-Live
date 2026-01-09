@@ -326,16 +326,21 @@
       if (jobData.zipCode) {
         document.getElementById('zip-code').value = jobData.zipCode;
       }
-      if (jobData.budgetLow && jobData.budgetHigh) {
-        const avgBudget = (jobData.budgetLow + jobData.budgetHigh) / 2;
-        document.getElementById('project-size').placeholder = `Budget range: $${jobData.budgetLow.toLocaleString()} - $${jobData.budgetHigh.toLocaleString()}`;
-      }
+      // FIX: project-size element doesn't exist on this page, commenting out
+      // if (jobData.budgetLow && jobData.budgetHigh) {
+      //   const avgBudget = (jobData.budgetLow + jobData.budgetHigh) / 2;
+      //   document.getElementById('project-size').placeholder = `Budget range: $${jobData.budgetLow.toLocaleString()} - $${jobData.budgetHigh.toLocaleString()}`;
+      // }
 
       // Show info banner
       const banner = document.getElementById('auto-populate-banner');
       const jobTitle = document.getElementById('loaded-job-title');
-      jobTitle.textContent = jobData.jobTitle || 'Job from dashboard';
-      banner.classList.remove('hidden');
+      if (jobTitle) {
+        jobTitle.textContent = jobData.jobTitle || 'Job from dashboard';
+      }
+      if (banner) {
+        banner.classList.remove('hidden');
+      }
     }
 
     /**
