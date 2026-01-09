@@ -584,6 +584,19 @@
           </div>
         </div>
 
+        <!-- Detailed Estimate Breakdown (Work Packages) -->
+        <div id="estimateBreakdownSection" style="display: none; margin-top: 24px;">
+          <div class="detail-label" style="margin-bottom: 16px;">Detailed Estimate Breakdown</div>
+          <div id="workPackagesContainer" style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0;">
+            <!-- Dynamically populated work packages -->
+          </div>
+
+          <!-- Financial Summary -->
+          <div id="financialSummary" style="margin-top: 20px; background: #f9fafb; border-radius: 12px; padding: 20px;">
+            <!-- Dynamically populated financial breakdown -->
+          </div>
+        </div>
+
         <!-- AI Analysis (Collapsible) -->
         <div class="detail-section">
           <div class="detail-label">AI Analysis (Reference)</div>
@@ -745,6 +758,123 @@
       // AI Analysis - TASK 3: Ensure it's a string
       const aiAnalysis = (typeof data.aiAnalysis === 'string') ? data.aiAnalysis : '';
       document.getElementById('aiAnalysisText').textContent = aiAnalysis;
+
+      // NEW: Display detailed estimate breakdown if available
+      if (data._estimateData && data._estimateData.work_packages && data._estimateData.work_packages.length > 0) {
+        renderEstimateBreakdown(data._estimateData);
+        document.getElementById('estimateBreakdownSection').style.display = 'block';
+      }
+    }
+
+    /**
+     * Render estimate breakdown with work packages (same format as estimator)
+     */
+    function renderEstimateBreakdown(estimateData) {
+      const container = document.getElementById('workPackagesContainer');
+      container.innerHTML = '';
+
+      // Render work packages
+      estimateData.work_packages.forEach(pkg => {
+        // Group wrapper
+        const groupDiv = document.createElement('div');
+        groupDiv.className = "mb-6 border-b border-slate-200 pb-4 last:border-0";
+
+        // Group header
+        const header = document.createElement('h4');
+        header.className = "text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 bg-slate-50 px-3 py-2 rounded-lg inline-block";
+        header.innerText = pkg.category;
+        groupDiv.appendChild(header);
+
+        // Items within this package
+        pkg.items.forEach(item => {
+          const row = document.createElement('div');
+          row.className = "flex justify-between items-start mb-2 px-2";
+
+          // Badge color based on type
+          let badgeColor = 'bg-gray-100 text-gray-600';
+          if (item.type === 'Labor') badgeColor = 'bg-blue-50 text-blue-600';
+          if (item.type === 'Material') badgeColor = 'bg-emerald-50 text-emerald-600';
+          if (item.type === 'Permit') badgeColor = 'bg-amber-50 text-amber-600';
+
+          row.innerHTML = `
+            <div class="flex items-start gap-3 flex-1">
+              <span class="${badgeColor} text-[10px] font-bold px-2 py-1 rounded uppercase min-w-[70px] text-center mt-0.5">${item.type}</span>
+              <div class="flex-1">
+                <span class="text-sm text-slate-700 font-medium">${item.description}</span>
+              </div>
+            </div>
+            <span class="text-sm font-bold text-slate-900 font-mono whitespace-nowrap ml-4">${item.cost_range}</span>
+          `;
+
+          groupDiv.appendChild(row);
+        });
+
+        container.appendChild(groupDiv);
+      });
+
+      // Render financial summary
+      renderFinancialSummary(estimateData);
+    }
+
+    /**
+     * Render financial breakdown summary
+     */
+    function renderFinancialSummary(estimateData) {
+      const container = document.getElementById('financialSummary');
+
+      const subtotalLow = estimateData.subtotal_low || 0;
+      const subtotalHigh = estimateData.subtotal_high || 0;
+      const overheadPercent = estimateData.overhead_profit_percent || 20;
+      const contingencyPercent = estimateData.contingency_percent || 10;
+
+      // Calculate overhead and contingency
+      const overheadLow = Math.round(subtotalLow * (overheadPercent / 100));
+      const overheadHigh = Math.round(subtotalHigh * (overheadPercent / 100));
+      const contingencyLow = Math.round(subtotalLow * (contingencyPercent / 100));
+      const contingencyHigh = Math.round(subtotalHigh * (contingencyPercent / 100));
+
+      container.innerHTML = `
+        <!-- Subtotal -->
+        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 2px solid #cbd5e1;">
+          <div>
+            <div style="font-weight: 700; color: #1e293b;">Subtotal</div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Materials + Labor + Permits</div>
+          </div>
+          <div style="font-weight: 700; color: #1e293b; text-align: right;">
+            $${subtotalLow.toLocaleString()} - $${subtotalHigh.toLocaleString()}
+          </div>
+        </div>
+
+        <!-- Overhead & Profit -->
+        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+          <div>
+            <div style="font-weight: 600; color: #475569;">Overhead & Profit (${overheadPercent}%)</div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Business operations & margin</div>
+          </div>
+          <div style="font-weight: 600; color: #475569; text-align: right;">
+            $${overheadLow.toLocaleString()} - $${overheadHigh.toLocaleString()}
+          </div>
+        </div>
+
+        <!-- Contingency -->
+        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+          <div>
+            <div style="font-weight: 600; color: #475569;">Contingency (${contingencyPercent}%)</div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Unexpected costs & changes</div>
+          </div>
+          <div style="font-weight: 600; color: #475569; text-align: right;">
+            $${contingencyLow.toLocaleString()} - $${contingencyHigh.toLocaleString()}
+          </div>
+        </div>
+
+        <!-- Total -->
+        <div style="display: flex; justify-content: space-between; padding: 16px; margin-top: 8px; background: #eff6ff; border-radius: 12px;">
+          <div style="font-weight: 900; color: #1e293b; font-size: 18px;">TOTAL PROJECT COST</div>
+          <div style="font-weight: 900; color: #2563eb; font-size: 18px; text-align: right;">
+            $${(subtotalLow + overheadLow + contingencyLow).toLocaleString()} - $${(subtotalHigh + overheadHigh + contingencyHigh).toLocaleString()}
+          </div>
+        </div>
+      `;
     }
 
     /**

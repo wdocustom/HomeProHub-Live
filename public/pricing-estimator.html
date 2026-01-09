@@ -751,7 +751,10 @@
 
       sessionStorage.setItem('attachedEstimate_' + estimatorJobData.jobId, JSON.stringify(estimateData));
       sessionStorage.removeItem('estimatorJob');
-      window.location.href = 'contractor-dashboard.html';
+
+      // CRITICAL FIX: Redirect to job-board.html (not dashboard) so bid modal opens with estimate
+      console.log('✅ Estimate attached to job:', estimatorJobData.jobId);
+      window.location.href = 'job-board.html';
     }
 
     /**
