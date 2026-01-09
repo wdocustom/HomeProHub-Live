@@ -2598,22 +2598,21 @@ Otherwise, return a JSON object with this EXACT structure:
   "status": "ok",
   "intent_type": "PROJECT" or "ISSUE",
   "project_title": "Brief descriptive title",
-  "line_items": [
+  "work_packages": [
     {
-      "item": "Labor - [Trade Name]",
-      "low": 0,
-      "high": 0,
-      "notes": "Brief description",
-      "local_insight": {
-        "type": "design_trend" or "sourcing_tip",
-        "message": "Modest local design note or sourcing tip"
-      }
-    },
-    {
-      "item": "Materials - [Material Type]",
-      "low": 0,
-      "high": 0,
-      "notes": "Brief description"
+      "category": "Work Package Name (e.g., 'Flooring', 'Electrical', 'Plumbing')",
+      "items": [
+        {
+          "description": "Specific description (e.g., 'Romex 12/2 wire - 300 ft')",
+          "type": "Material" or "Labor" or "Permit",
+          "cost_range": "$X,XXX - $Y,YYY",
+          "notes": "Brief technical notes if needed",
+          "local_insight": {
+            "type": "design_trend" or "sourcing_tip",
+            "message": "Modest local design note or sourcing tip (PROJECTS only)"
+          }
+        }
+      ]
     }
   ],
   "subtotal_low": 0,
@@ -2628,6 +2627,15 @@ Otherwise, return a JSON object with this EXACT structure:
     "Costs adjusted for ZIP ${zip} using regional multiplier ${ragData.regionalMultiplier}"
   ]
 }
+
+STRUCTURE REQUIREMENTS:
+- Group related work into packages (e.g., "Electrical Rough-In", "Kitchen Plumbing", "Flooring")
+- Within each package, pair Materials with their corresponding Labor
+- Example: "Electrical Rough-In" should have "Romex wire and boxes" (Material) followed by "Rough-in labor" (Labor)
+- cost_range should be formatted as human-readable string: "$1,500 - $2,500"
+- Use "type" field: "Material", "Labor", or "Permit"
+- For GCs: Create comprehensive packages covering all trades
+- For specialty trades: Focus packages on your trade's scope only
 
 IMPORTANT NOTES:
 - The "local_insight" field is OPTIONAL and should only appear on material items for PROJECTS

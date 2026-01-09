@@ -430,11 +430,68 @@
       document.getElementById('result-high').textContent = '$' + (est.total_projected_high || 0).toLocaleString();
       document.getElementById('result-zip').textContent = zip;
 
-      // Render line items
+      // Render work packages (grouped line items) or legacy line items
       const breakdownList = document.getElementById('breakdown-list');
       breakdownList.innerHTML = '';
 
-      if (est.line_items && est.line_items.length > 0) {
+      // Support both new work_packages format and legacy line_items
+      const workPackages = est.work_packages || [];
+
+      if (workPackages.length > 0) {
+        // NEW FORMAT: Render grouped work packages
+        workPackages.forEach(pkg => {
+          // 1. Create Category Header (e.g., "Demolition", "Electrical Rough-In")
+          const header = document.createElement('div');
+          header.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2 font-bold text-slate-900 flex justify-between mt-4 first:mt-0";
+          header.innerHTML = `<span>${pkg.category}</span>`;
+          breakdownList.appendChild(header);
+
+          // 2. Loop through Items (Material/Labor/Permit)
+          pkg.items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = "flex justify-between items-start mb-3 pl-4 pr-2 border-b border-slate-50 pb-2 last:border-0";
+
+            // Distinct Badges for Contractors
+            let badgeType = 'bg-gray-100 text-gray-700';
+            if (item.type === 'Labor') badgeType = 'bg-blue-100 text-blue-700';
+            if (item.type === 'Material') badgeType = 'bg-orange-100 text-orange-700';
+            if (item.type === 'Permit') badgeType = 'bg-amber-100 text-amber-700';
+
+            let itemHTML = `
+              <div class="flex gap-3 flex-1">
+                <span class="${badgeType} text-[10px] font-bold px-2 py-1 rounded uppercase w-20 text-center self-start">${item.type}</span>
+                <div class="flex flex-col flex-1">
+                  <span class="text-sm font-medium text-slate-700">${item.description}</span>
+            `;
+
+            // Add notes if available
+            if (item.notes) {
+              itemHTML += `<div class="text-xs text-slate-500 mt-1">${item.notes}</div>`;
+            }
+
+            // Add local insight if available
+            if (item.local_insight && item.local_insight.message) {
+              itemHTML += `
+                <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+                  <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+                </div>
+              `;
+            }
+
+            itemHTML += `
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="block text-sm font-bold text-slate-900 font-mono whitespace-nowrap">${item.cost_range || item.cost || 'N/A'}</span>
+              </div>
+            `;
+
+            row.innerHTML = itemHTML;
+            breakdownList.appendChild(row);
+          });
+        });
+      } else if (est.line_items && est.line_items.length > 0) {
+        // LEGACY FORMAT: Fall back to old line_items rendering for backwards compatibility
         est.line_items.forEach((item, idx) => {
           const itemDiv = document.createElement('div');
           itemDiv.className = 'flex justify-between items-start py-3 border-b border-slate-100';
@@ -517,7 +574,41 @@
       const address = profile && profile.city && profile.state ? `${profile.city}, ${profile.state} ${profile.zipCode || ''}` : '';
 
       let lineItemsHTML = '';
-      if (currentEstimate.line_items && currentEstimate.line_items.length > 0) {
+
+      // Support both new work_packages format and legacy line_items
+      if (currentEstimate.work_packages && currentEstimate.work_packages.length > 0) {
+        // NEW FORMAT: Work packages with grouped items
+        currentEstimate.work_packages.forEach((pkg, pkgIdx) => {
+          // Add package header row
+          lineItemsHTML += `<tr style="background:#f3f4f6;">`;
+          lineItemsHTML += `<td colspan="3" style="padding:10px; font-weight:700; font-size:13px; text-transform:uppercase; border-top:2px solid #cbd5e1; border-bottom:1px solid #cbd5e1;">${pkg.category}</td>`;
+          lineItemsHTML += `</tr>`;
+
+          // Add items within this package
+          pkg.items.forEach((item, idx) => {
+            const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+            // Type badge color
+            let typeColor = '#6b7280';
+            if (item.type === 'Material') typeColor = '#ea580c';
+            if (item.type === 'Labor') typeColor = '#2563eb';
+            if (item.type === 'Permit') typeColor = '#d97706';
+
+            lineItemsHTML += `<tr style="background:${bg};">`;
+            lineItemsHTML += `<td style="padding:12px; border-bottom:1px solid #e5e7eb; padding-left:20px;">`;
+            lineItemsHTML += `<span style="color:${typeColor}; font-weight:600; font-size:9px; text-transform:uppercase; background:#f1f5f9; padding:2px 6px; border-radius:4px; margin-right:8px;">${item.type}</span>`;
+            lineItemsHTML += `${item.description}`;
+            if (item.notes) lineItemsHTML += `<br><span style="font-size:11px;color:#6b7280;">${item.notes}</span>`;
+            if (item.local_insight && item.local_insight.message) {
+              lineItemsHTML += `<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">💡 ${item.local_insight.message}</div>`;
+            }
+            lineItemsHTML += `</td>`;
+            lineItemsHTML += `<td colspan="2" style="padding:12px; text-align:right; border-bottom:1px solid #e5e7eb; font-family:monospace;">${item.cost_range}</td>`;
+            lineItemsHTML += `</tr>`;
+          });
+        });
+      } else if (currentEstimate.line_items && currentEstimate.line_items.length > 0) {
+        // LEGACY FORMAT: Flat line items
         currentEstimate.line_items.forEach((item, idx) => {
           const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
           lineItemsHTML += `<tr style="background:${bg};">`;
@@ -649,7 +740,8 @@
         total_low: currentEstimate.total_projected_low || 0,
         total_high: currentEstimate.total_projected_high || 0,
         project_title: currentEstimate.project_title || 'Estimate',
-        line_items: currentEstimate.line_items || [],
+        work_packages: currentEstimate.work_packages || [],
+        line_items: currentEstimate.line_items || [], // Keep for backward compatibility
         subtotal_low: currentEstimate.subtotal_low || 0,
         subtotal_high: currentEstimate.subtotal_high || 0,
         overhead_profit_percent: currentEstimate.overhead_profit_percent || 20,
