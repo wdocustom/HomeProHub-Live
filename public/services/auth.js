@@ -77,8 +77,21 @@ class AuthService {
         console.log('🔄 Validating existing session...');
         try {
           const { data: { user }, error } = await this.supabase.auth.getUser();
-          if (error || !user) {
-            console.log('Auth Init: Stale session detected on page load. Clearing...');
+          if (error) {
+            // Only clear session if it's a genuine auth error (401, invalid, expired)
+            const isAuthError = error.status === 401 || error.message?.includes('invalid') || error.message?.includes('expired');
+            if (isAuthError) {
+              console.log('Auth Init: Invalid/expired session detected on page load. Clearing...');
+              await this.supabase.auth.signOut();
+              this.currentUser = null;
+            } else {
+              // Network error - keep the session but log warning
+              console.warn('⚠️ Session validation encountered network error on init:', error.message);
+              console.log('Auth Init: Proceeding with existing session despite validation error');
+              this.currentUser = session.user;
+            }
+          } else if (!user) {
+            console.log('Auth Init: Stale session detected (no user). Clearing...');
             await this.supabase.auth.signOut();
             this.currentUser = null;
           } else {
@@ -86,9 +99,10 @@ class AuthService {
             this.currentUser = session.user;
           }
         } catch (err) {
-          console.log('Auth Init: Session validation failed on page load. Clearing...');
-          await this.supabase.auth.signOut();
-          this.currentUser = null;
+          // Network/timeout errors - keep the session but log warning
+          console.warn('⚠️ Session validation failed on init with exception:', err.message);
+          console.log('Auth Init: Proceeding with existing session despite validation exception');
+          this.currentUser = session.user;
         }
       }
 
@@ -123,15 +137,27 @@ class AuthService {
         if (event === 'SIGNED_IN' && !this.cachedProfile) {
           try {
             const { data: { user }, error } = await this.supabase.auth.getUser();
-            if (error || !user) {
-              console.log('Auth Debug: Stale session detected. Clearing...');
+            if (error) {
+              // IMPORTANT: Only sign out if it's a genuine auth error, not a network error
+              const isAuthError = error.status === 401 || error.message?.includes('invalid') || error.message?.includes('expired');
+              if (isAuthError) {
+                console.log('Auth Debug: Invalid/expired session detected. Clearing...');
+                await this.supabase.auth.signOut();
+                return;
+              } else {
+                // Network error or temporary issue - log but DON'T sign out
+                console.warn('⚠️ Session validation encountered network error:', error.message);
+                console.log('Auth Debug: Allowing session to continue despite validation error');
+              }
+            } else if (!user) {
+              console.log('Auth Debug: Stale session detected (no user). Clearing...');
               await this.supabase.auth.signOut();
               return;
             }
           } catch (err) {
-            console.log('Auth Debug: Session validation failed. Clearing...');
-            await this.supabase.auth.signOut();
-            return;
+            // Network/timeout errors - don't sign the user out
+            console.warn('⚠️ Session validation failed with exception:', err.message);
+            console.log('Auth Debug: Allowing session to continue despite validation exception');
           }
         }
 

@@ -2739,7 +2739,14 @@ Keep your response practical, specific, and action-oriented.`;
     // For pricing questions, attempt JSON parsing
     if (selectedFocus === "pricing") {
       try {
-        const cleanedJson = rawAnswer.replace(/```json\s*|```/g, '').trim();
+        // Clean and extract JSON from response
+        let cleanedJson = rawAnswer.replace(/```json\s*|```/g, '').trim();
+
+        // Try to fix common JSON issues
+        // Remove trailing commas before closing braces/brackets
+        cleanedJson = cleanedJson.replace(/,(\s*[}\]])/g, '$1');
+
+        // Attempt to parse
         const jsonAnswer = JSON.parse(cleanedJson);
 
         console.log(`✓ Contractor estimate generated (JSON)`);
@@ -2747,10 +2754,49 @@ Keep your response practical, specific, and action-oriented.`;
 
       } catch (jsonErr) {
         console.warn('⚠️  JSON parse failed for pricing response:', jsonErr.message);
+        console.warn('Raw response (first 500 chars):', rawAnswer.substring(0, 500));
+
+        // FALLBACK: Create a valid estimate structure from the text response
+        const fallbackEstimate = {
+          status: "ok",
+          intent_type: "PROJECT",
+          project_title: "Estimate (AI returned invalid JSON)",
+          work_packages: [
+            {
+              category: "Estimated Work",
+              items: [
+                {
+                  description: "Complete project scope",
+                  type: "Material",
+                  cost_range: "$5,000 - $15,000",
+                  notes: "AI returned invalid JSON - please regenerate estimate"
+                },
+                {
+                  description: "Labor and installation",
+                  type: "Labor",
+                  cost_range: "$3,000 - $8,000"
+                }
+              ]
+            }
+          ],
+          subtotal_low: 8000,
+          subtotal_high: 23000,
+          overhead_profit_percent: 20,
+          contingency_percent: 10,
+          total_projected_low: 10400,
+          total_projected_high: 29900,
+          disclaimers: [
+            "This is a fallback estimate due to AI parsing error",
+            "Please try regenerating for accurate pricing",
+            "Raw AI response was malformed - contact support if this persists"
+          ]
+        };
+
         return res.json({
-          answer: rawAnswer,
-          format: 'text',
-          parseError: "AI response was not valid JSON."
+          answer: fallbackEstimate,
+          format: 'json',
+          parseError: true,
+          parseErrorMessage: jsonErr.message
         });
       }
     } else {
