@@ -2150,7 +2150,7 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
     }
     // --- END RAG IMPLEMENTATION ---
 
-    const defaultSystemPrompt = `You are a Master General Contractor giving a preliminary budget to a homeowner. Analyze the project description and photos carefully. Be realistic, not optimistic.
+    const defaultSystemPrompt = `You are a Master General Contractor creating a formal bid for a homeowner. Analyze the project description and photos carefully. Be realistic, not optimistic.
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
@@ -2163,18 +2163,68 @@ Use the RAG context above to provide accurate, location-adjusted pricing.
 CRITICAL: Return ONLY valid JSON with these fields:
 - 'subtotal_low' (number): Subtotal low estimate (labor + materials only)
 - 'subtotal_high' (number): Subtotal high estimate (labor + materials only)
-- 'line_items' (array): Each item must have:
-  * 'category' (string): Materials, Labor, Permits, etc.
-  * 'description' (string): Brief description
-  * 'low' (number): Low estimate for this item
-  * 'high' (number): High estimate for this item
-  * 'local_insight' (object, optional): Only for material items in renovation projects
-    - 'type': "design_trend" or "sourcing_tip"
-    - 'message': Modest, helpful tip about local design trends or sourcing (under 2 sentences)
+- 'work_packages' (array): Group related work together. Each package represents a specific task (e.g., 'Flooring', 'Electrical', 'Cabinets', 'Plumbing'). Each package must have:
+  * 'category' (string): The work package name (e.g., "Flooring", "Kitchen Cabinets", "Bathroom Fixtures")
+  * 'items' (array): Specific line items within this package. MUST pair Materials with their corresponding Labor costs. Each item must have:
+    - 'description' (string): Specific description (e.g., "Wide plank white oak flooring - 800 sq ft")
+    - 'type' (string): Must be "Material", "Labor", or "Permit"
+    - 'cost_range' (string): Formatted as "$X,XXX - $Y,YYY" (human-readable with commas)
+    - 'local_insight' (object, optional): Only for material items
+      * 'type': "design_trend" or "sourcing_tip"
+      * 'message': Modest, helpful tip about local design trends or sourcing (under 2 sentences)
 - 'designer_note' (string): One professional insight or pro tip about the project (concise and actionable)
 
+STRUCTURE REQUIREMENTS:
+- Each work package should contain its specific Materials immediately followed by their corresponding Labor
+- Example: "Flooring" package should have "Wide plank oak flooring" (Material) followed by "Installation, sanding, and sealing" (Labor)
+- Group logically: Don't scatter "Flooring Materials" and "Flooring Labor" into separate packages
+- Permits can be standalone or grouped by scope
+
+Example Structure:
+{
+  "subtotal_low": 45000,
+  "subtotal_high": 75000,
+  "work_packages": [
+    {
+      "category": "Flooring",
+      "items": [
+        {
+          "description": "Wide plank white oak flooring - 800 sq ft",
+          "type": "Material",
+          "cost_range": "$8,000 - $12,000",
+          "local_insight": {
+            "type": "design_trend",
+            "message": "White oak is trending in ${zipCode || 'your area'} for modern farmhouse aesthetics. Local suppliers stock 7-9 inch planks."
+          }
+        },
+        {
+          "description": "Installation, sanding, and sealing labor",
+          "type": "Labor",
+          "cost_range": "$3,500 - $5,000"
+        }
+      ]
+    },
+    {
+      "category": "Kitchen Cabinets",
+      "items": [
+        {
+          "description": "Custom shaker-style cabinets with soft-close hardware",
+          "type": "Material",
+          "cost_range": "$12,000 - $18,000"
+        },
+        {
+          "description": "Cabinet installation and alignment",
+          "type": "Labor",
+          "cost_range": "$2,000 - $3,500"
+        }
+      ]
+    }
+  ],
+  "designer_note": "Consider phasing the project: start with structural work and flooring, then finish with cabinets and fixtures to minimize damage risk."
+}
+
 Guidelines for local_insight:
-- Only add to material line items (flooring, countertops, fixtures, cabinets, etc.)
+- Only add to material items (flooring, countertops, fixtures, cabinets, etc.)
 - Reference the specific city/region from ZIP ${zipCode || 'unknown'}
 - Match the finish level (${metadata?.finishLevel || 'mid-range'})
 - Mention real local distributors if known, or describe vendor type
@@ -2270,32 +2320,54 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
       console.error('❌ Failed to parse JSON response:', parseError);
       console.log('Raw response:', responseText.substring(0, 500));
 
-      // Fallback: create a simple estimate with local insights
+      // Fallback: create a simple estimate with work_packages structure
       estimateData = {
         subtotal_low: 10000,
         subtotal_high: 25000,
-        line_items: [
+        work_packages: [
           {
-            category: "Materials",
-            description: "Flooring, fixtures, and finishes",
-            low: 4000,
-            high: 10000,
-            local_insight: {
-              type: "sourcing_tip",
-              message: `Local sourcing tip: Check regional home centers and specialty suppliers for ${metadata?.finishLevel || 'mid-range'} finish materials that match local design preferences.`
-            }
-          },
-          {
-            category: "Labor",
-            description: "Professional installation",
-            low: 5000,
-            high: 12000
+            category: "Flooring & Finishes",
+            items: [
+              {
+                description: "Flooring materials, fixtures, and finishes",
+                type: "Material",
+                cost_range: "$4,000 - $10,000",
+                local_insight: {
+                  type: "sourcing_tip",
+                  message: `Local sourcing tip: Check regional home centers and specialty suppliers for ${metadata?.finishLevel || 'mid-range'} finish materials that match local design preferences.`
+                }
+              },
+              {
+                description: "Installation and finishing labor",
+                type: "Labor",
+                cost_range: "$3,000 - $7,000"
+              }
+            ]
           },
           {
             category: "Permits & Fees",
-            description: "Building permits and inspections",
-            low: 1000,
-            high: 3000
+            items: [
+              {
+                description: "Building permits and inspections",
+                type: "Permit",
+                cost_range: "$1,000 - $3,000"
+              }
+            ]
+          },
+          {
+            category: "Additional Work",
+            items: [
+              {
+                description: "Miscellaneous materials and supplies",
+                type: "Material",
+                cost_range: "$1,000 - $2,500"
+              },
+              {
+                description: "General labor and project management",
+                type: "Labor",
+                cost_range: "$1,000 - $2,500"
+              }
+            ]
           }
         ],
         designer_note: "Get at least 3 detailed quotes before starting. Material prices can vary 20-30% between suppliers, and contractor availability affects timeline significantly."

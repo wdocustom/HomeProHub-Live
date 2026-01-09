@@ -351,39 +351,97 @@
       document.getElementById('total-high').textContent = '$' + data.high.toLocaleString();
       document.getElementById('display-zip').textContent = zipCode;
 
-      // Render line items
+      // Render work packages (grouped line items)
       const container = document.getElementById('line-items-container');
       container.innerHTML = '';
 
-      data.line_items.forEach(item => {
-        const lineItem = document.createElement('div');
-        lineItem.className = 'flex justify-between items-start py-4 border-b border-slate-100 last:border-0';
+      // Support both new work_packages format and legacy line_items format
+      const workPackages = data.work_packages || [];
 
-        let itemHTML = `
-          <div class="flex-1">
-            <div class="font-bold text-slate-900">${item.category}</div>
-            <div class="text-sm text-slate-500 mt-1">${item.description}</div>
-        `;
+      if (workPackages.length > 0) {
+        // NEW FORMAT: Render grouped work packages
+        workPackages.forEach(pkg => {
+          // 1. Create the Group Wrapper
+          const groupDiv = document.createElement('div');
+          groupDiv.className = "mb-6 border-b border-slate-200 pb-4 last:border-0";
 
-        // Add local insight if available
-        if (item.local_insight && item.local_insight.message) {
+          // 2. Group Header (e.g. "Flooring", "Kitchen Cabinets")
+          const header = document.createElement('h4');
+          header.className = "text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 bg-slate-50 px-3 py-2 rounded-lg inline-block";
+          header.innerText = pkg.category;
+          groupDiv.appendChild(header);
+
+          // 3. Loop through specific items (Material vs Labor)
+          pkg.items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = "flex justify-between items-start mb-2 px-2";
+
+            // Badge Color Logic based on type
+            let badgeColor = 'bg-gray-100 text-gray-600';
+            if (item.type === 'Labor') badgeColor = 'bg-blue-50 text-blue-600';
+            if (item.type === 'Material') badgeColor = 'bg-emerald-50 text-emerald-600';
+            if (item.type === 'Permit') badgeColor = 'bg-amber-50 text-amber-600';
+
+            let itemHTML = `
+              <div class="flex items-start gap-3 flex-1">
+                <span class="${badgeColor} text-[10px] font-bold px-2 py-1 rounded uppercase min-w-[70px] text-center mt-0.5">${item.type}</span>
+                <div class="flex-1">
+                  <span class="text-sm text-slate-700 font-medium">${item.description}</span>
+            `;
+
+            // Add local insight if available (only for Material items)
+            if (item.local_insight && item.local_insight.message) {
+              itemHTML += `
+                <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+                  <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+                </div>
+              `;
+            }
+
+            itemHTML += `
+                </div>
+              </div>
+              <span class="text-sm font-bold text-slate-900 font-mono whitespace-nowrap ml-4">${item.cost_range}</span>
+            `;
+
+            row.innerHTML = itemHTML;
+            groupDiv.appendChild(row);
+          });
+
+          container.appendChild(groupDiv);
+        });
+      } else if (data.line_items) {
+        // LEGACY FORMAT: Fall back to old line_items rendering for backwards compatibility
+        data.line_items.forEach(item => {
+          const lineItem = document.createElement('div');
+          lineItem.className = 'flex justify-between items-start py-4 border-b border-slate-100 last:border-0';
+
+          let itemHTML = `
+            <div class="flex-1">
+              <div class="font-bold text-slate-900">${item.category}</div>
+              <div class="text-sm text-slate-500 mt-1">${item.description}</div>
+          `;
+
+          // Add local insight if available
+          if (item.local_insight && item.local_insight.message) {
+            itemHTML += `
+              <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+                <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+              </div>
+            `;
+          }
+
           itemHTML += `
-            <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
-              <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+            </div>
+            <div class="text-right ml-4">
+              <div class="font-bold text-slate-900">$${item.low.toLocaleString()} - $${item.high.toLocaleString()}</div>
             </div>
           `;
-        }
 
-        itemHTML += `
-          </div>
-          <div class="text-right ml-4">
-            <div class="font-bold text-slate-900">$${item.low.toLocaleString()} - $${item.high.toLocaleString()}</div>
-          </div>
-        `;
-
-        lineItem.innerHTML = itemHTML;
-        container.appendChild(lineItem);
-      });
+          lineItem.innerHTML = itemHTML;
+          container.appendChild(lineItem);
+        });
+      }
 
       // Add financial breakdown rows
       const subtotalLow = data.subtotal_low || data.low || 0;
@@ -522,19 +580,46 @@
       let pdfLinesHTML = '<table style="width:100%; border-collapse:collapse; margin-top:10px;">';
       pdfLinesHTML += '<thead><tr style="border-bottom:2px solid #e5e7eb;">';
       pdfLinesHTML += '<th style="padding:8px; text-align:left; font-size:12px; color:#666;">Item</th>';
-      pdfLinesHTML += '<th style="padding:8px; text-align:right; font-size:12px; color:#666;">Low</th>';
-      pdfLinesHTML += '<th style="padding:8px; text-align:right; font-size:12px; color:#666;">High</th>';
+      pdfLinesHTML += '<th style="padding:8px; text-align:left; font-size:10px; color:#666;">Type</th>';
+      pdfLinesHTML += '<th style="padding:8px; text-align:right; font-size:12px; color:#666;">Cost Range</th>';
       pdfLinesHTML += '</tr></thead><tbody>';
 
-      if (estimate.line_items && estimate.line_items.length > 0) {
+      // Support both new work_packages format and legacy line_items
+      if (estimate.work_packages && estimate.work_packages.length > 0) {
+        // NEW FORMAT: Work packages with grouped items
+        estimate.work_packages.forEach((pkg, pkgIdx) => {
+          // Add package header row
+          pdfLinesHTML += `<tr style="background:#f3f4f6;">`;
+          pdfLinesHTML += `<td colspan="3" style="padding:10px; font-weight:700; font-size:13px; text-transform:uppercase; border-top:2px solid #cbd5e1; border-bottom:1px solid #cbd5e1;">${pkg.category}</td>`;
+          pdfLinesHTML += `</tr>`;
+
+          // Add items within this package
+          pkg.items.forEach((item, idx) => {
+            const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+            // Type badge color
+            let typeColor = '#6b7280';
+            if (item.type === 'Material') typeColor = '#059669';
+            if (item.type === 'Labor') typeColor = '#2563eb';
+            if (item.type === 'Permit') typeColor = '#d97706';
+
+            pdfLinesHTML += `<tr style="background:${bg};">`;
+            pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb; padding-left:20px;">${item.description}</td>`;
+            pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb;"><span style="color:${typeColor}; font-weight:600; font-size:9px;">${item.type.toUpperCase()}</span></td>`;
+            pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb; font-family:monospace;">${item.cost_range}</td>`;
+            pdfLinesHTML += `</tr>`;
+          });
+        });
+      } else if (estimate.line_items && estimate.line_items.length > 0) {
+        // LEGACY FORMAT: Flat line items
         estimate.line_items.forEach((item, idx) => {
           const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
           pdfLinesHTML += `<tr style="background:${bg};">`;
           pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb;">${item.category}`;
           if (item.description) pdfLinesHTML += `<br><span style="font-size:11px; color:#666;">${item.description}</span>`;
           pdfLinesHTML += `</td>`;
-          pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${(item.low || 0).toLocaleString()}</td>`;
-          pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${(item.high || 0).toLocaleString()}</td>`;
+          pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb;"><span style="font-size:9px; color:#6b7280;">${item.category}</span></td>`;
+          pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${(item.low || 0).toLocaleString()} - $${(item.high || 0).toLocaleString()}</td>`;
           pdfLinesHTML += `</tr>`;
         });
       }
@@ -624,10 +709,22 @@
       // Transform estimator data to post-project format
       const estimate = window.currentEstimate;
 
-      // Convert line_items to scopeItems format
-      const scopeItems = estimate.estimate.line_items.map(item =>
-        `${item.category}: ${item.description} ($${item.low.toLocaleString()} - $${item.high.toLocaleString()})`
-      );
+      // Convert to scopeItems format (support both work_packages and legacy line_items)
+      let scopeItems = [];
+
+      if (estimate.estimate.work_packages && estimate.estimate.work_packages.length > 0) {
+        // NEW FORMAT: Work packages with grouped items
+        estimate.estimate.work_packages.forEach(pkg => {
+          pkg.items.forEach(item => {
+            scopeItems.push(`${pkg.category} - ${item.type}: ${item.description} (${item.cost_range})`);
+          });
+        });
+      } else if (estimate.estimate.line_items && estimate.estimate.line_items.length > 0) {
+        // LEGACY FORMAT: Flat line items
+        scopeItems = estimate.estimate.line_items.map(item =>
+          `${item.category}: ${item.description} ($${item.low.toLocaleString()} - $${item.high.toLocaleString()})`
+        );
+      }
 
       // Create project draft in format expected by post-project.html
       const projectDraft = {
