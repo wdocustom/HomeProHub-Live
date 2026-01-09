@@ -675,6 +675,12 @@
     }
 
     function postProject() {
+      // CRITICAL: Check if estimate exists
+      if (!window.currentEstimate || !window.currentEstimate.estimate) {
+        alert('No estimate available. Please generate an estimate first.');
+        return;
+      }
+
       // Transform estimator data to post-project format
       const estimate = window.currentEstimate;
 
@@ -698,12 +704,16 @@
         photos: estimate.photos || []
       };
 
-      // Save to hot_lead_draft (the key post-project.html looks for)
+      // CRITICAL FIX: Save to hot_lead_draft (the key post-project.html looks for)
+      // This ensures data persists across page navigation
       localStorage.setItem('hot_lead_draft', JSON.stringify(projectDraft));
+      console.log('✅ Project draft saved to localStorage:', projectDraft);
 
-      console.log('✓ Saved project draft for posting:', projectDraft);
+      // Also ensure pending_estimate is cleared (if exists from previous flow)
+      localStorage.removeItem('pending_estimate');
 
       // Redirect to post-project page
+      console.log('🔄 Redirecting to post-project page...');
       window.location.href = '/post-project.html?source=estimator';
     }
 

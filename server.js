@@ -2183,141 +2183,75 @@ Guidelines for local_insight:
 
 IMPORTANT: Do NOT calculate overhead, profit, or contingency - just return subtotal. Server will add those.`;
 
-    console.log(`🤖 ESTIMATOR: Using OpenAI GPT-4o (Primary) with ${photos?.length || 0} images...`);
+    console.log(`🤖 ESTIMATOR: Using OpenAI GPT-4o (EXCLUSIVE - No Fallback) with ${photos?.length || 0} images...`);
     console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}`);
-
-    let responseText = null;
-    let usedProvider = null;
 
     // Build enhanced user prompt with RAG context
     const enhancedUserPrompt = `${userPrompt}
 
 Use the labor rates, regional multiplier, and permit costs provided in the RAG context to calculate realistic estimates for ZIP ${zipCode}. Analyze any provided photos for scope details.`;
 
-    // Try OpenAI FIRST (with vision support)
-    if (OPENAI_API_KEY) {
-      try {
-        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-
-        // Build message content with text and images
-        let userContent = [{ type: "text", text: enhancedUserPrompt }];
-
-        // Add photos with vision support
-        if (photos && Array.isArray(photos) && photos.length > 0) {
-          photos.slice(0, 5).forEach(photo => {
-            // Clean base64 string
-            let cleanBase64 = photo;
-            if (photo.includes(',')) {
-              cleanBase64 = photo.split(',')[1];
-            }
-
-            userContent.push({
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${cleanBase64}`,
-                detail: "high"
-              }
-            });
-          });
-          console.log(`📸 Added ${userContent.length - 1} photos to vision analysis`);
-        }
-
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: systemPrompt || defaultSystemPrompt },
-            { role: "user", content: userContent }
-          ],
-          response_format: { type: "json_object" },
-          max_tokens: 2048,
-          temperature: 0.7
-        });
-
-        responseText = completion.choices[0].message.content;
-        usedProvider = 'OpenAI (GPT-4o with Vision)';
-
-      } catch (openaiError) {
-        console.warn(`⚠️  OpenAI primary failed, attempting Anthropic fallback:`, openaiError.message);
-      }
-    }
-
-    // Try Anthropic as fallback if OpenAI failed
-    if (!responseText && ANTHROPIC_API_KEY) {
-      try {
-        console.log(`🔄 Fallback to Anthropic Claude...`);
-
-        // Build content blocks for Anthropic
-        const contentBlocks = [{ type: 'text', text: enhancedUserPrompt }];
-
-        // Add photos if provided
-        if (photos && Array.isArray(photos) && photos.length > 0) {
-          for (const photo of photos.slice(0, 5)) {
-            let base64Data = photo;
-            if (photo.includes(',')) {
-              base64Data = photo.split(',')[1];
-            }
-
-            let mediaType = 'image/jpeg';
-            if (photo.startsWith('data:')) {
-              const match = photo.match(/data:([^;]+);/);
-              if (match) mediaType = match[1];
-            }
-
-            contentBlocks.push({
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64Data
-              }
-            });
-          }
-        }
-
-        const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01"
-          },
-          body: JSON.stringify({
-            model: "claude-3-5-sonnet-latest",
-            max_tokens: 2048,
-            system: systemPrompt || defaultSystemPrompt,
-            messages: [
-              {
-                role: "user",
-                content: contentBlocks
-              }
-            ]
-          })
-        });
-
-        if (apiResponse.ok) {
-          const data = await apiResponse.json();
-          responseText = data.content && data.content[0]?.text
-            ? data.content[0].text
-            : null;
-          usedProvider = 'Anthropic (Fallback)';
-        } else {
-          const errorText = await apiResponse.text();
-          console.error(`❌ Anthropic fallback error (${apiResponse.status}):`, errorText);
-          throw new Error(`Anthropic API error: ${apiResponse.status}`);
-        }
-      } catch (anthropicError) {
-        console.error(`❌ Anthropic fallback failed:`, anthropicError.message);
-        throw anthropicError;
-      }
-    }
-
-    // If both providers failed
-    if (!responseText) {
+    // FORCE OpenAI ONLY - No fallback for faster response
+    if (!OPENAI_API_KEY) {
       return res.status(503).json({
-        error: "AI service error. Please try again.",
-        code: 'AI_SERVICE_ERROR'
+        error: "OpenAI API is required for estimator but not configured.",
+        code: 'OPENAI_REQUIRED'
       });
     }
+
+    let responseText = null;
+    let usedProvider = 'OpenAI (GPT-4o with Vision)';
+
+    try {
+      const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+      // Build message content with text and images
+      let userContent = [{ type: "text", text: enhancedUserPrompt }];
+
+      // Add photos with vision support
+      if (photos && Array.isArray(photos) && photos.length > 0) {
+        photos.slice(0, 5).forEach(photo => {
+          // Clean base64 string
+          let cleanBase64 = photo;
+          if (photo.includes(',')) {
+            cleanBase64 = photo.split(',')[1];
+          }
+
+          userContent.push({
+            type: "image_url",
+            image_url: {
+              url: `data:image/jpeg;base64,${cleanBase64}`,
+              detail: "high"
+            }
+          });
+        });
+        console.log(`📸 Added ${userContent.length - 1} photos to vision analysis`);
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt || defaultSystemPrompt },
+          { role: "user", content: userContent }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 2048,
+        temperature: 0.7
+      });
+
+      responseText = completion.choices[0].message.content;
+      console.log(`✅ OpenAI GPT-4o estimate generated successfully`);
+
+    } catch (openaiError) {
+      console.error(`❌ OpenAI error in estimator:`, openaiError.message);
+      return res.status(500).json({
+        error: "Failed to generate estimate with OpenAI.",
+        code: 'OPENAI_ERROR',
+        details: openaiError.message
+      });
+    }
+
+    // Anthropic fallback removed - OpenAI exclusive for faster performance
 
     // Parse JSON from response
     let estimateData;
