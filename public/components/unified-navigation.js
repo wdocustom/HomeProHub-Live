@@ -233,30 +233,57 @@
           });
         }
 
+        console.log(`🔐 [Navigation] Auth check for zone ${zone} (${config.name})`);
+
         const user = await window.authService.getCurrentUser();
         if (!user) {
+          console.log('❌ [Navigation] No user found, redirecting to signin');
           // Redirect to signin
           window.location.href = '/signin.html';
           return;
         }
 
+        console.log('✓ [Navigation] User found:', user.email);
+
         const profile = await window.authService.getUserProfile();
+        console.log('✓ [Navigation] Profile loaded:', { role: profile?.role, email: profile?.email });
+
         if (config.userRole && profile.role !== config.userRole) {
           // Wrong role - redirect to appropriate dashboard
-          if (profile.role === 'homeowner') {
-            window.location.href = '/homeowner-dashboard.html';
-          } else if (profile.role === 'contractor') {
-            window.location.href = '/contractor-dashboard.html';
-          }
-          return;
-        }
+          console.log(`⚠️ [Navigation] Role mismatch! Page requires: ${config.userRole}, User is: ${profile.role}`);
 
-        userData = {
-          email: user.email,
-          name: profile.full_name || profile.company_name || user.email.split('@')[0]
-        };
+          // CRITICAL FIX: Don't redirect if we're ALREADY on a dashboard or project page
+          // This prevents infinite redirect loops
+          const currentPath = window.location.pathname;
+          const isDashboard = currentPath.includes('dashboard') || currentPath.includes('home.html');
+          const isProjectPage = currentPath.includes('post-project') || currentPath.includes('project');
+
+          if (isDashboard || isProjectPage) {
+            console.log(`⏸️ [Navigation] Already on dashboard/project page (${currentPath}), skipping redirect to prevent loop`);
+            // Allow navigation to render even with role mismatch
+            // The page's own auth check will handle appropriate redirects
+            userData = {
+              email: user.email,
+              name: profile.full_name || profile.company_name || user.email.split('@')[0]
+            };
+          } else {
+            console.log(`🔄 [Navigation] Redirecting to correct dashboard for role: ${profile.role}`);
+            if (profile.role === 'homeowner') {
+              window.location.href = '/home.html';
+            } else if (profile.role === 'contractor') {
+              window.location.href = '/contractor-dashboard.html';
+            }
+            return;
+          }
+        } else {
+          console.log('✅ [Navigation] Auth check passed, role matches zone requirement');
+          userData = {
+            email: user.email,
+            name: profile.full_name || profile.company_name || user.email.split('@')[0]
+          };
+        }
       } catch (error) {
-        console.error('Navigation auth check failed:', error);
+        console.error('❌ [Navigation] Auth check failed:', error);
         window.location.href = '/signin.html';
         return;
       }
