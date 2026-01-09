@@ -529,24 +529,60 @@
 
     // Auth check for download/post actions
     window.checkAuthAndAction = async function(action) {
+      console.log('🔐 checkAuthAndAction called with action:', action);
+
       // Check if user is logged in
       if (!window.authService || !window.authService.initialized) {
+        console.log('⏳ Auth service not ready, waiting 500ms...');
         // Auth service not ready yet
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       const user = await window.authService.getCurrentUser();
+      console.log('👤 Current user:', user ? user.email : 'NOT LOGGED IN');
 
       if (!user) {
         // Not logged in - redirect to signup with intent
-        localStorage.setItem('pending_estimate', JSON.stringify(window.currentEstimate));
+        console.log('🚨 User not logged in - preparing redirect to signup');
+
+        // CRITICAL: Verify currentEstimate exists before saving
+        console.log('📊 window.currentEstimate exists?', !!window.currentEstimate);
+        if (window.currentEstimate) {
+          console.log('📊 window.currentEstimate contents:', {
+            hasVision: !!window.currentEstimate.vision,
+            hasFinishLevel: !!window.currentEstimate.finishLevel,
+            hasZipCode: !!window.currentEstimate.zipCode,
+            hasEstimate: !!window.currentEstimate.estimate,
+            photoCount: window.currentEstimate.photos?.length || 0
+          });
+        } else {
+          console.error('❌ CRITICAL: window.currentEstimate is undefined! Cannot save to localStorage.');
+          alert('Error: No estimate data found. Please generate an estimate first.');
+          return;
+        }
+
+        // Save to localStorage
+        const estimateJSON = JSON.stringify(window.currentEstimate);
+        console.log('💾 Saving to localStorage.pending_estimate, size:', (estimateJSON.length / 1024).toFixed(2), 'KB');
+        localStorage.setItem('pending_estimate', estimateJSON);
+
+        // Verify it was saved
+        const verification = localStorage.getItem('pending_estimate');
+        console.log('✅ Verification - localStorage.pending_estimate saved?', !!verification);
+        if (verification) {
+          console.log('✅ Verification - Data size in storage:', (verification.length / 1024).toFixed(2), 'KB');
+        }
+
         sessionStorage.setItem('signup_role', 'homeowner');
         sessionStorage.setItem('return_url', window.location.href);
+
+        console.log('🔄 Redirecting to /signup.html?intent=remodel_estimate');
         window.location.href = '/signup.html?intent=remodel_estimate';
         return;
       }
 
       // User is logged in - proceed with action
+      console.log('✓ User is logged in, proceeding with action:', action);
       if (action === 'download') {
         downloadPDF();
       } else if (action === 'post') {
