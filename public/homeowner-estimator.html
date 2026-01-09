@@ -498,47 +498,48 @@
     };
 
     async function downloadPDF() {
-      if (!window.currentEstimate) {
+      // Validate estimate exists
+      if (!window.currentEstimate || !window.currentEstimate.estimate) {
         alert('No estimate available to download. Please generate an estimate first.');
         return;
-      }
-
-      // Auth is already checked by checkAuthAndAction, so user is logged in at this point
-      // Get user profile for PDF header
-      let userProfile = null;
-      try {
-        userProfile = await window.authService.getUserProfile();
-      } catch (err) {
-        console.error('Error getting user profile:', err);
       }
 
       const estimate = window.currentEstimate.estimate;
       const zipCode = window.currentEstimate.zipCode;
       const finishLevel = window.currentEstimate.finishLevel;
 
-      // Build user info for header
-      const userName = userProfile?.fullName || 'Homeowner';
-      const userEmail = userProfile?.email || '';
+      console.log('📄 Generating PDF from estimate...');
 
-      // Build line items HTML
-      let lineItemsHTML = '';
+      // STEP 1: Populate the hidden PDF template with data
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('pdf-date').textContent = today;
+      document.getElementById('pdf-low').textContent = `$${(estimate.low || 0).toLocaleString()}`;
+      document.getElementById('pdf-high').textContent = `$${(estimate.high || 0).toLocaleString()}`;
+      document.getElementById('pdf-zip').textContent = zipCode || 'N/A';
+      document.getElementById('pdf-finish').textContent = finishLevel ? (finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)) : 'Standard';
+
+      // Build line items for PDF template
+      let pdfLinesHTML = '<table style="width:100%; border-collapse:collapse; margin-top:10px;">';
+      pdfLinesHTML += '<thead><tr style="border-bottom:2px solid #e5e7eb;">';
+      pdfLinesHTML += '<th style="padding:8px; text-align:left; font-size:12px; color:#666;">Item</th>';
+      pdfLinesHTML += '<th style="padding:8px; text-align:right; font-size:12px; color:#666;">Low</th>';
+      pdfLinesHTML += '<th style="padding:8px; text-align:right; font-size:12px; color:#666;">High</th>';
+      pdfLinesHTML += '</tr></thead><tbody>';
+
       if (estimate.line_items && estimate.line_items.length > 0) {
         estimate.line_items.forEach((item, idx) => {
           const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
-          lineItemsHTML += `<tr style="background:${bg};">`;
-          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;">${item.category}`;
-          if (item.description) lineItemsHTML += `<br><span style="font-size:11px;color:#6b7280;">${item.description}</span>`;
-          if (item.local_insight && item.local_insight.message) {
-            lineItemsHTML += `<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">💡 ${item.local_insight.message}</div>`;
-          }
-          lineItemsHTML += `</td>`;
-          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.low || 0).toLocaleString()}</td>`;
-          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.high || 0).toLocaleString()}</td>`;
-          lineItemsHTML += `</tr>`;
+          pdfLinesHTML += `<tr style="background:${bg};">`;
+          pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb;">${item.category}`;
+          if (item.description) pdfLinesHTML += `<br><span style="font-size:11px; color:#666;">${item.description}</span>`;
+          pdfLinesHTML += `</td>`;
+          pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${(item.low || 0).toLocaleString()}</td>`;
+          pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${(item.high || 0).toLocaleString()}</td>`;
+          pdfLinesHTML += `</tr>`;
         });
       }
 
-      // Add financial breakdown rows
+      // Add financial breakdown
       const subtotalLow = estimate.subtotal_low || estimate.low || 0;
       const subtotalHigh = estimate.subtotal_high || estimate.high || 0;
       const overheadProfitLow = estimate.overhead_profit_low || 0;
@@ -546,129 +547,68 @@
       const contingencyLow = estimate.contingency_low || 0;
       const contingencyHigh = estimate.contingency_high || 0;
 
-      lineItemsHTML += `
-        <tr style="background:#f3f4f6;border-top:2px solid #cbd5e1;">
-          <td style="padding:12px;font-weight:700;">Subtotal</td>
-          <td style="padding:12px;text-align:right;font-weight:700;">$${subtotalLow.toLocaleString()}</td>
-          <td style="padding:12px;text-align:right;font-weight:700;">$${subtotalHigh.toLocaleString()}</td>
+      pdfLinesHTML += `
+        <tr style="background:#f3f4f6; border-top:2px solid #cbd5e1;">
+          <td style="padding:10px; font-weight:700;">Subtotal</td>
+          <td style="padding:10px; text-align:right; font-weight:700;">$${subtotalLow.toLocaleString()}</td>
+          <td style="padding:10px; text-align:right; font-weight:700;">$${subtotalHigh.toLocaleString()}</td>
         </tr>
-        <tr style="background:#ffffff;">
-          <td style="padding:12px;">Overhead & Profit (${estimate.overhead_profit_percent || 20}%)</td>
-          <td style="padding:12px;text-align:right;">$${overheadProfitLow.toLocaleString()}</td>
-          <td style="padding:12px;text-align:right;">$${overheadProfitHigh.toLocaleString()}</td>
+        <tr><td style="padding:10px;">Overhead & Profit (${estimate.overhead_profit_percent || 20}%)</td>
+          <td style="padding:10px; text-align:right;">$${overheadProfitLow.toLocaleString()}</td>
+          <td style="padding:10px; text-align:right;">$${overheadProfitHigh.toLocaleString()}</td>
         </tr>
-        <tr style="background:#f9fafb;">
-          <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Contingency (${estimate.contingency_percent || 10}%)</td>
-          <td style="padding:12px;text-align:right;border-bottom:1px solid #e5e7eb;">$${contingencyLow.toLocaleString()}</td>
-          <td style="padding:12px;text-align:right;border-bottom:1px solid #e5e7eb;">$${contingencyHigh.toLocaleString()}</td>
+        <tr><td style="padding:10px; border-bottom:1px solid #e5e7eb;">Contingency (${estimate.contingency_percent || 10}%)</td>
+          <td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${contingencyLow.toLocaleString()}</td>
+          <td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${contingencyHigh.toLocaleString()}</td>
+        </tr>
+        <tr style="background:#dbeafe; font-weight:700; font-size:16px;">
+          <td style="padding:12px;">TOTAL</td>
+          <td style="padding:12px; text-align:right; color:#2563eb;">$${(estimate.low || 0).toLocaleString()}</td>
+          <td style="padding:12px; text-align:right; color:#2563eb;">$${(estimate.high || 0).toLocaleString()}</td>
         </tr>
       `;
+      pdfLinesHTML += '</tbody></table>';
+      document.getElementById('pdf-lines').innerHTML = pdfLinesHTML;
 
-      // Build designer note HTML
-      let designerNoteHTML = '';
+      // Add designer note if exists
       if (estimate.designer_note) {
-        designerNoteHTML = `<div style="background:#dbeafe;border-left:4px solid #2563eb;padding:12px;margin-top:20px;border-radius:8px;">
-          <h4 style="margin:0 0 8px 0;color:#1e40af;font-size:14px;">💡 Pro Tip</h4>
-          <p style="margin:0;font-size:13px;color:#1e3a8a;line-height:1.6;">${estimate.designer_note}</p>
-        </div>`;
+        document.getElementById('pdf-designer-note').innerHTML = `
+          <div style="background:#dbeafe; border-left:4px solid #2563eb; padding:12px; border-radius:4px;">
+            <h4 style="margin:0 0 8px 0; color:#1e40af; font-size:14px;">💡 Pro Tip</h4>
+            <p style="margin:0; font-size:13px; color:#1e3a8a; line-height:1.6;">${estimate.designer_note}</p>
+          </div>
+        `;
+        document.getElementById('pdf-designer-note').style.display = 'block';
+      } else {
+        document.getElementById('pdf-designer-note').style.display = 'none';
       }
 
-      const html = `<!DOCTYPE html>
-<html><head>
-  <title>Renovation Estimate - ${finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)} Finish</title>
-  <style>
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; color: #1f2937; }
-    .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
-    .header-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-    .company-name { font-size: 24px; font-weight: 700; color: #2563eb; }
-    .project-title { font-size: 28px; font-weight: 700; margin: 20px 0 10px 0; }
-    .total-box { background: #dbeafe; border: 2px solid #2563eb; border-radius: 12px; padding: 16px; margin: 20px 0; text-align: center; }
-    .total-label { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
-    .total-amount { font-size: 32px; font-weight: 700; color: #2563eb; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th { background: #f3f4f6; padding: 12px; text-align: left; font-size: 13px; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
-    .total-row { background: #dbeafe; font-weight: 700; font-size: 16px; border-top: 2px solid #2563eb; }
-    @media print { body { padding: 20px; } }
-  </style>
-</head><body>
-  <div class="header">
-    <div class="header-row">
-      <div>
-        <div class="company-name">HomeProHub</div>
-        <div style="font-size:13px;color:#6b7280;margin-top:4px;">Renovation Estimate</div>
-        ${userEmail ? `<div style="font-size:13px;color:#6b7280;">${userEmail}</div>` : ''}
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:13px;color:#6b7280;">Date: ${new Date().toLocaleDateString()}</div>
-        <div style="font-size:13px;color:#6b7280;">Estimate ID: HPH-${Math.floor(Math.random() * 90000) + 10000}</div>
-        <div style="font-size:13px;color:#6b7280;">ZIP: ${zipCode}</div>
-      </div>
-    </div>
-  </div>
+      // STEP 2: Show template and generate PDF
+      const pdfTemplate = document.getElementById('pdf-invoice-template');
+      pdfTemplate.style.display = 'block';
 
-  <h1 class="project-title">Renovation Project - ${finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)} Finish</h1>
-
-  <div class="total-box">
-    <div class="total-label">Estimated Total Range</div>
-    <div class="total-amount">$${(estimate.low || 0).toLocaleString()} - $${(estimate.high || 0).toLocaleString()}</div>
-  </div>
-
-  <h3 style="margin:30px 0 10px 0;color:#374151;">Detailed Breakdown</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Category / Item</th>
-        <th style="text-align:right;width:120px;">Low Estimate</th>
-        <th style="text-align:right;width:120px;">High Estimate</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${lineItemsHTML}
-      <tr class="total-row">
-        <td style="padding:14px;">TOTAL PROJECT ESTIMATE</td>
-        <td style="padding:14px;text-align:right;color:#2563eb;">$${(estimate.low || 0).toLocaleString()}</td>
-        <td style="padding:14px;text-align:right;color:#2563eb;">$${(estimate.high || 0).toLocaleString()}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  ${designerNoteHTML}
-
-  <div style="margin-top:40px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
-    This estimate is preliminary and subject to change based on site conditions, material availability, and final scope. Not a binding contract.
-  </div>
-</body></html>`;
-
-      // Create temporary element for PDF generation
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      document.body.appendChild(tempDiv);
-
-      // Show loading feedback on button
+      // Button feedback
       const downloadBtn = document.querySelector('button[onclick*="download"]');
       const originalText = downloadBtn.innerHTML;
       downloadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-500 text-xl"></i> Generating PDF...';
       downloadBtn.disabled = true;
 
-      // Generate PDF using html2pdf
       const opt = {
         margin: 0.5,
-        filename: `HomeProHub-Estimate-${zipCode}-${Date.now()}.pdf`,
+        filename: `HomeProHub_Estimate_${zipCode}_${Date.now()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
 
       try {
-        await html2pdf().set(opt).from(tempDiv).save();
+        await html2pdf().set(opt).from(pdfTemplate).save();
+        console.log('✅ PDF generated successfully');
       } catch (error) {
-        console.error('PDF generation error:', error);
+        console.error('❌ PDF generation error:', error);
         alert('Failed to generate PDF. Please try again.');
       } finally {
-        // Clean up
-        document.body.removeChild(tempDiv);
+        pdfTemplate.style.display = 'none';
         downloadBtn.innerHTML = originalText;
         downloadBtn.disabled = false;
       }
@@ -741,5 +681,45 @@
       }
     });
   </script>
+
+  <!-- Hidden PDF Template (Print-Friendly) -->
+  <div id="pdf-invoice-template" style="display: none;">
+    <div style="padding: 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #333;">
+      <!-- Header -->
+      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #2563eb;">Renovation Estimate</h1>
+        <p style="margin: 5px 0 0; color: #666; font-size: 14px;">Generated by HomeProHub</p>
+        <p style="margin: 5px 0 0; color: #999; font-size: 12px;" id="pdf-date"></p>
+      </div>
+
+      <!-- Project Summary Box -->
+      <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 2px solid #2563eb;">
+        <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #1e40af; font-weight: bold;">Estimated Project Cost</p>
+        <h2 style="margin: 10px 0 0; font-size: 32px; font-weight: bold; color: #2563eb;">
+          <span id="pdf-low"></span> - <span id="pdf-high"></span>
+        </h2>
+        <p style="margin: 10px 0 5px; font-size: 14px; color: #1e40af;">Zip Code: <span id="pdf-zip"></span></p>
+        <p style="margin: 5px 0 0; font-size: 14px; color: #1e40af;">Finish Level: <span id="pdf-finish"></span></p>
+      </div>
+
+      <!-- Scope Breakdown -->
+      <h3 style="border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; font-size: 18px; color: #1f2937;">Scope Breakdown</h3>
+      <div id="pdf-lines" style="font-size: 14px; line-height: 1.6;">
+        <!-- Line items will be inserted here -->
+      </div>
+
+      <!-- Designer Note -->
+      <div id="pdf-designer-note" style="margin-top: 30px; display: none;">
+        <!-- Designer note will be inserted here -->
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #999;">
+        <p style="margin: 0;">This is a preliminary estimate. Final costs may vary based on site conditions and contractor availability.</p>
+        <p style="margin: 10px 0 0;">For questions, visit <strong>homeprohub.today</strong></p>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

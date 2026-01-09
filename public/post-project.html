@@ -633,8 +633,16 @@
         return;
       }
 
-      // TASK 3: Hot Potato Strategy - Check cookies FIRST, then localStorage
-      let draftStr = localStorage.getItem('hot_lead_draft');
+      // CRITICAL FIX: Check ALL possible localStorage keys (catch-all strategy)
+      // Different flows may save data under different keys
+      let draftStr = localStorage.getItem('hot_lead_draft') ||
+                     localStorage.getItem('pending_estimate') ||
+                     localStorage.getItem('pending_project_estimate');
+
+      console.log('🔍 Searching for project draft data across all storage keys...');
+      console.log('  - hot_lead_draft:', !!localStorage.getItem('hot_lead_draft'));
+      console.log('  - pending_estimate:', !!localStorage.getItem('pending_estimate'));
+      console.log('  - pending_project_estimate:', !!localStorage.getItem('pending_project_estimate'));
 
       // If localStorage is empty, check for cookie (cross-device/session persistence)
       if (!draftStr) {
@@ -652,6 +660,7 @@
 
       if (!draftStr) {
         // No draft found in localStorage OR cookies - show error
+        console.error('❌ No project data found in any storage location');
         document.getElementById('loadingSection').style.display = 'none';
         document.getElementById('errorSection').style.display = 'flex';
         return;
