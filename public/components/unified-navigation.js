@@ -272,16 +272,16 @@
       }
 
       // Otherwise, wait for the custom event dispatched by auth.js
-      window.addEventListener('auth-ready', () => {
-        console.log('✓ [Navigation] Auth ready event received');
+      window.addEventListener('auth-init-complete', () => {
+        console.log('✓ [Navigation] Auth init complete event received');
         resolve();
       }, { once: true });
 
-      // Fallback safety timer (3 seconds)
+      // Fallback safety timer (5 seconds)
       setTimeout(() => {
-        console.warn('⚠️ [Navigation] Auth ready timeout after 3s, proceeding anyway');
+        console.warn('⚠️ [Navigation] Auth ready timeout after 5s, proceeding anyway');
         resolve();
-      }, 3000);
+      }, 5000);
     });
   }
 
@@ -1050,6 +1050,31 @@
     }
   };
 
+  /**
+   * Start Navigation System (The Listener)
+   */
+  function startNavigationSystem() {
+    console.log('🧭 [Navigation] Starting Navigation System...');
+
+    // Detect current zone from page metadata
+    const zoneMeta = document.querySelector('meta[name="sanctuary-zone"]');
+    const zone = zoneMeta ? zoneMeta.content : 'A';
+
+    console.log(`🧭 [Navigation] Detected Zone: ${zone}`);
+
+    // Check if user is logged in
+    const user = window.currentUser;
+
+    if (user) {
+      console.log(`👤 [Navigation] User detected (${user.email}). Rendering authenticated navigation.`);
+    } else {
+      console.log('👽 [Navigation] Guest detected. Rendering public navigation.');
+    }
+
+    // Initialize navigation for detected zone
+    initNavigation(zone);
+  }
+
   // Export to global scope
   window.SanctuaryNavigation = {
     init: initNavigation,
@@ -1058,4 +1083,18 @@
   };
 
   console.log('✓ Sanctuary Glass 2.0 Navigation System loaded');
+
+  // Auto-start navigation when auth is ready
+  if (window.authReady) {
+    // Auth already complete, start immediately
+    console.log('✓ [Navigation] Auth already ready, starting navigation');
+    startNavigationSystem();
+  } else {
+    // Wait for auth to complete
+    console.log('⏳ [Navigation] Waiting for auth-init-complete event...');
+    window.addEventListener('auth-init-complete', () => {
+      console.log('✓ [Navigation] Auth init complete, starting navigation');
+      startNavigationSystem();
+    });
+  }
 })();

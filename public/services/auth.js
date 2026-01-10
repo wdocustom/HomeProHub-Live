@@ -75,29 +75,23 @@ class AuthService {
       }
 
       console.log('🔄 Auth init step 4: Getting current session...');
-      // Get current session and validate it (with timeout to prevent hanging)
+      // Get current session - let Supabase handle its own timeouts
       let session = null;
       try {
-        const sessionPromise = this.supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('getSession() timeout - clearing localStorage and retrying')), 10000)
-        );
+        const { data, error } = await this.supabase.auth.getSession();
 
-        const result = await Promise.race([sessionPromise, timeoutPromise]);
-        session = result.data.session;
-        console.log('✓ Session check complete:', session ? 'Existing session found' : 'No existing session');
+        if (error) {
+          console.warn('⚠️ getSession() returned error:', error.message);
+          session = null;
+        } else {
+          session = data.session;
+          console.log('✓ Session check complete:', session ? 'Existing session found' : 'No existing session');
+        }
       } catch (err) {
-        console.warn('⚠️ getSession() failed or timed out:', err.message);
-        console.log('🔄 Clearing potentially corrupt localStorage and continuing...');
-        // Clear Supabase localStorage to fix corruption
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-')) {
-            localStorage.removeItem(key);
-            console.log('Removed:', key);
-          }
-        });
+        // Network/timeout errors - don't wipe localStorage
+        console.warn('⚠️ getSession() failed with exception:', err.message);
+        console.log('Auth Init: Continuing with no session (no localStorage wipe)');
         session = null;
-        console.log('✓ localStorage cleared, continuing with no session');
       }
 
       if (session) {
@@ -113,26 +107,35 @@ class AuthService {
               console.log('Auth Init: Invalid/expired session detected on page load. Clearing...');
               await this.supabase.auth.signOut();
               this.currentUser = null;
+              window.currentUser = null;
             } else {
               // Network error - keep the session but log warning
               console.warn('⚠️ Session validation encountered network error on init:', error.message);
               console.log('Auth Init: Proceeding with existing session despite validation error');
               this.currentUser = session.user;
+              window.currentUser = session.user;
             }
           } else if (!user) {
             console.log('Auth Init: Stale session detected (no user). Clearing...');
             await this.supabase.auth.signOut();
             this.currentUser = null;
+            window.currentUser = null;
           } else {
             console.log('✓ Session validated for user:', user.email);
             this.currentUser = session.user;
+            window.currentUser = session.user;
           }
         } catch (err) {
           // Network/timeout errors - keep the session but log warning
           console.warn('⚠️ Session validation failed on init with exception:', err.message);
           console.log('Auth Init: Proceeding with existing session despite validation exception');
           this.currentUser = session.user;
+          window.currentUser = session.user;
         }
+      } else {
+        // No session - guest mode
+        this.currentUser = null;
+        window.currentUser = null;
       }
 
       console.log('🔄 Auth init step 5: Setting up auth state change listener...');
@@ -280,10 +283,6 @@ class AuthService {
 
       console.log('🔄 Auth init step 6: Marking as initialized...');
       this.initialized = true;
-      window.authReady = true;
-      window.dispatchEvent(new CustomEvent('auth-ready'));
-      console.log('✅ AuthService fully initialized and ready!');
-      console.log('✅ Event: auth-ready dispatched');
 
       // CRITICAL: Check for pending draft data after initialization
       // This handles the case where user signed in from estimator/blueprint flow
@@ -341,6 +340,11 @@ class AuthService {
       // Don't throw - this prevents the entire page from breaking
       // Auth features will be disabled but page will still load
       console.log('⚠️ Auth features disabled due to initialization error');
+    } finally {
+      // THE GREEN LIGHT: Always dispatch completion event
+      window.authReady = true;
+      window.dispatchEvent(new CustomEvent('auth-init-complete'));
+      console.log('🚀 [Auth] Event "auth-init-complete" dispatched');
     }
   }
 
