@@ -870,21 +870,8 @@ try {
 window.authService = authService;
 console.log('✓ window.authService exported:', !!window.authService);
 
-// Auto-initialize when DOM is ready
-if (authService) {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('✓ DOM loaded, initializing auth...');
-      authService.init().catch(err => {
-        console.error('❌ Auth init failed:', err);
-      });
-    });
-  } else {
-    console.log('✓ DOM already ready, initializing auth...');
-    authService.init().catch(err => {
-      console.error('❌ Auth init failed:', err);
-    });
-  }
-} else {
-  console.error('❌ Cannot initialize authService - instance creation failed');
-}
+// PASSIVE MODE: Do NOT auto-initialize
+// The AppController (app-controller.js) will call authService.init() explicitly
+// This eliminates race conditions by enforcing a strict boot sequence
+console.log('⏸️ [Auth] Passive mode - waiting for AppController to initialize');
+

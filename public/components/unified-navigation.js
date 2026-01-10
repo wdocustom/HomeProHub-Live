@@ -1091,17 +1091,8 @@
 
   console.log('✓ Sanctuary Glass 2.0 Navigation System loaded');
 
-  // Auto-start navigation when auth is ready
-  if (window.authReady) {
-    // Auth already complete, start immediately
-    console.log('✓ [Navigation] Auth already ready, starting navigation');
-    startNavigationSystem();
-  } else {
-    // Wait for auth to complete
-    console.log('⏳ [Navigation] Waiting for auth-init-complete event...');
-    window.addEventListener('auth-init-complete', () => {
-      console.log('✓ [Navigation] Auth init complete, starting navigation');
-      startNavigationSystem();
-    });
-  }
+  // PASSIVE MODE: Do NOT auto-start
+  // The AppController (app-controller.js) will call SanctuaryNavigation.init() explicitly
+  // This eliminates race conditions by enforcing a strict boot sequence
+  console.log('⏸️ [Navigation] Passive mode - waiting for AppController to initialize');
 })();
