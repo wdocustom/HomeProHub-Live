@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
   <title>Renovation Planner – HomeProHub</title>
 
   <!-- Sanctuary Glass 2.0 Design System -->
@@ -237,8 +238,6 @@
   <!-- Sanctuary Glass 2.0 Navigation System -->
   <script src="/components/unified-navigation.js"></script>
   <script>
-    // Initialize Zone A navigation (Public - No Auth Required)
-    window.SanctuaryNavigation.init('A');
 
     // Photo upload handling
     let selectedPhotos = [];
@@ -864,6 +863,9 @@
       }
     });
   </script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
 
   <!-- Hidden PDF Template (Print-Friendly) -->
   <div id="pdf-invoice-template" style="display: none;">

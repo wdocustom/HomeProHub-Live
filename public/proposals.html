@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="sanctuary-zone" content="C">
   <title>Proposals – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="styles/sanctuary-glass.css" />
@@ -353,13 +354,6 @@
   <script src="components/footer.js"></script>
 
   <script>
-    // Initialize Sanctuary Glass 2.0 navigation
-    if (window.initNavigation) {
-      window.initNavigation('C');
-    }
-  </script>
-
-  <script>
     // Get project ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('project_id');
@@ -680,5 +674,8 @@
       loadProjectAndProposals();
     });
   </script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="C">
   <title>HomeProHub – My Profile</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="/components/sanctuary-glass.css">
@@ -851,42 +852,9 @@ async function loadActivityStats() {
     const saveButton = document.getElementById('saveButton');
     const statusMessage = document.getElementById('statusMessage');
 
-    async function checkAuth() {
-        try {
-            // Wait for authService to be ready
-            if (!window.authService || !window.authService.initialized) {
-                await new Promise(resolve => {
-                    const checkInterval = setInterval(() => {
-                        if (window.authService && window.authService.initialized) {
-                            clearInterval(checkInterval);
-                            resolve();
-                        }
-                    }, 100);
-                });
-            }
-
-            const user = await window.authService.getCurrentUser();
-            if (!user) {
-                console.log('No user found - navigation will handle redirect');
-                return false;
-            }
-
-            const userProfile = await window.authService.getUserProfile();
-            if (!userProfile || userProfile.role !== 'homeowner') {
-                console.log('Not a homeowner - navigation will handle redirect');
-                return false;
-            }
-
-            return true;
-        } catch (error) {
-            console.error('Auth check failed:', error);
-            return false;
-        }
-    }
-
     async function loadProfile() {
         try {
-            const user = await window.authService.getCurrentUser();
+            const user = window.currentUser;
             const profile = await window.authService.getUserProfile();
 
             if (user) {
@@ -965,11 +933,9 @@ async function loadActivityStats() {
         }
     });
 
-    // Initialize with async auth check
-    checkAuth().then(isAuthenticated => {
-        if (isAuthenticated) {
-            loadProfile();
-        }
+    // Initialize on app-ready
+    window.addEventListener('app-ready', () => {
+        loadProfile();
     });
 })();
 
@@ -1089,12 +1055,8 @@ async function confirmDeleteAccount() {
 
 <!-- Unified Navigation Component -->
 <script src="/components/unified-navigation.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.UnifiedNavigation) {
-      window.UnifiedNavigation.init('C');
-    }
-  });
-</script>
+
+<!-- Application Controller (MUST BE LAST) -->
+<script src="/services/app-controller.js"></script>
 </body>
 </html>

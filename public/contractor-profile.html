@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="D">
   <title>HomeProHub – Contractor Profile</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="components/sanctuary-glass.css">
@@ -2022,11 +2023,8 @@ async function confirmDeleteAccount() {
 
 <!-- Unified Navigation Component -->
 <script src="/components/unified-navigation.js"></script>
-<script>
-  // Initialize navigation for contractor zone
-  if (window.SanctuaryNavigation) {
-    window.SanctuaryNavigation.init('D');
-  }
-</script>
+
+<!-- Application Controller (MUST BE LAST) -->
+<script src="/services/app-controller.js"></script>
 </body>
 </html>
