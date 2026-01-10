@@ -421,12 +421,21 @@
       }
     });
 
-    // Initial fetch
-    fetchUnreadCount();
-    fetchNotifications();
+    // Wait for authService to be ready before fetching notifications
+    const initNotifications = () => {
+      if (window.authService && window.authService.supabase) {
+        console.log('✓ AuthService ready, initializing notifications');
+        fetchUnreadCount();
+        fetchNotifications();
+        startPolling();
+      } else {
+        console.log('⏳ Waiting for authService to initialize...');
+        setTimeout(initNotifications, 500);
+      }
+    };
 
-    // Start polling (every 30 seconds)
-    startPolling();
+    // Delay initial fetch to ensure authService is ready
+    setTimeout(initNotifications, 1000);
 
     // Handle visibility change (pause polling when tab is inactive)
     document.addEventListener('visibilitychange', () => {
@@ -438,9 +447,12 @@
         }
       } else {
         console.log('▶️ Tab active, resuming notification polling');
-        fetchUnreadCount();
-        fetchNotifications();
-        startPolling();
+        // Only resume if authService is ready
+        if (window.authService && window.authService.supabase) {
+          fetchUnreadCount();
+          fetchNotifications();
+          startPolling();
+        }
       }
     });
   }
