@@ -5929,20 +5929,21 @@ app.post("/api/conversations/:conversationId/read", requireAuth, async (req, res
  */
 app.get("/api/notifications", requireAuth, async (req, res) => {
   try {
-    const { email, limit } = req.query;
+    // Get email from authenticated user
+    const email = req.user.email;
+    const { limit } = req.query;
 
     if (!email) {
       return res.status(400).json({
-        error: "Email parameter required",
+        error: "User email not found",
         code: 'VALIDATION_ERROR'
       });
     }
 
     const notifications = await db.getNotifications(email, limit ? parseInt(limit) : 50);
-    const unreadCount = await db.getUnreadNotificationCount(email);
 
     console.log(`✓ Retrieved ${notifications.length} notifications for: ${email}`);
-    res.json({ notifications, unreadCount });
+    res.json(notifications);
 
   } catch (err) {
     console.error("❌ Error in /api/notifications:", err);
@@ -6023,13 +6024,14 @@ app.get("/api/unread-count", async (req, res) => {
  * Get unread notification count only (for navigation)
  * TASK 2: Fail gracefully - return 200 with count: 0 instead of 500 error
  */
-app.get("/api/notifications/unread", async (req, res) => {
+app.get("/api/notifications/unread", requireAuth, async (req, res) => {
   try {
-    const { email } = req.query;
+    // Get email from authenticated user
+    const email = req.user.email;
 
     if (!email) {
       // Fail gracefully - don't alarm user with 400 error for optional feature
-      console.warn('⚠️  Notifications endpoint called without email');
+      console.warn('⚠️  Notifications endpoint called without user email');
       return res.json({ count: 0 });
     }
 
@@ -6049,9 +6051,10 @@ app.get("/api/notifications/unread", async (req, res) => {
  * POST /api/notifications/:id/read
  * Mark a specific notification as read (REST-style)
  */
-app.post("/api/notifications/:id/read", async (req, res) => {
+app.post("/api/notifications/:id/read", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const email = req.user.email;
 
     if (!id) {
       return res.status(400).json({
@@ -6060,9 +6063,23 @@ app.post("/api/notifications/:id/read", async (req, res) => {
       });
     }
 
+    // Verify notification belongs to user before marking as read
+    const { data: notification } = await db.supabase
+      .from('notifications')
+      .select('user_email')
+      .eq('id', id)
+      .single();
+
+    if (!notification || notification.user_email !== email) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        code: 'FORBIDDEN'
+      });
+    }
+
     await db.markNotificationAsRead(id);
 
-    console.log(`✓ Notification marked as read: ${id}`);
+    console.log(`✓ Notification marked as read: ${id} for user: ${email}`);
     res.json({ success: true });
 
   } catch (err) {
@@ -6079,13 +6096,14 @@ app.post("/api/notifications/:id/read", async (req, res) => {
  * POST /api/notifications/mark-all-read
  * Mark all notifications as read for a user
  */
-app.post("/api/notifications/mark-all-read", async (req, res) => {
+app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
   try {
-    const { email } = req.body;
+    // Get email from authenticated user
+    const email = req.user.email;
 
     if (!email) {
       return res.status(400).json({
-        error: "Email required",
+        error: "User email not found",
         code: 'VALIDATION_ERROR'
       });
     }

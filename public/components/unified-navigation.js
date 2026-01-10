@@ -127,10 +127,27 @@
     } else if (config.rightProfile && userData) {
       rightSectionHtml = `
         <!-- Notification Bell -->
-        <button id="notificationBell" class="nav-notification-btn relative">
-          <i class="fa-solid fa-bell text-xl text-slate-600 hover:text-blue-600 transition-colors"></i>
-          <span id="notificationBadge" class="notification-badge hidden">0</span>
-        </button>
+        <div class="relative">
+          <button id="notificationBell" class="nav-notification-btn relative p-2 hover:bg-slate-50 rounded-xl transition-colors">
+            <i class="fa-solid fa-bell text-xl text-slate-600 hover:text-blue-600 transition-colors"></i>
+            <span id="notificationBadge" class="notification-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">0</span>
+          </button>
+
+          <!-- Notification Panel (Desktop) -->
+          <div id="notificationPanel" class="hidden absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 max-h-[500px] flex flex-col">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 class="font-bold text-slate-900">Notifications</h3>
+              <button id="markAllReadBtn" class="text-xs text-blue-600 hover:text-blue-700 font-semibold">Mark all read</button>
+            </div>
+            <div id="notificationList" class="overflow-y-auto flex-1">
+              <!-- Notifications will be inserted here -->
+              <div class="p-8 text-center text-slate-400">
+                <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                <p class="text-sm">Loading notifications...</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Profile Dropdown -->
         <div class="relative">
@@ -190,11 +207,12 @@
   /**
    * Render Mobile Bottom Navigation
    */
-  function renderMobileNav(zone) {
+  function renderMobileNav(zone, userData = null) {
     const config = ZONE_CONFIG[zone].mobile;
     const currentPath = window.location.pathname;
+    const isAuthZone = ZONE_CONFIG[zone].requiresAuth;
 
-    const itemsHtml = config.items.map(item => {
+    let itemsHtml = config.items.map(item => {
       const isActive = currentPath === item.href || currentPath === item.href.replace(/^\//, '');
       return `
         <a href="${item.href}" class="flex flex-col items-center justify-center gap-1 flex-1 py-2 ${isActive ? 'text-blue-600' : 'text-slate-400'}">
@@ -203,6 +221,35 @@
         </a>
       `;
     }).join('');
+
+    // Add notification bell for authenticated users (insert before last item which is Profile)
+    if (isAuthZone && userData) {
+      const lastItem = config.items[config.items.length - 1];
+      const isLastActive = currentPath === lastItem.href || currentPath === lastItem.href.replace(/^\//, '');
+
+      // Remove last item from itemsHtml
+      const otherItems = config.items.slice(0, -1).map(item => {
+        const isActive = currentPath === item.href || currentPath === item.href.replace(/^\//, '');
+        return `
+          <a href="${item.href}" class="flex flex-col items-center justify-center gap-1 flex-1 py-2 ${isActive ? 'text-blue-600' : 'text-slate-400'}">
+            <i class="fa-solid ${item.icon} text-xl"></i>
+            <span class="text-[10px] font-bold uppercase tracking-wide">${item.label}</span>
+          </a>
+        `;
+      }).join('');
+
+      itemsHtml = otherItems + `
+        <button onclick="toggleMobileNotifications()" class="flex flex-col items-center justify-center gap-1 flex-1 py-2 text-slate-400 relative">
+          <i class="fa-solid fa-bell text-xl"></i>
+          <span class="text-[10px] font-bold uppercase tracking-wide">Alerts</span>
+          <span id="mobileNotificationBadge" class="notification-badge hidden absolute top-1 right-[calc(50%-12px)] bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">0</span>
+        </button>
+        <a href="${lastItem.href}" class="flex flex-col items-center justify-center gap-1 flex-1 py-2 ${isLastActive ? 'text-blue-600' : 'text-slate-400'}">
+          <i class="fa-solid ${lastItem.icon} text-xl"></i>
+          <span class="text-[10px] font-bold uppercase tracking-wide">${lastItem.label}</span>
+        </a>
+      `;
+    }
 
     return `
       <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 pb-safe z-50">
@@ -301,7 +348,7 @@
     document.body.insertAdjacentHTML('afterbegin', headerHtml);
 
     // Render mobile nav
-    const mobileNavHtml = renderMobileNav(zone);
+    const mobileNavHtml = renderMobileNav(zone, userData);
     document.body.insertAdjacentHTML('beforeend', mobileNavHtml);
 
     // Add padding to body for mobile nav
@@ -310,6 +357,7 @@
     // Setup profile dropdown toggle
     if (config.desktop.rightProfile) {
       setupProfileDropdown();
+      setupNotificationSystem(userData);
     }
   }
 
@@ -334,6 +382,408 @@
       }
     });
   }
+
+  /**
+   * Setup Notification System
+   */
+  let notificationPollingInterval = null;
+  let lastNotificationCount = 0;
+
+  function setupNotificationSystem(userData) {
+    const bellBtn = document.getElementById('notificationBell');
+    const panel = document.getElementById('notificationPanel');
+    const markAllBtn = document.getElementById('markAllReadBtn');
+
+    if (!bellBtn || !panel) {
+      console.warn('Notification elements not found');
+      return;
+    }
+
+    console.log('🔔 Initializing notification system for:', userData.email);
+
+    // Bell button click handler
+    bellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
+    });
+
+    // Mark all read button
+    if (markAllBtn) {
+      markAllBtn.addEventListener('click', () => {
+        markAllAsRead();
+      });
+    }
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (!panel.contains(e.target) && !bellBtn.contains(e.target)) {
+        panel.classList.add('hidden');
+      }
+    });
+
+    // Initial fetch
+    fetchUnreadCount();
+    fetchNotifications();
+
+    // Start polling (every 30 seconds)
+    startPolling();
+
+    // Handle visibility change (pause polling when tab is inactive)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        console.log('⏸️ Tab inactive, pausing notification polling');
+        if (notificationPollingInterval) {
+          clearInterval(notificationPollingInterval);
+          notificationPollingInterval = null;
+        }
+      } else {
+        console.log('▶️ Tab active, resuming notification polling');
+        fetchUnreadCount();
+        fetchNotifications();
+        startPolling();
+      }
+    });
+  }
+
+  /**
+   * Get Auth Token from Supabase
+   */
+  async function getAuthToken() {
+    try {
+      if (window.authService && window.authService.supabase) {
+        const { data } = await window.authService.supabase.auth.getSession();
+        return data?.session?.access_token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to get auth token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch Unread Notification Count
+   */
+  async function fetchUnreadCount() {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.warn('No auth token available for notifications');
+        return;
+      }
+
+      const response = await fetch('/api/notifications/unread', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const count = data.count || 0;
+
+      // Update desktop badge
+      const badge = document.getElementById('notificationBadge');
+      if (badge) {
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+
+      // Update mobile badge
+      const mobileBadge = document.getElementById('mobileNotificationBadge');
+      if (mobileBadge) {
+        if (count > 0) {
+          mobileBadge.textContent = count > 99 ? '99+' : count;
+          mobileBadge.classList.remove('hidden');
+        } else {
+          mobileBadge.classList.add('hidden');
+        }
+      }
+
+      // Show toast if count increased
+      if (count > lastNotificationCount && lastNotificationCount > 0) {
+        const newCount = count - lastNotificationCount;
+        showToast(`You have ${newCount} new notification${newCount > 1 ? 's' : ''}`);
+      }
+      lastNotificationCount = count > 0 ? count : 0;
+
+      console.log('🔔 Unread count:', count);
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+    }
+  }
+
+  /**
+   * Fetch Notifications
+   */
+  async function fetchNotifications() {
+    const listContainer = document.getElementById('notificationList');
+    if (!listContainer) return;
+
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.warn('No auth token available for notifications');
+        return;
+      }
+
+      const response = await fetch('/api/notifications?limit=20', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const notifications = await response.json();
+
+      if (notifications.length === 0) {
+        listContainer.innerHTML = `
+          <div class="p-8 text-center text-slate-400">
+            <i class="fa-solid fa-bell-slash text-3xl mb-2"></i>
+            <p class="text-sm font-semibold">No notifications yet</p>
+            <p class="text-xs mt-1">We'll notify you when something happens</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Render notifications
+      listContainer.innerHTML = notifications.map(notif => {
+        const icon = getNotificationIcon(notif.type);
+        const timeAgo = formatNotificationTime(notif.created_at);
+        const unreadClass = notif.read ? '' : 'bg-blue-50 border-l-4 border-l-blue-500';
+
+        return `
+          <div class="notification-item p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${unreadClass}"
+               data-notification-id="${notif.id}"
+               data-read="${notif.read}"
+               onclick="handleNotificationClick('${notif.id}', '${notif.link || '#'}')">
+            <div class="flex items-start gap-3">
+              <div class="text-2xl flex-shrink-0">${icon}</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-slate-900 mb-1">${notif.title}</p>
+                <p class="text-xs text-slate-600 mb-2">${notif.message}</p>
+                <p class="text-xs text-slate-400">${timeAgo}</p>
+              </div>
+              ${!notif.read ? '<div class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      console.log('✓ Loaded', notifications.length, 'notifications');
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+      listContainer.innerHTML = `
+        <div class="p-8 text-center text-red-400">
+          <i class="fa-solid fa-exclamation-triangle text-3xl mb-2"></i>
+          <p class="text-sm font-semibold">Failed to load notifications</p>
+          <button onclick="window.SanctuaryNavigation.refreshNotifications()" class="mt-2 text-xs text-blue-600 hover:text-blue-700">Retry</button>
+        </div>
+      `;
+    }
+  }
+
+  /**
+   * Toggle Notification Panel
+   */
+  function toggleNotificationPanel() {
+    const panel = document.getElementById('notificationPanel');
+    if (!panel) return;
+
+    const isHidden = panel.classList.contains('hidden');
+
+    if (isHidden) {
+      panel.classList.remove('hidden');
+      fetchNotifications(); // Refresh when opening
+    } else {
+      panel.classList.add('hidden');
+    }
+  }
+
+  /**
+   * Mark Notification as Read
+   */
+  async function markAsRead(notificationId) {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.warn('No auth token available for marking notification as read');
+        return;
+      }
+
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      console.log('✓ Marked notification as read:', notificationId);
+
+      // Update UI
+      fetchUnreadCount();
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  }
+
+  /**
+   * Mark All Notifications as Read
+   */
+  async function markAllAsRead() {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.warn('No auth token available for marking all notifications as read');
+        return;
+      }
+
+      const response = await fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      console.log('✓ Marked all notifications as read');
+
+      // Update UI
+      fetchUnreadCount();
+      fetchNotifications();
+      showToast('All notifications marked as read');
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+      showToast('Failed to mark notifications as read', 'error');
+    }
+  }
+
+  /**
+   * Start Polling for New Notifications
+   */
+  function startPolling() {
+    // Clear existing interval
+    if (notificationPollingInterval) {
+      clearInterval(notificationPollingInterval);
+    }
+
+    // Poll every 30 seconds
+    notificationPollingInterval = setInterval(() => {
+      if (!document.hidden) {
+        fetchUnreadCount();
+      }
+    }, 30000);
+
+    console.log('✓ Notification polling started (30s interval)');
+  }
+
+  /**
+   * Show Toast Notification
+   */
+  function showToast(message, type = 'info') {
+    // Remove existing toast
+    const existingToast = document.getElementById('notificationToast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+
+    // Create toast
+    const toast = document.createElement('div');
+    toast.id = 'notificationToast';
+    toast.className = `fixed top-20 right-4 z-[60] bg-white shadow-xl rounded-xl border-l-4 ${
+      type === 'error' ? 'border-l-red-500' : 'border-l-blue-500'
+    } p-4 min-w-[300px] max-w-[400px] animate-slide-in-right`;
+
+    toast.innerHTML = `
+      <div class="flex items-start gap-3">
+        <i class="fa-solid ${type === 'error' ? 'fa-exclamation-circle text-red-500' : 'fa-bell text-blue-500'} text-xl flex-shrink-0"></i>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-slate-900">${message}</p>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      toast.style.animation = 'slide-out-right 0.3s ease-out';
+      setTimeout(() => toast.remove(), 300);
+    }, 5000);
+  }
+
+  /**
+   * Format Notification Time
+   */
+  function formatNotificationTime(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now - time;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+    return time.toLocaleDateString();
+  }
+
+  /**
+   * Get Notification Icon
+   */
+  function getNotificationIcon(type) {
+    const icons = {
+      'new_bid': '💰',
+      'bid_accepted': '✅',
+      'bid_rejected': '❌',
+      'new_job': '🔨',
+      'new_message': '💬',
+      'job_update': '📋',
+      'payment': '💳',
+      'system': 'ℹ️'
+    };
+    return icons[type] || '🔔';
+  }
+
+  /**
+   * Handle Notification Click
+   */
+  window.handleNotificationClick = async function(notificationId, link) {
+    // Mark as read
+    await markAsRead(notificationId);
+
+    // Navigate to link
+    if (link && link !== '#') {
+      window.location.href = link;
+    }
+  };
 
   /**
    * Handle Logout
@@ -405,10 +855,163 @@
     mobileMenu.classList.toggle('hidden');
   };
 
+  /**
+   * Toggle Mobile Notifications Panel
+   */
+  window.toggleMobileNotifications = function() {
+    let mobilePanel = document.getElementById('mobileNotificationPanel');
+
+    if (!mobilePanel) {
+      // Create mobile notification panel (full-screen slide-up)
+      mobilePanel = document.createElement('div');
+      mobilePanel.id = 'mobileNotificationPanel';
+      mobilePanel.className = 'fixed inset-0 bg-white z-[60] hidden md:hidden flex flex-col';
+      mobilePanel.innerHTML = `
+        <div class="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+          <h2 class="text-xl font-bold text-slate-900">Notifications</h2>
+          <div class="flex items-center gap-2">
+            <button id="mobileMarkAllReadBtn" class="text-sm text-blue-600 hover:text-blue-700 font-semibold">Mark all read</button>
+            <button onclick="toggleMobileNotifications()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+              <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+          </div>
+        </div>
+        <div id="mobileNotificationList" class="flex-1 overflow-y-auto">
+          <!-- Notifications will be inserted here -->
+          <div class="p-8 text-center text-slate-400">
+            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+            <p class="text-sm">Loading notifications...</p>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(mobilePanel);
+
+      // Setup mark all read button
+      const mobileMarkAllBtn = document.getElementById('mobileMarkAllReadBtn');
+      if (mobileMarkAllBtn) {
+        mobileMarkAllBtn.addEventListener('click', () => {
+          markAllAsRead();
+        });
+      }
+    }
+
+    // Toggle visibility with slide animation
+    const isHidden = mobilePanel.classList.contains('hidden');
+
+    if (isHidden) {
+      mobilePanel.classList.remove('hidden');
+      fetchMobileNotifications(); // Refresh when opening
+      // Animate in
+      setTimeout(() => {
+        mobilePanel.style.transform = 'translateY(0)';
+      }, 10);
+    } else {
+      // Animate out
+      mobilePanel.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        mobilePanel.classList.add('hidden');
+      }, 300);
+    }
+  };
+
+  /**
+   * Fetch Notifications for Mobile
+   */
+  async function fetchMobileNotifications() {
+    const listContainer = document.getElementById('mobileNotificationList');
+    if (!listContainer) return;
+
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.warn('No auth token available for mobile notifications');
+        return;
+      }
+
+      const response = await fetch('/api/notifications?limit=50', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const notifications = await response.json();
+
+      if (notifications.length === 0) {
+        listContainer.innerHTML = `
+          <div class="p-8 text-center text-slate-400">
+            <i class="fa-solid fa-bell-slash text-4xl mb-3"></i>
+            <p class="text-base font-semibold">No notifications yet</p>
+            <p class="text-sm mt-1">We'll notify you when something happens</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Render notifications (mobile-optimized)
+      listContainer.innerHTML = notifications.map(notif => {
+        const icon = getNotificationIcon(notif.type);
+        const timeAgo = formatNotificationTime(notif.created_at);
+        const unreadClass = notif.read ? '' : 'bg-blue-50 border-l-4 border-l-blue-500';
+
+        return `
+          <div class="notification-item p-4 border-b border-slate-100 active:bg-slate-100 cursor-pointer transition-colors ${unreadClass}"
+               data-notification-id="${notif.id}"
+               data-read="${notif.read}"
+               onclick="handleMobileNotificationClick('${notif.id}', '${notif.link || '#'}')">
+            <div class="flex items-start gap-3">
+              <div class="text-3xl flex-shrink-0">${icon}</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-base font-semibold text-slate-900 mb-1">${notif.title}</p>
+                <p class="text-sm text-slate-600 mb-2">${notif.message}</p>
+                <p class="text-xs text-slate-400">${timeAgo}</p>
+              </div>
+              ${!notif.read ? '<div class="w-2.5 h-2.5 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      console.log('✓ Loaded', notifications.length, 'mobile notifications');
+    } catch (error) {
+      console.error('Failed to fetch mobile notifications:', error);
+      listContainer.innerHTML = `
+        <div class="p-8 text-center text-red-400">
+          <i class="fa-solid fa-exclamation-triangle text-4xl mb-3"></i>
+          <p class="text-base font-semibold">Failed to load notifications</p>
+          <button onclick="fetchMobileNotifications()" class="mt-3 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg">Retry</button>
+        </div>
+      `;
+    }
+  }
+
+  /**
+   * Handle Mobile Notification Click
+   */
+  window.handleMobileNotificationClick = async function(notificationId, link) {
+    // Mark as read
+    await markAsRead(notificationId);
+
+    // Close panel
+    toggleMobileNotifications();
+
+    // Navigate to link
+    if (link && link !== '#') {
+      setTimeout(() => {
+        window.location.href = link;
+      }, 300);
+    }
+  };
+
   // Export to global scope
   window.SanctuaryNavigation = {
     init: initNavigation,
-    zones: Object.keys(ZONE_CONFIG)
+    zones: Object.keys(ZONE_CONFIG),
+    refreshNotifications: fetchNotifications
   };
 
   console.log('✓ Sanctuary Glass 2.0 Navigation System loaded');
