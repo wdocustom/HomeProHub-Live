@@ -353,60 +353,40 @@
       const container = document.getElementById('line-items-container');
       container.innerHTML = '';
 
-      // Support both new work_packages format and legacy line_items format
-      const workPackages = data.work_packages || [];
+      // Check for new work_packages structure
+      if (data.work_packages) {
+        data.work_packages.forEach(pkg => {
+          // A. Create Category Wrapper (e.g. "Flooring")
+          const wrapper = document.createElement('div');
+          wrapper.className = "mb-6 border-b border-slate-100 pb-2 last:border-0";
 
-      if (workPackages.length > 0) {
-        // NEW FORMAT: Render grouped work packages
-        workPackages.forEach(pkg => {
-          // 1. Create the Group Wrapper
-          const groupDiv = document.createElement('div');
-          groupDiv.className = "mb-6 border-b border-slate-200 pb-4 last:border-0";
-
-          // 2. Group Header (e.g. "Flooring", "Kitchen Cabinets")
+          // B. Category Header
           const header = document.createElement('h4');
-          header.className = "text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 bg-slate-50 px-3 py-2 rounded-lg inline-block";
+          header.className = "font-extrabold text-slate-900 uppercase tracking-wider text-sm mb-3 bg-slate-50 inline-block px-3 py-1 rounded-lg";
           header.innerText = pkg.category;
-          groupDiv.appendChild(header);
+          wrapper.appendChild(header);
 
-          // 3. Loop through specific items (Material vs Labor)
+          // C. Loop through Items (Material + Labor)
           pkg.items.forEach(item => {
+            const isLabor = item.type === 'Labor';
+            // distinct colors for visual separation
+            const badgeClass = isLabor ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
+            const icon = isLabor ? '<i class="fa-solid fa-person-digging"></i>' : '<i class="fa-solid fa-box-open"></i>';
+
             const row = document.createElement('div');
-            row.className = "flex justify-between items-start mb-2 px-2";
-
-            // Badge Color Logic based on type
-            let badgeColor = 'bg-gray-100 text-gray-600';
-            if (item.type === 'Labor') badgeColor = 'bg-blue-50 text-blue-600';
-            if (item.type === 'Material') badgeColor = 'bg-emerald-50 text-emerald-600';
-            if (item.type === 'Permit') badgeColor = 'bg-amber-50 text-amber-600';
-
-            let itemHTML = `
-              <div class="flex items-start gap-3 flex-1">
-                <span class="${badgeColor} text-[10px] font-bold px-2 py-1 rounded uppercase min-w-[70px] text-center mt-0.5">${item.type}</span>
-                <div class="flex-1">
-                  <span class="text-sm text-slate-700 font-medium">${item.description}</span>
-            `;
-
-            // Add local insight if available (only for Material items)
-            if (item.local_insight && item.local_insight.message) {
-              itemHTML += `
-                <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
-                  <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
-                </div>
-              `;
-            }
-
-            itemHTML += `
-                </div>
+            row.className = "flex justify-between items-start mb-2 pl-2";
+            row.innerHTML = `
+              <div class="flex items-start gap-3">
+                <span class="${badgeClass} text-[10px] font-bold px-2 py-1 rounded min-w-[85px] text-center flex items-center justify-center gap-1">
+                  ${icon} ${item.type}
+                </span>
+                <span class="text-sm text-slate-600 font-medium leading-tight pt-0.5">${item.description}</span>
               </div>
-              <span class="text-sm font-bold text-slate-900 font-mono whitespace-nowrap ml-4">${item.cost_range}</span>
+              <span class="text-sm font-bold text-slate-900 font-mono whitespace-nowrap ml-4">${item.cost || item.cost_range}</span>
             `;
-
-            row.innerHTML = itemHTML;
-            groupDiv.appendChild(row);
+            wrapper.appendChild(row);
           });
-
-          container.appendChild(groupDiv);
+          container.appendChild(wrapper);
         });
       } else if (data.line_items) {
         // LEGACY FORMAT: Fall back to old line_items rendering for backwards compatibility
@@ -527,316 +507,55 @@
     }
 
     // Auth check for download/post actions
-    window.checkAuthAndAction = async function(action) {
-      console.log('🔐 checkAuthAndAction called with action:', action);
+    window.checkAuthAndAction = function(action) {
+      // 1. Scrape current estimate data
+      const draft = {
+        title: "My Renovation Project",
+        description: document.getElementById('project-vision').value,
+        budget_range: `${document.getElementById('total-low').innerText} - ${document.getElementById('total-high').innerText}`,
+        zip: document.getElementById('zip-code').value,
+        status: 'draft'
+      };
 
-      // Check if user is logged in
-      if (!window.authService || !window.authService.initialized) {
-        console.log('⏳ Auth service not ready, waiting 500ms...');
-        // Auth service not ready yet
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      // 2. SAVE (Critical Step)
+      localStorage.setItem('pending_project_estimate', JSON.stringify(draft));
 
-      const user = await window.authService.getCurrentUser();
-      console.log('👤 Current user:', user ? user.email : 'NOT LOGGED IN');
-
-      if (!user) {
-        // Not logged in - redirect to signup with intent
-        console.log('🚨 User not logged in - preparing redirect to signup');
-
-        // CRITICAL: Verify currentEstimate exists before saving
-        console.log('📊 window.currentEstimate exists?', !!window.currentEstimate);
-        if (!window.currentEstimate || !window.currentEstimate.estimate) {
-          console.error('❌ CRITICAL: window.currentEstimate is undefined or missing estimate! Cannot save to localStorage.');
-          alert('Error: No estimate data found. Please generate an estimate first.');
-          return;
-        }
-
-        console.log('📊 window.currentEstimate contents:', {
-          hasVision: !!window.currentEstimate.vision,
-          hasFinishLevel: !!window.currentEstimate.finishLevel,
-          hasZipCode: !!window.currentEstimate.zipCode,
-          hasEstimate: !!window.currentEstimate.estimate,
-          photoCount: window.currentEstimate.photos?.length || 0
-        });
-
-        // CRITICAL FIX: Transform estimate data to match post-project.html expected format
-        const projectDraft = transformEstimateToProjectDraft(window.currentEstimate);
-
-        console.log('🔄 Transformed estimate to project draft format:', {
-          budgetRange: `$${projectDraft.budgetMin} - $${projectDraft.budgetMax}`,
-          timeline: projectDraft.timeline,
-          title: projectDraft.title,
-          scopeItemCount: projectDraft.scopeItems.length
-        });
-
-        // Save to localStorage in the format post-project.html expects
-        const projectJSON = JSON.stringify(projectDraft);
-        console.log('💾 Saving to localStorage.pending_estimate, size:', (projectJSON.length / 1024).toFixed(2), 'KB');
-        localStorage.setItem('pending_estimate', projectJSON);
-
-        // Verify it was saved
-        const verification = localStorage.getItem('pending_estimate');
-        console.log('✅ Verification - localStorage.pending_estimate saved?', !!verification);
-        if (verification) {
-          console.log('✅ Verification - Data size in storage:', (verification.length / 1024).toFixed(2), 'KB');
-        }
-
-        sessionStorage.setItem('signup_role', 'homeowner');
-        sessionStorage.setItem('return_url', window.location.href);
-
-        console.log('🔄 Redirecting to /signup.html?intent=remodel_estimate');
-        window.location.href = '/signup.html?intent=remodel_estimate';
-        return;
-      }
-
-      // User is logged in - proceed with action
-      console.log('✓ User is logged in, proceeding with action:', action);
-      if (action === 'download') {
-        downloadPDF();
-      } else if (action === 'post') {
-        postProject();
+      // 3. Redirect
+      if (action === 'post') {
+        window.location.href = '/post-project.html';
+      } else if (action === 'download') {
+        window.generatePDF();
       }
     };
 
-    // Helper function to estimate timeline based on budget
-    function estimateTimeline(budget) {
-      if (budget < 10000) return '1-2 weeks';
-      if (budget < 30000) return '2-4 weeks';
-      if (budget < 75000) return '4-8 weeks';
-      if (budget < 150000) return '2-4 months';
-      return '4-6 months';
-    }
+    window.generatePDF = function() {
+      const resultCard = document.getElementById('estimate-result');
+      if (resultCard.classList.contains('hidden')) return alert("Please generate an estimate first.");
 
-    // SHARED TRANSFORMATION: Convert estimate data to post-project format
-    function transformEstimateToProjectDraft(currentEstimate) {
-      const estimate = currentEstimate.estimate;
-      const vision = currentEstimate.vision;
+      // 1. Copy Data to Hidden Template
+      document.getElementById('pdf-low').innerText = document.getElementById('total-low').innerText;
+      document.getElementById('pdf-high').innerText = document.getElementById('total-high').innerText;
+      document.getElementById('pdf-zip').innerText = document.getElementById('display-zip').innerText;
 
-      // Extract work packages into scope items
-      const scopeItems = [];
-      if (estimate.work_packages && estimate.work_packages.length > 0) {
-        estimate.work_packages.forEach(pkg => {
-          scopeItems.push(pkg.category);
-        });
-      } else if (estimate.line_items && estimate.line_items.length > 0) {
-        // Legacy format fallback
-        estimate.line_items.forEach(item => {
-          scopeItems.push(item.category);
-        });
-      }
+      // Clone the clean list we generated in Task 1
+      document.getElementById('pdf-lines').innerHTML = document.getElementById('line-items-container').innerHTML;
 
-      // Generate a title from the vision (first sentence or first 50 chars)
-      let title = vision.split('.')[0].trim();
-      if (title.length > 60) {
-        title = title.substring(0, 57) + '...';
-      }
+      // 2. Feedback
+      const btn = document.querySelector('button[onclick*="generatePDF"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
 
-      // Get budget values (prefer total_projected if available, otherwise use low/high)
-      const budgetMin = estimate.total_projected_low || estimate.low || 0;
-      const budgetMax = estimate.total_projected_high || estimate.high || 0;
-
-      // Transform to post-project format
-      return {
-        // Budget from estimate totals
-        budgetMin: budgetMin,
-        budgetMax: budgetMax,
-
-        // Timeline - estimate based on budget
-        timeline: estimateTimeline(budgetMax),
-
-        // Trade type
-        tradeType: 'general',
-
-        // Project details
-        title: title || 'Home Renovation Project',
-        description: vision,
-
-        // Scope items from work packages
-        scopeItems: scopeItems.length > 0 ? scopeItems : ['Full project scope'],
-
-        // Optional fields
-        designerNote: estimate.designer_note || '',
-        zipCode: currentEstimate.zipCode || '',
-
-        // Store original estimate data for reference
-        _estimateData: {
-          work_packages: estimate.work_packages || [],
-          subtotal_low: estimate.subtotal_low,
-          subtotal_high: estimate.subtotal_high,
-          overhead_profit_percent: estimate.overhead_profit_percent,
-          contingency_percent: estimate.contingency_percent,
-          finishLevel: currentEstimate.finishLevel,
-          photos: currentEstimate.photos || []
-        }
-      };
-    }
-
-    async function downloadPDF() {
-      // Validate estimate exists
-      if (!window.currentEstimate || !window.currentEstimate.estimate) {
-        alert('No estimate available to download. Please generate an estimate first.');
-        return;
-      }
-
-      const estimate = window.currentEstimate.estimate;
-      const zipCode = window.currentEstimate.zipCode;
-      const finishLevel = window.currentEstimate.finishLevel;
-
-      console.log('📄 Generating PDF from estimate...');
-
-      // STEP 1: Populate the hidden PDF template with data
-      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      document.getElementById('pdf-date').textContent = today;
-      document.getElementById('pdf-low').textContent = `$${(estimate.low || 0).toLocaleString()}`;
-      document.getElementById('pdf-high').textContent = `$${(estimate.high || 0).toLocaleString()}`;
-      document.getElementById('pdf-zip').textContent = zipCode || 'N/A';
-      document.getElementById('pdf-finish').textContent = finishLevel ? (finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)) : 'Standard';
-
-      // Build line items for PDF template
-      let pdfLinesHTML = '<table style="width:100%; border-collapse:collapse; margin-top:10px;">';
-      pdfLinesHTML += '<thead><tr style="border-bottom:2px solid #e5e7eb;">';
-      pdfLinesHTML += '<th style="padding:8px; text-align:left; font-size:12px; color:#666;">Item</th>';
-      pdfLinesHTML += '<th style="padding:8px; text-align:left; font-size:10px; color:#666;">Type</th>';
-      pdfLinesHTML += '<th style="padding:8px; text-align:right; font-size:12px; color:#666;">Cost Range</th>';
-      pdfLinesHTML += '</tr></thead><tbody>';
-
-      // Support both new work_packages format and legacy line_items
-      if (estimate.work_packages && estimate.work_packages.length > 0) {
-        // NEW FORMAT: Work packages with grouped items
-        estimate.work_packages.forEach((pkg, pkgIdx) => {
-          // Add package header row
-          pdfLinesHTML += `<tr style="background:#f3f4f6;">`;
-          pdfLinesHTML += `<td colspan="3" style="padding:10px; font-weight:700; font-size:13px; text-transform:uppercase; border-top:2px solid #cbd5e1; border-bottom:1px solid #cbd5e1;">${pkg.category}</td>`;
-          pdfLinesHTML += `</tr>`;
-
-          // Add items within this package
-          pkg.items.forEach((item, idx) => {
-            const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
-
-            // Type badge color
-            let typeColor = '#6b7280';
-            if (item.type === 'Material') typeColor = '#059669';
-            if (item.type === 'Labor') typeColor = '#2563eb';
-            if (item.type === 'Permit') typeColor = '#d97706';
-
-            pdfLinesHTML += `<tr style="background:${bg};">`;
-            pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb; padding-left:20px;">${item.description}</td>`;
-            pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb;"><span style="color:${typeColor}; font-weight:600; font-size:9px;">${item.type.toUpperCase()}</span></td>`;
-            pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb; font-family:monospace;">${item.cost_range}</td>`;
-            pdfLinesHTML += `</tr>`;
-          });
-        });
-      } else if (estimate.line_items && estimate.line_items.length > 0) {
-        // LEGACY FORMAT: Flat line items
-        estimate.line_items.forEach((item, idx) => {
-          const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
-          pdfLinesHTML += `<tr style="background:${bg};">`;
-          pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb;">${item.category}`;
-          if (item.description) pdfLinesHTML += `<br><span style="font-size:11px; color:#666;">${item.description}</span>`;
-          pdfLinesHTML += `</td>`;
-          pdfLinesHTML += `<td style="padding:10px; border-bottom:1px solid #e5e7eb;"><span style="font-size:9px; color:#6b7280;">${item.category}</span></td>`;
-          pdfLinesHTML += `<td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${(item.low || 0).toLocaleString()} - $${(item.high || 0).toLocaleString()}</td>`;
-          pdfLinesHTML += `</tr>`;
-        });
-      }
-
-      // Add financial breakdown
-      const subtotalLow = estimate.subtotal_low || estimate.low || 0;
-      const subtotalHigh = estimate.subtotal_high || estimate.high || 0;
-      const overheadProfitLow = estimate.overhead_profit_low || 0;
-      const overheadProfitHigh = estimate.overhead_profit_high || 0;
-      const contingencyLow = estimate.contingency_low || 0;
-      const contingencyHigh = estimate.contingency_high || 0;
-
-      pdfLinesHTML += `
-        <tr style="background:#f3f4f6; border-top:2px solid #cbd5e1;">
-          <td style="padding:10px; font-weight:700;">Subtotal</td>
-          <td style="padding:10px; text-align:right; font-weight:700;">$${subtotalLow.toLocaleString()}</td>
-          <td style="padding:10px; text-align:right; font-weight:700;">$${subtotalHigh.toLocaleString()}</td>
-        </tr>
-        <tr><td style="padding:10px;">Overhead & Profit (${estimate.overhead_profit_percent || 20}%)</td>
-          <td style="padding:10px; text-align:right;">$${overheadProfitLow.toLocaleString()}</td>
-          <td style="padding:10px; text-align:right;">$${overheadProfitHigh.toLocaleString()}</td>
-        </tr>
-        <tr><td style="padding:10px; border-bottom:1px solid #e5e7eb;">Contingency (${estimate.contingency_percent || 10}%)</td>
-          <td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${contingencyLow.toLocaleString()}</td>
-          <td style="padding:10px; text-align:right; border-bottom:1px solid #e5e7eb;">$${contingencyHigh.toLocaleString()}</td>
-        </tr>
-        <tr style="background:#dbeafe; font-weight:700; font-size:16px;">
-          <td style="padding:12px;">TOTAL</td>
-          <td style="padding:12px; text-align:right; color:#2563eb;">$${(estimate.low || 0).toLocaleString()}</td>
-          <td style="padding:12px; text-align:right; color:#2563eb;">$${(estimate.high || 0).toLocaleString()}</td>
-        </tr>
-      `;
-      pdfLinesHTML += '</tbody></table>';
-      document.getElementById('pdf-lines').innerHTML = pdfLinesHTML;
-
-      // Add designer note if exists
-      if (estimate.designer_note) {
-        document.getElementById('pdf-designer-note').innerHTML = `
-          <div style="background:#dbeafe; border-left:4px solid #2563eb; padding:12px; border-radius:4px;">
-            <h4 style="margin:0 0 8px 0; color:#1e40af; font-size:14px;">💡 Pro Tip</h4>
-            <p style="margin:0; font-size:13px; color:#1e3a8a; line-height:1.6;">${estimate.designer_note}</p>
-          </div>
-        `;
-        document.getElementById('pdf-designer-note').style.display = 'block';
-      } else {
-        document.getElementById('pdf-designer-note').style.display = 'none';
-      }
-
-      // STEP 2: Show template and generate PDF
-      const pdfTemplate = document.getElementById('pdf-invoice-template');
-      pdfTemplate.style.display = 'block';
-
-      // Button feedback
-      const downloadBtn = document.querySelector('button[onclick*="download"]');
-      const originalText = downloadBtn.innerHTML;
-      downloadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-500 text-xl"></i> Generating PDF...';
-      downloadBtn.disabled = true;
-
-      const opt = {
+      // 3. Print the Hidden Div
+      const element = document.getElementById('pdf-invoice-template');
+      html2pdf().set({
         margin: 0.5,
-        filename: `HomeProHub_Estimate_${zipCode}_${Date.now()}.pdf`,
+        filename: 'HomeProHub_Estimate.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-
-      try {
-        await html2pdf().set(opt).from(pdfTemplate).save();
-        console.log('✅ PDF generated successfully');
-      } catch (error) {
-        console.error('❌ PDF generation error:', error);
-        alert('Failed to generate PDF. Please try again.');
-      } finally {
-        pdfTemplate.style.display = 'none';
-        downloadBtn.innerHTML = originalText;
-        downloadBtn.disabled = false;
-      }
-    }
-
-    function postProject() {
-      // CRITICAL: Check if estimate exists
-      if (!window.currentEstimate || !window.currentEstimate.estimate) {
-        alert('No estimate available. Please generate an estimate first.');
-        return;
-      }
-
-      // Use shared transformation function
-      const projectDraft = transformEstimateToProjectDraft(window.currentEstimate);
-
-      // CRITICAL FIX: Save to hot_lead_draft (the key post-project.html looks for)
-      // This ensures data persists across page navigation
-      localStorage.setItem('hot_lead_draft', JSON.stringify(projectDraft));
-      console.log('✅ Project draft saved to localStorage:', projectDraft);
-
-      // Also ensure pending_estimate is cleared (if exists from previous flow)
-      localStorage.removeItem('pending_estimate');
-
-      // Redirect to post-project page
-      console.log('🔄 Redirecting to post-project page...');
-      window.location.href = '/post-project.html?source=estimator';
+      }).from(element).save().then(() => {
+        btn.innerHTML = originalText;
+      });
     }
 
     // On page load, check if returning from signup
@@ -867,42 +586,21 @@
   <!-- Application Controller (MUST BE LAST) -->
   <script src="/services/app-controller.js"></script>
 
-  <!-- Hidden PDF Template (Print-Friendly) -->
-  <div id="pdf-invoice-template" style="display: none;">
-    <div style="padding: 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #333;">
-      <!-- Header -->
-      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px;">
-        <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #2563eb;">Renovation Estimate</h1>
-        <p style="margin: 5px 0 0; color: #666; font-size: 14px;">Generated by HomeProHub</p>
-        <p style="margin: 5px 0 0; color: #999; font-size: 12px;" id="pdf-date"></p>
-      </div>
-
-      <!-- Project Summary Box -->
-      <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 2px solid #2563eb;">
-        <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #1e40af; font-weight: bold;">Estimated Project Cost</p>
-        <h2 style="margin: 10px 0 0; font-size: 32px; font-weight: bold; color: #2563eb;">
-          <span id="pdf-low"></span> - <span id="pdf-high"></span>
-        </h2>
-        <p style="margin: 10px 0 5px; font-size: 14px; color: #1e40af;">Zip Code: <span id="pdf-zip"></span></p>
-        <p style="margin: 5px 0 0; font-size: 14px; color: #1e40af;">Finish Level: <span id="pdf-finish"></span></p>
-      </div>
-
-      <!-- Scope Breakdown -->
-      <h3 style="border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; font-size: 18px; color: #1f2937;">Scope Breakdown</h3>
-      <div id="pdf-lines" style="font-size: 14px; line-height: 1.6;">
-        <!-- Line items will be inserted here -->
-      </div>
-
-      <!-- Designer Note -->
-      <div id="pdf-designer-note" style="margin-top: 30px; display: none;">
-        <!-- Designer note will be inserted here -->
-      </div>
-
-      <!-- Footer -->
-      <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #999;">
-        <p style="margin: 0;">This is a preliminary estimate. Final costs may vary based on site conditions and contractor availability.</p>
-        <p style="margin: 10px 0 0;">For questions, visit <strong>homeprohub.today</strong></p>
-      </div>
+  <!-- Hidden PDF Template (Off-Screen for html2pdf) -->
+  <div id="pdf-invoice-template" style="position: fixed; top: 0; left: -9999px; width: 800px; background: white; color: black; font-family: sans-serif; padding: 40px; z-index: -100;">
+    <div style="border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
+      <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Renovation Estimate</h1>
+      <p style="margin: 5px 0 0; color: #666;">Generated by HomeProHub</p>
+    </div>
+    <div style="background: #f4f4f4; padding: 20px; margin-bottom: 30px; border-radius: 4px;">
+      <h2 style="margin: 0; font-size: 32px; font-weight: bold;">
+        <span id="pdf-low"></span> - <span id="pdf-high"></span>
+      </h2>
+      <p style="margin: 5px 0 0;">Location: <span id="pdf-zip"></span></p>
+    </div>
+    <div id="pdf-lines" style="line-height: 1.6;"></div>
+    <div style="margin-top: 50px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 10px;">
+      Preliminary estimate. Actual costs may vary.
     </div>
   </div>
 
