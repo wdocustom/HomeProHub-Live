@@ -280,7 +280,10 @@ class AuthService {
 
       console.log('🔄 Auth init step 6: Marking as initialized...');
       this.initialized = true;
+      window.authReady = true;
+      window.dispatchEvent(new CustomEvent('auth-ready'));
       console.log('✅ AuthService fully initialized and ready!');
+      console.log('✅ Event: auth-ready dispatched');
 
       // CRITICAL: Check for pending draft data after initialization
       // This handles the case where user signed in from estimator/blueprint flow

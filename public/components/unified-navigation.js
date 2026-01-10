@@ -261,6 +261,31 @@
   }
 
   /**
+   * Wait for Auth Service to be Ready
+   */
+  function waitForAuth() {
+    return new Promise((resolve) => {
+      // If already ready, go immediately
+      if (window.authReady) {
+        console.log('✓ [Navigation] Auth already ready');
+        return resolve();
+      }
+
+      // Otherwise, wait for the custom event dispatched by auth.js
+      window.addEventListener('auth-ready', () => {
+        console.log('✓ [Navigation] Auth ready event received');
+        resolve();
+      }, { once: true });
+
+      // Fallback safety timer (3 seconds)
+      setTimeout(() => {
+        console.warn('⚠️ [Navigation] Auth ready timeout after 3s, proceeding anyway');
+        resolve();
+      }, 3000);
+    });
+  }
+
+  /**
    * Initialize Navigation
    */
   async function initNavigation(zone) {
@@ -276,16 +301,8 @@
     if (config.requiresAuth) {
       try {
         // Wait for authService to be ready
-        if (!window.authService || !window.authService.initialized) {
-          await new Promise(resolve => {
-            const checkAuth = setInterval(() => {
-              if (window.authService && window.authService.initialized) {
-                clearInterval(checkAuth);
-                resolve();
-              }
-            }, 100);
-          });
-        }
+        console.log('🔄 [Navigation] Waiting for auth service to be ready...');
+        await waitForAuth();
 
         console.log(`🔐 [Navigation] Auth check for zone ${zone} (${config.name})`);
 
