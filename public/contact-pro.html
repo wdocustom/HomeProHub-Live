@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8" />
+  <meta name="sanctuary-zone" content="C">
   <title>HomeProHub – Contact a Pro</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -59,21 +60,9 @@
         padding: 12px 25px;
         font-size: 16px;
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">HH</div>
-      <div class="brand-name">HomeProHub</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Dashboard</a>
-      <a href="ask.html">Assistant</a>
-      <div class="profile-area">
-        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div></header><main>
+  </style></head><body class="zone-c app-page">
+  <div id="nav-container"></div>
+<main>
   <div class="feature-card card">
     <h1 class="feature-title">Contact a Vetted Pro: Guided & Concierge Feature</h1>
     <p class="feature-subtitle">
@@ -247,4 +236,6 @@
     initialize();
   }
 })();
-</script></body></html>
+</script>
+<script src="/services/app-controller.js"></script>
+</body></html>

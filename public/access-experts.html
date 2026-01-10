@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="D">
   <title>HomeProHub – Access Experts</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="components/navigation.css">
@@ -137,8 +138,8 @@
     .close-modal:hover { color: #1f2937; }
   </style>
 </head>
-<body>
-  <!-- Navigation component will be injected here by navigation.js -->
+<body class="zone-d app-page">
+  <div id="nav-container"></div>
 
 <div class="experts-container">
   <div class="header-card">
@@ -349,10 +350,14 @@ document.getElementById('expertForm').addEventListener('submit', function(e) {
   }, 1500);
 });
 
-if (!checkAuth()) return;
+// Check auth on app-ready (app-controller guarantees auth is loaded)
+window.addEventListener('app-ready', () => {
+  const user = window.currentUser;
+  if (!user || (user.role !== 'contractor')) {
+    window.location.href = 'index.html';
+  }
+});
 </script>
-
-<!-- Unified Navigation Component -->
-<script src="components/navigation.js"></script>
+<script src="/services/app-controller.js"></script>
 </body>
 </html>
