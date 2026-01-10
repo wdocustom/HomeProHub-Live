@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8" />
+  <meta name="sanctuary-zone" content="C">
   <title>HomeScope AI – Project Planner</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -52,21 +53,9 @@
       border: 1px solid #d1d5db;
       border-radius: 12px;
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeScope AI</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Dashboard</a>
-      <a href="ask.html">Assistant</a>
-      <div class="profile-area">
-        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </div></header><main>
+  </style></head><body class="zone-c app-page">
+  <div id="nav-container"></div>
+<main>
   <section class="hero">
     <div class="hero-kicker">Project planning assistant</div>
     <h1 class="hero-title">Plan Your Remodel Project.</h1>
@@ -271,22 +260,15 @@
   }
 
   /**
-   * Initialize the page
+   * Initialize the page (app-controller guarantees auth is ready)
    */
-  function initialize() {
-    const user = getUserData();
+  window.addEventListener('app-ready', () => {
+    const user = window.currentUser;
 
     // Check authentication and role
-    if (!user || user.role !== 'homeowner') {
-      clearAllData();
+    if (!user || (user.role !== 'homeowner' && user.role !== 'contractor')) {
       window.location.href = 'index.html';
       return;
-    }
-
-    // Set profile link (sanitized)
-    if (profileLinkEl && user.name) {
-      const firstName = sanitizeText(user.name.split(' ')[0]);
-      profileLinkEl.textContent = firstName;
     }
 
     // Add event listener
@@ -302,15 +284,9 @@
         }
       });
     }
-  }
-
-  // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-  } else {
-    initialize();
-  }
+  });
 })();
 </script>
+<script src="/services/app-controller.js"></script>
 </body>
 </html>

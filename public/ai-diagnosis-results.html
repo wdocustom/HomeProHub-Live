@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
   <title>Your Project Blueprint – HomeProHub</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/navigation.css" />
@@ -494,10 +495,8 @@
     </div>
   </div>
 
-  <script src="components/navigation.js"></script>
-
   <script>
-    (async function() {
+    window.addEventListener('app-ready', async () => {
       'use strict';
 
       // Get diagnosis data from sessionStorage
@@ -541,7 +540,7 @@
           button.textContent = '📋 View Complete Analysis';
         }
       });
-    })();
+    });
 
     /**
      * Parse AI response to extract key sections
@@ -746,32 +745,14 @@
       localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
       console.log('✓ Hot lead draft saved to localStorage:', hotLeadDraft);
 
-      // STEP 3: Check authentication and route accordingly
-      try {
-        if (!window.authService || !window.authService.initialized) {
-          await new Promise(resolve => {
-            const checkAuth = setInterval(() => {
-              if (window.authService && window.authService.initialized) {
-                clearInterval(checkAuth);
-                resolve();
-              }
-            }, 100);
-          });
-        }
+      // STEP 3: Check authentication and route accordingly (app-controller guarantees auth is ready)
+      const user = window.currentUser;
 
-        const user = await window.authService.getCurrentUser();
-
-        if (user) {
-          // User IS logged in - go directly to Review & Post page
-          window.location.href = 'post-project.html';
-        } else {
-          // User NOT logged in - redirect to signup WITH INTENT parameter
-          sessionStorage.setItem('signup_role', 'homeowner');
-          window.location.href = 'signup.html?intent=post_project';
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-        // Fallback: redirect to signup with intent
+      if (user) {
+        // User IS logged in - go directly to Review & Post page
+        window.location.href = 'post-project.html';
+      } else {
+        // User NOT logged in - redirect to signup WITH INTENT parameter
         sessionStorage.setItem('signup_role', 'homeowner');
         window.location.href = 'signup.html?intent=post_project';
       }
@@ -816,5 +797,6 @@
       return text.replace(/[&<>"']/g, m => map[m]);
     }
   </script>
+  <script src="/services/app-controller.js"></script>
 </body>
 </html>

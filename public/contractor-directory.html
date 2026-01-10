@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
   <title>Find Verified Contractors – HomeProHub</title>
   <link rel="stylesheet" href="/components/sanctuary-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -667,32 +668,14 @@
       }
     });
 
-    // AUTH GATE: Check if user is logged in
-    (async function checkAuth() {
-      // Wait for authService to initialize
-      let attempts = 0;
-      while (!window.authService && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-
-      if (!window.authService) {
-        showSignupGate();
-        return;
-      }
-
-      // Wait for authService to be initialized
-      while (!window.authService.initialized && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-
-      const user = await window.authService.getCurrentUser();
+    // AUTH GATE: Check if user is logged in (app-controller guarantees auth is ready)
+    window.addEventListener('app-ready', () => {
+      const user = window.currentUser;
 
       if (!user) {
         showSignupGate();
       }
-    })();
+    });
 
     function showSignupGate() {
       // Hide the directory content
@@ -731,10 +714,6 @@
     }
   </script>
 
-  <!-- Unified Navigation Component -->
-  <script src="/components/unified-navigation.js"></script>
-  <script>
-    window.SanctuaryNavigation.init('A');
-  </script>
+  <script src="/services/app-controller.js"></script>
 </body>
 </html>
