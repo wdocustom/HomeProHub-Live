@@ -391,10 +391,13 @@
     }
   </style>
 </head>
-<body class="zone-c app-page">
-  <!-- Navigation component will be injected here -->
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans antialiased opacity-0 transition-opacity duration-300 zone-c app-page">
 
-  <main>
+  <!-- Navigation Header Container (Auto-injected by AppController) -->
+  <div id="main-header-container" class="w-full z-50 relative"></div>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow relative z-10">
     <div class="checkin-container">
       <div class="header-section">
         <h1>🏗️ Project Progress Check-in</h1>
@@ -692,6 +695,9 @@
       }
     });
   </script>
+
+  <!-- Mobile Navigation Container (Auto-injected by AppController) -->
+  <div id="mobile-nav-container"></div>
 
   <script src="/services/app-controller.js"></script>
 </body>
