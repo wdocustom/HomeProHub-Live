@@ -360,13 +360,27 @@
       }
     }
 
-    // Render header
-    const headerHtml = renderDesktopHeader(zone, userData);
-    document.body.insertAdjacentHTML('afterbegin', headerHtml);
+    // Render header with fail-safe container creation
+    let headerContainer = document.querySelector('header');
+    if (!headerContainer) {
+      console.warn('[Navigation] Header container missing. Creating it automatically.');
+      headerContainer = document.createElement('header');
+      headerContainer.id = 'main-header-container';
+      headerContainer.className = 'sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100';
+      document.body.prepend(headerContainer);
+    }
+    headerContainer.innerHTML = renderDesktopHeader(zone, userData);
 
-    // Render mobile nav
-    const mobileNavHtml = renderMobileNav(zone, userData);
-    document.body.insertAdjacentHTML('beforeend', mobileNavHtml);
+    // Render mobile nav with fail-safe container creation
+    let mobileContainer = document.getElementById('mobile-nav-container');
+    if (!mobileContainer) {
+      console.warn('[Navigation] Mobile nav container missing. Creating it automatically.');
+      mobileContainer = document.createElement('div');
+      mobileContainer.id = 'mobile-nav-container';
+      mobileContainer.className = 'md:hidden fixed bottom-0 left-0 right-0 z-50';
+      document.body.appendChild(mobileContainer);
+    }
+    mobileContainer.innerHTML = renderMobileNav(zone, userData);
 
     // Add padding to body for mobile nav
     document.body.classList.add('pb-20', 'md:pb-0');

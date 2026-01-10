@@ -80,7 +80,7 @@ class AuthService {
       try {
         const sessionPromise = this.supabase.auth.getSession();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('getSession() timeout - clearing localStorage and retrying')), 3000)
+          setTimeout(() => reject(new Error('getSession() timeout - clearing localStorage and retrying')), 10000)
         );
 
         const result = await Promise.race([sessionPromise, timeoutPromise]);
