@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="sanctuary-zone" content="A">
   <title>For Homeowners – HomeProHub</title>
   <!-- Sanctuary Glass 2.0 Design System -->
   <link rel="stylesheet" href="/components/sanctuary-glass.css">
@@ -122,9 +123,6 @@
   <!-- Sanctuary Glass 2.0 Navigation System -->
   <script src="/components/unified-navigation.js"></script>
   <script>
-    // Initialize Zone A Navigation
-    window.SanctuaryNavigation.init('A');
-
     // Rolling Text Animation
     const words = ["fixing", "analyzing", "diagnosing", "saving"];
     let i = 0;
@@ -139,5 +137,8 @@
       }, 500); // Wait for fade out
     }, 3000); // Change every 3 seconds
   </script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
 </body>
 </html>
