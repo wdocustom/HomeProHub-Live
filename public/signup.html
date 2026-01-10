@@ -14,6 +14,7 @@
   <!-- Sanctuary Glass 2.0 -->
   <link rel="stylesheet" href="/components/sanctuary-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
     * {
@@ -24,12 +25,6 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Symbol', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
     }
 
     .auth-container {
@@ -236,8 +231,14 @@
     }
   </style>
 </head>
-<body class="zone-a public-page">
-  <div class="auth-container">
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans antialiased opacity-0 transition-opacity duration-300 zone-a public-page">
+
+  <!-- Navigation Header Container (Auto-injected by AppController) -->
+  <div id="main-header-container" class="w-full z-50"></div>
+
+  <!-- Main Content Area (Centered Form) -->
+  <main class="flex-grow flex items-center justify-center px-4 py-12 relative z-10" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="auth-container">
     <div class="logo">
       <a href="/">HomeProHub</a>
     </div>
@@ -369,7 +370,11 @@
     <div class="back-home">
       <a href="/">← Back to Home</a>
     </div>
-  </div>
+    </div>
+  </main>
+
+  <!-- Mobile Navigation Container (Auto-injected by AppController) -->
+  <div id="mobile-nav-container"></div>
 
   <script>
     let selectedRole = null;
