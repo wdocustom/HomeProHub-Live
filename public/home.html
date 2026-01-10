@@ -970,44 +970,58 @@
     // Load Active Spotlight - Show most important active project
     (async function loadActiveSpotlight() {
       try {
-        if (window.authService) {
-          const user = await window.authService.getCurrentUser();
-          if (!user) return;
+        // Wait for authService to be fully initialized
+        const waitForAuth = () => {
+          return new Promise((resolve) => {
+            const checkAuth = () => {
+              if (window.authService && window.authService.supabase) {
+                resolve();
+              } else {
+                setTimeout(checkAuth, 100);
+              }
+            };
+            checkAuth();
+          });
+        };
 
-          const { createClient } = window.supabase;
-          const supabase = createClient(
-            'https://kwkeqcdmzlowhlybohni.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a2VxY2Rtemxvd2hseWJvaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2NjA1NjAsImV4cCI6MjA1MDIzNjU2MH0.aJNnzICb5rrP8rXVbg2VGpF_PBL2zQFSqxpPOLJOWAw'
-          );
+        await waitForAuth();
 
-          // Fetch active projects for homeowner
-          const { data: projects, error } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('homeowner_id', user.id)
-            .eq('status', 'active')
-            .order('created_at', { ascending: false })
-            .limit(1);
+        const user = await window.authService.getCurrentUser();
+        if (!user) return;
 
-          if (error) throw error;
+        const { createClient } = window.supabase;
+        const supabase = createClient(
+          'https://kwkeqcdmzlowhlybohni.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3a2VxY2Rtemxvd2hseWJvaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2NjA1NjAsImV4cCI6MjA1MDIzNjU2MH0.aJNnzICb5rrP8rXVbg2VGpF_PBL2zQFSqxpPOLJOWAw'
+        );
 
-          if (projects && projects.length > 0) {
-            const project = projects[0];
+        // Fetch active projects for homeowner
+        const { data: projects, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('homeowner_id', user.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-            // Count pending bids for this project
-            const { count: bidCount } = await supabase
-              .from('bids')
-              .select('*', { count: 'exact', head: true })
-              .eq('project_id', project.id)
-              .eq('status', 'pending');
+        if (error) throw error;
 
-            if (bidCount > 0) {
-              // Show Active Spotlight
-              document.getElementById('activeSpotlight').style.display = 'block';
-              document.getElementById('spotlightTitle').textContent = project.title;
-              document.getElementById('spotlightDescription').textContent =
-                `You have ${bidCount} new ${bidCount === 1 ? 'bid' : 'bids'} to review. Contractors are waiting for your response.`;
-            }
+        if (projects && projects.length > 0) {
+          const project = projects[0];
+
+          // Count pending bids for this project
+          const { count: bidCount } = await supabase
+            .from('bids')
+            .select('*', { count: 'exact', head: true })
+            .eq('project_id', project.id)
+            .eq('status', 'pending');
+
+          if (bidCount > 0) {
+            // Show Active Spotlight
+            document.getElementById('activeSpotlight').style.display = 'block';
+            document.getElementById('spotlightTitle').textContent = project.title;
+            document.getElementById('spotlightDescription').textContent =
+              `You have ${bidCount} new ${bidCount === 1 ? 'bid' : 'bids'} to review. Contractors are waiting for your response.`;
           }
         }
       } catch (error) {
