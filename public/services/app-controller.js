@@ -5,8 +5,6 @@
  */
 
 (async function initializeApp() {
-  console.log('🚀 [AppController] Starting application initialization...');
-
   // Show loading state
   showLoadingState();
 
@@ -14,7 +12,6 @@
     // ============================================
     // STEP 1: AUTHENTICATE USER (BLOCKING)
     // ============================================
-    console.log('🔐 [AppController] Step 1: Authenticating user...');
 
     // Wait for AuthService to be available
     await waitForAuthService();
@@ -25,12 +22,9 @@
     const user = window.currentUser;
     const userState = determineUserState(user);
 
-    console.log(`✓ [AppController] Step 1 Complete. User State: ${userState}`);
-
     // ============================================
     // STEP 2: DETERMINE GLOBAL STATE (BLOCKING)
     // ============================================
-    console.log('🎯 [AppController] Step 2: Determining global state...');
 
     const appState = {
       user: user,
@@ -43,16 +37,9 @@
     // Store globally for other components
     window.appState = appState;
 
-    console.log('✓ [AppController] Step 2 Complete. App State:', {
-      userState: appState.userState,
-      role: appState.role,
-      zone: appState.zone
-    });
-
     // ============================================
     // STEP 3: RENDER CORE UI (BLOCKING)
     // ============================================
-    console.log('🎨 [AppController] Step 3: Rendering core UI...');
 
     // Wait for navigation system to be available
     await waitForNavigationSystem();
@@ -62,25 +49,17 @@
       await window.SanctuaryNavigation.init(appState.zone);
     }
 
-    console.log('✓ [AppController] Step 3 Complete. Core UI rendered.');
-
     // ============================================
     // STEP 4: HYDRATE PAGE CONTENT
     // ============================================
-    console.log('📦 [AppController] Step 4: Hydrating page content...');
 
     // Dispatch event for page-specific initialization
     window.dispatchEvent(new CustomEvent('app-ready', {
       detail: appState
     }));
 
-    console.log('✓ [AppController] Step 4 Complete. Page hydration triggered.');
-
     // Hide loading state
     hideLoadingState();
-
-    console.log('✅ [AppController] Application initialization complete!');
-    console.log('📊 [AppController] Total boot time:', Date.now() - performance.timing.navigationStart, 'ms');
 
   } catch (error) {
     console.error('❌ [AppController] Initialization failed:', error);
@@ -253,5 +232,3 @@ function handleInitializationError(error) {
 
   document.body.appendChild(errorDiv);
 }
-
-console.log('✓ [AppController] Controller script loaded');

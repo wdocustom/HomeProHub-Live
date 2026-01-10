@@ -23,11 +23,13 @@ class AuthService {
   async init() {
     // Prevent multiple simultaneous init() calls (race condition fix)
     if (this.initialized) {
+      console.log('✓ Auth already initialized, skipping');
       return;
     }
 
     // If initialization is already in progress, wait for it to complete
     if (this.initPromise) {
+      console.log('⏳ Auth initialization already in progress, waiting...');
       return this.initPromise;
     }
 
@@ -43,9 +45,11 @@ class AuthService {
 
   async _doInit() {
     try {
+      console.log('🔄 Auth init step 1: Handling URL errors...');
       // PART 1: Handle Supabase errors in URL hash (e.g., otp_expired from cross-device verification)
       this.handleURLErrors();
 
+      console.log('🔄 Auth init step 2: Fetching config from /api/config...');
       // Get Supabase config from server
       const response = await fetch('/api/config');
       if (!response.ok) {
@@ -53,10 +57,13 @@ class AuthService {
       }
 
       const config = await response.json();
+      console.log('✓ Config received:', { url: config.supabaseUrl?.substring(0, 30) + '...', hasKey: !!config.supabaseAnonKey });
 
+      console.log('🔄 Auth init step 3: Creating Supabase client...');
       // Initialize Supabase client (wrap in try-catch to handle AbortError)
       try {
         this.supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+        console.log('✓ Supabase client created');
       } catch (clientError) {
         // Handle client creation errors (including AbortError)
         if (clientError.name === 'AbortError') {
@@ -67,6 +74,7 @@ class AuthService {
         throw new Error('Supabase client creation failed: ' + clientError.message);
       }
 
+      console.log('🔄 Auth init step 4: Getting current session...');
       // Get current session - trust Supabase's internal validation
       let session = null;
       try {
@@ -77,28 +85,35 @@ class AuthService {
           session = null;
         } else {
           session = data.session;
+          console.log('✓ Session check complete:', session ? 'Existing session found' : 'No existing session');
         }
       } catch (err) {
         // Network/timeout errors - don't wipe localStorage
         console.warn('⚠️ getSession() failed with exception:', err.message);
+        console.log('Auth Init: Continuing with no session (no localStorage wipe)');
         session = null;
       }
 
       // Set global user object
       if (session && session.user) {
+        console.log('✅ [Auth] Session found for:', session.user.email);
         this.currentUser = session.user;
         window.currentUser = session.user;
       } else {
+        console.log('○ [Auth] No active session (Guest Mode)');
         this.currentUser = null;
         window.currentUser = null;
       }
 
+      console.log('🔄 Auth init step 5: Setting up auth state change listener...');
       // PART 2: Master Auth Listener - Page Guard to prevent homepage hijacking
       this.supabase.auth.onAuthStateChange(async (event, session) => {
         // 1. Debugging
+        console.log(`Auth Debug: Event=${event}, User=${session?.user?.email || 'Guest'}`);
 
         // CRITICAL FIX: Handle SIGNED_OUT first before any other logic
         if (event === 'SIGNED_OUT') {
+          console.log('Auth Debug: User signed out. Clearing state...');
           this.currentUser = null;
           this.handleSignOut();
           // Don't redirect here - let the signOut method handle it
@@ -110,6 +125,7 @@ class AuthService {
 
         // 2. GUEST GUARD: If no session, stop everything.
         if (!session || !session.user) {
+          console.log('Auth Debug: No valid session detected.');
           return;
         }
 
@@ -124,19 +140,23 @@ class AuthService {
               // IMPORTANT: Only sign out if it's a genuine auth error, not a network error
               const isAuthError = error.status === 401 || error.message?.includes('invalid') || error.message?.includes('expired');
               if (isAuthError) {
+                console.log('Auth Debug: Invalid/expired session detected. Clearing...');
                 await this.supabase.auth.signOut();
                 return;
               } else {
                 // Network error or temporary issue - log but DON'T sign out
                 console.warn('⚠️ Session validation encountered network error:', error.message);
+                console.log('Auth Debug: Allowing session to continue despite validation error');
               }
             } else if (!user) {
+              console.log('Auth Debug: Stale session detected (no user). Clearing...');
               await this.supabase.auth.signOut();
               return;
             }
           } catch (err) {
             // Network/timeout errors - don't sign the user out
             console.warn('⚠️ Session validation failed with exception:', err.message);
+            console.log('Auth Debug: Allowing session to continue despite validation exception');
           }
         }
 
@@ -150,12 +170,14 @@ class AuthService {
         // CRITICAL FIX: Only redirect on explicit SIGNED_IN event, not INITIAL_SESSION
         // This prevents auto-redirect when user visits signin page with existing session
         if (!isAuthPage) {
+          console.log("Auth Debug: User is on a content page. No redirect.");
           return;
         }
 
         // If user just loaded the page (INITIAL_SESSION), don't auto-redirect
         // Let them see the signin page and decide what to do
         if (event === 'INITIAL_SESSION') {
+          console.log("Auth Debug: Initial session detected on auth page. No auto-redirect.");
           return;
         }
 
@@ -168,29 +190,34 @@ class AuthService {
 
         if (hasDraft) {
           // Scenario A: Finishing the Flow -> Post Project
+          console.log("Auth Debug: Draft found. Completing Handoff...");
           if (!cookieDraft && localDraft) this.setCookie('hot_lead_draft', localDraft, 1);
           window.location.href = '/post-project.html';
         } else {
           // Scenario B: Just Logging In -> Dashboard
           // CRITICAL FIX: Check user role to redirect to correct dashboard
+          console.log("Auth Debug: Standard Login. Checking role...");
 
           let role = null;
 
           // 1. First, check cached profile from signIn (fastest, already fetched)
           if (this.cachedProfile?.role) {
             role = this.cachedProfile.role;
+            console.log(`Auth Debug: Got role from cached profile: ${role}`);
           }
 
           // 2. If not cached, check user metadata (faster, no API call)
           if (!role) {
             role = session?.user?.user_metadata?.role || session?.user?.app_metadata?.role;
             if (role) {
+              console.log(`Auth Debug: Got role from session metadata: ${role}`);
             }
           }
 
           // 3. If still not found, fetch from profile with timeout (slowest)
           if (!role) {
             try {
+              console.log('Auth Debug: Role not found, fetching profile...');
               const profilePromise = this.getUserProfile();
               const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
@@ -198,7 +225,9 @@ class AuthService {
 
               const profile = await Promise.race([profilePromise, timeoutPromise]);
               role = profile?.role || 'homeowner';
+              console.log(`Auth Debug: Got role from profile: ${role}`);
             } catch (err) {
+              console.log('Auth Debug: Could not get profile, defaulting to homeowner:', err.message);
               role = 'homeowner';
             }
           }
@@ -210,6 +239,7 @@ class AuthService {
           this.cachedProfile = null;
 
           // 6. Redirect based on role
+          console.log(`Auth Debug: Redirecting ${role} to dashboard...`);
           if (role === 'contractor') {
             window.location.href = '/contractor-dashboard.html';
           } else {
@@ -218,6 +248,7 @@ class AuthService {
         }
       });
 
+      console.log('🔄 Auth init step 6: Marking as initialized...');
       this.initialized = true;
 
       // CRITICAL: Check for pending draft data after initialization
@@ -228,6 +259,7 @@ class AuthService {
       const isPostProjectPage = currentPath.includes('post-project');
 
       if (session && session.user && !isPostProjectPage) {
+        console.log('🔍 Checking for pending project draft...');
 
         // Check for draft data (multiple possible keys)
         let draftData = localStorage.getItem('hot_lead_draft');
@@ -235,19 +267,23 @@ class AuthService {
 
         // If we have a pending_estimate but no hot_lead_draft, convert it
         if (!draftData && pendingEstimate) {
+          console.log('✅ Found pending estimate! Converting to project draft...');
           localStorage.setItem('hot_lead_draft', pendingEstimate);
           localStorage.removeItem('pending_estimate');
           draftData = pendingEstimate;
         }
 
         if (draftData) {
+          console.log('✅ Draft data ready! Redirecting to post-project page...');
           // Give a moment for the page to settle, then redirect
           setTimeout(() => {
             window.location.href = '/post-project.html';
           }, 500);
         } else {
+          console.log('✓ No draft data found - normal flow');
         }
       } else if (isPostProjectPage) {
+        console.log('✓ Already on post-project page - skipping redirect check');
       }
     } catch (error) {
       // Handle AbortError gracefully (happens when page navigation interrupts initialization)
@@ -275,6 +311,7 @@ class AuthService {
       // THE GREEN LIGHT: Always dispatch completion event
       window.authReady = true;
       window.dispatchEvent(new CustomEvent('auth-init-complete'));
+      console.log('🚀 [Auth] Event "auth-init-complete" dispatched');
     }
   }
 
@@ -332,6 +369,7 @@ class AuthService {
    */
   async signIn(email, password) {
     try {
+      console.log('🔐 Signing in via backend endpoint...');
       // Use backend endpoint for signin
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
@@ -346,23 +384,28 @@ class AuthService {
         throw new Error(data.error || 'Sign in failed');
       }
 
+      console.log('✅ Backend signin successful');
       // Update local state
       this.currentUser = data.user;
 
       // CRITICAL FIX: Cache the profile so auth state change handler can access it
       // This prevents redundant API calls during redirect
       this.cachedProfile = data.profile;
+      console.log('Auth Debug: Cached profile during signin:', data.profile?.role);
 
       // Try to set session in Supabase client (non-blocking, optional)
       // The backend has already authenticated us, so this is just for convenience
       if (data.session && this.supabase) {
         try {
+          console.log('🔄 Attempting to set session in Supabase client...');
           await this.supabase.auth.setSession({
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token
           });
+          console.log('✓ Session set in Supabase client');
         } catch (sessionError) {
           console.warn('⚠️ Could not set session in Supabase client (non-critical):', sessionError.message);
+          console.log('✓ Continuing anyway - backend authentication succeeded');
         }
       }
 
@@ -610,6 +653,7 @@ class AuthService {
     if (!draftProject) {
       const localDraft = localStorage.getItem('hot_lead_draft');
       if (localDraft) {
+        console.log("✓ Found draft in localStorage!");
         draftProject = localDraft;
         // Sync to cookie for consistency across pages
         this.setCookie('project_draft', localDraft, 1);
@@ -623,6 +667,7 @@ class AuthService {
 
       // If we found a draft in the cloud but not locally, use the cloud one
       if (metaDraft) {
+        console.log("✓ Found cloud draft! Restoring from user metadata...");
         // Re-save to cookie/localStorage so post-project.html can read it easily
         this.setCookie('project_draft', JSON.stringify(metaDraft), 1);
         localStorage.setItem('hot_lead_draft', JSON.stringify(metaDraft));
@@ -638,6 +683,7 @@ class AuthService {
       // Scenario A: User has a draft (The Magic Carpet)
       // Fix: Only redirect if NOT already on the post-project page
       if (!currentPath.includes('post-project')) {
+        console.log("✓ Draft found! Redirecting to project creation...");
         // Ensure draft is in localStorage for post-project.html to read
         if (typeof draftProject === 'string') {
           localStorage.setItem('hot_lead_draft', draftProject);
@@ -669,7 +715,43 @@ class AuthService {
           window.location.href = '/home.html';
         }
       } else {
+        console.log('Already on dashboard - skipping redirect to prevent loop');
       }
+    }
+  }
+
+  /**
+   * DEPRECATED: Old handleSignIn method - replaced by handleSignInSmart
+   * Kept for reference only
+   */
+  async handleSignIn() {
+    console.log('🔐 User signed in - checking for draft project...');
+
+    // Check for the "Hot Potato" Cookie
+    const projectDraftCookie = this.getCookie('project_draft');
+    const postIntentCookie = this.getCookie('post_intent');
+
+    if (projectDraftCookie && postIntentCookie === 'post_project') {
+      console.log('✓ Found draft project cookie - redirecting to post-project.html');
+
+      // Restore to localStorage for post-project.html to read
+      localStorage.setItem('hot_lead_draft', decodeURIComponent(projectDraftCookie));
+
+      // Redirect to post-project page
+      window.location.href = 'post-project.html';
+      return;
+    }
+
+    // No draft project - redirect to appropriate dashboard based on role
+    const profile = await this.getUserProfile();
+    const role = profile?.role || 'homeowner';
+
+    console.log(`No draft project found - redirecting to ${role} dashboard`);
+
+    if (role === 'contractor') {
+      window.location.href = 'contractor-dashboard.html';
+    } else {
+      window.location.href = 'home.html';
     }
   }
 
@@ -719,6 +801,7 @@ class AuthService {
       }
     }
     keysToRemove.forEach(key => {
+      console.log(`Clearing localStorage key: ${key}`);
       localStorage.removeItem(key);
     });
 
@@ -729,8 +812,10 @@ class AuthService {
     const cookiesToClear = ['hot_lead_draft', 'project_draft', 'post_intent'];
     cookiesToClear.forEach(cookieName => {
       document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      console.log(`Cleared cookie: ${cookieName}`);
     });
 
+    console.log('✓ All auth storage cleared - user signed out');
 
     // Note: Navigation component (navigation.js) handles redirects
     // We don't redirect here to avoid race conditions with page auth checks
@@ -775,6 +860,7 @@ class AuthService {
 let authService;
 try {
   authService = new AuthService();
+  console.log('✓ AuthService instance created');
 } catch (error) {
   console.error('❌ Failed to create AuthService:', error);
   authService = null;
@@ -782,8 +868,10 @@ try {
 
 // Export for use in other scripts IMMEDIATELY (before init)
 window.authService = authService;
+console.log('✓ window.authService exported:', !!window.authService);
 
 // PASSIVE MODE: Do NOT auto-initialize
 // The AppController (app-controller.js) will call authService.init() explicitly
 // This eliminates race conditions by enforcing a strict boot sequence
+console.log('⏸️ [Auth] Passive mode - waiting for AppController to initialize');
 
