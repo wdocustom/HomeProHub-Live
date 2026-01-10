@@ -2150,7 +2150,8 @@ app.post("/api/ai/estimate-remodel", async (req, res) => {
     }
     // --- END RAG IMPLEMENTATION ---
 
-    const defaultSystemPrompt = `You are a Master General Contractor creating a formal bid for a homeowner. Analyze the project description and photos carefully. Be realistic, not optimistic.
+    const defaultSystemPrompt = `You are a Master Construction Estimator with 20+ years of experience.
+Analyze the project vision and photos carefully. Use the provided RAG context for accurate, location-adjusted pricing.
 
 --- BEGIN RAG CONTEXT ---
 Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
@@ -2158,87 +2159,53 @@ Regional Multiplier for ZIP ${zipCode || 'N/A'}: ${ragData.regionalMultiplier}
 Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
 --- END RAG CONTEXT ---
 
-Use the RAG context above to provide accurate, location-adjusted pricing.
-
-CRITICAL: Return ONLY valid JSON with these fields:
-- 'subtotal_low' (number): Subtotal low estimate (labor + materials only)
-- 'subtotal_high' (number): Subtotal high estimate (labor + materials only)
-- 'work_packages' (array): Group related work together. Each package represents a specific task (e.g., 'Flooring', 'Electrical', 'Cabinets', 'Plumbing'). Each package must have:
-  * 'category' (string): The work package name (e.g., "Flooring", "Kitchen Cabinets", "Bathroom Fixtures")
-  * 'items' (array): Specific line items within this package. MUST pair Materials with their corresponding Labor costs. Each item must have:
-    - 'description' (string): Specific description (e.g., "Wide plank white oak flooring - 800 sq ft")
-    - 'type' (string): Must be "Material", "Labor", or "Permit"
-    - 'cost_range' (string): Formatted as "$X,XXX - $Y,YYY" (human-readable with commas)
-    - 'local_insight' (object, optional): Only for material items
-      * 'type': "design_trend" or "sourcing_tip"
-      * 'message': Modest, helpful tip about local design trends or sourcing (under 2 sentences)
-- 'designer_note' (string): One professional insight or pro tip about the project (concise and actionable)
-
-STRUCTURE REQUIREMENTS:
-- Each work package should contain its specific Materials immediately followed by their corresponding Labor
-- Example: "Flooring" package should have "Wide plank oak flooring" (Material) followed by "Installation, sanding, and sealing" (Labor)
-- Group logically: Don't scatter "Flooring Materials" and "Flooring Labor" into separate packages
-- Permits can be standalone or grouped by scope
-
-Example Structure:
+You MUST return a JSON object with this EXACT structure:
 {
-  "subtotal_low": 45000,
-  "subtotal_high": 75000,
+  "subtotal_low": 15000,
+  "subtotal_high": 22000,
+  "summary": "Brief scope overview highlighting key project elements and any notable observations from photos",
   "work_packages": [
     {
       "category": "Flooring",
       "items": [
         {
-          "description": "Wide plank white oak flooring - 800 sq ft",
+          "description": "White Oak Plank Material",
           "type": "Material",
-          "cost_range": "$8,000 - $12,000",
-          "local_insight": {
-            "type": "design_trend",
-            "message": "White oak is trending in ${zipCode || 'your area'} for modern farmhouse aesthetics. Local suppliers stock 7-9 inch planks."
-          }
+          "cost": "$4,000 - $5,000"
         },
         {
-          "description": "Installation, sanding, and sealing labor",
+          "description": "Flooring Install Labor",
           "type": "Labor",
-          "cost_range": "$3,500 - $5,000"
+          "cost": "$2,500 - $3,500"
         }
       ]
     },
     {
-      "category": "Kitchen Cabinets",
+      "category": "Cabinets",
       "items": [
         {
-          "description": "Custom shaker-style cabinets with soft-close hardware",
+          "description": "Shaker Cabinetry",
           "type": "Material",
-          "cost_range": "$12,000 - $18,000"
+          "cost": "$6,000 - $8,000"
         },
         {
-          "description": "Cabinet installation and alignment",
+          "description": "Cabinet Installation",
           "type": "Labor",
-          "cost_range": "$2,000 - $3,500"
+          "cost": "$1,200 - $1,800"
         }
       ]
     }
-  ],
-  "designer_note": "Consider phasing the project: start with structural work and flooring, then finish with cabinets and fixtures to minimize damage risk."
+  ]
 }
 
-CRITICAL JSON FORMATTING RULES:
-- ONLY use double quotes for strings, NEVER single quotes
-- Do NOT include trailing commas after last items in arrays or objects
-- Ensure all strings are properly closed with matching double quotes
-- Escape any quotes within strings using backslash (e.g., "6\\" planks")
-- cost_range must be a STRING: "$X,XXX - $Y,YYY"
-- type must be exactly: "Material" or "Labor" or "Permit"
-- All numbers (subtotal_low, subtotal_high) must be integers with no quotes
-
-Guidelines for local_insight:
-- Only add to material items (flooring, countertops, fixtures, cabinets, etc.)
-- Reference the specific city/region from ZIP ${zipCode || 'unknown'}
-- Match the finish level (${metadata?.finishLevel || 'mid-range'})
-- Mention real local distributors if known, or describe vendor type
-- Keep messages under 2 sentences
-- Use modest, consultative tone (e.g., "Design Note:" or "Local sourcing tip:")
+CRITICAL REQUIREMENTS:
+1. Every major task (Flooring, Drywall, Electrical, Plumbing, Cabinets, etc.) MUST have both 'Material' and 'Labor' lines grouped under it
+2. Do NOT list materials and labor separately - they must be paired within each work_package
+3. Use the RAG context labor rates and regional multiplier to calculate realistic costs
+4. Analyze all provided photos for scope details, finishes, and complexity
+5. Field names: "cost" (not "cost_range"), "summary" (not "designer_note")
+6. subtotal_low and subtotal_high should match the sum of all work_packages
+7. Cost format: "$X,XXX - $Y,YYY" as a string with commas and dollar signs
 
 IMPORTANT: Do NOT calculate overhead, profit, or contingency - just return subtotal. Server will add those.`;
 
@@ -2333,33 +2300,20 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
       estimateData = {
         subtotal_low: 10000,
         subtotal_high: 25000,
+        summary: "Unable to parse AI response. This is a generic estimate based on typical renovation costs. Please regenerate for a detailed breakdown.",
         work_packages: [
           {
-            category: "Flooring & Finishes",
+            category: "General Materials",
             items: [
               {
-                description: "Flooring materials, fixtures, and finishes",
+                description: "Materials and supplies",
                 type: "Material",
-                cost_range: "$4,000 - $10,000",
-                local_insight: {
-                  type: "sourcing_tip",
-                  message: `Local sourcing tip: Check regional home centers and specialty suppliers for ${metadata?.finishLevel || 'mid-range'} finish materials that match local design preferences.`
-                }
+                cost: "$4,000 - $10,000"
               },
               {
-                description: "Installation and finishing labor",
+                description: "Installation labor",
                 type: "Labor",
-                cost_range: "$3,000 - $7,000"
-              }
-            ]
-          },
-          {
-            category: "Permits & Fees",
-            items: [
-              {
-                description: "Building permits and inspections",
-                type: "Permit",
-                cost_range: "$1,000 - $3,000"
+                cost: "$3,000 - $7,000"
               }
             ]
           },
@@ -2367,19 +2321,18 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
             category: "Additional Work",
             items: [
               {
-                description: "Miscellaneous materials and supplies",
-                type: "Material",
-                cost_range: "$1,000 - $2,500"
+                description: "Permits and fees",
+                type: "Permit",
+                cost: "$1,000 - $3,000"
               },
               {
-                description: "General labor and project management",
+                description: "Miscellaneous labor",
                 type: "Labor",
-                cost_range: "$1,000 - $2,500"
+                cost: "$2,000 - $5,000"
               }
             ]
           }
-        ],
-        designer_note: "Get at least 3 detailed quotes before starting. Material prices can vary 20-30% between suppliers, and contractor availability affects timeline significantly."
+        ]
       };
     }
 
