@@ -75,7 +75,7 @@ class AuthService {
       }
 
       console.log('🔄 Auth init step 4: Getting current session...');
-      // Get current session - let Supabase handle its own timeouts
+      // Get current session - trust Supabase's internal validation
       let session = null;
       try {
         const { data, error } = await this.supabase.auth.getSession();
@@ -94,46 +94,13 @@ class AuthService {
         session = null;
       }
 
-      if (session) {
-        // CRITICAL FIX: Validate the session on init to catch stale sessions
-        // Don't just trust localStorage - verify with the server
-        console.log('🔄 Validating existing session...');
-        try {
-          const { data: { user }, error } = await this.supabase.auth.getUser();
-          if (error) {
-            // Only clear session if it's a genuine auth error (401, invalid, expired)
-            const isAuthError = error.status === 401 || error.message?.includes('invalid') || error.message?.includes('expired');
-            if (isAuthError) {
-              console.log('Auth Init: Invalid/expired session detected on page load. Clearing...');
-              await this.supabase.auth.signOut();
-              this.currentUser = null;
-              window.currentUser = null;
-            } else {
-              // Network error - keep the session but log warning
-              console.warn('⚠️ Session validation encountered network error on init:', error.message);
-              console.log('Auth Init: Proceeding with existing session despite validation error');
-              this.currentUser = session.user;
-              window.currentUser = session.user;
-            }
-          } else if (!user) {
-            console.log('Auth Init: Stale session detected (no user). Clearing...');
-            await this.supabase.auth.signOut();
-            this.currentUser = null;
-            window.currentUser = null;
-          } else {
-            console.log('✓ Session validated for user:', user.email);
-            this.currentUser = session.user;
-            window.currentUser = session.user;
-          }
-        } catch (err) {
-          // Network/timeout errors - keep the session but log warning
-          console.warn('⚠️ Session validation failed on init with exception:', err.message);
-          console.log('Auth Init: Proceeding with existing session despite validation exception');
-          this.currentUser = session.user;
-          window.currentUser = session.user;
-        }
+      // Set global user object
+      if (session && session.user) {
+        console.log('✅ [Auth] Session found for:', session.user.email);
+        this.currentUser = session.user;
+        window.currentUser = session.user;
       } else {
-        // No session - guest mode
+        console.log('○ [Auth] No active session (Guest Mode)');
         this.currentUser = null;
         window.currentUser = null;
       }

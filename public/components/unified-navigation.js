@@ -363,10 +363,10 @@
     // Render header with fail-safe container creation
     let headerContainer = document.querySelector('header');
     if (!headerContainer) {
-      console.warn('[Navigation] Header container missing. Creating it automatically.');
+      console.warn('🔨 [Nav] Creating missing header container.');
       headerContainer = document.createElement('header');
       headerContainer.id = 'main-header-container';
-      headerContainer.className = 'sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100';
+      headerContainer.className = 'sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 transition-all duration-300';
       document.body.prepend(headerContainer);
     }
     headerContainer.innerHTML = renderDesktopHeader(zone, userData);
@@ -1058,7 +1058,7 @@
 
     // Detect current zone from page metadata
     const zoneMeta = document.querySelector('meta[name="sanctuary-zone"]');
-    const zone = zoneMeta ? zoneMeta.content : 'A';
+    let zone = zoneMeta ? zoneMeta.content : 'A';
 
     console.log(`🧭 [Navigation] Detected Zone: ${zone}`);
 
@@ -1067,6 +1067,13 @@
 
     if (user) {
       console.log(`👤 [Navigation] User detected (${user.email}). Rendering authenticated navigation.`);
+
+      // If user is on public zone (A or B) but logged in, use their role-appropriate zone
+      if (zone === 'A' || zone === 'B') {
+        const userRole = user.user_metadata?.role || user.app_metadata?.role || 'homeowner';
+        zone = userRole === 'contractor' ? 'D' : 'C';
+        console.log(`🔄 [Navigation] User on public zone, redirecting to Zone ${zone} (${userRole})`);
+      }
     } else {
       console.log('👽 [Navigation] Guest detected. Rendering public navigation.');
     }
