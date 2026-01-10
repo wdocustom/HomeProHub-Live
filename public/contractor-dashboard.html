@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="D">
   <title>Mission Control – HomeProHub</title>
 
   <!-- Sanctuary Glass 2.0 Design System -->
@@ -382,28 +383,12 @@
 
   <!-- Sanctuary Glass 2.0 Navigation System -->
   <script src="/components/unified-navigation.js"></script>
-  <script>
-    // Initialize Zone D navigation (Contractor App - Protected)
-    window.SanctuaryNavigation.init('D');
-  </script>
 
   <script>
-    // Auth check
+    // Auth check (app-controller guarantees auth is ready)
     async function checkAuth() {
       try {
-        // Wait for auth service
-        if (!window.authService || !window.authService.initialized) {
-          await new Promise(resolve => {
-            const checkAuth = setInterval(() => {
-              if (window.authService && window.authService.initialized) {
-                clearInterval(checkAuth);
-                resolve();
-              }
-            }, 100);
-          });
-        }
-
-        const user = await window.authService.getCurrentUser();
+        const user = window.currentUser;
         if (!user) {
           window.location.href = 'index.html';
           return;
@@ -420,21 +405,9 @@
       }
     }
 
-    // Load stats
+    // Load stats (app-controller guarantees auth is ready)
     async function loadStats() {
       try {
-        // Wait for auth service
-        if (!window.authService || !window.authService.initialized) {
-          await new Promise(resolve => {
-            const checkAuth = setInterval(() => {
-              if (window.authService && window.authService.initialized) {
-                clearInterval(checkAuth);
-                resolve();
-              }
-            }, 100);
-          });
-        }
-
         const profile = await window.authService.getUserProfile();
         if (!profile) return;
 
@@ -476,24 +449,6 @@
     // Load pending reviews (with auth check)
     async function loadPendingReviews() {
       try {
-        // Wait for authService to be ready
-        if (!window.authService || !window.authService.initialized) {
-          console.log('Auth not ready, waiting...');
-          await new Promise(resolve => {
-            const checkInterval = setInterval(() => {
-              if (window.authService && window.authService.initialized) {
-                clearInterval(checkInterval);
-                resolve();
-              }
-            }, 100);
-            // Timeout after 5 seconds
-            setTimeout(() => {
-              clearInterval(checkInterval);
-              resolve();
-            }, 5000);
-          });
-        }
-
         // Check if still not ready
         if (!window.authService || !window.authService.initialized) {
           console.warn('Auth service not available after timeout');
@@ -638,8 +593,8 @@
         .replace(/'/g, "&#039;");
     }
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
+    // Initialize after app is ready
+    window.addEventListener('app-ready', () => {
       checkAuth();
       loadStats();
       loadPendingReviews();
@@ -746,5 +701,8 @@
 
   <!-- Global Footer -->
   <script src="components/footer.js"></script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
 </body>
 </html>

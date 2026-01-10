@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
   <title>HomeProHub – Understand Your Home Issues, Connect with Verified Contractors</title>
   <meta name="description" content="Free AI-powered home issue guidance. Connect with vetted, licensed contractors. Optional on-demand expert access. Trust, clarity, no hidden fees.">
 
@@ -1631,9 +1632,6 @@
   <!-- Sanctuary Glass 2.0 Navigation System -->
   <script src="/components/unified-navigation.js"></script>
   <script>
-    // Initialize Zone A navigation (Public Homeowner)
-    window.SanctuaryNavigation.init('A');
-
     // Rolling Text Animation
     const words = ["care", "analysis", "diagnosis", "advice"];
     let i = 0;
@@ -2182,5 +2180,8 @@
       }
     })();
   </script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
 </body>
 </html>
