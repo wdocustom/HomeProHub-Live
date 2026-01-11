@@ -404,6 +404,8 @@
     // TAB SWITCHING
     // ============================================
     function switchTab(tabId) {
+      // FIX 1: INSTANT TAB SWITCHING - Show tab IMMEDIATELY without awaiting anything
+
       // 1. Hide ALL content containers first
       document.getElementById('estimator-content').classList.add('hidden');
       document.getElementById('lead-scout-content').classList.add('hidden');
@@ -412,18 +414,13 @@
       document.getElementById('tab-estimator').classList.remove('border-blue-600', 'text-blue-600');
       document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 'text-blue-600');
 
-      // 3. Show SELECTED content & highlight button
+      // 3. Show SELECTED content & highlight button (INSTANT - no await)
       document.getElementById(`${tabId}-content`).classList.remove('hidden');
       document.getElementById(`tab-${tabId}`).classList.add('border-blue-600', 'text-blue-600');
 
-      // 4. Mobile Map Resize trigger (Crucial for Mapbox)
-      if (tabId === 'lead-scout' && leadsMap) {
-        leadsMap.resize();
-      }
-
-      // Initialize map when Lead Scout tab is opened (if not already initialized)
-      if (tabId === 'lead-scout' && !leadsMap) {
-        initializeLeadScout();
+      // 4. FIX 2: Lazy Load Map - Call checkAndLoadMap for lead scout tab
+      if (tabId === 'lead-scout') {
+        checkAndLoadMap();
       }
     }
 
@@ -934,16 +931,41 @@
     }
 
     // ============================================
-    // LEAD SCOUT - Initialize Map
+    // LEAD SCOUT - Lazy Load Map
     // ============================================
-    async function initializeLeadScout() {
-      // Check if user has premium access
+    async function checkAndLoadMap() {
+      // FIX 2: LAZY LOAD THE MAP - Check if map exists, otherwise load it
+
+      // If map already exists, just resize it and return
+      if (leadsMap) {
+        leadsMap.resize();
+        console.log('✅ Map already loaded, resizing...');
+        return;
+      }
+
+      // Map doesn't exist yet, check if user has premium access
+      console.log('🔍 Checking premium access...');
       const hasPremiumAccess = await checkPremiumAccess();
 
-      if (!hasPremiumAccess) {
-        // Show premium overlay
+      if (hasPremiumAccess) {
+        // User has access - initialize the map
+        console.log('✅ Premium access confirmed, loading map...');
+        await initMap();
+      } else {
+        // User doesn't have access - show premium overlay
+        console.log('❌ No premium access, showing overlay...');
         document.getElementById('premium-overlay').classList.remove('hidden');
-        return;
+      }
+    }
+
+    // ============================================
+    // LEAD SCOUT - Initialize Map
+    // ============================================
+    async function initMap() {
+      // FIX 3: FORCE MAP DIMENSIONS - Ensure container has explicit height before Mapbox init
+      const mapContainer = document.getElementById('lead-map');
+      if (mapContainer) {
+        mapContainer.style.height = '600px';
       }
 
       try {
