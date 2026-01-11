@@ -648,7 +648,7 @@
 
         if (user) {
           // Fetch user profile to determine role
-          const response = await window.authService.authenticatedFetch('/api/profile');
+          const response = await window.authService.authenticatedFetch('/api/profile/me');
           const profile = await response.json();
 
           if (profile && profile.role === 'contractor') {
