@@ -294,7 +294,7 @@
         </div>
 
         <!-- TAB 2: LEAD SCOUT -->
-        <div id="content-lead-scout" class="tab-content p-8">
+        <div id="content-lead-scout" class="tab-content p-8 hidden">
           <!-- Premium Tier Check Container -->
           <div id="lead-scout-container" class="relative">
 
@@ -410,11 +410,20 @@
       });
       document.getElementById('tab-' + tabName).classList.add('active');
 
-      // Update tab content
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-      document.getElementById('content-' + tabName).classList.add('active');
+      // Explicitly hide/show tabs to ensure mutual exclusivity
+      if (tabName === 'lead-scout') {
+        // Show Lead Scout, hide Estimator
+        document.getElementById('content-lead-scout').classList.remove('hidden');
+        document.getElementById('content-lead-scout').classList.add('active');
+        document.getElementById('content-estimator').classList.add('hidden');
+        document.getElementById('content-estimator').classList.remove('active');
+      } else if (tabName === 'estimator') {
+        // Show Estimator, hide Lead Scout
+        document.getElementById('content-estimator').classList.remove('hidden');
+        document.getElementById('content-estimator').classList.add('active');
+        document.getElementById('content-lead-scout').classList.add('hidden');
+        document.getElementById('content-lead-scout').classList.remove('active');
+      }
 
       // Initialize map when Lead Scout tab is opened
       if (tabName === 'lead-scout' && !leadsMap) {

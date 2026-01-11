@@ -628,8 +628,46 @@
       }
     }
 
-    // Check for selectedPlan in sessionStorage (from redirect)
-    window.addEventListener('DOMContentLoaded', () => {
+    // Check user role and auto-show appropriate pricing
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Wait for authService to be ready
+      if (!window.authService || !window.authService.initialized) {
+        await new Promise(resolve => {
+          const checkInterval = setInterval(() => {
+            if (window.authService && window.authService.initialized) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100);
+        });
+      }
+
+      try {
+        // Get current user
+        const user = await window.authService.getCurrentUser();
+
+        if (user) {
+          // Fetch user profile to determine role
+          const response = await window.authService.authenticatedFetch('/api/profile');
+          const profile = await response.json();
+
+          if (profile && profile.role === 'contractor') {
+            // Auto-switch to contractor pricing
+            showPricing('contractor');
+
+            // Hide homeowner toggle button for contractors
+            const homeownerToggle = document.getElementById('homeownerToggle');
+            if (homeownerToggle) {
+              homeownerToggle.style.display = 'none';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        // Silently fail - show default (homeowner) pricing
+      }
+
+      // Check for selectedPlan in sessionStorage (from redirect)
       const selectedPlan = sessionStorage.getItem('selectedPlan');
       if (selectedPlan) {
         sessionStorage.removeItem('selectedPlan');

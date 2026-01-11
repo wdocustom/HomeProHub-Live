@@ -3524,6 +3524,38 @@ app.put("/api/profile/update", requireAuth, async (req, res) => {
       });
     }
 
+    // Process business_start_date if provided (for contractors)
+    if (profileData.business_start_date) {
+      // Validate date format (should be YYYY-MM or YYYY-MM-DD)
+      const dateStr = profileData.business_start_date;
+
+      // Convert to proper date format for database
+      // If format is YYYY-MM, append -01 to make it a valid date
+      let formattedDate = dateStr;
+      if (/^\d{4}-\d{2}$/.test(dateStr)) {
+        formattedDate = `${dateStr}-01`;
+      }
+
+      // Validate the date is valid
+      const startDate = new Date(formattedDate);
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({
+          error: "Invalid business start date format",
+          code: 'INVALID_DATE'
+        });
+      }
+
+      // Calculate years in business
+      const now = new Date();
+      const yearsDiff = now.getFullYear() - startDate.getFullYear();
+      const monthsDiff = now.getMonth() - startDate.getMonth();
+      const yearsInBusiness = monthsDiff < 0 ? yearsDiff - 1 : yearsDiff;
+
+      // Update the profile data with calculated value
+      profileData.business_start_date = formattedDate;
+      profileData.years_in_business = Math.max(0, yearsInBusiness);
+    }
+
     // Update profile in database
     const updatedProfile = await db.updateUserProfile(userEmail, profileData);
 
