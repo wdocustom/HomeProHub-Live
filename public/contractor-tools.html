@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://api.mapbox.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; img-src 'self' data: https: blob:; worker-src 'self' blob:; connect-src 'self' https:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://api.mapbox.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://*.supabase.co https://*.supabase.in https:; worker-src 'self' blob:;">
   <meta name="sanctuary-zone" content="D">
   <title>Contractor Tools – HomeProHub</title>
 
@@ -1163,12 +1163,38 @@
       }
     }
 
+    // ============================================
+    // DEFENSIVE INITIALIZATION WITH SUPABASE CHECK
+    // ============================================
+    function safeInit() {
+      // Check if Supabase SDK loaded successfully
+      if (typeof window.supabase === 'undefined' && !window.authService) {
+        console.error('⚠️ CRITICAL: Supabase SDK failed to load. Check CSP or Network.');
+        console.warn('Attempting to continue without authentication...');
+
+        // Still make the UI visible - don't let backend failure block the user
+        document.body.style.opacity = '1';
+        switchTab('estimator');
+        renderTradeFields();
+
+        // Show a non-intrusive warning
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+          statusEl.textContent = '⚠️ Running in offline mode. Some features may be limited.';
+          statusEl.className = 'text-sm text-center text-amber-600';
+        }
+      } else {
+        // Supabase loaded OK, proceed with normal initialization
+        initPage();
+      }
+    }
+
     // Run when DOM is ready
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initPage);
+      document.addEventListener('DOMContentLoaded', safeInit);
     } else {
       // DOM already loaded
-      initPage();
+      safeInit();
     }
   </script>
 
