@@ -557,6 +557,39 @@
   </div>
 
   <script>
+    // Check authentication and recover session
+    async function checkAuth() {
+      try {
+        // Wait for authService to initialize
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              resolve();
+            }, 5000);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          return null;
+        }
+
+        // Fetch user profile to get role
+        const profile = await window.authService.getUserProfile();
+        return profile;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        return null;
+      }
+    }
+
     function showPricing(role) {
       // Update toggle buttons
       document.getElementById('homeownerToggle').classList.toggle('active', role === 'homeowner');
@@ -628,51 +661,35 @@
       }
     }
 
-    // Check user role and auto-show appropriate pricing
-    window.addEventListener('DOMContentLoaded', async () => {
-      // Wait for authService to be ready
-      if (!window.authService || !window.authService.initialized) {
-        await new Promise(resolve => {
-          const checkInterval = setInterval(() => {
-            if (window.authService && window.authService.initialized) {
-              clearInterval(checkInterval);
-              resolve();
-            }
-          }, 100);
-        });
-      }
-
+    // Initialize pricing page with session recovery
+    document.addEventListener('DOMContentLoaded', async () => {
       try {
-        // Get current user
-        const user = await window.authService.getCurrentUser();
+        // 1. Recover Session
+        const user = await checkAuth();
 
-        if (user) {
-          // Fetch user profile to determine role
-          const response = await window.authService.authenticatedFetch('/api/profile/me');
-          const profile = await response.json();
-
-          if (profile && profile.role === 'contractor') {
-            // Auto-switch to contractor pricing
-            showPricing('contractor');
-
-            // Hide homeowner toggle button for contractors
-            const homeownerToggle = document.getElementById('homeownerToggle');
-            if (homeownerToggle) {
-              homeownerToggle.style.display = 'none';
-            }
+        // 2. Auto-Select Contractor Tab if applicable
+        if (user && user.role === 'contractor') {
+          // Simulate click on Contractor toggle to ensure all UI updates properly
+          const contractorToggle = document.querySelector('[onclick="showPricing(\'contractor\')"]');
+          if (contractorToggle) {
+            contractorToggle.click();
           }
+
+          // Optional: Hide Homeowner option entirely for strictly targeted view
+          // Uncomment the line below if you want contractors to only see contractor pricing
+          // document.getElementById('homeownerToggle').style.display = 'none';
+        }
+
+        // Check for selectedPlan in sessionStorage (from redirect)
+        const selectedPlan = sessionStorage.getItem('selectedPlan');
+        if (selectedPlan) {
+          sessionStorage.removeItem('selectedPlan');
+          // Auto-select the plan if user just logged in
+          setTimeout(() => selectPlan(selectedPlan), 1000);
         }
       } catch (error) {
-        console.error('Error checking user role:', error);
+        console.error('Error initializing pricing page:', error);
         // Silently fail - show default (homeowner) pricing
-      }
-
-      // Check for selectedPlan in sessionStorage (from redirect)
-      const selectedPlan = sessionStorage.getItem('selectedPlan');
-      if (selectedPlan) {
-        sessionStorage.removeItem('selectedPlan');
-        // Auto-select the plan if user just logged in
-        setTimeout(() => selectPlan(selectedPlan), 1000);
       }
     });
   </script>

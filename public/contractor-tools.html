@@ -62,7 +62,7 @@
     .tab-content.active { display: block; }
 
     /* CSS Failsafe: Show estimator by default even if JS fails */
-    #content-estimator { display: block; }
+    #estimator-content { display: block; }
 
     /* Map Styles */
     #lead-map {
@@ -136,7 +136,7 @@
       <div class="bg-white rounded-b-2xl border border-slate-200 shadow-xl">
 
         <!-- TAB 1: PROJECT ESTIMATOR -->
-        <div id="content-estimator" class="tab-content active p-8">
+        <div id="estimator-content" class="tab-content active p-8">
           <div class="space-y-6">
 
             <!-- Trade Switcher -->
@@ -294,7 +294,7 @@
         </div>
 
         <!-- TAB 2: LEAD SCOUT -->
-        <div id="content-lead-scout" class="tab-content p-8 hidden">
+        <div id="lead-scout-content" class="tab-content p-8 hidden">
           <!-- Premium Tier Check Container -->
           <div id="lead-scout-container" class="relative">
 
@@ -403,30 +403,26 @@
     // ============================================
     // TAB SWITCHING
     // ============================================
-    function switchTab(tabName) {
-      // Update tab buttons
-      document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      document.getElementById('tab-' + tabName).classList.add('active');
+    function switchTab(tabId) {
+      // 1. Hide ALL content containers first
+      document.getElementById('estimator-content').classList.add('hidden');
+      document.getElementById('lead-scout-content').classList.add('hidden');
 
-      // Explicitly hide/show tabs to ensure mutual exclusivity
-      if (tabName === 'lead-scout') {
-        // Show Lead Scout, hide Estimator
-        document.getElementById('content-lead-scout').classList.remove('hidden');
-        document.getElementById('content-lead-scout').classList.add('active');
-        document.getElementById('content-estimator').classList.add('hidden');
-        document.getElementById('content-estimator').classList.remove('active');
-      } else if (tabName === 'estimator') {
-        // Show Estimator, hide Lead Scout
-        document.getElementById('content-estimator').classList.remove('hidden');
-        document.getElementById('content-estimator').classList.add('active');
-        document.getElementById('content-lead-scout').classList.add('hidden');
-        document.getElementById('content-lead-scout').classList.remove('active');
+      // 2. Remove active state from ALL buttons
+      document.getElementById('tab-estimator').classList.remove('border-blue-600', 'text-blue-600');
+      document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 'text-blue-600');
+
+      // 3. Show SELECTED content & highlight button
+      document.getElementById(`${tabId}-content`).classList.remove('hidden');
+      document.getElementById(`tab-${tabId}`).classList.add('border-blue-600', 'text-blue-600');
+
+      // 4. Mobile Map Resize trigger (Crucial for Mapbox)
+      if (tabId === 'lead-scout' && leadsMap) {
+        leadsMap.resize();
       }
 
-      // Initialize map when Lead Scout tab is opened
-      if (tabName === 'lead-scout' && !leadsMap) {
+      // Initialize map when Lead Scout tab is opened (if not already initialized)
+      if (tabId === 'lead-scout' && !leadsMap) {
         initializeLeadScout();
       }
     }
