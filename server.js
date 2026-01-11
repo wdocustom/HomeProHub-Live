@@ -7062,9 +7062,20 @@ app.get("/api/homeowner/stats", requireAuth, async (req, res) => {
 /**
  * POST /api/user/subscription-access
  * Check if user has access to specific premium features
+ * ⚠️ TEMPORARILY BYPASSED FOR TESTING - Remove before production
  */
 app.post("/api/user/subscription-access", async (req, res) => {
   try {
+    console.log('⚠️ BYPASSING SUBSCRIPTION CHECK FOR TESTING');
+
+    // MOCK RESPONSE: Always return premium access for testing
+    return res.json({
+      hasAccess: true,
+      tier: 'contractor_premium',
+      mocked: true
+    });
+
+    /* // ========== ORIGINAL LOGIC (Commented for testing) ==========
     const { email, feature } = req.body;
 
     if (!email || !feature) {
@@ -7091,6 +7102,7 @@ app.post("/api/user/subscription-access", async (req, res) => {
       hasAccess: hasPremiumAccess,
       tier: profile?.subscription_tier || 'contractor_starter'
     });
+    // ========== END ORIGINAL LOGIC ========== */
 
   } catch (err) {
     console.error('❌ Error checking subscription access:', err);
