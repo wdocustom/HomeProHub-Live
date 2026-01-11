@@ -7072,7 +7072,7 @@ app.post("/api/user/subscription-access", async (req, res) => {
     }
 
     // Query user's subscription tier from user_profiles
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await db.supabase
       .from('user_profiles')
       .select('subscription_tier')
       .eq('email', email)
