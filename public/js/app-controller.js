@@ -1,234 +1,152 @@
 /**
  * HomeProHub Application Controller
- * Central orchestration point for app initialization
- * Eliminates race conditions by enforcing strict boot sequence
+ * The Single Source of Truth for App Initialization
+ * Loads dependencies dynamically to ensure strict execution order.
  */
 
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
 (async function initializeApp() {
-  // Show loading state
-  showLoadingState();
+  // 1. Immediate Visual Feedback (Anti-Flicker)
+  // We ensure the body exists before trying to style it
+  if (document.body) document.body.style.opacity = '0';
 
   try {
-    // ============================================
-    // STEP 1: AUTHENTICATE USER (BLOCKING)
-    // ============================================
+    console.group("🚀 [AppController] Boot Sequence");
 
-    // Wait for AuthService to be available
-    await waitForAuthService();
+    // ============================================
+    // STEP 1: LOAD DEPENDENCIES (BLOCKING)
+    // ============================================
+    console.time("Dependency Load");
+    
+    // Check if Supabase is ready
+    if (!window.supabase) {
+        // Fallback: If CDN failed, we could handle it here, 
+        // but typically the HTML script tag handles this.
+        console.log("...Waiting for Supabase SDK...");
+    }
 
-    // Initialize auth and wait for completion
+    // Load Auth Service & Navigation Service dynamically
+    // This replaces the need for <script> tags in the HTML
+    await Promise.all([
+        loadScript('/services/auth.js'), 
+        loadScript('/components/unified-navigation.js') 
+    ]);
+    console.timeEnd("Dependency Load");
+
+    // ============================================
+    // STEP 2: AUTHENTICATE USER (BLOCKING)
+    // ============================================
+    console.time("Auth Init");
+    
+    // Safety check: Did auth.js load correctly?
+    if (!window.authService) throw new Error("AuthService failed to load");
+    
+    // Initialize Auth
     await window.authService.init();
-
     const user = window.currentUser;
-    const userState = determineUserState(user);
+    console.timeEnd("Auth Init");
 
     // ============================================
-    // STEP 2: DETERMINE GLOBAL STATE (BLOCKING)
+    // STEP 3: DETERMINE GLOBAL STATE
     // ============================================
-
     const appState = {
       user: user,
-      userState: userState,
-      role: user?.user_metadata?.role || user?.app_metadata?.role || 'guest',
+      role: user?.user_metadata?.role || 'guest',
       zone: detectZone(),
       timestamp: Date.now()
     };
-
-    // Store globally for other components
     window.appState = appState;
+    console.log(`✅ State Determined: ${appState.role} in Zone ${appState.zone}`);
 
     // ============================================
-    // STEP 3: RENDER CORE UI (BLOCKING)
+    // STEP 4: RENDER UI (BLOCKING)
     // ============================================
+    
+    // Verify Containers Exist (Fixes the White Screen Hang)
+    ensureLayoutContainers();
 
-    // Wait for navigation system to be available
-    await waitForNavigationSystem();
-
-    // Initialize navigation (this will render header/nav)
-    if (window.SanctuaryNavigation && window.SanctuaryNavigation.init) {
-      await window.SanctuaryNavigation.init(appState.zone);
+    // Initialize Navigation
+    if (window.SanctuaryNavigation) {
+        await window.SanctuaryNavigation.init(appState.zone);
+    } else {
+        console.warn("⚠️ SanctuaryNavigation missing, skipping nav render");
     }
 
     // ============================================
-    // STEP 4: HYDRATE PAGE CONTENT
+    // STEP 5: REVEAL APPLICATION
     // ============================================
+    
+    // Dispatch Ready Event
+    window.dispatchEvent(new CustomEvent('app-ready', { detail: appState }));
 
-    // Dispatch event for page-specific initialization
-    window.dispatchEvent(new CustomEvent('app-ready', {
-      detail: appState
-    }));
-
-    // Hide loading state
-    hideLoadingState();
+    // Fade In
+    document.body.style.transition = 'opacity 0.3s ease-in';
+    document.body.style.opacity = '1';
+    
+    console.groupEnd();
 
   } catch (error) {
-    console.error('❌ [AppController] Initialization failed:', error);
-    handleInitializationError(error);
+    console.error('❌ [AppController] Critical Boot Failure:', error);
+    // Show a user-friendly error overlay if everything breaks
+    document.body.innerHTML = `
+        <div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:sans-serif;text-align:center;">
+            <div>
+                <h1 style="font-size:24px;margin-bottom:10px;">Connection Error</h1>
+                <p style="color:#666;">We couldn't load the application.</p>
+                <button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;background:#3b82f6;color:white;border:none;border-radius:5px;cursor:pointer;">Retry</button>
+            </div>
+        </div>
+    `;
+    document.body.style.opacity = '1';
   }
 })();
 
 /**
- * Wait for AuthService to be loaded
+ * Helper: Dynamically load a script file
  */
-function waitForAuthService() {
-  return new Promise((resolve) => {
-    if (window.authService) {
-      resolve();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.authService) {
-          clearInterval(checkInterval);
-          resolve();
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        // Check if already loaded
+        if (document.querySelector(`script[src="${src}"]`)) {
+            return resolve();
         }
-      }, 50);
-
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        console.warn('⚠️ [AppController] AuthService load timeout');
-        resolve();
-      }, 5000);
-    }
-  });
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(script);
+    });
 }
 
 /**
- * Wait for Navigation System to be loaded
- */
-function waitForNavigationSystem() {
-  return new Promise((resolve) => {
-    if (window.SanctuaryNavigation) {
-      resolve();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.SanctuaryNavigation) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 50);
-
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        console.warn('⚠️ [AppController] Navigation System load timeout');
-        resolve();
-      }, 5000);
-    }
-  });
-}
-
-/**
- * Determine user state from user object
- */
-function determineUserState(user) {
-  if (!user) return 'guest';
-
-  const role = user.user_metadata?.role || user.app_metadata?.role || 'homeowner';
-  const isPro = user.user_metadata?.subscription_tier === 'pro' ||
-                user.app_metadata?.subscription_tier === 'pro';
-
-  if (isPro) return 'pro';
-  if (role === 'contractor') return 'contractor';
-  if (role === 'homeowner') return 'homeowner';
-
-  return 'user';
-}
-
-/**
- * Detect current zone from page metadata
+ * Helper: Detect Zone based on URL or Meta Tag
  */
 function detectZone() {
-  const zoneMeta = document.querySelector('meta[name="sanctuary-zone"]');
-  if (zoneMeta) return zoneMeta.content;
-
-  // Fallback: detect from path
+  const meta = document.querySelector('meta[name="sanctuary-zone"]');
+  if (meta) return meta.content;
+  
   const path = window.location.pathname;
-
-  if (path.includes('contractor-dashboard') || path.includes('job-board')) return 'D';
+  if (path.includes('contractor')) return 'D';
   if (path.includes('home.html') || path.includes('homeowner')) return 'C';
   if (path.includes('signin') || path.includes('signup')) return 'B';
-
-  return 'A'; // Public zone
+  return 'A'; 
 }
 
 /**
- * Show loading state
+ * Helper: Ensure Header/Nav containers exist to prevent crashes
  */
-function showLoadingState() {
-  // Create loading overlay
-  const overlay = document.createElement('div');
-  overlay.id = 'app-loading-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(248, 250, 252, 0.95);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    backdrop-filter: blur(4px);
-  `;
-
-  overlay.innerHTML = `
-    <div style="text-align: center;">
-      <div style="width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px;"></div>
-      <p style="color: #64748b; font-size: 14px; font-weight: 500;">Loading HomeProHub...</p>
-    </div>
-    <style>
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    </style>
-  `;
-
-  document.body.appendChild(overlay);
-}
-
-/**
- * Hide loading state
- */
-function hideLoadingState() {
-  const overlay = document.getElementById('app-loading-overlay');
-  if (overlay) {
-    overlay.style.opacity = '0';
-    overlay.style.transition = 'opacity 0.3s ease-out';
-    setTimeout(() => overlay.remove(), 300);
-  }
-}
-
-/**
- * Handle initialization errors
- */
-function handleInitializationError(error) {
-  hideLoadingState();
-
-  // Show error message
-  const errorDiv = document.createElement('div');
-  errorDiv.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 32px;
-    border-radius: 16px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
-    text-align: center;
-    z-index: 10000;
-  `;
-
-  errorDiv.innerHTML = `
-    <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-    <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Initialization Error</h2>
-    <p style="font-size: 14px; color: #64748b; margin-bottom: 24px;">We encountered an error loading the application.</p>
-    <button onclick="location.reload()" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">
-      Reload Page
-    </button>
-  `;
-
-  document.body.appendChild(errorDiv);
+function ensureLayoutContainers() {
+    if (!document.getElementById('main-header-container')) {
+        console.warn("🔨 [AppController] Injecting missing header container");
+        const header = document.createElement('div');
+        header.id = 'main-header-container';
+        header.className = 'w-full z-50 relative';
+        document.body.prepend(header);
+    }
+    if (!document.getElementById('mobile-nav-container')) {
+        const mobile = document.createElement('div');
+        mobile.id = 'mobile-nav-container';
+        document.body.appendChild(mobile);
+    }
 }
