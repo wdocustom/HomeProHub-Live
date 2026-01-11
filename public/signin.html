@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="B">
+  <title>Sign In – HomeProHub</title>
+
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Preserved Styles */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .btn-primary:hover { background: #2563eb; }
+  </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans antialiased opacity-0 transition-opacity duration-300">
+
+  <div id="main-header-container" class="w-full z-50 relative"></div>
+
+  <main class="flex-grow flex items-center justify-center px-4 py-12 relative z-10" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+    
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden p-8">
+      
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-extrabold text-slate-900">Welcome Back</h1>
+        <p class="text-slate-500 mt-2">Sign in to your account</p>
+      </div>
+
+      <form id="signin-form" class="space-y-6">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email</label>
+          <input type="email" id="email" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Password</label>
+          <input type="password" id="password" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900 focus:ring-blue-500" required>
+        </div>
+        
+        <div id="auth-error" class="hidden text-red-500 text-sm text-center font-bold bg-red-50 p-3 rounded-lg"></div>
+
+        <button type="submit" id="signin-btn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all">
+          Sign In
+        </button>
+      </form>
+
+      <div class="mt-6 text-center text-sm text-slate-500">
+        Don't have an account? <a href="/signup.html" class="font-bold text-blue-600 hover:text-blue-700">Sign up</a>
+      </div>
+      
+      <div class="mt-4 text-center">
+        <a href="/" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Back to Home</a>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="mobile-nav-container"></div>
+
+  <script type="module" src="/js/app-controller.js"></script>
+
+  <script>
+    // Display messages
+    function displayError(message) {
+      const errorEl = document.getElementById('auth-error');
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    // Loading state
+    function setLoading(loading) {
+      const button = document.getElementById('signin-btn');
+      const inputs = document.querySelectorAll('#signin-form input');
+      button.disabled = loading;
+      inputs.forEach(input => input.disabled = loading);
+      
+      if (loading) {
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing In...';
+      } else {
+        button.textContent = 'Sign In';
+      }
+    }
+
+    // Handle form submission
+    document.getElementById('signin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) return displayError('Please enter both email and password.');
+      
+      setLoading(true);
+      document.getElementById('auth-error').classList.add('hidden');
+
+      try {
+        // AppController guarantees authService is ready
+        if (!window.authService) {
+           throw new Error("System initializing... please wait a moment.");
+        }
+
+        console.log('🔄 Calling signIn...');
+        const result = await window.authService.signIn(email, password);
+
+        if (result.success) {
+          const userRole = result.profile?.role || 'homeowner';
+          // Redirect based on role
+          const dashboardUrl = userRole === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
+          console.log(`✓ Success! Redirecting to ${dashboardUrl}`);
+          window.location.href = dashboardUrl;
+        } else {
+          displayError(result.error || 'Sign in failed. Check your credentials.');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Sign in error:', error);
+        displayError(error.message || 'An error occurred.');
+        setLoading(false);
+      }
+    });
+  </script>
+  
+  <noscript><style>body { opacity: 1 !important; }</style></noscript>
+</body>
+</html>

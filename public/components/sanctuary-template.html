@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Title – HomeProHub</title>
+
+  <!-- Sanctuary Glass 2.0 Core -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Tailwind CDN (Optional - for utility classes) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Supabase Auth (for protected zones only) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <!-- Page-specific styles (if needed) -->
+  <style>
+    /* Add page-specific overrides here */
+  </style>
+</head>
+
+<!--
+  BODY CLASS MUST BE SET BASED ON ZONE:
+  - Zone A (Public Homeowner): class="zone-a public-page"
+  - Zone B (Public Contractor): class="zone-b public-page"
+  - Zone C (Homeowner App): class="zone-c app-page"
+  - Zone D (Contractor App): class="zone-d app-page"
+-->
+<body class="zone-a public-page">
+
+  <!--
+    NAVIGATION IS AUTO-INJECTED BY unified-navigation.js
+    Desktop header will be inserted at top of <body>
+    Mobile nav will be inserted at bottom of <body>
+  -->
+
+  <!-- Main Content Container -->
+  <main class="container">
+    <!-- Hero Section Example -->
+    <section class="py-20">
+      <h1 class="text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
+        Your Page Heading
+      </h1>
+      <p class="text-xl text-slate-500 font-medium mb-8 max-w-3xl">
+        Your body text goes here. All text should use the Sanctuary Glass 2.0 typography system.
+      </p>
+
+      <!-- Glass Card Example -->
+      <div class="glass-card glass-card-hover p-8 mb-6">
+        <h3 class="text-2xl font-extrabold text-slate-900 mb-4">Card Heading</h3>
+        <p class="text-slate-500 font-medium mb-6">
+          This is a glass card using the Sanctuary Glass 2.0 design system.
+        </p>
+
+        <!-- Floater Input Example -->
+        <input
+          type="text"
+          placeholder="Enter something..."
+          class="floater-input w-full mb-4"
+        />
+
+        <!-- Glow Button Example -->
+        <button class="glow-button">
+          Primary Action
+        </button>
+      </div>
+
+      <!-- Grid of Cards Example -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="glass-card p-6">
+          <i class="fa-solid fa-check-circle text-4xl text-blue-600 mb-4"></i>
+          <h4 class="text-lg font-extrabold text-slate-900 mb-2">Feature One</h4>
+          <p class="text-slate-500 font-medium">Description of feature one.</p>
+        </div>
+
+        <div class="glass-card p-6">
+          <i class="fa-solid fa-shield-halved text-4xl text-blue-600 mb-4"></i>
+          <h4 class="text-lg font-extrabold text-slate-900 mb-2">Feature Two</h4>
+          <p class="text-slate-500 font-medium">Description of feature two.</p>
+        </div>
+
+        <div class="glass-card p-6">
+          <i class="fa-solid fa-star text-4xl text-blue-600 mb-4"></i>
+          <h4 class="text-lg font-extrabold text-slate-900 mb-2">Feature Three</h4>
+          <p class="text-slate-500 font-medium">Description of feature three.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!--
+    Sanctuary Glass 2.0 Navigation System
+    MUST BE LOADED AFTER auth.js FOR PROTECTED ZONES
+  -->
+  <script src="/components/unified-navigation.js"></script>
+  <script>
+    // Initialize navigation for this zone
+    // Choose ONE of the following based on your page:
+
+    // Zone A - Public Homeowner (Guest)
+    window.SanctuaryNavigation.init('A');
+
+    // Zone B - Public Contractor (Guest)
+    // window.SanctuaryNavigation.init('B');
+
+    // Zone C - Homeowner App (Logged In)
+    // window.SanctuaryNavigation.init('C');
+
+    // Zone D - Contractor App (Logged In)
+    // window.SanctuaryNavigation.init('D');
+  </script>
+
+  <!-- Page-specific JavaScript -->
+  <script>
+    // Your page-specific functionality here
+    console.log('Page loaded with Sanctuary Glass 2.0');
+  </script>
+</body>
+</html>

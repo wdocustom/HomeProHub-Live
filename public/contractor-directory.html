@@ -1,197 +1,719 @@
-<!DOCTYPE html><html lang="en"><head>
-  <meta charset="UTF-8" />
-  <title>HomeScope AI – Contractor Directory</title>
-  <link rel="stylesheet" href="styles.css" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
+  <title>Find Verified Contractors – HomeProHub</title>
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
   <style>
-    /* Styling for the Contractor List */
-    .hero {
-      max-width: 900px;
-      margin: 48px auto 24px;
-      padding: 0 24px;
+    .directory-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .directory-header {
       text-align: center;
+      margin-bottom: 48px;
     }
-    .hero-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #9ca3af;
-      margin-bottom: 8px;
+
+    .directory-header h1 {
+      font-size: 42px;
+      margin: 0 0 12px 0;
+      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-    .hero-title {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 10px;
-      color: #111827;
-    }
-    .hero-subtitle {
-      font-size: 14px;
-      line-height: 1.6;
+
+    .directory-header p {
+      font-size: 18px;
       color: #6b7280;
-      max-width: 640px;
+      max-width: 700px;
       margin: 0 auto;
     }
 
-    .directory-list {
-      max-width: 900px;
-      margin: 0 auto 60px;
-      padding: 0 24px;
+    .search-filter-section {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 40px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 14px 20px;
+      font-size: 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    .search-btn {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .search-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(37,99,235,0.3);
+    }
+
+    .filters-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 15px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .active-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #eff6ff;
+      color: #1e40af;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .filter-tag button {
+      background: none;
+      border: none;
+      color: #1e40af;
+      cursor: pointer;
+      font-weight: 700;
+      padding: 0 4px;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .results-count {
+      font-size: 18px;
+      color: #111827;
+      font-weight: 600;
+    }
+
+    .sort-select {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .contractors-grid {
+      display: grid;
+      gap: 24px;
     }
 
     .contractor-card {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-      padding: 20px;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      background: #ffffff;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+      cursor: pointer;
     }
 
-    .logo-container {
+    .contractor-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+      border-color: #2563eb;
+    }
+
+    .card-header {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+
+    .contractor-avatar {
       flex-shrink: 0;
       width: 80px;
       height: 80px;
-      border-radius: 8px;
-      background: #f3f4f6;
-      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
-      color: #374151;
-      font-weight: 600;
+      font-size: 28px;
+      font-weight: 700;
+      color: #6b7280;
+      border: 2px solid #d1d5db;
     }
 
-    .details-container {
-      flex-grow: 1;
+    .card-info {
+      flex: 1;
+      min-width: 0;
     }
 
     .contractor-name {
-      font-size: 18px;
-      font-weight: 600;
-      margin-top: 0;
-      margin-bottom: 4px;
-      color: #2563eb; /* Blue for the link/name */
-      text-decoration: none;
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      color: #111827;
     }
 
-    .grade-tag {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 12px;
+    .card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .grade-badge {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 14px;
       font-weight: 700;
       color: white;
-      margin-right: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    .grade-a { background: #10b981; } /* Green */
-    .grade-b { background: #3b82f6; } /* Blue */
-    .grade-c { background: #f59e0b; } /* Yellow/Orange */
-    .grade-f { background: #ef4444; } /* Red */
-
-    .info-tag {
-      display: inline-block;
-      font-size: 12px;
-      color: #6b7280;
-      margin-right: 15px;
-    }
-    .description {
-      font-size: 14px;
+    .info-badge {
+      padding: 6px 12px;
+      background: #f3f4f6;
       color: #4b5563;
-      margin-top: 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
     }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeScope AI</div>
-    </div>
-    <div class="nav-links">
-      <a href="home.html">Homeowner dashboard</a>
-    </div>
-  </div></header><main>
-  <section class="hero">
-    <div class="hero-kicker">Find your pro</div>
-    <h1 class="hero-title">Verified Contractor Directory.</h1>
-    <p class="hero-subtitle">
-      Search local general contractors and trades. Every pro listed is vetted and scored based on transparent criteria, not just reviews.
-    </p>
-  </section>
 
-  <section class="directory-list">
-    <div class="card" style="margin-bottom: 25px;">
-        <h3 style="margin-top: 0; font-size: 18px;">Find a Pro:</h3>
-        <input type="text" class="input" placeholder="Search by name, trade, or service (e.g., 'Plumber', 'Deck Builder', 'Smith Builders')" />
-        <div style="margin-top: 10px;">
-            <button class="btn-primary" style="padding: 8px 16px; font-size: 14px;">Search</button>
-            <button class="btn-secondary" style="padding: 8px 16px; font-size: 14px;">Filters (Trade, Grade, Distance)</button>
+    .verified-badge {
+      background: #10b981;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rating-stars {
+      color: #f59e0b;
+      font-size: 16px;
+    }
+
+    .card-description {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #f3f4f6;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #4b5563;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn-view-profile {
+      flex: 1;
+      padding: 10px 20px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-view-profile:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-contact {
+      padding: 10px 20px;
+      background: white;
+      color: #2563eb;
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-contact:hover {
+      background: #eff6ff;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 60px 24px;
+      background: white;
+      border-radius: 16px;
+    }
+
+    .no-results h3 {
+      font-size: 24px;
+      margin: 0 0 12px 0;
+      color: #111827;
+    }
+
+    .no-results p {
+      font-size: 16px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .loading-spinner {
+      text-align: center;
+      padding: 60px;
+    }
+
+    .spinner {
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .directory-header h1 {
+        font-size: 32px;
+      }
+
+      .search-bar {
+        flex-direction: column;
+      }
+
+      .filters-row {
+        grid-template-columns: 1fr;
+      }
+
+      .card-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .card-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body class="zone-a public-page">
+
+  <div class="directory-container" id="directory-container">
+    <div class="directory-header">
+      <h1>Find Verified Contractors</h1>
+      <p>Search local contractors and trades. Every pro is graded based on transparent criteria: license verification, profile completeness, and verified reviews.</p>
+    </div>
+
+    <!-- Floating Search Bar (Sanctuary Glass 2.0) -->
+    <div class="relative z-10 -mt-8 mb-12 max-w-4xl mx-auto px-4">
+      <div class="bg-white rounded-full shadow-xl ring-1 ring-slate-900/5 p-2 flex flex-col md:flex-row items-center gap-2">
+
+        <div class="flex-1 flex items-center px-4 w-full">
+          <i class="fa-solid fa-magnifying-glass text-slate-400 mr-3"></i>
+          <input type="text" id="searchInput" placeholder="Search by trade (e.g. Plumber) or name..." class="w-full border-0 bg-transparent focus:ring-0 text-slate-900 placeholder:text-slate-400 font-medium h-12" style="outline: none;">
         </div>
+
+        <div class="hidden md:block w-px h-8 bg-slate-200 mx-2"></div>
+
+        <div class="w-full md:w-48 flex items-center px-4">
+          <i class="fa-solid fa-location-dot text-slate-400 mr-3"></i>
+          <input type="text" id="zipFilter" placeholder="Zip Code" maxlength="5" pattern="[0-9]{5}" class="w-full border-0 bg-transparent focus:ring-0 text-slate-900 placeholder:text-slate-400 font-medium h-12" style="outline: none;">
+        </div>
+
+        <button onclick="applyFilters()" class="w-full md:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full shadow-lg shadow-blue-500/30 transition-all">
+          Search
+        </button>
+      </div>
+
+      <!-- Quick Filter Buttons -->
+      <div class="flex flex-wrap justify-center gap-2 mt-6">
+        <button onclick="filterByTrade('plumbing')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">💧 Plumbers</button>
+        <button onclick="filterByTrade('electrical')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">⚡ Electricians</button>
+        <button onclick="filterByTrade('hvac')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">❄️ HVAC</button>
+        <button onclick="filterByTrade('general_contractor')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-blue-300 transition-colors">🏠 Remodelers</button>
+        <button onclick="filterByTrade('all')" class="px-4 py-2 bg-slate-900 border border-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors">All Trades</button>
+      </div>
     </div>
 
-    <div class="contractor-card">
-        <div class="logo-container">GC</div>
-        <div class="details-container">
-            <a href="#" class="contractor-name">Smith Remodeling Group</a>
-            <div>
-                <span class="grade-tag grade-a">Grade A+</span>
-                <span class="info-tag">General Contractor</span>
-                <span class="info-tag">12 Yrs Experience</span>
-                <span class="info-tag">2.1 mi Away</span>
+    <div class="results-header">
+      <div class="results-count" id="resultsCount">Loading contractors...</div>
+    </div>
+
+    <div id="contractorsContainer" class="contractors-grid">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p style="margin-top: 16px; color: #6b7280;">Finding contractors...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allContractors = [];
+    let currentFilters = {
+      searchTerm: '',
+      trade: 'all',
+      minGrade: '',
+      zip: '',
+      maxDistance: ''
+    };
+
+    // Load contractors on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadContractors();
+    });
+
+    async function loadContractors() {
+      try {
+        const params = new URLSearchParams({
+          limit: 100
+        });
+
+        // Add filters if set
+        if (currentFilters.trade && currentFilters.trade !== 'all') {
+          params.append('trade', currentFilters.trade);
+        }
+        if (currentFilters.searchTerm) {
+          params.append('searchTerm', currentFilters.searchTerm);
+        }
+        if (currentFilters.minGrade) {
+          params.append('minGrade', currentFilters.minGrade);
+        }
+        if (currentFilters.zip) {
+          params.append('zip', currentFilters.zip);
+        }
+        if (currentFilters.maxDistance && currentFilters.zip) {
+          params.append('maxDistance', currentFilters.maxDistance);
+        }
+
+        const response = await fetch(`/api/contractors/directory?${params}`);
+
+        if (!response.ok) throw new Error('Failed to load contractors');
+
+        const data = await response.json();
+        allContractors = data.contractors || [];
+
+        renderContractors();
+        updateActiveFilters();
+
+      } catch (error) {
+        console.error('Error loading contractors:', error);
+        document.getElementById('contractorsContainer').innerHTML = `
+          <div class="no-results">
+            <h3>Failed to Load Contractors</h3>
+            <p>Please try again later. Error: ${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function applyFilters() {
+      currentFilters.searchTerm = document.getElementById('searchInput').value.trim();
+      currentFilters.zip = document.getElementById('zipFilter').value.trim();
+      // Trade filter is now set by filterByTrade() function
+      // Remove grade and distance filters (simplified UI)
+
+      loadContractors();
+    }
+
+    function filterByTrade(trade) {
+      currentFilters.trade = trade;
+      loadContractors();
+    }
+
+    function updateActiveFilters() {
+      // Active filters display removed in new design
+      // Filters are now shown via quick filter buttons
+    }
+
+    function removeFilter(key) {
+      if (key === 'searchTerm') {
+        document.getElementById('searchInput').value = '';
+        currentFilters.searchTerm = '';
+      } else if (key === 'trade') {
+        currentFilters.trade = 'all';
+      } else if (key === 'zip') {
+        document.getElementById('zipFilter').value = '';
+        currentFilters.zip = '';
+      }
+
+      loadContractors();
+    }
+
+    function renderContractors() {
+      const container = document.getElementById('contractorsContainer');
+      const count = document.getElementById('resultsCount');
+
+      if (allContractors.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 24px; border: 1px solid #e5e7eb;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+            <h3 style="font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 8px;">No Contractors Found</h3>
+            <p style="color: #6b7280;">Try adjusting your filters or search term to find contractors in your area.</p>
+          </div>
+        `;
+        count.textContent = '0 contractors found';
+        return;
+      }
+
+      count.textContent = `${allContractors.length} contractor${allContractors.length === 1 ? '' : 's'} found`;
+
+      container.innerHTML = allContractors.map(contractor => {
+        const avatarUrl = contractor.avatar_url || '/default-avatar.png';
+        const companyName = escapeHtml(contractor.contractor_name || contractor.company_name || 'Unknown Contractor');
+        const grade = contractor.grade || 'B';
+        const city = escapeHtml(contractor.city || '');
+        const state = contractor.state || '';
+        const rating = contractor.average_rating || 0;
+        const reviewCount = contractor.review_count || 0;
+        const trade = contractor.trade || '';
+        const trades = trade ? [formatTrade(trade)] : ['General'];
+
+        return `
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all group flex flex-col md:flex-row gap-6" onclick="viewContractorProfile('${contractor.email}')">
+
+            <div class="shrink-0 relative">
+              <div class="h-24 w-24 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-3xl font-bold text-slate-600 shadow-sm">
+                ${getInitials(companyName)}
+              </div>
+              ${contractor.has_verified_license ? `
+                <div class="absolute -bottom-2 -right-2 bg-white p-1 rounded-full shadow-sm">
+                  <i class="fa-solid fa-circle-check text-2xl text-blue-500"></i>
+                </div>
+              ` : ''}
             </div>
-            <p class="description">
-                Full-service home remodeler specializing in kitchens, baths, and whole-house renovations. Known for detailed scopes and excellent client communication.
-            </p>
-        </div>
-    </div>
 
-    <div class="contractor-card">
-        <div class="logo-container">EL</div>
-        <div class="details-container">
-            <a href="#" class="contractor-name">A-Z Electricians Inc.</a>
-            <div>
-                <span class="grade-tag grade-b">Grade B</span>
-                <span class="info-tag">Licensed Electrician</span>
-                <span class="info-tag">5 Yrs Experience</span>
-                <span class="info-tag">5.8 mi Away</span>
-            </div>
-            <p class="description">
-                Focus on residential wiring, panel upgrades, and new fixture installation. Known for clean work but sometimes slow on follow-up maintenance.
-            </p>
-        </div>
-    </div>
+            <div class="flex-1">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">${companyName}</h3>
+                  ${city && state ? `
+                    <p class="text-slate-500 text-sm mb-2"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i> ${city}, ${state}</p>
+                  ` : ''}
+                </div>
+                <div class="text-center bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
+                  <span class="block text-2xl font-black text-slate-900">${grade}</span>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Grade</span>
+                </div>
+              </div>
 
-    <div class="contractor-card">
-        <div class="logo-container">PL</div>
-        <div class="details-container">
-            <a href="#" class="contractor-name">Pipe Dreams Plumbing</a>
-            <div>
-                <span class="grade-tag grade-f">Grade F</span>
-                <span class="info-tag">Plumber</span>
-                <span class="info-tag">2 Yrs Experience</span>
-                <span class="info-tag">1.5 mi Away</span>
-            </div>
-            <p class="description">
-                Handles drain cleaning and basic fixture replacement. **WARNING:** Has high rate of unpermitted work and poor insurance coverage. Use caution.
-            </p>
-        </div>
-    </div>
+              <div class="flex gap-2 mb-4 mt-2">
+                ${trades.map(t => `<span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg uppercase tracking-wide">${t}</span>`).join('')}
+              </div>
 
-    <div class="contractor-card">
-        <div class="logo-container">HV</div>
-        <div class="details-container">
-            <a href="#" class="contractor-name">Comfort Kings HVAC</a>
-            <div>
-                <span class="grade-tag grade-c">Grade C</span>
-                <span class="info-tag">HVAC/Mechanical</span>
-                <span class="info-tag">18 Yrs Experience</span>
-                <span class="info-tag">11.3 mi Away</span>
+              <div class="flex items-center gap-6 text-sm text-slate-500 border-t border-slate-50 pt-4">
+                ${contractor.has_verified_license ? `
+                  <span class="flex items-center gap-1"><i class="fa-solid fa-shield-halved text-emerald-500"></i> Licensed & Insured</span>
+                ` : `
+                  <span class="flex items-center gap-1"><i class="fa-solid fa-circle-info text-slate-400"></i> License Pending</span>
+                `}
+                ${reviewCount > 0 ? `
+                  <span class="flex items-center gap-1"><i class="fa-solid fa-star text-yellow-400"></i> ${rating.toFixed(1)} (${reviewCount})</span>
+                ` : `
+                  <span class="flex items-center gap-1"><i class="fa-regular fa-star text-slate-300"></i> No reviews yet</span>
+                `}
+              </div>
             </div>
-            <p class="description">
-                Reliable repair and installation of central heating and cooling units. Grade lowered due to older website and minimal client communication tracking.
+
+            <div class="flex flex-col justify-center border-l border-slate-50 pl-6 border-0 md:border-l">
+              <button onclick="event.stopPropagation(); viewContractorProfile('${contractor.email}')" class="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-blue-600 transition-colors whitespace-nowrap">
+                View Profile
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getInitials(name) {
+      if (!name) return '?';
+      const words = name.split(' ');
+      if (words.length >= 2) {
+        return (words[0][0] + words[1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+
+    function formatTrade(trade) {
+      if (!trade) return '';
+      return trade.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    function renderStars(rating) {
+      const fullStars = Math.floor(rating);
+      const halfStar = rating % 1 >= 0.5 ? 1 : 0;
+      const emptyStars = 5 - fullStars - halfStar;
+
+      return '★'.repeat(fullStars) + (halfStar ? '⯨' : '') + '☆'.repeat(emptyStars);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function viewContractorProfile(email) {
+      // TODO: Navigate to contractor profile page
+      window.location.href = `contractor-public-profile.html?email=${encodeURIComponent(email)}`;
+    }
+
+    function contactContractor(email) {
+      // TODO: Open contact/message modal
+      alert(`Contact feature coming soon for ${email}`);
+    }
+
+    // Allow Enter key in search
+    document.getElementById('searchInput')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        applyFilters();
+      }
+    });
+
+    // Auto-filter on ZIP code blur
+    document.getElementById('zipFilter')?.addEventListener('blur', () => {
+      if (document.getElementById('zipFilter').value.length === 5) {
+        applyFilters();
+      }
+    });
+
+    // AUTH GATE: Check if user is logged in (app-controller guarantees auth is ready)
+    window.addEventListener('app-ready', () => {
+      const user = window.currentUser;
+
+      if (!user) {
+        showSignupGate();
+      }
+    });
+
+    function showSignupGate() {
+      // Hide the directory content
+      document.getElementById('directory-container').style.display = 'none';
+
+      // Show signup gate message
+      const gateHTML = `
+        <div style="max-width: 600px; margin: 100px auto; padding: 40px; text-align: center;">
+          <div style="background: white; border-radius: 24px; padding: 48px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-radius: 20px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 40px;">
+              🔒
+            </div>
+            <h2 style="font-size: 32px; font-weight: 800; color: #111827; margin-bottom: 16px; letter-spacing: -0.02em;">
+              Directory Access
+            </h2>
+            <p style="font-size: 18px; color: #6b7280; margin-bottom: 32px; line-height: 1.6;">
+              We safeguard contractor information to ensure quality connections. Create a free account to access our verified directory of licensed professionals.
             </p>
+            <div style="display: flex; flex-direction: column; gap: 12px; max-width: 400px; margin: 0 auto;">
+              <a href="/signup.html" style="display: block; padding: 16px 32px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; font-size: 16px; font-weight: 700; border-radius: 12px; text-decoration: none; transition: all 0.2s;">
+                Create Free Account
+              </a>
+              <a href="/signin.html" style="display: block; padding: 16px 32px; background: transparent; color: #6b7280; font-size: 16px; font-weight: 600; border-radius: 12px; text-decoration: none; transition: all 0.2s;">
+                Already have an account? Sign In
+              </a>
+            </div>
+            <p style="font-size: 14px; color: #9ca3af; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+              <strong style="color: #6b7280;">Why we require signup:</strong><br>
+              We verify all users to maintain a trusted marketplace. This protects both homeowners and contractors from spam and ensures serious connections.
+            </p>
+          </div>
         </div>
-    </div>
-  </section></main></body></html>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', gateHTML);
+    }
+  </script>
+
+  <script src="/services/app-controller.js"></script>
+</body>
+</html>

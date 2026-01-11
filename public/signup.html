@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="B">
+  <title>Sign Up – HomeProHub</title>
+
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Preserved Styles */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .auth-container { background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); max-width: 540px; width: 100%; padding: 48px 40px; }
+    .role-option { padding: 20px; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .role-option:hover { border-color: #3b82f6; background: #eff6ff; }
+    .role-option.active { border-color: #3b82f6; background: #eff6ff; }
+    .role-specific-fields { display: none; }
+    .role-specific-fields.active { display: block; }
+    input:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .btn-primary { width: 100%; padding: 14px 24px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+  </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans antialiased opacity-0 transition-opacity duration-300">
+
+  <div id="main-header-container" class="w-full z-50 relative"></div>
+
+  <main class="flex-grow flex items-center justify-center px-4 py-12 relative z-10" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+    
+    <div class="auth-container">
+      <div class="logo mb-8 text-center">
+         <a href="/" class="text-2xl font-extrabold text-slate-900 no-underline">HomeProHub</a>
+      </div>
+
+      <h1 id="pageTitle" class="text-2xl font-bold text-slate-900 text-center mb-2">Create Account</h1>
+      <p id="pageSubtitle" class="text-slate-500 text-center mb-8">Join HomeProHub to get started</p>

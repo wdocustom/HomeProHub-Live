@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Still Reviewing Bids? - HomeProHub</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      padding: 40px 30px;
+      line-height: 1.6;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .intro {
+      font-size: 16px;
+      color: #4b5563;
+      margin-bottom: 24px;
+    }
+    .reassurance-box {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #fbbf24;
+    }
+    .reassurance-box h3 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .reassurance-box p {
+      color: #78350f;
+      margin: 0;
+    }
+    .common-reasons {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .common-reasons h3 {
+      color: #1f2937;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+    }
+    .reason-item {
+      display: flex;
+      align-items: flex-start;
+      margin: 16px 0;
+      padding: 16px;
+      background-color: white;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    .reason-icon {
+      font-size: 28px;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+    .reason-content h4 {
+      margin: 0 0 8px 0;
+      color: #1f2937;
+      font-size: 16px;
+    }
+    .reason-content p {
+      margin: 0 0 8px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .reason-content .solution {
+      color: #059669;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .help-box {
+      background-color: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .help-box h3 {
+      color: #1e40af;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .help-box p {
+      color: #1e3a8a;
+      margin: 8px 0;
+    }
+    .help-box ul {
+      margin: 12px 0;
+      padding-left: 20px;
+      color: #1e3a8a;
+    }
+    .help-box li {
+      margin: 6px 0;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white !important;
+      padding: 16px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #f59e0b;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon">🔍</div>
+      <h1>Still Reviewing Bids?</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <p class="greeting">Hi {{homeownerName}},</p>
+
+      <p class="intro">
+        We noticed you haven't selected a contractor yet for <strong>{{jobTitle}}</strong>. That's completely okay—choosing the right contractor is an important decision and shouldn't be rushed. As your owner's representative, we want to make sure you feel confident in your choice.
+      </p>
+
+      <!-- Reassurance -->
+      <div class="reassurance-box">
+        <h3>👍 Take Your Time</h3>
+        <p>A week is actually a normal timeframe for reviewing bids and making a decision. Some homeowners take even longer. The key is making an informed choice, not a fast one.</p>
+      </div>
+
+      <!-- Common Reasons -->
+      <div class="common-reasons">
+        <h3>🤔 Common Reasons for Hesitation</h3>
+
+        <div class="reason-item">
+          <div class="reason-icon">❓</div>
+          <div class="reason-content">
+            <h4>Unclear About Differences</h4>
+            <p>The bids all look similar and you're not sure what makes one better than another.</p>
+            <span class="solution">→ We can help you compare bids side-by-side and identify key differences</span>
+          </div>
+        </div>
+
+        <div class="reason-item">
+          <div class="reason-icon">💭</div>
+          <div class="reason-content">
+            <h4>Waiting for More Bids</h4>
+            <p>You're hoping to get a few more options before deciding.</p>
+            <span class="solution">→ If you haven't received 3-4 bids yet, we can help expand your search</span>
+          </div>
+        </div>
+
+        <div class="reason-item">
+          <div class="reason-icon">😰</div>
+          <div class="reason-content">
+            <h4>Feeling Overwhelmed</h4>
+            <p>There's a lot to consider and you're not sure where to start.</p>
+            <span class="solution">→ Let's hop on a quick call and walk through your options together</span>
+          </div>
+        </div>
+
+        <div class="reason-item">
+          <div class="reason-icon">💰</div>
+          <div class="reason-content">
+            <h4>Budget Concerns</h4>
+            <p>The bids came in higher than you expected.</p>
+            <span class="solution">→ We can discuss project scope adjustments or phased approaches</span>
+          </div>
+        </div>
+
+        <div class="reason-item">
+          <div class="reason-icon">🚩</div>
+          <div class="reason-content">
+            <h4>Something Feels Off</h4>
+            <p>You have a gut feeling about one or more contractors but can't pinpoint why.</p>
+            <span class="solution">→ Trust your instincts—let's talk through your concerns</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Section -->
+      <div class="help-box">
+        <h3>💡 How We Can Help Right Now</h3>
+        <p>As your owner's representative, here's what we can do for you:</p>
+        <ul>
+          <li><strong>Bid Review Call:</strong> We'll review all your bids with you and highlight what to watch for</li>
+          <li><strong>Contractor Vetting:</strong> We can dig deeper into any contractor's background and past work</li>
+          <li><strong>Scope Refinement:</strong> Help you adjust the project scope to fit your budget</li>
+          <li><strong>Timeline Planning:</strong> Discuss realistic timelines and scheduling</li>
+          <li><strong>Question Drafting:</strong> Help you formulate questions to ask contractors</li>
+        </ul>
+        <p style="margin-top: 16px;"><strong>All of this is included—no extra cost. We're here for you.</strong></p>
+      </div>
+
+      <p style="color: #4b5563; margin-top: 24px;">
+        <strong>Remember:</strong> Every contractor on HomeProHub is already vetted, licensed, insured, and bonded. You're choosing from quality contractors—we just want to help you find the perfect match for your specific project.
+      </p>
+
+      <!-- CTA Button -->
+      <div class="cta-container">
+        <a href="{{dashboardLink}}" class="cta-button">
+          Review Your Options →
+        </a>
+      </div>
+
+      <p style="color: #6b7280; line-height: 1.6; margin-top: 30px;">
+        <strong>Need help making a decision?</strong> Just reply to this email or reach out via text, phone, or video call. We're your owner's representative—helping you make the right choice is literally our job. Let us help!
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>HomeProHub</strong> - Your Owner's Representative</p>
+      <p>Here to help you every step of the way</p>
+      <p style="margin-top: 20px;">
+        <a href="https://www.homeprohub.today">www.homeprohub.today</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

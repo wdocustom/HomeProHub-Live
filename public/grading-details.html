@@ -1,205 +1,271 @@
-<!DOCTYPE html><html lang="en"><head>
-  <meta charset="UTF-8" />
-  <title>HomeProHub – Grading System Details</title>
-  <link rel="stylesheet" href="styles.css" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How We Verify Contractors – HomeProHub</title>
+  <meta name="description" content="Learn how we verify contractors through license checks, project history, and structured reviews. Real credentials, not paid placement.">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Sanctuary Glass 2.0 Design System -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+
   <style>
-    .hero {
-      max-width: 900px;
-      margin: 48px auto 24px;
-      padding: 0 24px;
-      text-align: center;
-    }
-    .hero-title {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 10px;
-      color: #111827;
-    }
-    .hero-subtitle {
-      font-size: 14px;
-      line-height: 1.6;
-      color: #6b7280;
-      max-width: 640px;
-      margin: 0 auto;
-    }
-    .content-grid {
-      max-width: 900px;
-      margin: 0 auto 60px;
-      padding: 0 24px;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-    @media (max-width: 800px) {
-      .content-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .grade-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .grade-title {
-      font-size: 20px;
+    * {
       margin: 0;
-    }
-    .grade-pill {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: #f0f4ff;
-      color: #2563eb;
-      font-weight: 600;
-    }
-    .criteria-list {
-      list-style: none;
       padding: 0;
-      margin: 10px 0 0;
-      font-size: 14px;
-      color: #4b5563;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
-    .criteria-list li {
-      margin-bottom: 10px;
-      padding-left: 15px;
-      position: relative;
+
+    body {
+      color: #1f2937;
+      line-height: 1.6;
+      padding-bottom: 80px;
     }
-    .criteria-list li::before {
-      content: "✓";
-      color: #10b981;
-      font-weight: 700;
-      position: absolute;
-      left: 0;
-    }
-  </style></head><body><header class="navbar">
-  <div class="nav-inner">
-    <div class="brand-area">
-      <div class="brand-logo">H</div>
-      <div class="brand-name">HomeProHub</div>
+  </style>
+</head>
+<body class="zone-a public-page">
+
+  <!-- HERO SECTION -->
+  <div class="relative bg-gradient-to-b from-purple-50 to-slate-50 pt-24 pb-16 px-4">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-purple-200 shadow-sm mb-6">
+        <i class="fa-solid fa-medal text-purple-600"></i>
+        <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Transparent Scoring</span>
+      </div>
+
+      <h1 class="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6">
+        How We <span class="text-purple-600">Verify</span> Contractors
+      </h1>
+
+      <p class="text-xl text-slate-500 mb-8 max-w-2xl mx-auto leading-relaxed">
+        We confirm licenses, insurance, and project history through public registries and structured reviews—not paid placement or advertising.
+      </p>
     </div>
-    <div class="nav-links">
-      <a href="index.html">Home</a>
-      <div class="profile-area">
-        <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- CREDENTIAL LEVELS OVERVIEW -->
+  <div class="max-w-5xl mx-auto px-4 -mt-8 mb-20">
+    <div class="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+      <h2 class="text-2xl font-bold text-slate-900 mb-8 text-center">Contractor Credential Levels</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Verified -->
+        <div class="text-center p-8 bg-emerald-50 rounded-2xl border border-emerald-100">
+          <div class="text-4xl mb-3">✓</div>
+          <div class="text-2xl font-black text-emerald-600 mb-3">Verified</div>
+          <div class="text-sm font-bold text-emerald-700 mb-4">Active License</div>
+          <ul class="text-xs text-slate-600 text-left space-y-2">
+            <li>• State/city license confirmed</li>
+            <li>• Insurance on file</li>
+            <li>• Eligible to bid</li>
+          </ul>
+        </div>
+
+        <!-- Established -->
+        <div class="text-center p-8 bg-blue-50 rounded-2xl border border-blue-100">
+          <div class="text-4xl mb-3">⭐</div>
+          <div class="text-2xl font-black text-blue-600 mb-3">Established</div>
+          <div class="text-sm font-bold text-blue-700 mb-4">Proven Track Record</div>
+          <ul class="text-xs text-slate-600 text-left space-y-2">
+            <li>• 5+ completed projects</li>
+            <li>• Avg. response within 24hrs</li>
+            <li>• 90%+ on-time delivery</li>
+          </ul>
+        </div>
+
+        <!-- Premier -->
+        <div class="text-center p-8 bg-purple-50 rounded-2xl border border-purple-100">
+          <div class="text-4xl mb-3">🏆</div>
+          <div class="text-2xl font-black text-purple-600 mb-3">Premier</div>
+          <div class="text-sm font-bold text-purple-700 mb-4">Top Tier Performance</div>
+          <ul class="text-xs text-slate-600 text-left space-y-2">
+            <li>• 20+ completed projects</li>
+            <li>• Exceptional reviews</li>
+            <li>• Priority search visibility</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="text-center text-sm text-slate-500 mt-8 italic">
+        All listed contractors hold verified licenses. Higher tiers earn visibility through consistent performance.
+      </p>
+    </div>
+  </div>
+
+  <!-- CONTRACTOR GRADING CRITERIA -->
+  <div class="max-w-7xl mx-auto px-4 mb-16">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+      <!-- Contractor Verification Card -->
+      <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-slate-900">How Contractors Earn Visibility</h2>
+          <span class="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wide">Public</span>
+        </div>
+
+        <p class="text-slate-500 mb-6 leading-relaxed">
+          We verify contractor credentials and track performance through structured reviews. No contractor can pay for better placement.
+        </p>
+
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Visibility Factors</h3>
+
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-certificate text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">License Verification</div>
+              <div class="text-sm text-slate-500">Required for all listings</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-shield text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Insurance Coverage</div>
+              <div class="text-sm text-slate-500">General liability and workers' comp verification</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-clipboard-check text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Completed Projects</div>
+              <div class="text-sm text-slate-500">Volume, diversity, and complexity of work</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-clock text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">On-Time Completion</div>
+              <div class="text-sm text-slate-500">Adherence to contract timelines</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-comments text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Communication Quality</div>
+              <div class="text-sm text-slate-500">Response time and clarity of bids</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-chart-line text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Review History</div>
+              <div class="text-sm text-slate-500">Structured feedback from completed projects</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Homeowner Project History Card -->
+      <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-slate-900">Project Readiness Signals</h2>
+          <span class="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full uppercase tracking-wide">Visible After Bid</span>
+        </div>
+
+        <p class="text-slate-500 mb-6 leading-relaxed">
+          After accepting a bid, contractors see project history indicators that help them prepare for site visits and set accurate timelines.
+        </p>
+
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Project Indicators</h3>
+
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-comments text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Communication Patterns</div>
+              <div class="text-sm text-slate-500">Average response time and message clarity</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-key text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Site Access</div>
+              <div class="text-sm text-slate-500">Scheduled access times, keys/codes provided on time</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-credit-card text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Payment Timing</div>
+              <div class="text-sm text-slate-500">On-time payment percentage</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-list-check text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Project Completion Rate</div>
+              <div class="text-sm text-slate-500">Percentage of started projects completed</div>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+              <i class="fa-solid fa-star text-lg"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Review Completion</div>
+              <div class="text-sm text-slate-500">Reviews left for completed projects</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WHY IT MATTERS -->
+  <div class="max-w-5xl mx-auto px-4 mb-32">
+    <div class="bg-gradient-to-br from-blue-50 to-white rounded-3xl p-8 md:p-12 shadow-sm border border-blue-100">
+      <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+        <div class="flex-shrink-0 w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-3xl">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="flex-1">
+          <h2 class="text-2xl font-bold text-slate-900 mb-3">Why Verification Matters</h2>
+          <p class="text-slate-600 leading-relaxed mb-4">
+            Most contractor platforms let anyone pay for top placement. We don't. Our verification system is based on confirmed credentials and project history, not advertising dollars. This creates a marketplace where quality work is rewarded, and both homeowners and contractors can build reputation through performance.
+          </p>
+          <a href="/index.html" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:scale-105 transition-all">
+            <span>Get Started</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
       </div>
     </div>
   </div>
-</header><main>
-  <section class="hero">
-    <h1 class="hero-title">HomeProHub Grading System: Transparency in Vetting.</h1>
-    <p class="hero-subtitle">
-      Our grading system (A+ to F) is based on clear, weighted metrics, not just random reviews. Learn exactly how we score both contractors and homeowners.
-    </p>
-  </section>
 
-  <section class="content-grid" id="gradingContent">
-    <p style="grid-column: 1 / -1; text-align: center;">Loading grading criteria...</p>
-  </section></main><script>
-  // --- USER AUTH/NAV SCRIPT START ---
-  function getUserData() {
-    try {
-      const raw = localStorage.getItem("homeprohub_user");
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  const user = getUserData();
-  const profileArea = document.querySelector('.profile-area'); 
-
-  // Check if user is logged in and add the Profile/Name Link
-  if (user && user.name) {
-    const nameLink = document.createElement('a');
-    nameLink.href = 'user-profile.html';
-    nameLink.className = 'profile-link';
-    // Use the stored first name for the link text
-    nameLink.textContent = user.name.split(' ')[0]; 
-    // This now works because profileArea exists in the HTML!
-    profileArea.prepend(nameLink); 
-  } else {
-    // If not logged in, redirect them back to choose role
-    window.location.href = "index.html";
-  }
-
-  function logout() {
-    localStorage.removeItem("homeprohub_user");
-    localStorage.removeItem("homeprohub_history_v1");
-    window.location.href = "index.html";
-  }
-  // --- USER AUTH/NAV SCRIPT END ---
-
-
-  async function loadGradingData() {
-    const contentGrid = document.getElementById('gradingContent');
-    contentGrid.innerHTML = ''; 
-
-    try {
-      // Fetch data from the secure server route
-      const response = await fetch('http://localhost:3000/grading-data');
-      if (!response.ok) {
-          throw new Error(`Server status: ${response.status}`);
-      }
-      const data = await response.json();
-
-      // --- CONTRACTOR CRITERIA CARD ---
-      const contractorCard = document.createElement('div');
-      contractorCard.className = 'card';
-      contractorCard.innerHTML = `
-        <div class="grade-header">
-          <h2 class="grade-title">Contractor Grade Criteria</h2>
-          <span class="grade-pill">Visible to Homeowners</span>
-        </div>
-        <p style="font-size: 14px; color: #4b5563;">
-          ${data.contractor_grading_criteria.description}
-        </p>
-        <h3 style="font-size: 16px; margin: 15px 0 5px;">Key Data Points (Weight)</h3>
-        <ul class="criteria-list">
-          <li>State/City License Verification (Weight: 30%)</li>
-          <li>Completed Projects (Volume and Diversity) (Weight: 20%)</li>
-          <li>Completion on Time (Adherence to contract timelines) (Weight: 15%)</li>
-          <li>Number of client complaints (past 2 years) (Weight: 15%)</li>
-          <li>Average response time on platform (for communication score) (Weight: 10%)</li>
-          <li>Clarity of scope language in uploaded bids (AI assessed) (Weight: 10%)</li>
-          <li>Historical data on payment disputes (low score on financial risk) (Weight: 10%)</li>
-        </ul>
-      `;
-      contentGrid.appendChild(contractorCard);
-
-      // --- HOMEOWNER CRITERIA CARD ---
-      const homeownerCard = document.createElement('div');
-      homeownerCard.className = 'card';
-      homeownerCard.innerHTML = `
-        <div class="grade-header">
-          <h2 class="grade-title">Homeowner Grade Criteria</h2>
-          <span class="grade-pill" style="background:#fff3f2; color:#ef4444;">Visible to Contractors Only</span>
-        </div>
-        <p style="font-size: 14px; color: #4b5563;">
-          ${data.homeowner_grading_criteria.description}
-        </p>
-        <h3 style="font-size: 16px; margin: 15px 0 5px;">Key Data Points (Weight)</h3>
-        <ul class="criteria-list">
-          ${data.homeowner_grading_criteria.data_points_required.map((point, index) => {
-            const weights = data.homeowner_grading_criteria.grade_weighting;
-            const keys = Object.keys(weights);
-            let weightKey = keys[index % keys.length]; 
-            return `<li>${point} (Weight: ${weights[weightKey]}%)</li>`;
-          }).join('')}
-        </ul>
-      `;
-      contentGrid.appendChild(homeownerCard);
-
-    } catch (error) {
-      console.error("Could not load grading logic:", error);
-      contentGrid.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center; color: #ef4444;">
-        Error loading grading logic: Could not connect to data source or data is invalid. (Check your server.js console for errors or confirm the JSON file is present).
-      </div>`;
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', loadGradingData);
-</script></body></html>
+  <script src="/services/app-controller.js"></script>
+</body>
+</html>

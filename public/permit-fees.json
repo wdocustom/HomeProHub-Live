@@ -1,17 +1,99 @@
 {
-  "description": "Mocked average permit costs and requirements for common projects.",
+  "description": "Average permit costs and requirements for common home improvement projects.",
+  "last_updated": "2025-01",
+  "disclaimer": "Permit requirements vary by municipality. Always check local building codes.",
   "projects": {
     "bathroom_remodel": {
       "permits_required": ["Building (Structural changes)", "Electrical", "Plumbing"],
-      "average_fee_range": [300, 1500]
+      "average_fee_range": [300, 1500],
+      "typical_timeline": "2-4 weeks for approval"
     },
     "kitchen_remodel": {
-      "permits_required": ["Building (Structural changes)", "Electrical, Mechanical (HVAC)", "Plumbing"],
-      "average_fee_range": [500, 2500]
+      "permits_required": ["Building (Structural changes)", "Electrical", "Mechanical (HVAC)", "Plumbing"],
+      "average_fee_range": [500, 2500],
+      "typical_timeline": "3-6 weeks for approval"
+    },
+    "full_addition": {
+      "permits_required": ["Building", "Electrical", "Plumbing", "Mechanical", "Zoning Review"],
+      "average_fee_range": [2000, 8000],
+      "typical_timeline": "6-12 weeks for approval"
+    },
+    "deck_construction": {
+      "permits_required": ["Building", "Zoning (setback requirements)"],
+      "average_fee_range": [200, 800],
+      "typical_timeline": "2-3 weeks for approval"
+    },
+    "roof_replacement": {
+      "permits_required": ["Building"],
+      "average_fee_range": [150, 500],
+      "typical_timeline": "1-2 weeks for approval"
+    },
+    "window_replacement": {
+      "permits_required": ["Building (if structural)"],
+      "average_fee_range": [100, 400],
+      "typical_timeline": "1-2 weeks for approval"
+    },
+    "siding_replacement": {
+      "permits_required": ["Building"],
+      "average_fee_range": [150, 500],
+      "typical_timeline": "1-2 weeks for approval"
+    },
+    "hvac_replacement": {
+      "permits_required": ["Mechanical", "Electrical (if upgrading service)"],
+      "average_fee_range": [200, 800],
+      "typical_timeline": "1-3 weeks for approval"
+    },
+    "electrical_panel_upgrade": {
+      "permits_required": ["Electrical"],
+      "average_fee_range": [150, 600],
+      "typical_timeline": "1-2 weeks for approval"
+    },
+    "plumbing_repiping": {
+      "permits_required": ["Plumbing"],
+      "average_fee_range": [200, 700],
+      "typical_timeline": "1-3 weeks for approval"
+    },
+    "fence_installation": {
+      "permits_required": ["Zoning (setback requirements)", "Building (in some municipalities)"],
+      "average_fee_range": [50, 300],
+      "typical_timeline": "1-2 weeks for approval"
+    },
+    "shed_construction": {
+      "permits_required": ["Building (if over 120 sq ft)", "Zoning"],
+      "average_fee_range": [100, 500],
+      "typical_timeline": "2-3 weeks for approval"
+    },
+    "pool_installation": {
+      "permits_required": ["Building", "Electrical", "Zoning", "Fence (safety requirement)"],
+      "average_fee_range": [1000, 5000],
+      "typical_timeline": "4-8 weeks for approval"
+    },
+    "basement_finishing": {
+      "permits_required": ["Building", "Electrical", "Plumbing (if adding bath)"],
+      "average_fee_range": [400, 2000],
+      "typical_timeline": "3-5 weeks for approval"
     },
     "general_repair": {
       "permits_required": ["None required for non-structural/non-utility fixes"],
-      "average_fee_range": [0, 0]
+      "average_fee_range": [0, 0],
+      "typical_timeline": "No permit needed"
+    },
+    "minor_electrical": {
+      "permits_required": ["Electrical (for new circuits/outlets)"],
+      "average_fee_range": [50, 200],
+      "typical_timeline": "1 week for approval"
+    },
+    "minor_plumbing": {
+      "permits_required": ["Plumbing (for new fixtures)"],
+      "average_fee_range": [50, 250],
+      "typical_timeline": "1 week for approval"
     }
-  }
+  },
+  "notes": [
+    "Fees vary significantly by jurisdiction",
+    "Some municipalities calculate fees as % of project value",
+    "Expedited review options may be available for additional fees",
+    "Inspections are typically required during and after construction",
+    "Work started without required permits may result in fines and remediation costs"
+  ]
 }
