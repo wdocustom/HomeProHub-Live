@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://api.mapbox.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' https://api.mapbox.com https:;">
   <meta name="sanctuary-zone" content="D">
   <title>Contractor Tools – HomeProHub</title>
 
@@ -59,6 +60,9 @@
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+
+    /* CSS Failsafe: Show estimator by default even if JS fails */
+    #content-estimator { display: block; }
 
     /* Map Styles */
     #lead-map {
@@ -1135,12 +1139,32 @@
     // ============================================
     // INITIALIZE APP
     // ============================================
-    checkAuth().then(isAuthenticated => {
-      if (isAuthenticated) {
-        checkForEstimatorJob();
+    async function initPage() {
+      try {
+        // 1. Show default tab IMMEDIATELY so page isn't blank
+        switchTab('estimator');
+
+        // 2. Initialize trade fields immediately
+        renderTradeFields();
+
+        // 3. Then try to authenticate and load job data
+        const isAuthenticated = await checkAuth();
+        if (isAuthenticated) {
+          checkForEstimatorJob();
+        }
+      } catch (error) {
+        console.error('Page initialization failed:', error);
+        // Even if init fails, the Estimator tab stays visible due to CSS failsafe
       }
-      renderTradeFields();
-    });
+    }
+
+    // Run when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+      // DOM already loaded
+      initPage();
+    }
   </script>
 
   <!-- Sanctuary Glass 2.0 Navigation System -->
