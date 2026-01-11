@@ -7023,6 +7023,244 @@ app.get("/api/homeowner/stats", requireAuth, async (req, res) => {
   }
 });
 
+// ========================================
+// CONTRACTOR TOOLS - Lead Scout & Subscription Access
+// ========================================
+
+/**
+ * POST /api/user/subscription-access
+ * Check if user has access to specific premium features
+ */
+app.post("/api/user/subscription-access", async (req, res) => {
+  try {
+    const { email, feature } = req.body;
+
+    if (!email || !feature) {
+      return res.status(400).json({ error: 'Email and feature required' });
+    }
+
+    // Query user's subscription tier from user_profiles
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('subscription_tier')
+      .eq('email', email)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      return res.json({ hasAccess: false });
+    }
+
+    // Check if user has premium tier (contractor_premium)
+    // pm_tools_access is only available on Premium tier
+    const hasPremiumAccess = profile?.subscription_tier === 'contractor_premium';
+
+    res.json({
+      hasAccess: hasPremiumAccess,
+      tier: profile?.subscription_tier || 'contractor_starter'
+    });
+
+  } catch (err) {
+    console.error('❌ Error checking subscription access:', err);
+    res.status(500).json({ error: 'Internal server error', hasAccess: false });
+  }
+});
+
+/**
+ * GET /api/leads/search
+ * Search for fresh real estate leads from Repliers.io
+ * Query params: zipCode, radius (miles)
+ */
+app.get("/api/leads/search", requireAuth, async (req, res) => {
+  try {
+    const { zipCode, radius } = req.query;
+
+    if (!zipCode) {
+      return res.status(400).json({ error: 'Zip code required' });
+    }
+
+    // Repliers.io API configuration (or SimplyRETS fallback)
+    const REPLIERS_API_KEY = process.env.REPLIERS_API_KEY;
+    const USE_MOCK_DATA = !REPLIERS_API_KEY; // Use mock data if no API key
+
+    if (USE_MOCK_DATA) {
+      // Mock data for development/testing
+      const mockLeads = generateMockLeads(zipCode, parseInt(radius) || 25);
+      return res.json({
+        leads: mockLeads,
+        count: mockLeads.length,
+        source: 'mock'
+      });
+    }
+
+    // Real API call to Repliers.io
+    const searchRadius = parseInt(radius) || 25;
+    const apiUrl = `https://api.repliers.io/listings?zipCode=${zipCode}&radius=${searchRadius}&status=Pending,Closed&lastUpdated=last7days&class=Residential`;
+
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${REPLIERS_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Repliers.io API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Transform Repliers.io data to our format
+    const leads = (data.listings || []).map(listing => ({
+      listingId: listing.listingId,
+      standardStatus: listing.standardStatus, // 'Closed' or 'Pending'
+      listDate: listing.closeDate || listing.pendingDate,
+      property: {
+        bedrooms: listing.property?.bedrooms,
+        bathrooms: listing.property?.bathrooms,
+        area: listing.property?.area
+      },
+      geo: {
+        lat: listing.geo?.lat,
+        lng: listing.geo?.lng
+      },
+      addressHidden: true // Address hidden until unlocked
+    }));
+
+    res.json({
+      leads,
+      count: leads.length,
+      source: 'repliers'
+    });
+
+  } catch (err) {
+    console.error('❌ Error fetching leads:', err);
+    res.status(500).json({
+      error: 'Failed to fetch leads',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/leads/unlock
+ * Unlock a lead to reveal full address and save to contractor's CRM
+ */
+app.post("/api/leads/unlock", requireAuth, async (req, res) => {
+  try {
+    const { listingId, contractorEmail } = req.body;
+
+    if (!listingId || !contractorEmail) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Fetch full listing details from Repliers.io
+    const REPLIERS_API_KEY = process.env.REPLIERS_API_KEY;
+    const USE_MOCK_DATA = !REPLIERS_API_KEY;
+
+    if (USE_MOCK_DATA) {
+      // Mock unlocked lead data
+      return res.json({
+        address: '123 Main St, Omaha, NE 68105',
+        owner: 'John Doe',
+        phone: '(555) 123-4567',
+        email: 'mock@example.com',
+        unlocked: true
+      });
+    }
+
+    const apiUrl = `https://api.repliers.io/listings/${listingId}`;
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${REPLIERS_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to unlock lead: ${response.status}`);
+    }
+
+    const listingData = await response.json();
+
+    // Save unlocked lead to contractor's CRM (leads table)
+    const { data: savedLead, error: saveError } = await supabase
+      .from('leads')
+      .insert({
+        contractor_email: contractorEmail,
+        listing_id: listingId,
+        address: listingData.address?.full,
+        owner_name: listingData.owner?.name,
+        owner_phone: listingData.owner?.phone,
+        owner_email: listingData.owner?.email,
+        property_type: 'Residential',
+        bedrooms: listingData.property?.bedrooms,
+        bathrooms: listingData.property?.bathrooms,
+        sqft: listingData.property?.area,
+        status: listingData.standardStatus,
+        unlocked_at: new Date().toISOString(),
+        source: 'lead_scout'
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error('Error saving lead to CRM:', saveError);
+    }
+
+    res.json({
+      address: listingData.address?.full,
+      owner: listingData.owner?.name,
+      phone: listingData.owner?.phone,
+      email: listingData.owner?.email,
+      unlocked: true,
+      savedToCRM: !saveError
+    });
+
+  } catch (err) {
+    console.error('❌ Error unlocking lead:', err);
+    res.status(500).json({
+      error: 'Failed to unlock lead',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * Helper function to generate mock leads for testing
+ */
+function generateMockLeads(zipCode, radius) {
+  const leads = [];
+  const statuses = ['Closed', 'Pending'];
+
+  // Generate 5-15 random mock leads
+  const count = Math.floor(Math.random() * 10) + 5;
+
+  for (let i = 0; i < count; i++) {
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const lat = 41.2565 + (Math.random() - 0.5) * 0.1; // Center around Omaha
+    const lng = -95.9345 + (Math.random() - 0.5) * 0.1;
+
+    leads.push({
+      listingId: `MOCK-${Date.now()}-${i}`,
+      standardStatus: status,
+      listDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      property: {
+        bedrooms: Math.floor(Math.random() * 4) + 2,
+        bathrooms: Math.floor(Math.random() * 3) + 1,
+        area: Math.floor(Math.random() * 2000) + 1000
+      },
+      geo: {
+        lat,
+        lng
+      },
+      addressHidden: true
+    });
+  }
+
+  return leads;
+}
+
 // ====== 404 HANDLER ======
 // This must be the LAST route handler, after all other routes
 app.use((req, res) => {
