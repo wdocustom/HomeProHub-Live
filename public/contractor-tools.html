@@ -937,30 +937,46 @@
         return;
       }
 
-      // Initialize Mapbox map
-      mapboxgl.accessToken = 'pk.eyJ1IjoieW91ci1tYXBib3gtdXNlcm5hbWUiLCJhIjoieW91ci1hY2Nlc3MtdG9rZW4ifQ.placeholder';
+      try {
+        // Fetch Mapbox token from backend (environment variable)
+        const tokenResponse = await fetch('/api/config/mapbox');
+        const tokenData = await tokenResponse.json();
 
-      // Get user's zip code from profile or prompt
-      const userZip = profile?.zipCode || profile?.zip_code || '68105'; // Fallback to Omaha
+        if (!tokenData.token) {
+          console.error('❌ Mapbox token not available');
+          document.getElementById('leads-count').textContent = 'Map configuration error. Please contact support.';
+          return;
+        }
 
-      // Geocode the zip code to get center coordinates
-      const centerCoords = await geocodeZip(userZip);
+        // Initialize Mapbox map with token from server
+        mapboxgl.accessToken = tokenData.token;
 
-      leadsMap = new mapboxgl.Map({
-        container: 'lead-map',
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: centerCoords,
-        zoom: 11
-      });
+        // Get user's zip code from profile or prompt
+        const userZip = profile?.zipCode || profile?.zip_code || '68105'; // Fallback to Omaha
 
-      // Add navigation controls
-      leadsMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        // Geocode the zip code to get center coordinates
+        const centerCoords = await geocodeZip(userZip);
 
-      // Set the zip code input to user's zip
-      document.getElementById('map-zip-code').value = userZip;
+        leadsMap = new mapboxgl.Map({
+          container: 'lead-map',
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: centerCoords,
+          zoom: 11
+        });
 
-      // Auto-search on load
-      setTimeout(() => searchLeads(), 500);
+        // Add navigation controls
+        leadsMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+        // Set the zip code input to user's zip
+        document.getElementById('map-zip-code').value = userZip;
+
+        // Auto-search on load
+        setTimeout(() => searchLeads(), 500);
+
+      } catch (error) {
+        console.error('❌ Error initializing map:', error);
+        document.getElementById('leads-count').textContent = 'Failed to load map. Please refresh the page.';
+      }
     }
 
     async function checkPremiumAccess() {

@@ -7067,6 +7067,30 @@ app.post("/api/user/subscription-access", async (req, res) => {
 });
 
 /**
+ * GET /api/config/mapbox
+ * Provide Mapbox token to authenticated frontend
+ * Security: Safe to expose - Mapbox tokens are domain-restricted
+ */
+app.get("/api/config/mapbox", (req, res) => {
+  try {
+    const token = process.env.MAPBOX_ACCESS_TOKEN;
+
+    if (!token) {
+      console.warn('⚠️ MAPBOX_ACCESS_TOKEN not configured in environment variables');
+      return res.status(500).json({
+        error: 'Mapbox token not configured',
+        token: null
+      });
+    }
+
+    res.json({ token });
+  } catch (err) {
+    console.error('❌ Error fetching Mapbox token:', err);
+    res.status(500).json({ error: 'Failed to fetch token', token: null });
+  }
+});
+
+/**
  * GET /api/leads/search
  * Search for fresh real estate leads from Repliers.io
  * Query params: zipCode, radius (miles)
@@ -7079,23 +7103,23 @@ app.get("/api/leads/search", requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Zip code required' });
     }
 
-    // Repliers.io API configuration (or SimplyRETS fallback)
+    // Fetch Repliers.io API key from environment
     const REPLIERS_API_KEY = process.env.REPLIERS_API_KEY;
-    const USE_MOCK_DATA = !REPLIERS_API_KEY; // Use mock data if no API key
 
-    if (USE_MOCK_DATA) {
-      // Mock data for development/testing
-      const mockLeads = generateMockLeads(zipCode, parseInt(radius) || 25);
-      return res.json({
-        leads: mockLeads,
-        count: mockLeads.length,
-        source: 'mock'
+    if (!REPLIERS_API_KEY) {
+      console.error('❌ REPLIERS_API_KEY not configured in environment variables');
+      return res.status(500).json({
+        error: 'MLS API not configured. Please contact support.',
+        leads: [],
+        count: 0
       });
     }
 
     // Real API call to Repliers.io
     const searchRadius = parseInt(radius) || 25;
     const apiUrl = `https://api.repliers.io/listings?zipCode=${zipCode}&radius=${searchRadius}&status=Pending,Closed&lastUpdated=last7days&class=Residential`;
+
+    console.log(`🔍 Fetching leads from Repliers.io: ZIP ${zipCode}, Radius ${searchRadius}mi`);
 
     const response = await fetch(apiUrl, {
       headers: {
@@ -7105,12 +7129,15 @@ app.get("/api/leads/search", requireAuth, async (req, res) => {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Repliers.io API error ${response.status}:`, errorText);
       throw new Error(`Repliers.io API error: ${response.status}`);
     }
 
     const data = await response.json();
 
     // Transform Repliers.io data to our format
+    // IMPORTANT: Real MLS data structure mapping
     const leads = (data.listings || []).map(listing => ({
       listingId: listing.listingId,
       standardStatus: listing.standardStatus, // 'Closed' or 'Pending'
@@ -7121,11 +7148,14 @@ app.get("/api/leads/search", requireAuth, async (req, res) => {
         area: listing.property?.area
       },
       geo: {
-        lat: listing.geo?.lat,
-        lng: listing.geo?.lng
+        // Real MLS uses listing.map.latitude and listing.map.longitude
+        lat: listing.map?.latitude || listing.geo?.lat,
+        lng: listing.map?.longitude || listing.geo?.lng
       },
       addressHidden: true // Address hidden until unlocked
-    }));
+    })).filter(lead => lead.geo.lat && lead.geo.lng); // Filter out leads without valid coordinates
+
+    console.log(`✅ Successfully fetched ${leads.length} leads from Repliers.io`);
 
     res.json({
       leads,
@@ -7137,7 +7167,9 @@ app.get("/api/leads/search", requireAuth, async (req, res) => {
     console.error('❌ Error fetching leads:', err);
     res.status(500).json({
       error: 'Failed to fetch leads',
-      message: err.message
+      message: err.message,
+      leads: [],
+      count: 0
     });
   }
 });
@@ -7154,20 +7186,17 @@ app.post("/api/leads/unlock", requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Fetch full listing details from Repliers.io
+    // Fetch Repliers.io API key from environment
     const REPLIERS_API_KEY = process.env.REPLIERS_API_KEY;
-    const USE_MOCK_DATA = !REPLIERS_API_KEY;
 
-    if (USE_MOCK_DATA) {
-      // Mock unlocked lead data
-      return res.json({
-        address: '123 Main St, Omaha, NE 68105',
-        owner: 'John Doe',
-        phone: '(555) 123-4567',
-        email: 'mock@example.com',
-        unlocked: true
+    if (!REPLIERS_API_KEY) {
+      console.error('❌ REPLIERS_API_KEY not configured in environment variables');
+      return res.status(500).json({
+        error: 'MLS API not configured. Please contact support.'
       });
     }
+
+    console.log(`🔓 Unlocking lead ${listingId} for ${contractorEmail}`);
 
     const apiUrl = `https://api.repliers.io/listings/${listingId}`;
     const response = await fetch(apiUrl, {
@@ -7178,10 +7207,22 @@ app.post("/api/leads/unlock", requireAuth, async (req, res) => {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Repliers.io unlock error ${response.status}:`, errorText);
       throw new Error(`Failed to unlock lead: ${response.status}`);
     }
 
     const listingData = await response.json();
+
+    // Build full address from real MLS data structure
+    // Real API uses: listing.address.streetNumber + streetName + city + state + postalCode
+    const fullAddress = [
+      listingData.address?.streetNumber,
+      listingData.address?.streetName,
+      listingData.address?.city,
+      listingData.address?.state,
+      listingData.address?.postalCode
+    ].filter(Boolean).join(' ') || listingData.address?.full || 'Address not available';
 
     // Save unlocked lead to contractor's CRM (leads table)
     const { data: savedLead, error: saveError } = await supabase
@@ -7189,10 +7230,10 @@ app.post("/api/leads/unlock", requireAuth, async (req, res) => {
       .insert({
         contractor_email: contractorEmail,
         listing_id: listingId,
-        address: listingData.address?.full,
-        owner_name: listingData.owner?.name,
-        owner_phone: listingData.owner?.phone,
-        owner_email: listingData.owner?.email,
+        address: fullAddress,
+        owner_name: listingData.agent?.name || 'Not available',
+        owner_phone: listingData.agent?.phone || 'Not available',
+        owner_email: listingData.agent?.email || 'Not available',
         property_type: 'Residential',
         bedrooms: listingData.property?.bedrooms,
         bathrooms: listingData.property?.bathrooms,
@@ -7205,14 +7246,16 @@ app.post("/api/leads/unlock", requireAuth, async (req, res) => {
       .single();
 
     if (saveError) {
-      console.error('Error saving lead to CRM:', saveError);
+      console.error('⚠️ Error saving lead to CRM:', saveError);
     }
 
+    console.log(`✅ Successfully unlocked lead ${listingId}`);
+
     res.json({
-      address: listingData.address?.full,
-      owner: listingData.owner?.name,
-      phone: listingData.owner?.phone,
-      email: listingData.owner?.email,
+      address: fullAddress,
+      owner: listingData.agent?.name || 'Not available',
+      phone: listingData.agent?.phone || 'Not available',
+      email: listingData.agent?.email || 'Not available',
       unlocked: true,
       savedToCRM: !saveError
     });
