@@ -1,7 +1,7 @@
 /**
  * Sanctuary Glass 2.0 - Unified Navigation System
  * Zone-based navigation for HomeProHub
- * * UPDATED: Fixed Notification Bell Alignment & Container Logic
+ * * UPDATED: Robust Logout Fix & Notification Bell Alignment
  */
 
 (function() {
@@ -121,8 +121,6 @@
         </a>
       `;
     } else if (config.rightProfile && userData) {
-      // === FIXED SECTION START ===
-      // Wraps Bell and Profile in a flex container for perfect alignment
       rightSectionHtml = `
         <div class="flex items-center gap-3">
           
@@ -179,7 +177,6 @@
 
         </div>
       `;
-      // === FIXED SECTION END ===
     }
 
     return `
@@ -466,8 +463,6 @@
   }
 
   async function markAsRead(notificationId) {
-     /* ... (Keep existing logic or stub) ... */
-     // Simplified for brevity, assumes endpoint exists
      try {
          const token = await getAuthToken();
          await fetch(`/api/notifications/${notificationId}/read`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
@@ -490,7 +485,6 @@
   }
 
   function showToast(message) {
-    // Simple Toast Implementation
     const toast = document.createElement('div');
     toast.className = 'fixed top-20 right-4 z-[100] bg-white shadow-xl rounded-xl border-l-4 border-blue-500 p-4 animate-slide-in';
     toast.innerHTML = `<p class="text-sm font-semibold">${message}</p>`;
@@ -517,18 +511,37 @@
     if(link && link !== '#') window.location.href = link;
   };
 
+  // --- ROBUST LOGOUT HANDLER ---
+  // Tries both logout() and signOut() to match Supabase/Auth wrapper standards
   window.handleLogout = async function() {
-    if(window.authService) await window.authService.logout();
+    console.log("🚪 Logging out...");
+    try {
+      if (window.authService) {
+        // 1. Try 'logout' (Custom Wrapper)
+        if (typeof window.authService.logout === 'function') {
+           await window.authService.logout();
+        } 
+        // 2. Try 'signOut' (Supabase Standard)
+        else if (typeof window.authService.signOut === 'function') {
+           await window.authService.signOut();
+        }
+        else {
+           console.warn("AuthService missing logout function, forcing redirect");
+        }
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+    // Force redirect regardless of API success
     window.location.href = '/index.html';
   };
 
   window.toggleMobileMenu = function() {
-     /* Mobile Menu Logic (Simplified for brevity, keep if needed) */
      alert("Mobile menu toggle"); 
   };
   
   window.toggleMobileNotifications = function() {
-      /* Mobile Notif Logic */
+      // Logic handled in separate script or redundant
   };
 
   function startNavigationSystem() {
