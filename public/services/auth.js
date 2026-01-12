@@ -49,10 +49,28 @@ class AuthService {
       // Get Supabase config from server
       const response = await fetch('/api/config');
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.code === 'AUTH_NOT_CONFIGURED') {
+          console.warn('⚠️ Supabase credentials not configured. Authentication features disabled.');
+          throw new Error('AUTH_NOT_CONFIGURED');
+        }
         throw new Error('Failed to get Supabase config');
       }
 
       const config = await response.json();
+
+      // Validate that credentials are not placeholders
+      const isPlaceholder =
+        !config.supabaseUrl ||
+        !config.supabaseAnonKey ||
+        config.supabaseUrl.includes('your-project.supabase.co') ||
+        config.supabaseAnonKey.includes('your-supabase-anon-key');
+
+      if (isPlaceholder) {
+        console.warn('⚠️ Supabase credentials are placeholder values. Please configure real credentials in .env file.');
+        console.warn('   Visit https://supabase.com to create a project and get your credentials.');
+        throw new Error('PLACEHOLDER_CREDENTIALS');
+      }
 
       // Initialize Supabase client (wrap in try-catch to handle AbortError)
       try {
@@ -258,6 +276,21 @@ class AuthService {
         return; // Don't throw - allow graceful degradation
       }
 
+      // Handle configuration errors with user-friendly messages
+      if (error.message === 'AUTH_NOT_CONFIGURED' || error.message === 'PLACEHOLDER_CREDENTIALS') {
+        console.warn('⚠️ Authentication service not properly configured');
+        console.warn('   To enable authentication features:');
+        console.warn('   1. Create a Supabase project at https://supabase.com');
+        console.warn('   2. Copy your project URL and anon key from Project Settings > API');
+        console.warn('   3. Update SUPABASE_URL and SUPABASE_ANON_KEY in your .env file');
+        console.warn('   4. Restart the server');
+        this.initialized = false;
+
+        // Show user-friendly message in UI
+        this.showConfigurationWarning();
+        return; // Don't throw - allow page to load in demo mode
+      }
+
       console.error('❌ Failed to initialize AuthService:', error);
       console.error('Error details:', {
         name: error.name,
@@ -283,6 +316,14 @@ class AuthService {
    */
   async signUp(email, password, userData = {}) {
     try {
+      // Check if auth service is properly initialized
+      if (!this.initialized || !this.supabase) {
+        return {
+          success: false,
+          error: 'Authentication service not available. Please configure Supabase credentials in your .env file and restart the server.'
+        };
+      }
+
       // Use backend endpoint for signup (handles both auth and profile creation)
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -332,6 +373,14 @@ class AuthService {
    */
   async signIn(email, password) {
     try {
+      // Check if auth service is properly initialized
+      if (!this.initialized || !this.supabase) {
+        return {
+          success: false,
+          error: 'Authentication service not available. Please configure Supabase credentials in your .env file and restart the server.'
+        };
+      }
+
       // Use backend endpoint for signin
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
@@ -695,6 +744,53 @@ class AuthService {
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
     const expires = `expires=${date.toUTCString()}`;
     document.cookie = `${name}=${value}; ${expires}; path=/`;
+  }
+
+  /**
+   * Show configuration warning banner when Supabase is not properly configured
+   */
+  showConfigurationWarning() {
+    // Only show warning on pages that require auth
+    const path = window.location.pathname;
+    const authRequiredPages = ['/signin.html', '/signup.html'];
+    const isAuthPage = authRequiredPages.some(p => path.includes(p));
+
+    if (!isAuthPage) {
+      return; // Don't show warning on public pages
+    }
+
+    // Create warning banner
+    const banner = document.createElement('div');
+    banner.id = 'auth-config-warning';
+    banner.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      z-index: 9999;
+      border-bottom: 2px solid #f59e0b;
+    `;
+
+    banner.innerHTML = `
+      <div style="max-width: 1200px; margin: 0 auto;">
+        <strong>⚠️ Authentication Not Configured</strong>
+        <span style="margin: 0 12px; opacity: 0.7;">|</span>
+        <span>Supabase credentials are not set up. Please configure SUPABASE_URL and SUPABASE_ANON_KEY in your .env file.</span>
+        <a href="https://supabase.com" target="_blank" style="margin-left: 12px; color: #1e40af; text-decoration: underline;">Get Started →</a>
+      </div>
+    `;
+
+    document.body.prepend(banner);
+
+    // Add top padding to body to prevent content from being hidden
+    document.body.style.paddingTop = banner.offsetHeight + 'px';
   }
 
   /**
