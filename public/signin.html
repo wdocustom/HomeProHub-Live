@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="contractors.html">For Contractors</a>
+    </div>
+  </div>
+</header>
+
+<main style="max-width: 500px; margin: 80px auto; padding: 0 24px;">
+  <div class="card">
+    <h1 style="margin-top: 0; text-align: center;">Welcome Back</h1>
+    <p style="text-align: center; color: #6b7280; margin-bottom: 32px;">
+      Sign in to your account
+    </p>
+
+    <form id="signinForm">
+      <label for="email" style="display: block; margin-bottom: 6px; font-size: 14px; color: #374151; font-weight: 500;">
+        EMAIL
+      </label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        placeholder="e.g. contractor@example.com"
+        required
+        style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 16px;"
+      />
+
+      <label for="password" style="display: block; margin-bottom: 6px; font-size: 14px; color: #374151; font-weight: 500;">
+        PASSWORD
+      </label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        placeholder="••••••••"
+        required
+        style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 24px;"
+      />
+
+      <button type="submit" class="btn-primary" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 600;">
+        Sign In
+      </button>
+
+      <p id="status" style="margin-top: 16px; text-align: center; font-size: 14px;"></p>
+    </form>
+
+    <p style="text-align: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280;">
+      Don't have an account?
+      <a href="index.html" style="color: #2563eb; text-decoration: none; font-weight: 500;">Sign up</a>
+    </p>
+
+    <p style="text-align: center; margin-top: 12px;">
+      <a href="index.html" style="color: #6b7280; text-decoration: none; font-size: 14px;">
+        ← Back to Home
+      </a>
+    </p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://artcgqykrmliskbkzunz.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_93uN7DNKNFnNQ2ZH9fMuvA_jGCWHifP';
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const signinForm = document.getElementById('signinForm');
+  const statusEl = document.getElementById('status');
+
+  signinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      statusEl.textContent = 'Please enter both email and password.';
+      statusEl.style.color = '#dc2626';
+      return;
+    }
+
+    statusEl.textContent = 'Signing in...';
+    statusEl.style.color = '#6b7280';
+
+    try {
+      // Step 1: Sign in with Supabase
+      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!authData.user) {
+        throw new Error('No user data returned');
+      }
+
+      // Step 2: Fetch user profile from backend
+      const profileResponse = await fetch(`/api/auth/get-profile?email=${encodeURIComponent(email)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const profileData = await profileResponse.json();
+
+      // Step 3: Store user data in localStorage
+      localStorage.setItem('homeprohub_username', email);
+      localStorage.setItem('homeprohub_auth_token', authData.session.access_token);
+      localStorage.setItem('homeprohub_user_role', profileData.role || 'homeowner');
+
+      if (profileData.role === 'contractor') {
+        localStorage.setItem('homeprohub_contractor_profile', JSON.stringify(profileData.profile || {}));
+
+        // Check if profile is complete
+        if (profileData.profile && profileData.profile.profileComplete) {
+          window.location.href = 'contractor-tools.html';
+        } else {
+          window.location.href = 'contractor-profile.html';
+        }
+      } else {
+        // Homeowner
+        window.location.href = 'home.html';
+      }
+
+    } catch (error) {
+      console.error('Sign in error:', error);
+      statusEl.textContent = 'Sign in failed: ' + error.message;
+      statusEl.style.color = '#dc2626';
+    }
+  });
+</script>
+
+</body>
+</html>

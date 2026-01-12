@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>For Contractors - HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">H</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="signin.html">Sign In</a>
+    </div>
+  </div>
+</header>
+
+<main style="max-width: 900px; margin: 60px auto; padding: 0 24px;">
+  <div class="card">
+    <h1 style="margin-top: 0;">For Contractors</h1>
+    <p style="font-size: 16px; color: #4b5563; line-height: 1.7;">
+      Welcome to HomeProHub's contractor platform. Get access to qualified leads,
+      project estimating tools, and grow your business.
+    </p>
+
+    <div style="margin-top: 32px;">
+      <h2 style="font-size: 20px;">Get Started</h2>
+      <p style="color: #6b7280; margin-bottom: 20px;">
+        Sign in to access your contractor dashboard and tools.
+      </p>
+
+      <a href="signin.html" class="btn-primary" style="display: inline-block; text-decoration: none;">
+        Sign In to Contractor Portal
+      </a>
+    </div>
+
+    <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+      <h3 style="font-size: 18px; margin-bottom: 12px;">Features</h3>
+      <ul style="color: #4b5563; line-height: 1.8;">
+        <li><strong>Project Estimator</strong> - AI-powered estimating tool for accurate bids</li>
+        <li><strong>Lead Scout</strong> - Find and connect with qualified homeowners in your area</li>
+        <li><strong>Contractor Coach</strong> - Get expert advice on pricing, materials, and business decisions</li>
+        <li><strong>Homeowner Grading</strong> - See communication and payment reliability ratings</li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Simple redirect check - if user is already signed in as contractor, go to dashboard
+  document.addEventListener('DOMContentLoaded', () => {
+    const role = localStorage.getItem('homeprohub_user_role');
+    const username = localStorage.getItem('homeprohub_username');
+
+    if (role === 'contractor' && username) {
+      // User is already logged in as contractor
+      const profile = localStorage.getItem('homeprohub_contractor_profile');
+      if (profile) {
+        try {
+          const profileData = JSON.parse(profile);
+          if (profileData.profileComplete) {
+            // Redirect to contractor tools
+            window.location.href = 'contractor-tools.html';
+          }
+        } catch (e) {
+          console.error('Error parsing profile:', e);
+        }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
