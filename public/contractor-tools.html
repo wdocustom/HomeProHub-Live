@@ -66,7 +66,10 @@
 
     /* Map Styles */
     #lead-map {
-      height: 600px;
+      min-height: 600px !important;
+      width: 100%;
+      display: block;
+      background-color: #f3f4f6;
       border-radius: 16px;
       overflow: hidden;
     }
@@ -421,6 +424,11 @@
       // 4. FIX 2: Lazy Load Map - Call checkAndLoadMap for lead scout tab
       if (tabId === 'lead-scout') {
         checkAndLoadMap();
+
+        // FIX 2: Trigger map resize after div becomes visible
+        setTimeout(() => {
+          if (window.leadsMap) window.leadsMap.resize();
+        }, 50);
       }
     }
 
@@ -1072,6 +1080,9 @@
 
         const data = await response.json();
         const leads = data.leads || [];
+
+        // FIX 3: Verify data arrived on frontend
+        console.log('📍 Frontend received leads:', leads);
 
         // Update results count
         document.getElementById('leads-count').textContent = `Found ${leads.length} fresh leads`;
