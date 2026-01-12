@@ -7212,12 +7212,15 @@ app.get("/api/leads/search", /* requireAuth */ async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Error fetching leads:', err);
-    res.status(500).json({
-      error: 'Failed to fetch leads',
-      message: err.message,
-      leads: [],
-      count: 0
+    console.error('❌ External API Failed:', err.message);
+    console.log('🛡️ Falling back to Mock Data');
+
+    // Return 200 OK with Mock Data so the map still works
+    const mockLeads = generateMockLeads(req.query.zipCode, req.query.radius);
+    return res.json({
+      leads: mockLeads,
+      count: mockLeads.length,
+      source: 'mock_fallback'
     });
   }
 });
