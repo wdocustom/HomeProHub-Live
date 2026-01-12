@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <title>HomeProHub – Contractor Tools</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
     /* Darker, more "pro" hero just for contractors */
     .hero-contractor {
@@ -96,6 +99,47 @@
       font-size: 13px;
       resize: vertical;
     }
+
+    /* Tab Navigation Styles */
+    .tab-navigation {
+      max-width: 900px;
+      margin: 0 auto 24px;
+      padding: 0 24px;
+      display: flex;
+      gap: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .tab-button {
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      color: #6b7280;
+      transition: all 0.2s ease;
+      margin-bottom: -2px;
+    }
+    .tab-button.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+    }
+    .tab-button:hover {
+      color: #1d4ed8;
+    }
+
+    /* Map Container */
+    #map {
+      width: 100%;
+      height: 600px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .mapboxgl-popup-content {
+      padding: 12px;
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -125,7 +169,19 @@
   </div>
 </section>
 
+<!-- Tab Navigation -->
+<div class="tab-navigation">
+  <button id="tab-estimator" class="tab-button active" onclick="switchTab('estimator')">
+    🧰 Project Estimator
+  </button>
+  <button id="tab-lead-scout" class="tab-button" onclick="switchTab('lead-scout')">
+    📍 Lead Scout
+  </button>
+</div>
+
 <main>
+  <!-- Tab Content: Project Estimator -->
+  <div id="estimator-content" style="display: block;">
   <!-- Two-column layout: features + contractor coach -->
   <section class="contractor-grid">
     <!-- Left card: features + tiers -->
@@ -219,9 +275,278 @@
 
     </div>
   </section>
+  </div>
+  <!-- End Tab Content: Project Estimator -->
+
+  <!-- Tab Content: Lead Scout -->
+  <div id="lead-scout-content" style="display: none;">
+    <section style="max-width: 900px; margin: 0 auto; padding: 0 24px;">
+      <div class="card">
+        <h2 style="margin-top:0; margin-bottom:8px;">📍 Lead Scout</h2>
+        <p style="margin:0 0 16px; font-size:14px; color:#4b5563;">
+          View nearby homeowner project leads on the map. Click a marker to see project details and homeowner grade.
+        </p>
+        <div id="map-status" style="margin-bottom: 12px; font-size: 13px; color: #6b7280;"></div>
+        <div id="map"></div>
+      </div>
+    </section>
+  </div>
+  <!-- End Tab Content: Lead Scout -->
 </main>
 
 <script>
+  // --- GLOBAL VARIABLES ---
+  let map = null; // Mapbox instance
+  let mapInitialized = false;
+  let leadsData = []; // Store leads globally
+
+  // --- BRUTE-FORCE TAB SWITCHING FUNCTION ---
+  function switchTab(tabId) {
+    console.log('🔄 Forced Switch to:', tabId);
+
+    // Step 1: Hard Reset - Force both containers to display: none
+    const estimatorContent = document.getElementById('estimator-content');
+    const leadScoutContent = document.getElementById('lead-scout-content');
+
+    if (estimatorContent) estimatorContent.style.display = 'none';
+    if (leadScoutContent) leadScoutContent.style.display = 'none';
+    console.log('✅ Both containers hidden');
+
+    // Step 2: Visual Reset - Remove active styling from both tab buttons
+    const estimatorTab = document.getElementById('tab-estimator');
+    const leadScoutTab = document.getElementById('tab-lead-scout');
+
+    if (estimatorTab) estimatorTab.classList.remove('active');
+    if (leadScoutTab) leadScoutTab.classList.remove('active');
+    console.log('✅ Tab buttons reset');
+
+    // Step 3: Activate Target Container
+    const targetContainer = document.getElementById(tabId + '-content');
+    const targetTab = document.getElementById('tab-' + tabId);
+
+    if (targetContainer) {
+      targetContainer.style.display = 'block';
+      console.log('✅ Target container displayed:', tabId + '-content');
+    } else {
+      console.error('❌ Target container not found:', tabId + '-content');
+    }
+
+    if (targetTab) {
+      targetTab.classList.add('active');
+      console.log('✅ Target tab activated:', 'tab-' + tabId);
+    }
+
+    // Step 4: Map Trigger - If switching to Lead Scout, initialize map
+    if (tabId === 'lead-scout') {
+      const mapContainer = document.getElementById('map');
+      if (mapContainer) {
+        // CRITICAL: Force hardcoded height BEFORE initialization
+        mapContainer.style.height = '600px';
+        console.log('✅ Map container height set to 600px');
+
+        // Delay map initialization slightly to ensure DOM has rendered
+        setTimeout(() => {
+          checkAndLoadMap();
+        }, 50);
+      } else {
+        console.error('❌ Map container not found');
+      }
+    }
+  }
+
+  // --- MAP INITIALIZATION FUNCTION ---
+  function checkAndLoadMap() {
+    console.log('🗺️ checkAndLoadMap called');
+
+    // Only initialize map once
+    if (mapInitialized) {
+      console.log('ℹ️ Map already initialized, skipping');
+      if (map) {
+        map.resize(); // Just resize if switching back
+        console.log('✅ Map resized');
+      }
+      return;
+    }
+
+    initMap();
+  }
+
+  function initMap() {
+    console.log('🗺️ Initializing Mapbox...');
+
+    const mapContainer = document.getElementById('map');
+    const mapStatus = document.getElementById('map-status');
+
+    if (!mapContainer) {
+      console.error('❌ Map container not found');
+      return;
+    }
+
+    // Verify container is visible
+    const rect = mapContainer.getBoundingClientRect();
+    console.log('📏 Map container dimensions:', rect.width, 'x', rect.height);
+
+    if (rect.height === 0) {
+      console.error('❌ Map container has 0 height! Cannot initialize.');
+      if (mapStatus) {
+        mapStatus.textContent = '⚠️ Map container error - refreshing...';
+        mapStatus.style.color = '#dc2626';
+      }
+      return;
+    }
+
+    try {
+      // Initialize Mapbox (using public token for demo - replace with your token)
+      mapboxgl.accessToken = 'pk.eyJ1IjoiaG9tZXByb2h1YiIsImEiOiJjbTVhZ3k4ZHIwZjlkMmxzYXY4dnBhZGF0In0.qKW3lQZVUuWZM2SvRIc5Jg';
+
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [-98.5795, 39.8283], // Center of USA
+        zoom: 4
+      });
+
+      console.log('✅ Mapbox instance created');
+
+      // Add load listener to handle resize after map loads
+      map.on('load', () => {
+        console.log('✅ Map loaded successfully');
+        map.resize();
+        console.log('✅ Map resized after load');
+
+        if (mapStatus) {
+          mapStatus.textContent = '🔄 Loading leads...';
+          mapStatus.style.color = '#6b7280';
+        }
+
+        // Fetch and display leads
+        fetchAndDisplayLeads();
+      });
+
+      // Add navigation controls
+      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+      mapInitialized = true;
+      console.log('✅ Map initialization complete');
+
+    } catch (error) {
+      console.error('❌ Map initialization error:', error);
+      if (mapStatus) {
+        mapStatus.textContent = '⚠️ Error initializing map: ' + error.message;
+        mapStatus.style.color = '#dc2626';
+      }
+    }
+  }
+
+  // --- FETCH AND DISPLAY LEADS ---
+  async function fetchAndDisplayLeads() {
+    console.log('📡 Fetching leads from backend...');
+    const mapStatus = document.getElementById('map-status');
+
+    try {
+      const response = await fetch('/api/leads', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch leads: ' + response.status);
+      }
+
+      const data = await response.json();
+      leadsData = data.leads || data || [];
+
+      console.log('📍 Frontend received leads:', leadsData);
+      console.log('📊 Total leads received:', leadsData.length);
+
+      if (mapStatus) {
+        mapStatus.textContent = `✅ ${leadsData.length} leads loaded`;
+        mapStatus.style.color = '#16a34a';
+      }
+
+      // Display leads on map
+      if (leadsData.length > 0) {
+        displayLeadsOnMap(leadsData);
+      } else {
+        console.warn('⚠️ No leads data received');
+        if (mapStatus) {
+          mapStatus.textContent = '⚠️ No leads available';
+          mapStatus.style.color = '#f59e0b';
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error fetching leads:', error);
+      if (mapStatus) {
+        mapStatus.textContent = '⚠️ Error loading leads: ' + error.message;
+        mapStatus.style.color = '#dc2626';
+      }
+    }
+  }
+
+  // --- DISPLAY LEADS ON MAP ---
+  function displayLeadsOnMap(leads) {
+    console.log('🗺️ Displaying', leads.length, 'leads on map');
+
+    if (!map) {
+      console.error('❌ Map not initialized');
+      return;
+    }
+
+    leads.forEach((lead, index) => {
+      // Ensure lead has valid coordinates
+      if (!lead.latitude || !lead.longitude) {
+        console.warn('⚠️ Lead missing coordinates:', lead);
+        return;
+      }
+
+      // Create a marker
+      const marker = new mapboxgl.Marker({ color: '#2563eb' })
+        .setLngLat([lead.longitude, lead.latitude])
+        .addTo(map);
+
+      // Create popup content
+      const popupContent = `
+        <div style="min-width: 200px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #1f2937;">
+            ${lead.projectType || 'Project Lead'}
+          </h3>
+          <p style="margin: 0 0 6px 0; font-size: 12px; color: #4b5563;">
+            <strong>Location:</strong> ${lead.city || 'N/A'}, ${lead.state || 'N/A'}
+          </p>
+          <p style="margin: 0 0 6px 0; font-size: 12px; color: #4b5563;">
+            <strong>Budget:</strong> ${lead.budget || 'Not specified'}
+          </p>
+          <p style="margin: 0 0 6px 0; font-size: 12px; color: #4b5563;">
+            <strong>Homeowner Grade:</strong> ${lead.grade || 'N/A'}
+          </p>
+          ${lead.description ? `<p style="margin: 6px 0 0 0; font-size: 11px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 6px;">${lead.description}</p>` : ''}
+        </div>
+      `;
+
+      const popup = new mapboxgl.Popup({ offset: 25 })
+        .setHTML(popupContent);
+
+      marker.setPopup(popup);
+
+      console.log(`✅ Marker ${index + 1} added:`, lead.city, lead.state);
+    });
+
+    // Fit map to show all markers if there are leads
+    if (leads.length > 0 && leads[0].latitude && leads[0].longitude) {
+      const bounds = new mapboxgl.LngLatBounds();
+      leads.forEach(lead => {
+        if (lead.latitude && lead.longitude) {
+          bounds.extend([lead.longitude, lead.latitude]);
+        }
+      });
+      map.fitBounds(bounds, { padding: 50, maxZoom: 12 });
+      console.log('✅ Map bounds adjusted to show all leads');
+    }
+  }
+
   // --- ELEMENT SELECTORS ---
   const askButton = document.getElementById("askBtn");
   const textarea = document.getElementById("question");
