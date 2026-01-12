@@ -410,15 +410,16 @@
       // FIX 1: INSTANT TAB SWITCHING - Show tab IMMEDIATELY without awaiting anything
 
       // 1. Hide ALL content containers first
-      document.getElementById('estimator-content').classList.add('hidden');
-      document.getElementById('lead-scout-content').classList.add('hidden');
+      // NEW (brute-force inline styles - always works)
+document.getElementById('estimator-content').style.display = 'none';
+document.getElementById('lead-scout-content').style.display = 'none';
 
       // 2. Remove active state from ALL buttons
       document.getElementById('tab-estimator').classList.remove('border-blue-600', 'text-blue-600');
-      document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 'text-blue-600');
+document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 'text-blue-600');
 
       // 3. Show SELECTED content & highlight button (INSTANT - no await)
-      document.getElementById(`${tabId}-content`).classList.remove('hidden');
+      document.getElementById(`${tabId}-content`).style.display = 'block';
       document.getElementById(`tab-${tabId}`).classList.add('border-blue-600', 'text-blue-600');
 
       // 4. FIX 2: Lazy Load Map - Call checkAndLoadMap for lead scout tab
