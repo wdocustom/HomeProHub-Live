@@ -1741,18 +1741,51 @@
           return;
         }
 
-        // Fetch jobs where the contractor is assigned
-        const response = await fetch(`/api/jobs/contractor/${encodeURIComponent(profile.email)}`);
+        // INTEGRATION: Fetch awarded jobs from accepted bids
+        const bidsResponse = await window.authService.authenticatedFetch(
+          `/api/contractor/bids?email=${encodeURIComponent(profile.email)}&status=accepted`
+        );
 
-        if (!response.ok) {
-          console.error('Failed to load active projects');
-          return;
+        let awardedJobs = [];
+        if (bidsResponse.ok) {
+          const bidsData = await bidsResponse.json();
+          // Extract jobs from accepted bids
+          awardedJobs = (bidsData.bids || [])
+            .filter(bid => bid.status === 'accepted' && bid.job)
+            .map(bid => ({
+              ...bid.job,
+              contractor_bid_id: bid.id,
+              bid_amount_low: bid.bid_amount_low,
+              bid_amount_high: bid.bid_amount_high,
+              source: 'awarded_bid'
+            }));
+          console.log(`✅ Found ${awardedJobs.length} awarded jobs from bids`);
         }
 
-        const jobs = await response.json();
+        // Also fetch jobs where contractor is directly assigned (template-based projects)
+        const jobsResponse = await fetch(`/api/jobs/contractor/${encodeURIComponent(profile.email)}`);
+        let assignedJobs = [];
+
+        if (jobsResponse.ok) {
+          assignedJobs = await jobsResponse.json();
+          assignedJobs = assignedJobs.map(job => ({
+            ...job,
+            source: 'template_project'
+          }));
+          console.log(`✅ Found ${assignedJobs.length} template-based projects`);
+        }
+
+        // Combine both sources and deduplicate by job ID
+        const allJobs = [...awardedJobs, ...assignedJobs];
+        const jobMap = new Map();
+        allJobs.forEach(job => {
+          if (!jobMap.has(job.id)) {
+            jobMap.set(job.id, job);
+          }
+        });
 
         // Filter for active/in-progress jobs
-        activeProjects = jobs.filter(job =>
+        activeProjects = Array.from(jobMap.values()).filter(job =>
           job.status === 'in_progress' || job.status === 'active'
         );
 
@@ -1763,11 +1796,13 @@
         activeProjects.forEach(project => {
           const option = document.createElement('option');
           option.value = project.id;
-          option.textContent = project.title || `Project ${project.id.substring(0, 8)}`;
+          // Show source indicator in project title
+          const sourceLabel = project.source === 'awarded_bid' ? '🏆 ' : '📋 ';
+          option.textContent = sourceLabel + (project.title || `Project ${project.id.substring(0, 8)}`);
           selector.appendChild(option);
         });
 
-        console.log(`✅ Loaded ${activeProjects.length} active projects`);
+        console.log(`✅ Loaded ${activeProjects.length} total active projects (${awardedJobs.length} awarded, ${assignedJobs.length} template-based)`);
 
       } catch (error) {
         console.error('Error loading active projects:', error);
