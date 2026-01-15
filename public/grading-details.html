@@ -2,12 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
   <title>How We Verify Contractors – HomeProHub</title>
   <meta name="description" content="Learn how we verify contractors through license checks, project history, and structured reviews. Real credentials, not paid placement.">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
 
   <!-- Sanctuary Glass 2.0 Design System -->
   <link rel="stylesheet" href="/components/sanctuary-glass.css">
@@ -266,6 +272,10 @@
     </div>
   </div>
 
+  <!-- Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+
+  <!-- Application Controller (MUST BE LAST) -->
   <script src="/services/app-controller.js"></script>
 </body>
 </html>
