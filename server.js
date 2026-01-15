@@ -7355,6 +7355,259 @@ function generateMockLeads(zipCode, radius) {
   return leads;
 }
 
+// ====== AI AGENT SYSTEM ENDPOINTS ======
+
+/**
+ * POST /api/agents/generate-daily-summary
+ * Phase 1 MVP: Generates a friendly summary of project activity for homeowners
+ */
+app.post('/api/agents/generate-daily-summary', async (req, res) => {
+  try {
+    const { project_id } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({
+        error: 'project_id is required'
+      });
+    }
+
+    console.log(`🤖 Generating daily summary for project ${project_id}`);
+
+    // Step 1: Fetch all project logs from the last 24 hours
+    const logs = await db.getProjectLogs(project_id, 24);
+
+    if (logs.length === 0) {
+      return res.json({
+        summary: 'No activity in the last 24 hours.',
+        logs: [],
+        notification_created: false
+      });
+    }
+
+    // Step 2: Format logs for AI processing
+    const logsText = logs.map((log, index) => {
+      return `[${log.source}] ${log.created_by_name || log.created_by_email || 'System'}: ${log.entry_text}`;
+    }).join('\n');
+
+    console.log('📋 Processing logs:', logsText);
+
+    // Step 3: Send to OpenAI for summarization
+    const openai = new OpenAI({
+      apiKey: OPENAI_API_KEY
+    });
+
+    const systemPrompt = `You are a helpful Construction Project Manager.
+Summarize these raw project activity logs into a friendly, 3-bullet-point text message for the homeowner.
+Tone: Professional but reassuring. Focus on progress made and next steps.
+Keep it concise (under 200 words total).`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Here are the project logs from the last 24 hours:\n\n${logsText}` }
+      ],
+      temperature: 0.7,
+      max_tokens: 300
+    });
+
+    const summary = completion.choices[0]?.message?.content || 'Unable to generate summary';
+
+    console.log('✅ AI generated summary:', summary);
+
+    // Step 4: Get project details to find homeowner
+    const project = await db.getJobById(project_id);
+
+    if (!project) {
+      return res.status(404).json({
+        error: 'Project not found'
+      });
+    }
+
+    // Step 5: Create notification for homeowner
+    const notification = await db.createNotification({
+      user_email: project.homeowner_email,
+      type: 'project_update',
+      title: '📋 Daily Project Update',
+      message: summary,
+      metadata: {
+        project_id: project_id,
+        project_title: project.title,
+        generated_by: 'ai_agent',
+        agent_type: 'summarizer',
+        log_count: logs.length
+      },
+      created_at: new Date().toISOString(),
+      read: false
+    });
+
+    // Step 6: Log AI agent activity
+    await db.logAIAgentActivity({
+      project_id: project_id,
+      agent_type: 'summarizer',
+      action_type: 'generate_daily_summary',
+      action_description: `Generated daily summary for homeowner based on ${logs.length} activity logs`,
+      action_result: summary,
+      input_data: { log_count: logs.length },
+      output_data: { notification_id: notification.id, summary_length: summary.length },
+      status: 'completed'
+    });
+
+    console.log('✅ Daily summary generated and notification created');
+
+    res.json({
+      success: true,
+      summary: summary,
+      logs: logs,
+      notification_id: notification.id,
+      notification_created: true,
+      agent_activity_logged: true
+    });
+
+  } catch (error) {
+    console.error('❌ Error generating daily summary:', error);
+
+    // Log failed agent activity
+    if (req.body.project_id) {
+      try {
+        await db.logAIAgentActivity({
+          project_id: req.body.project_id,
+          agent_type: 'summarizer',
+          action_type: 'generate_daily_summary',
+          action_description: 'Failed to generate daily summary',
+          status: 'failed',
+          error_message: error.message
+        });
+      } catch (logError) {
+        console.error('Failed to log agent error:', logError);
+      }
+    }
+
+    res.status(500).json({
+      error: 'Failed to generate daily summary',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/agents/log-contractor-update
+ * Allows contractors to log updates to a project
+ */
+app.post('/api/agents/log-contractor-update', async (req, res) => {
+  try {
+    const { project_id, update_text, contractor_email, contractor_name, photos } = req.body;
+
+    if (!project_id || !update_text) {
+      return res.status(400).json({
+        error: 'project_id and update_text are required'
+      });
+    }
+
+    console.log(`📝 Logging contractor update for project ${project_id}`);
+
+    // Create the project log
+    const logEntry = await db.createProjectLog({
+      project_id: project_id,
+      entry_text: update_text,
+      source: 'contractor_update',
+      created_by_email: contractor_email,
+      created_by_name: contractor_name,
+      photos: photos || [],
+      metadata: {
+        logged_via: 'command_center'
+      }
+    });
+
+    // Update project state last activity
+    const currentState = await db.getProjectState(project_id);
+    if (currentState) {
+      await db.upsertProjectState({
+        project_id: project_id,
+        current_phase: currentState.current_phase,
+        blockers: currentState.blockers,
+        agent_logs: currentState.agent_logs
+      });
+    } else {
+      // Create initial state if it doesn't exist
+      await db.upsertProjectState({
+        project_id: project_id,
+        current_phase: 'in_progress'
+      });
+    }
+
+    console.log('✅ Contractor update logged successfully');
+
+    res.json({
+      success: true,
+      log_id: logEntry.id,
+      message: 'Update logged successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error logging contractor update:', error);
+    res.status(500).json({
+      error: 'Failed to log update',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/agents/project-logs/:project_id
+ * Get all logs for a project
+ */
+app.get('/api/agents/project-logs/:project_id', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { hours } = req.query;
+
+    const logs = hours
+      ? await db.getProjectLogs(project_id, parseInt(hours))
+      : await db.getAllProjectLogs(project_id);
+
+    res.json({
+      project_id: project_id,
+      log_count: logs.length,
+      logs: logs
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching project logs:', error);
+    res.status(500).json({
+      error: 'Failed to fetch project logs',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/agents/project-state/:project_id
+ * Get the current state of a project
+ */
+app.get('/api/agents/project-state/:project_id', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+
+    const state = await db.getProjectState(project_id);
+
+    if (!state) {
+      return res.status(404).json({
+        error: 'Project state not found'
+      });
+    }
+
+    res.json(state);
+
+  } catch (error) {
+    console.error('❌ Error fetching project state:', error);
+    res.status(500).json({
+      error: 'Failed to fetch project state',
+      message: error.message
+    });
+  }
+});
+
 // ====== 404 HANDLER ======
 // This must be the LAST route handler, after all other routes
 app.use((req, res) => {

@@ -61,8 +61,8 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* CSS Failsafe: Show estimator by default even if JS fails */
-    #estimator-content { display: block; }
+    /* CSS Failsafe: Show command center by default even if JS fails */
+    #command-center-content { display: block; }
 
     /* Map Styles */
     #lead-map {
@@ -105,9 +105,9 @@
 
     <!-- Hero Section -->
     <div class="text-center py-12 px-4">
-      <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Contractor Tools</h1>
+      <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Contractor Command Center</h1>
       <p class="text-lg text-slate-500 max-w-2xl mx-auto">
-        Professional estimating and lead discovery in one powerful dashboard.
+        AI-powered project management, professional estimating, and lead discovery in one dashboard.
       </p>
     </div>
 
@@ -117,9 +117,18 @@
       <!-- Tab Navigation -->
       <div class="bg-white rounded-t-2xl border border-slate-200 border-b-0 flex gap-2 p-2">
         <button
+          onclick="switchTab('command-center')"
+          id="tab-command-center"
+          class="tab-button flex-1 py-3 px-6 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-semibold active"
+        >
+          <i class="fa-solid fa-robot mr-2"></i>
+          AI Command Center
+          <span class="ml-2 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full">NEW</span>
+        </button>
+        <button
           onclick="switchTab('estimator')"
           id="tab-estimator"
-          class="tab-button flex-1 py-3 px-6 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-semibold active"
+          class="tab-button flex-1 py-3 px-6 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-semibold"
         >
           <i class="fa-solid fa-calculator mr-2"></i>
           Project Estimator
@@ -137,6 +146,186 @@
 
       <!-- Tab Contents -->
       <div class="bg-white rounded-b-2xl border border-slate-200 shadow-xl">
+
+        <!-- TAB 0: AI COMMAND CENTER -->
+        <div id="command-center-content" class="tab-content active p-8">
+          <div class="space-y-8">
+
+            <!-- Command Center Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white">
+              <h2 class="text-2xl font-bold mb-2">🤖 AI Agent Command Center</h2>
+              <p class="text-purple-100">Monitor your AI agents as they manage projects, coordinate trades, and keep homeowners updated.</p>
+            </div>
+
+            <!-- Active Projects Section -->
+            <div>
+              <h3 class="text-xl font-bold text-slate-900 mb-4">📋 Your Active Projects</h3>
+
+              <!-- Project Selection -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Select a Project</label>
+                <select id="active-project-selector" onchange="loadProjectDetails()" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900 focus:border-purple-500 focus:ring-purple-500">
+                  <option value="">Select a project to manage...</option>
+                </select>
+              </div>
+
+              <!-- Project Status Card (shown when project selected) -->
+              <div id="project-status-card" class="hidden bg-slate-50 rounded-xl p-6 border border-slate-200">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div class="bg-white rounded-lg p-4 border border-slate-200">
+                    <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Current Phase</div>
+                    <div id="project-phase" class="text-lg font-bold text-slate-900">Planning</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-4 border border-slate-200">
+                    <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Last Activity</div>
+                    <div id="project-last-activity" class="text-lg font-bold text-slate-900">--</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-4 border border-slate-200">
+                    <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Total Logs</div>
+                    <div id="project-log-count" class="text-lg font-bold text-slate-900">0</div>
+                  </div>
+                </div>
+
+                <!-- Blockers Alert -->
+                <div id="project-blockers" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-4">
+                  <p class="font-semibold text-sm text-red-900 mb-2">⚠️ Active Blockers:</p>
+                  <ul id="blockers-list" class="text-xs text-red-800 space-y-1 pl-4 list-disc"></ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contractor Update Section -->
+            <div id="contractor-update-section" class="hidden">
+              <h3 class="text-xl font-bold text-slate-900 mb-4">✏️ Log Project Update</h3>
+
+              <div class="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                <div class="mb-4">
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">What's the latest on this project?</label>
+                  <textarea
+                    id="update-text"
+                    rows="4"
+                    class="w-full rounded-xl border-slate-200 bg-white p-4 text-slate-900 focus:border-purple-500 focus:ring-purple-500 transition-all shadow-sm resize-none"
+                    placeholder="e.g., Finished drywall in all rooms. Starting paint prep tomorrow. Homeowner selected Benjamin Moore 'Swiss Coffee' for walls."
+                  ></textarea>
+                </div>
+
+                <div class="flex gap-4">
+                  <button
+                    onclick="logContractorUpdate()"
+                    id="log-update-btn"
+                    class="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl shadow-lg transition-all"
+                  >
+                    <i class="fa-solid fa-paper-plane mr-2"></i>Log Update
+                  </button>
+                  <button
+                    onclick="generateAndSendSummary()"
+                    id="send-summary-btn"
+                    class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all"
+                  >
+                    <i class="fa-solid fa-robot mr-2"></i>Generate AI Summary
+                  </button>
+                </div>
+
+                <div id="update-status" class="mt-4 text-sm text-center"></div>
+              </div>
+            </div>
+
+            <!-- Project Activity Log -->
+            <div id="project-activity-section" class="hidden">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-slate-900">📜 Project Activity Log</h3>
+                <button
+                  onclick="refreshActivityLog()"
+                  class="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-all"
+                >
+                  <i class="fa-solid fa-rotate-right mr-2"></i>Refresh
+                </button>
+              </div>
+
+              <div id="activity-log-container" class="bg-slate-50 rounded-xl p-6 border border-slate-200 max-h-96 overflow-y-auto">
+                <div id="activity-log-list" class="space-y-3">
+                  <p class="text-center text-slate-500 text-sm py-8">No activity logged yet. Start by logging an update above.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Agent Activity Monitor -->
+            <div>
+              <h3 class="text-xl font-bold text-slate-900 mb-4">🤖 AI Agent Activity</h3>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- The Summarizer -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                  <div class="flex items-center mb-3">
+                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+                      <i class="fa-solid fa-file-lines text-white text-lg"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-slate-900">The Summarizer</h4>
+                      <p class="text-xs text-slate-600">Daily update generator</p>
+                    </div>
+                  </div>
+                  <p class="text-sm text-slate-700">Automatically generates friendly progress updates for homeowners based on your logged activity.</p>
+                  <div class="mt-4 pt-4 border-t border-blue-200">
+                    <div class="text-xs text-slate-600">Status: <span class="font-semibold text-green-600">Active</span></div>
+                  </div>
+                </div>
+
+                <!-- The Orchestrator (Coming Soon) -->
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 opacity-60">
+                  <div class="flex items-center mb-3">
+                    <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mr-3">
+                      <i class="fa-solid fa-brain text-white text-lg"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-slate-900">The Orchestrator</h4>
+                      <p class="text-xs text-slate-600">Project state manager</p>
+                    </div>
+                  </div>
+                  <p class="text-sm text-slate-700">Manages project phases, tracks dependencies, and coordinates the AI agent team.</p>
+                  <div class="mt-4 pt-4 border-t border-purple-200">
+                    <div class="text-xs text-slate-600">Status: <span class="font-semibold text-amber-600">Coming Soon</span></div>
+                  </div>
+                </div>
+
+                <!-- The Hawk (Coming Soon) -->
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 opacity-60">
+                  <div class="flex items-center mb-3">
+                    <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mr-3">
+                      <i class="fa-solid fa-users text-white text-lg"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-slate-900">The Hawk</h4>
+                      <p class="text-xs text-slate-600">Procurement specialist</p>
+                    </div>
+                  </div>
+                  <p class="text-sm text-slate-700">Finds and coordinates subcontractors using your Lead Scout database and local pro network.</p>
+                  <div class="mt-4 pt-4 border-t border-green-200">
+                    <div class="text-xs text-slate-600">Status: <span class="font-semibold text-amber-600">Coming Soon</span></div>
+                  </div>
+                </div>
+
+                <!-- The Whip (Coming Soon) -->
+                <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200 opacity-60">
+                  <div class="flex items-center mb-3">
+                    <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mr-3">
+                      <i class="fa-solid fa-calendar-check text-white text-lg"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-slate-900">The Whip</h4>
+                      <p class="text-xs text-slate-600">Schedule coordinator</p>
+                    </div>
+                  </div>
+                  <p class="text-sm text-slate-700">Manages the calendar, handles dependencies, and reschedules trades when delays occur.</p>
+                  <div class="mt-4 pt-4 border-t border-orange-200">
+                    <div class="text-xs text-slate-600">Status: <span class="font-semibold text-amber-600">Coming Soon</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
 
         <!-- TAB 1: PROJECT ESTIMATOR -->
         <div id="estimator-content" class="tab-content active p-8">
@@ -402,6 +591,8 @@
     let estimatorJobData = null;
     let leadsMap = null;
     let currentMarkers = [];
+    let selectedProjectId = null;
+    let activeProjects = [];
 
     // ============================================
     // TAB SWITCHING
@@ -410,13 +601,14 @@
       // FIX 1: INSTANT TAB SWITCHING - Show tab IMMEDIATELY without awaiting anything
 
       // 1. Hide ALL content containers first
-      // NEW (brute-force inline styles - always works)
-document.getElementById('estimator-content').style.display = 'none';
-document.getElementById('lead-scout-content').style.display = 'none';
+      document.getElementById('command-center-content').style.display = 'none';
+      document.getElementById('estimator-content').style.display = 'none';
+      document.getElementById('lead-scout-content').style.display = 'none';
 
       // 2. Remove active state from ALL buttons
+      document.getElementById('tab-command-center').classList.remove('border-blue-600', 'text-blue-600');
       document.getElementById('tab-estimator').classList.remove('border-blue-600', 'text-blue-600');
-document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 'text-blue-600');
+      document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 'text-blue-600');
 
       // 3. Show SELECTED content & highlight button (INSTANT - no await)
       document.getElementById(`${tabId}-content`).style.display = 'block';
@@ -1176,6 +1368,354 @@ document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 't
     }
 
     // ============================================
+    // COMMAND CENTER - AI AGENT FUNCTIONS
+    // ============================================
+
+    /**
+     * Load contractor's active projects into the dropdown
+     */
+    async function loadActiveProjects() {
+      try {
+        if (!profile || !profile.email) {
+          console.log('No profile loaded yet');
+          return;
+        }
+
+        // Fetch jobs where the contractor is assigned
+        const response = await fetch(`/api/jobs/contractor/${encodeURIComponent(profile.email)}`);
+
+        if (!response.ok) {
+          console.error('Failed to load active projects');
+          return;
+        }
+
+        const jobs = await response.json();
+
+        // Filter for active/in-progress jobs
+        activeProjects = jobs.filter(job =>
+          job.status === 'in_progress' || job.status === 'active'
+        );
+
+        // Populate the dropdown
+        const selector = document.getElementById('active-project-selector');
+        selector.innerHTML = '<option value="">Select a project to manage...</option>';
+
+        activeProjects.forEach(project => {
+          const option = document.createElement('option');
+          option.value = project.id;
+          option.textContent = project.title || `Project ${project.id.substring(0, 8)}`;
+          selector.appendChild(option);
+        });
+
+        console.log(`✅ Loaded ${activeProjects.length} active projects`);
+
+      } catch (error) {
+        console.error('Error loading active projects:', error);
+      }
+    }
+
+    /**
+     * Load project details when user selects a project
+     */
+    async function loadProjectDetails() {
+      const selector = document.getElementById('active-project-selector');
+      const projectId = selector.value;
+
+      if (!projectId) {
+        // Hide all sections if no project selected
+        document.getElementById('project-status-card').classList.add('hidden');
+        document.getElementById('contractor-update-section').classList.add('hidden');
+        document.getElementById('project-activity-section').classList.add('hidden');
+        selectedProjectId = null;
+        return;
+      }
+
+      selectedProjectId = projectId;
+
+      // Show sections
+      document.getElementById('project-status-card').classList.remove('hidden');
+      document.getElementById('contractor-update-section').classList.remove('hidden');
+      document.getElementById('project-activity-section').classList.remove('hidden');
+
+      try {
+        // Fetch project state
+        const stateResponse = await fetch(`/api/agents/project-state/${projectId}`);
+
+        if (stateResponse.ok) {
+          const state = await stateResponse.json();
+
+          // Update UI with state data
+          document.getElementById('project-phase').textContent = state.current_phase || 'planning';
+
+          if (state.last_activity_date) {
+            const lastActivity = new Date(state.last_activity_date);
+            const timeAgo = getTimeAgo(lastActivity);
+            document.getElementById('project-last-activity').textContent = timeAgo;
+          }
+
+          // Show blockers if any
+          if (state.blockers && state.blockers.length > 0) {
+            const blockersList = document.getElementById('blockers-list');
+            blockersList.innerHTML = state.blockers.map(b => `<li>${b}</li>`).join('');
+            document.getElementById('project-blockers').classList.remove('hidden');
+          } else {
+            document.getElementById('project-blockers').classList.add('hidden');
+          }
+        } else {
+          // No state yet, create initial state
+          await fetch('/api/agents/log-contractor-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project_id: projectId,
+              update_text: 'Project initialized in Command Center',
+              contractor_email: profile.email,
+              contractor_name: profile.full_name || profile.business_name
+            })
+          });
+
+          document.getElementById('project-phase').textContent = 'planning';
+          document.getElementById('project-last-activity').textContent = 'Just now';
+        }
+
+        // Load activity logs
+        await refreshActivityLog();
+
+      } catch (error) {
+        console.error('Error loading project details:', error);
+      }
+    }
+
+    /**
+     * Log a contractor update
+     */
+    async function logContractorUpdate() {
+      const updateText = document.getElementById('update-text').value.trim();
+      const statusEl = document.getElementById('update-status');
+      const btn = document.getElementById('log-update-btn');
+
+      if (!updateText) {
+        statusEl.textContent = 'Please enter an update first';
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+        return;
+      }
+
+      if (!selectedProjectId) {
+        statusEl.textContent = 'No project selected';
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Logging...';
+      statusEl.textContent = 'Saving update...';
+      statusEl.className = 'mt-4 text-sm text-center text-slate-500';
+
+      try {
+        const response = await fetch('/api/agents/log-contractor-update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_id: selectedProjectId,
+            update_text: updateText,
+            contractor_email: profile.email,
+            contractor_name: profile.full_name || profile.business_name
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to log update');
+
+        const result = await response.json();
+
+        statusEl.textContent = '✅ Update logged successfully!';
+        statusEl.className = 'mt-4 text-sm text-center text-green-600';
+
+        // Clear the input
+        document.getElementById('update-text').value = '';
+
+        // Refresh the activity log
+        await refreshActivityLog();
+
+        // Update last activity time
+        document.getElementById('project-last-activity').textContent = 'Just now';
+
+      } catch (error) {
+        console.error('Error logging update:', error);
+        statusEl.textContent = '❌ Failed to log update: ' + error.message;
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Log Update';
+      }
+    }
+
+    /**
+     * Generate AI summary and send to homeowner
+     */
+    async function generateAndSendSummary() {
+      const statusEl = document.getElementById('update-status');
+      const btn = document.getElementById('send-summary-btn');
+
+      if (!selectedProjectId) {
+        statusEl.textContent = 'No project selected';
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      statusEl.textContent = '🤖 AI is analyzing project activity and generating a summary...';
+      statusEl.className = 'mt-4 text-sm text-center text-blue-600';
+
+      try {
+        const response = await fetch('/api/agents/generate-daily-summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_id: selectedProjectId
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to generate summary');
+
+        const result = await response.json();
+
+        if (result.notification_created) {
+          statusEl.textContent = '✅ AI summary generated and sent to homeowner!';
+          statusEl.className = 'mt-4 text-sm text-center text-green-600';
+
+          // Show the summary
+          setTimeout(() => {
+            const summaryPreview = document.createElement('div');
+            summaryPreview.className = 'mt-4 bg-white rounded-xl p-4 border-2 border-green-200 text-left';
+            summaryPreview.innerHTML = `
+              <p class="text-xs font-semibold text-green-700 uppercase mb-2">📨 Sent to Homeowner:</p>
+              <p class="text-sm text-slate-700 whitespace-pre-line">${result.summary}</p>
+            `;
+            statusEl.appendChild(summaryPreview);
+          }, 500);
+        } else {
+          statusEl.textContent = result.summary || 'No recent activity to summarize';
+          statusEl.className = 'mt-4 text-sm text-center text-slate-600';
+        }
+
+      } catch (error) {
+        console.error('Error generating summary:', error);
+        statusEl.textContent = '❌ Failed to generate summary: ' + error.message;
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate AI Summary';
+      }
+    }
+
+    /**
+     * Refresh the activity log display
+     */
+    async function refreshActivityLog() {
+      if (!selectedProjectId) return;
+
+      try {
+        const response = await fetch(`/api/agents/project-logs/${selectedProjectId}`);
+
+        if (!response.ok) {
+          console.error('Failed to load activity log');
+          return;
+        }
+
+        const data = await response.json();
+        const logs = data.logs || [];
+
+        // Update log count
+        document.getElementById('project-log-count').textContent = logs.length;
+
+        // Update activity log display
+        const logList = document.getElementById('activity-log-list');
+
+        if (logs.length === 0) {
+          logList.innerHTML = '<p class="text-center text-slate-500 text-sm py-8">No activity logged yet. Start by logging an update above.</p>';
+          return;
+        }
+
+        logList.innerHTML = logs.map(log => {
+          const logTime = new Date(log.created_at);
+          const timeStr = logTime.toLocaleString();
+          const sourceIcon = getSourceIcon(log.source);
+          const sourceColor = getSourceColor(log.source);
+
+          return `
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full ${sourceColor} flex items-center justify-center flex-shrink-0">
+                  ${sourceIcon}
+                </div>
+                <div class="flex-1">
+                  <div class="flex justify-between items-start mb-1">
+                    <p class="font-semibold text-sm text-slate-900">${log.created_by_name || 'System'}</p>
+                    <p class="text-xs text-slate-500">${getTimeAgo(logTime)}</p>
+                  </div>
+                  <p class="text-sm text-slate-700">${log.entry_text}</p>
+                  <p class="text-xs text-slate-400 mt-1">${timeStr}</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('Error refreshing activity log:', error);
+      }
+    }
+
+    /**
+     * Helper function to get time ago string
+     */
+    function getTimeAgo(date) {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} min ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    }
+
+    /**
+     * Helper function to get source icon
+     */
+    function getSourceIcon(source) {
+      const icons = {
+        contractor_update: '<i class="fa-solid fa-hammer text-white text-sm"></i>',
+        homeowner_update: '<i class="fa-solid fa-home text-white text-sm"></i>',
+        system_event: '<i class="fa-solid fa-cog text-white text-sm"></i>',
+        ai_agent: '<i class="fa-solid fa-robot text-white text-sm"></i>',
+        schedule_change: '<i class="fa-solid fa-calendar text-white text-sm"></i>',
+        inspection: '<i class="fa-solid fa-clipboard-check text-white text-sm"></i>',
+        delivery: '<i class="fa-solid fa-truck text-white text-sm"></i>'
+      };
+      return icons[source] || icons.system_event;
+    }
+
+    /**
+     * Helper function to get source color
+     */
+    function getSourceColor(source) {
+      const colors = {
+        contractor_update: 'bg-blue-600',
+        homeowner_update: 'bg-green-600',
+        system_event: 'bg-slate-600',
+        ai_agent: 'bg-purple-600',
+        schedule_change: 'bg-orange-600',
+        inspection: 'bg-amber-600',
+        delivery: 'bg-indigo-600'
+      };
+      return colors[source] || colors.system_event;
+    }
+
+    // ============================================
     // INITIALIZE APP
     // ============================================
     async function initPage() {
@@ -1184,7 +1724,7 @@ document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 't
         document.body.style.opacity = '1';
 
         // 2. Show default tab IMMEDIATELY so page isn't blank
-        switchTab('estimator');
+        switchTab('command-center');
 
         // 3. Initialize trade fields immediately
         renderTradeFields();
@@ -1193,6 +1733,9 @@ document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 't
         const isAuthenticated = await checkAuth();
         if (isAuthenticated) {
           checkForEstimatorJob();
+
+          // 5. Load active projects for Command Center
+          await loadActiveProjects();
         }
       } catch (error) {
         console.error('Page initialization failed:', error);
@@ -1213,7 +1756,7 @@ document.getElementById('tab-lead-scout').classList.remove('border-blue-600', 't
 
         // Still make the UI visible - don't let backend failure block the user
         document.body.style.opacity = '1';
-        switchTab('estimator');
+        switchTab('command-center');
         renderTradeFields();
 
         // Show a non-intrusive warning

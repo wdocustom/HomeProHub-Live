@@ -944,6 +944,165 @@ async function logActivity(activityData) {
 }
 
 // ========================================
+// AI Agent System Operations
+// ========================================
+
+/**
+ * Create a project log entry
+ */
+async function createProjectLog(logData) {
+  const { data, error } = await supabase
+    .from('project_logs')
+    .insert({
+      project_id: logData.project_id,
+      entry_text: logData.entry_text,
+      source: logData.source,
+      created_by_email: logData.created_by_email || null,
+      created_by_name: logData.created_by_name || null,
+      metadata: logData.metadata || {},
+      photos: logData.photos || [],
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get project logs for a specific project (optionally filter by time range)
+ */
+async function getProjectLogs(projectId, hoursBack = 24) {
+  const cutoffTime = new Date();
+  cutoffTime.setHours(cutoffTime.getHours() - hoursBack);
+
+  const { data, error } = await supabase
+    .from('project_logs')
+    .select('*')
+    .eq('project_id', projectId)
+    .gte('created_at', cutoffTime.toISOString())
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Get all project logs for a project (no time filter)
+ */
+async function getAllProjectLogs(projectId) {
+  const { data, error } = await supabase
+    .from('project_logs')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Create or update project state
+ */
+async function upsertProjectState(stateData) {
+  const { data, error } = await supabase
+    .from('project_states')
+    .upsert({
+      project_id: stateData.project_id,
+      current_phase: stateData.current_phase || 'planning',
+      blockers: stateData.blockers || [],
+      agent_logs: stateData.agent_logs || [],
+      estimated_completion_date: stateData.estimated_completion_date || null,
+      actual_start_date: stateData.actual_start_date || null,
+      last_activity_date: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'project_id' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get project state by project ID
+ */
+async function getProjectState(projectId) {
+  const { data, error } = await supabase
+    .from('project_states')
+    .select('*')
+    .eq('project_id', projectId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+  return data;
+}
+
+/**
+ * Update project state phase
+ */
+async function updateProjectPhase(projectId, phase, blockers = []) {
+  const { data, error } = await supabase
+    .from('project_states')
+    .update({
+      current_phase: phase,
+      blockers: blockers,
+      last_activity_date: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('project_id', projectId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Log AI agent activity
+ */
+async function logAIAgentActivity(activityData) {
+  const { data, error } = await supabase
+    .from('ai_agent_activity')
+    .insert({
+      project_id: activityData.project_id,
+      agent_type: activityData.agent_type,
+      action_type: activityData.action_type,
+      action_description: activityData.action_description,
+      action_result: activityData.action_result || null,
+      input_data: activityData.input_data || {},
+      output_data: activityData.output_data || {},
+      status: activityData.status || 'completed',
+      error_message: activityData.error_message || null,
+      created_at: new Date().toISOString(),
+      completed_at: activityData.status === 'completed' ? new Date().toISOString() : null
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get active projects (for agent loop processing)
+ */
+async function getActiveProjects() {
+  const { data, error } = await supabase
+    .from('job_postings')
+    .select(`
+      *,
+      project_states (*)
+    `)
+    .in('status', ['in_progress', 'active'])
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// ========================================
 // Export all functions
 // ========================================
 
@@ -1013,5 +1172,15 @@ module.exports = {
   getReviewsByHomeowner,
 
   // Activity
-  logActivity
+  logActivity,
+
+  // AI Agent System
+  createProjectLog,
+  getProjectLogs,
+  getAllProjectLogs,
+  upsertProjectState,
+  getProjectState,
+  updateProjectPhase,
+  logAIAgentActivity,
+  getActiveProjects
 };
