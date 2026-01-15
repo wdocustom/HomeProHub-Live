@@ -36,6 +36,48 @@
 
     .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
 
+    /* Hawk Agent Contractor Cards */
+    .contractor-card {
+      transition: all 0.2s ease;
+      animation: slideInFromLeft 0.3s ease-out;
+    }
+
+    .contractor-card:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .contractor-card:nth-child(1) { animation-delay: 0.1s; }
+    .contractor-card:nth-child(2) { animation-delay: 0.2s; }
+    .contractor-card:nth-child(3) { animation-delay: 0.3s; }
+
+    /* Scanning pulse animation */
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+      }
+    }
+
     /* Tab Styles */
     .tab-button {
       position: relative;
@@ -1831,8 +1873,130 @@
       }
     }
 
+    // ============================================
+    // HAWK AGENT: MOCK DATA GENERATOR
+    // ============================================
     /**
-     * Auto-Scout: Switch to Lead Scout tab and auto-search
+     * Generate mock contractor data based on zip code
+     * Returns an array of 3 recommended subcontractors
+     */
+    function getMockContractors(zip) {
+      // Use zip code to generate consistent but varied results
+      const seed = parseInt(zip) || 68105;
+      const baseNames = [
+        ["Premier Plumbing", "Ace Electric", "Elite HVAC"],
+        ["Rapid Rooter Services", "Lightning Electric Co", "Climate Control Pros"],
+        ["Midwest Pipe & Drain", "Voltage Masters", "Cool Breeze HVAC"],
+        ["Professional Plumbing", "Power Line Electric", "Temp Perfect Systems"],
+        ["Quality Drainage", "Circuit Solutions", "Air Comfort Specialists"]
+      ];
+
+      const set = baseNames[seed % baseNames.length];
+
+      return [
+        {
+          name: set[0],
+          rating: "4.9",
+          distance: "1.2mi",
+          ready: true,
+          phone: "(402) 555-0" + (seed % 900 + 100),
+          specialty: "Licensed & Insured"
+        },
+        {
+          name: set[1],
+          rating: "4.7",
+          distance: "3.4mi",
+          ready: true,
+          phone: "(402) 555-0" + ((seed + 50) % 900 + 100),
+          specialty: "Same-Day Service"
+        },
+        {
+          name: set[2],
+          rating: "4.6",
+          distance: "5.1mi",
+          ready: true,
+          phone: "(402) 555-0" + ((seed + 100) % 900 + 100),
+          specialty: "24/7 Emergency"
+        }
+      ];
+    }
+
+    /**
+     * Render contractor results inside Hawk Agent card
+     */
+    function renderContractorResults(contractors, zipCode) {
+      const statusText = document.getElementById('hawk-status-text');
+
+      // Build HTML for contractor list
+      let resultsHTML = `
+        <div class="contractor-results-container">
+          <div class="mb-3">
+            <p class="text-sm font-bold text-green-800 mb-1">✅ Found ${contractors.length} Verified Contractors</p>
+            <p class="text-xs text-slate-600">Ready to bid in ${zipCode}</p>
+          </div>
+
+          <div class="space-y-2 mb-4">
+      `;
+
+      contractors.forEach((contractor, index) => {
+        resultsHTML += `
+          <div class="contractor-card bg-white rounded-lg p-3 border border-green-200 hover:border-green-400 transition-all">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-bold text-sm text-slate-900">${contractor.name}</span>
+                  <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Verified</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-slate-600">
+                  <span>⭐ ${contractor.rating}</span>
+                  <span>📍 ${contractor.distance}</span>
+                  <span class="text-green-600 font-semibold">${contractor.specialty}</span>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      resultsHTML += `
+          </div>
+        </div>
+      `;
+
+      statusText.innerHTML = resultsHTML;
+    }
+
+    /**
+     * Render Call-to-Action buttons after scanning completes
+     */
+    function renderHawkCTAButtons() {
+      const actionContainer = document.getElementById('hawk-action-container');
+
+      actionContainer.innerHTML = `
+        <div class="flex gap-2 mt-3">
+          <button
+            onclick="inviteAllToBid()"
+            class="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-md text-sm"
+          >
+            <i class="fa-solid fa-paper-plane mr-2"></i>Invite All to Bid
+          </button>
+          <button
+            onclick="verifyOnMap()"
+            class="flex-1 py-2.5 border-2 border-green-600 text-green-700 hover:bg-green-50 font-bold rounded-lg transition-all text-sm"
+          >
+            <i class="fa-solid fa-map-location-dot mr-2"></i>Verify on Map
+          </button>
+        </div>
+      `;
+
+      actionContainer.classList.remove('hidden');
+    }
+
+    /**
+     * Auto-Scout: Upgraded UX with scanning animation and results
      */
     function runAutoScout() {
       const projectDataStr = localStorage.getItem('currentActiveProject');
@@ -1843,8 +2007,106 @@
 
       try {
         const projectData = JSON.parse(projectDataStr);
+        const zipCode = projectData.zipCode;
 
-        // Switch to Lead Scout tab
+        // ===== STEP 1: DISABLE BUTTON & SHOW SCANNING STATE =====
+        const hawkButton = document.getElementById('run-hawk-agent');
+        const statusText = document.getElementById('hawk-status-text');
+        const statusBadge = document.getElementById('hawk-status-badge');
+        const actionContainer = document.getElementById('hawk-action-container');
+
+        // Disable button and change text
+        hawkButton.disabled = true;
+        hawkButton.innerHTML = `<i class="fa-solid fa-satellite-dish mr-2 animate-pulse"></i>🦅 Scanning network in ${zipCode}...`;
+        hawkButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+        hawkButton.classList.add('bg-slate-400', 'cursor-not-allowed');
+
+        // Update status badge
+        statusBadge.textContent = 'Scanning...';
+        statusBadge.className = 'font-semibold text-blue-600';
+
+        // Show scanning animation in status text
+        statusText.innerHTML = `
+          <div class="flex items-center gap-3 text-blue-600">
+            <i class="fa-solid fa-circle-notch fa-spin text-lg"></i>
+            <div class="text-left">
+              <p class="text-sm font-semibold">Analyzing network...</p>
+              <p class="text-xs text-slate-600">Matching contractors to your project requirements</p>
+            </div>
+          </div>
+        `;
+
+        // Hide action buttons during scanning
+        actionContainer.classList.add('hidden');
+
+        // ===== STEP 2: SIMULATE API SEARCH (2.5s DELAY) =====
+        setTimeout(() => {
+          // Generate mock contractor data
+          const contractors = getMockContractors(zipCode);
+
+          // ===== STEP 3: RENDER RESULTS =====
+          renderContractorResults(contractors, zipCode);
+
+          // Update status badge
+          statusBadge.textContent = 'Results Ready';
+          statusBadge.className = 'font-semibold text-green-600';
+
+          // ===== STEP 4: RENDER CTA BUTTONS =====
+          renderHawkCTAButtons();
+
+          // Show success toast
+          showToast(`Found ${contractors.length} verified contractors near ${zipCode}`);
+
+        }, 2500); // 2.5 second delay
+
+      } catch (error) {
+        console.error('Error running auto-scout:', error);
+        alert('Error: Could not load project data');
+      }
+    }
+
+    /**
+     * "Invite All to Bid" button handler
+     */
+    function inviteAllToBid() {
+      const projectDataStr = localStorage.getItem('currentActiveProject');
+      if (!projectDataStr) return;
+
+      try {
+        const projectData = JSON.parse(projectDataStr);
+        const contractors = getMockContractors(projectData.zipCode);
+
+        // Show success toast with details
+        showToast(`📧 Invites sent to ${contractors.length} contractors!`);
+
+        // Update Hawk status text
+        const statusText = document.getElementById('hawk-status-text');
+        statusText.innerHTML = `
+          <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+            <p class="text-sm font-bold text-green-800 mb-2">✅ Invitations Sent Successfully</p>
+            <ul class="text-xs text-green-700 space-y-1">
+              ${contractors.map(c => `<li>• ${c.name} - Invitation delivered</li>`).join('')}
+            </ul>
+            <p class="text-xs text-slate-600 mt-2">You'll receive notifications when contractors respond with bids.</p>
+          </div>
+        `;
+
+      } catch (error) {
+        console.error('Error sending invites:', error);
+      }
+    }
+
+    /**
+     * "Verify on Map" button handler - switches to Lead Scout tab
+     */
+    function verifyOnMap() {
+      const projectDataStr = localStorage.getItem('currentActiveProject');
+      if (!projectDataStr) return;
+
+      try {
+        const projectData = JSON.parse(projectDataStr);
+
+        // Switch to Lead Scout tab (original behavior)
         switchTab('lead-scout');
 
         // Wait for tab to switch and map to load, then auto-fill and search
@@ -1858,15 +2120,12 @@
           // Automatically trigger search
           setTimeout(() => {
             searchLeads();
-
-            // Show success toast
-            showToast(`Searching for leads near ${projectData.zipCode}`);
+            showToast(`Verifying contractors on map near ${projectData.zipCode}`);
           }, 500);
         }, 300);
 
       } catch (error) {
-        console.error('Error running auto-scout:', error);
-        alert('Error: Could not load project data');
+        console.error('Error verifying on map:', error);
       }
     }
 
