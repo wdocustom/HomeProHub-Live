@@ -334,14 +334,14 @@
                 <div id="hawk-agent-card" class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 opacity-60 transition-all duration-500">
                   <div class="flex items-center mb-3">
                     <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mr-3">
-                      <i class="fa-solid fa-users text-white text-lg"></i>
+                      <i class="fa-solid fa-users text-white text-lg" id="hawk-icon"></i>
                     </div>
                     <div>
                       <h4 class="font-bold text-slate-900">The Hawk</h4>
                       <p class="text-xs text-slate-600">Procurement specialist</p>
                     </div>
                   </div>
-                  <p class="text-sm text-slate-700 mb-3">Finds and coordinates subcontractors using your Lead Scout database and local pro network.</p>
+                  <p id="hawk-description" class="text-sm text-slate-700 mb-3">Finds and coordinates subcontractors using your Lead Scout database and local pro network.</p>
 
                   <!-- Dynamic Status Text -->
                   <div id="hawk-status-text" class="text-sm text-slate-600 mb-3 min-h-[20px]"></div>
@@ -356,7 +356,7 @@
                         onclick="runAutoScout()"
                         class="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-md"
                       >
-                        <i class="fa-solid fa-search-location mr-2"></i>Auto-Scout Subcontractors
+                        <i class="fa-solid fa-search-location mr-2"></i><span id="hawk-button-text">Auto-Scout Subcontractors</span>
                       </button>
                     </div>
                   </div>
@@ -790,6 +790,9 @@
           `}
         </div>
       `).join('');
+
+      // Update Hawk agent based on trade type
+      updateHawkAgentForTrade(trade);
     }
 
     // ============================================
@@ -2140,6 +2143,50 @@
     }
 
     /**
+     * Update The Hawk agent description and functionality based on trade type
+     */
+    function updateHawkAgentForTrade(trade) {
+      const hawkDescription = document.getElementById('hawk-description');
+      const hawkButtonText = document.getElementById('hawk-button-text');
+      const hawkIcon = document.getElementById('hawk-icon');
+
+      // Trade-specific configurations
+      const tradeConfigurations = {
+        gc: {
+          description: 'Finds and coordinates subcontractors using your Lead Scout database and local pro network.',
+          buttonText: 'Auto-Scout Subcontractors',
+          icon: 'fa-users'
+        },
+        electrician: {
+          description: 'Finds electrical suppliers, schedules inspections, and sources materials for your projects.',
+          buttonText: 'Auto-Scout Suppliers & Inspectors',
+          icon: 'fa-box'
+        },
+        plumber: {
+          description: 'Finds plumbing suppliers, schedules inspections, and sources fixtures & materials for your projects.',
+          buttonText: 'Auto-Scout Suppliers & Inspectors',
+          icon: 'fa-box'
+        },
+        hvac: {
+          description: 'Finds HVAC suppliers, schedules inspections, and sources equipment & materials for your projects.',
+          buttonText: 'Auto-Scout Suppliers & Inspectors',
+          icon: 'fa-box'
+        }
+      };
+
+      const config = tradeConfigurations[trade] || tradeConfigurations.gc;
+
+      // Update description
+      hawkDescription.textContent = config.description;
+
+      // Update button text
+      hawkButtonText.textContent = config.buttonText;
+
+      // Update icon
+      hawkIcon.className = `fa-solid ${config.icon} text-white text-lg`;
+    }
+
+    /**
      * Activate The Hawk agent card with current project info
      */
     function activateHawkAgent() {
@@ -2148,15 +2195,26 @@
 
       try {
         const projectData = JSON.parse(projectDataStr);
+        const trade = projectData.tradeType || 'gc';
 
         const hawkCard = document.getElementById('hawk-agent-card');
         const statusText = document.getElementById('hawk-status-text');
         const statusBadge = document.getElementById('hawk-status-badge');
         const actionContainer = document.getElementById('hawk-action-container');
 
+        // Trade-specific ready messages
+        const readyMessages = {
+          gc: '🎯 Ready to scout subcontractors for:',
+          electrician: '🎯 Ready to scout suppliers for:',
+          plumber: '🎯 Ready to scout suppliers for:',
+          hvac: '🎯 Ready to scout suppliers for:'
+        };
+
+        const readyMessage = readyMessages[trade] || readyMessages.gc;
+
         // Update status text
         statusText.innerHTML = `
-          <strong class="text-green-700">🎯 Ready to scout leads for:</strong><br>
+          <strong class="text-green-700">${readyMessage}</strong><br>
           <span class="text-slate-800 font-semibold">${projectData.projectName}</span><br>
           <span class="text-slate-600 text-xs">Location: ${projectData.zipCode} · Est: $${projectData.estimateLow.toLocaleString()} - $${projectData.estimateHigh.toLocaleString()}</span>
         `;
@@ -2236,17 +2294,105 @@
     }
 
     /**
+     * Generate mock supplier data based on zip code and trade
+     * Returns an array of 3 recommended suppliers/inspectors
+     */
+    function getMockSuppliers(zip, trade) {
+      const seed = parseInt(zip) || 68105;
+
+      // Trade-specific supplier names
+      const tradeSuppliers = {
+        electrician: {
+          suppliers: [
+            ["Ace Electrical Supply", "Ferguson Electric", "Graybar Electric Supply"],
+            ["City Electric Supply", "Rexel USA", "Platt Electric"],
+            ["Williams Electric", "Werner Electric", "Capitol Electric Supply"]
+          ],
+          inspectors: ["Metro Electrical Inspections", "City Building Inspectors", "State Licensed Inspector"]
+        },
+        plumber: {
+          suppliers: [
+            ["Ferguson Plumbing Supply", "Home Depot PRO", "Lowe's Commercial"],
+            ["Morrison Supply Co", "HD Supply Plumbing", "F.W. Webb"],
+            ["Hajoca Corporation", "Weinstein Supply", "Plumbers Supply Co"]
+          ],
+          inspectors: ["City Plumbing Inspectors", "Licensed Inspector Network", "Metro Building Dept"]
+        },
+        hvac: {
+          suppliers: [
+            ["Ferguson HVAC Supply", "Johnstone Supply", "United Refrigeration"],
+            ["Baker Distributing", "Gemaire Distributors", "Carrier Enterprise"],
+            ["Winsupply HVAC/R", "RE Michel", "ABC Supply HVAC"]
+          ],
+          inspectors: ["HVAC Inspector Services", "City Mechanical Inspectors", "State HVAC Board"]
+        }
+      };
+
+      const tradeData = tradeSuppliers[trade] || tradeSuppliers.plumber;
+      const supplierSet = tradeData.suppliers[seed % tradeData.suppliers.length];
+
+      return [
+        {
+          name: supplierSet[0],
+          rating: "4.8",
+          distance: "2.1mi",
+          ready: true,
+          phone: "(402) 555-0" + (seed % 900 + 100),
+          specialty: "Same-Day Delivery"
+        },
+        {
+          name: supplierSet[1],
+          rating: "4.7",
+          distance: "4.3mi",
+          ready: true,
+          phone: "(402) 555-0" + ((seed + 50) % 900 + 100),
+          specialty: "Trade Accounts"
+        },
+        {
+          name: tradeData.inspectors[seed % tradeData.inspectors.length],
+          rating: "5.0",
+          distance: "Service Area",
+          ready: true,
+          phone: "(402) 555-0" + ((seed + 100) % 900 + 100),
+          specialty: "Licensed Inspector"
+        }
+      ];
+    }
+
+    /**
      * Render contractor results inside Hawk Agent card
      */
-    function renderContractorResults(contractors, zipCode) {
+    function renderContractorResults(contractors, zipCode, trade = 'gc') {
       const statusText = document.getElementById('hawk-status-text');
+
+      // Trade-specific result headers
+      const resultHeaders = {
+        gc: {
+          title: `✅ Found ${contractors.length} Verified Contractors`,
+          subtitle: `Ready to bid in ${zipCode}`
+        },
+        electrician: {
+          title: `✅ Found ${contractors.length} Verified Suppliers & Inspectors`,
+          subtitle: `Serving ${zipCode} area`
+        },
+        plumber: {
+          title: `✅ Found ${contractors.length} Verified Suppliers & Inspectors`,
+          subtitle: `Serving ${zipCode} area`
+        },
+        hvac: {
+          title: `✅ Found ${contractors.length} Verified Suppliers & Inspectors`,
+          subtitle: `Serving ${zipCode} area`
+        }
+      };
+
+      const header = resultHeaders[trade] || resultHeaders.gc;
 
       // Build HTML for contractor list
       let resultsHTML = `
         <div class="contractor-results-container">
           <div class="mb-3">
-            <p class="text-sm font-bold text-green-800 mb-1">✅ Found ${contractors.length} Verified Contractors</p>
-            <p class="text-xs text-slate-600">Ready to bid in ${zipCode}</p>
+            <p class="text-sm font-bold text-green-800 mb-1">${header.title}</p>
+            <p class="text-xs text-slate-600">${header.subtitle}</p>
           </div>
 
           <div class="space-y-2 mb-4">
@@ -2286,22 +2432,44 @@
     /**
      * Render Call-to-Action buttons after scanning completes
      */
-    function renderHawkCTAButtons() {
+    function renderHawkCTAButtons(trade = 'gc') {
       const actionContainer = document.getElementById('hawk-action-container');
+
+      // Trade-specific button configurations
+      const ctaButtons = {
+        gc: {
+          primary: { text: 'Invite All to Bid', icon: 'fa-paper-plane', action: 'inviteAllToBid()' },
+          secondary: { text: 'Verify on Map', icon: 'fa-map-location-dot', action: 'verifyOnMap()' }
+        },
+        electrician: {
+          primary: { text: 'Request Quotes', icon: 'fa-file-invoice-dollar', action: 'inviteAllToBid()' },
+          secondary: { text: 'View on Map', icon: 'fa-map-location-dot', action: 'verifyOnMap()' }
+        },
+        plumber: {
+          primary: { text: 'Request Quotes', icon: 'fa-file-invoice-dollar', action: 'inviteAllToBid()' },
+          secondary: { text: 'View on Map', icon: 'fa-map-location-dot', action: 'verifyOnMap()' }
+        },
+        hvac: {
+          primary: { text: 'Request Quotes', icon: 'fa-file-invoice-dollar', action: 'inviteAllToBid()' },
+          secondary: { text: 'View on Map', icon: 'fa-map-location-dot', action: 'verifyOnMap()' }
+        }
+      };
+
+      const buttons = ctaButtons[trade] || ctaButtons.gc;
 
       actionContainer.innerHTML = `
         <div class="flex gap-2 mt-3">
           <button
-            onclick="inviteAllToBid()"
+            onclick="${buttons.primary.action}"
             class="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-md text-sm"
           >
-            <i class="fa-solid fa-paper-plane mr-2"></i>Invite All to Bid
+            <i class="fa-solid ${buttons.primary.icon} mr-2"></i>${buttons.primary.text}
           </button>
           <button
-            onclick="verifyOnMap()"
+            onclick="${buttons.secondary.action}"
             class="flex-1 py-2.5 border-2 border-green-600 text-green-700 hover:bg-green-50 font-bold rounded-lg transition-all text-sm"
           >
-            <i class="fa-solid fa-map-location-dot mr-2"></i>Verify on Map
+            <i class="fa-solid ${buttons.secondary.icon} mr-2"></i>${buttons.secondary.text}
           </button>
         </div>
       `;
@@ -2322,12 +2490,23 @@
       try {
         const projectData = JSON.parse(projectDataStr);
         const zipCode = projectData.zipCode;
+        const trade = projectData.tradeType || 'gc';
 
         // ===== STEP 1: DISABLE BUTTON & SHOW SCANNING STATE =====
         const hawkButton = document.getElementById('run-hawk-agent');
         const statusText = document.getElementById('hawk-status-text');
         const statusBadge = document.getElementById('hawk-status-badge');
         const actionContainer = document.getElementById('hawk-action-container');
+
+        // Trade-specific scanning messages
+        const scanningMessages = {
+          gc: 'Matching subcontractors to your project requirements',
+          electrician: 'Finding electrical suppliers and inspectors near you',
+          plumber: 'Finding plumbing suppliers and inspectors near you',
+          hvac: 'Finding HVAC suppliers and inspectors near you'
+        };
+
+        const scanningMessage = scanningMessages[trade] || scanningMessages.gc;
 
         // Disable button and change text
         hawkButton.disabled = true;
@@ -2345,7 +2524,7 @@
             <i class="fa-solid fa-circle-notch fa-spin text-lg"></i>
             <div class="text-left">
               <p class="text-sm font-semibold">Analyzing network...</p>
-              <p class="text-xs text-slate-600">Matching contractors to your project requirements</p>
+              <p class="text-xs text-slate-600">${scanningMessage}</p>
             </div>
           </div>
         `;
@@ -2355,21 +2534,22 @@
 
         // ===== STEP 2: SIMULATE API SEARCH (2.5s DELAY) =====
         setTimeout(() => {
-          // Generate mock contractor data
-          const contractors = getMockContractors(zipCode);
+          // Generate mock data based on trade type
+          const results = trade === 'gc' ? getMockContractors(zipCode) : getMockSuppliers(zipCode, trade);
 
           // ===== STEP 3: RENDER RESULTS =====
-          renderContractorResults(contractors, zipCode);
+          renderContractorResults(results, zipCode, trade);
 
           // Update status badge
           statusBadge.textContent = 'Results Ready';
           statusBadge.className = 'font-semibold text-green-600';
 
           // ===== STEP 4: RENDER CTA BUTTONS =====
-          renderHawkCTAButtons();
+          renderHawkCTAButtons(trade);
 
           // Show success toast
-          showToast(`Found ${contractors.length} verified contractors near ${zipCode}`);
+          const resultType = trade === 'gc' ? 'contractors' : 'suppliers';
+          showToast(`Found ${results.length} verified ${resultType} near ${zipCode}`);
 
         }, 2500); // 2.5 second delay
 
