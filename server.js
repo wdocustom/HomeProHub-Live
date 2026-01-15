@@ -7608,6 +7608,288 @@ app.get('/api/agents/project-state/:project_id', async (req, res) => {
   }
 });
 
+// ====== UNIVERSAL AUTO-GC AGENT ROUTES ======
+
+// Import Universal Agent Services
+const {
+  OrchestratorAgent,
+  VisionaryAgent,
+  SharkAgent,
+  WhipAgent,
+  SentinelAgent
+} = require('./services/universalAgentServices');
+
+/**
+ * GET /api/templates
+ * Returns list of available project templates
+ */
+app.get('/api/templates', async (req, res) => {
+  try {
+    console.log('[API] GET /api/templates - Fetching project templates');
+
+    const result = await db.query(`
+      SELECT
+        id,
+        template_name,
+        template_type,
+        display_name,
+        description,
+        typical_duration_days,
+        complexity_level,
+        requires_blueprints,
+        requires_permits,
+        requires_engineering,
+        phases,
+        required_trades
+      FROM project_templates
+      WHERE is_active = true
+      ORDER BY
+        CASE template_type
+          WHEN 'new_construction' THEN 1
+          WHEN 'addition' THEN 2
+          WHEN 'remodel' THEN 3
+          WHEN 'repair' THEN 4
+          ELSE 5
+        END,
+        typical_duration_days DESC
+    `);
+
+    console.log(`[API] Found ${result.rows.length} active templates`);
+
+    res.json({
+      success: true,
+      templates: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('[API] Error fetching templates:', error);
+    res.status(500).json({
+      error: 'Failed to fetch project templates',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/projects/init
+ * Initialize a new project from a template using OrchestratorAgent
+ * Body: { ownerId, templateId, scopeData }
+ */
+app.post('/api/projects/init', requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const { templateId, scopeData } = req.body;
+    const ownerId = req.user.id;
+
+    console.log(`[API] POST /api/projects/init - User ${ownerId} initializing project with template ${templateId}`);
+
+    // Validate required fields
+    if (!templateId) {
+      return res.status(400).json({
+        error: 'Missing required field: templateId',
+        code: 'MISSING_TEMPLATE_ID'
+      });
+    }
+
+    // Verify template exists
+    const templateCheck = await db.query(
+      'SELECT id, template_name, display_name FROM project_templates WHERE id = $1 AND is_active = true',
+      [templateId]
+    );
+
+    if (templateCheck.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Template not found or inactive',
+        code: 'TEMPLATE_NOT_FOUND'
+      });
+    }
+
+    const template = templateCheck.rows[0];
+
+    // Create job posting with template reference
+    const jobTitle = scopeData?.title || `${template.display_name} Project`;
+    const jobDescription = scopeData?.description || `Project based on ${template.template_name} template`;
+    const zipCode = scopeData?.zipCode || '00000';
+    const address = scopeData?.address || '';
+    const blueprintsUrl = scopeData?.blueprintsUrl || null;
+
+    const jobResult = await db.query(`
+      INSERT INTO job_postings (
+        homeowner_email,
+        title,
+        description,
+        category,
+        zip_code,
+        address,
+        status,
+        template_id,
+        blueprints_url,
+        project_metadata,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      RETURNING id, title, template_id
+    `, [
+      req.user.email,
+      jobTitle,
+      jobDescription,
+      template.template_type || 'general',
+      zipCode,
+      address,
+      'in_progress',
+      templateId,
+      blueprintsUrl,
+      JSON.stringify(scopeData || {})
+    ]);
+
+    const projectId = jobResult.rows[0].id;
+
+    console.log(`[API] Created job posting ${projectId} for user ${ownerId}`);
+
+    // Initialize project with OrchestratorAgent
+    console.log(`[API] Calling OrchestratorAgent.initializeProject(${projectId})`);
+
+    const initResult = await OrchestratorAgent.initializeProject(projectId);
+
+    console.log(`[API] OrchestratorAgent completed: ${initResult.milestones_created} milestones created`);
+
+    res.json({
+      success: true,
+      project_id: projectId,
+      project_title: jobResult.rows[0].title,
+      template_name: template.template_name,
+      orchestrator_result: initResult,
+      message: `Project initialized with ${initResult.milestones_created} milestones from ${initResult.template} template`
+    });
+
+  } catch (error) {
+    console.error('[API] Error initializing project:', error);
+    res.status(500).json({
+      error: 'Failed to initialize project',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/agents/trigger
+ * Manually trigger a specific AI agent for a project
+ * Body: { projectId, agentName, actionParams }
+ */
+app.post('/api/agents/trigger', requireAuth, async (req, res) => {
+  try {
+    const { projectId, agentName, actionParams = {} } = req.body;
+
+    console.log(`[API] POST /api/agents/trigger - Agent: ${agentName}, Project: ${projectId}`);
+
+    // Validate required fields
+    if (!projectId || !agentName) {
+      return res.status(400).json({
+        error: 'Missing required fields: projectId and agentName',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Verify project exists and user has access
+    const projectCheck = await db.query(
+      'SELECT id, homeowner_email, title FROM job_postings WHERE id = $1',
+      [projectId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Project not found',
+        code: 'PROJECT_NOT_FOUND'
+      });
+    }
+
+    const project = projectCheck.rows[0];
+
+    // Check authorization (homeowner owns the project OR contractor is assigned)
+    if (project.homeowner_email !== req.user.email) {
+      // TODO: Check if user is an assigned contractor on this project
+      const contractorCheck = await db.query(
+        'SELECT * FROM project_team WHERE project_id = $1 AND contractor_email = $2',
+        [projectId, req.user.email]
+      );
+
+      if (contractorCheck.rows.length === 0) {
+        return res.status(403).json({
+          error: 'You do not have permission to trigger agents for this project',
+          code: 'FORBIDDEN'
+        });
+      }
+    }
+
+    let result;
+
+    // Route to appropriate agent
+    switch (agentName.toLowerCase()) {
+      case 'orchestrator':
+        if (actionParams.action === 'advance') {
+          result = await OrchestratorAgent.advanceToNextMilestone(
+            projectId,
+            actionParams.currentMilestoneId
+          );
+        } else {
+          result = await OrchestratorAgent.initializeProject(projectId);
+        }
+        break;
+
+      case 'visionary':
+        result = await VisionaryAgent.analyzeBlueprints(
+          projectId,
+          actionParams.blueprintUrl
+        );
+        break;
+
+      case 'shark':
+        result = await SharkAgent.huntForContractors(projectId);
+        break;
+
+      case 'whip':
+        if (actionParams.action === 'detect_delays') {
+          result = await WhipAgent.detectDelaysAndReschedule(projectId);
+        } else {
+          result = await WhipAgent.calculateCriticalPath(projectId);
+        }
+        break;
+
+      case 'sentinel':
+        result = await SentinelAgent.performCodeCheck(
+          projectId,
+          actionParams.milestoneId,
+          actionParams.photoUrls || []
+        );
+        break;
+
+      default:
+        return res.status(400).json({
+          error: `Unknown agent: ${agentName}`,
+          code: 'UNKNOWN_AGENT',
+          available_agents: ['orchestrator', 'visionary', 'shark', 'whip', 'sentinel']
+        });
+    }
+
+    console.log(`[API] Agent ${agentName} completed successfully`);
+
+    res.json({
+      success: true,
+      agent: agentName,
+      project_id: projectId,
+      project_title: project.title,
+      result
+    });
+
+  } catch (error) {
+    console.error(`[API] Error triggering agent ${agentName}:`, error);
+    res.status(500).json({
+      error: `Failed to execute ${agentName} agent`,
+      message: error.message
+    });
+  }
+});
+
 // ====== 404 HANDLER ======
 // This must be the LAST route handler, after all other routes
 app.use((req, res) => {

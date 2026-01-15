@@ -297,7 +297,7 @@ class VisionaryAgent {
    * Analyze blueprints using GPT-4o Vision
    * Context: For new builds/additions that require PDF plan sets
    */
-  static async analyzeBlueprintsprintPDFUrl) {
+  static async analyzeBlueprints(projectId, blueprintPDFUrl) {
     console.log('[Visionary] Analyzing blueprints with GPT-4o Vision...');
 
     const template = await getProjectTemplate(projectId);
