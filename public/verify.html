@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="HomeProHub - Secure Milestone Verification">
+  <title>Verify Milestone | HomeProHub</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
+
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Auth Service -->
+  <script src="/services/auth.js"></script>
+
+  <!-- SecureEvidenceCapture Component -->
+  <script src="/components/SecureEvidenceCapture.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-container {
+      text-align: center;
+      color: white;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-container {
+      max-width: 500px;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .error-icon {
+      font-size: 60px;
+      margin-bottom: 16px;
+    }
+
+    .error-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 12px;
+    }
+
+    .error-message {
+      font-size: 15px;
+      color: #4a5568;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .error-code {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #718096;
+    }
+
+    .success-container {
+      max-width: 600px;
+      background: white;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 24px;
+      animation: scaleIn 0.5s ease-out;
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .success-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 12px;
+    }
+
+    .success-message {
+      font-size: 16px;
+      color: #4a5568;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .info-card {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+    }
+
+    .info-label {
+      color: #718096;
+      font-weight: 500;
+    }
+
+    .info-value {
+      color: #2d3748;
+      font-weight: 600;
+    }
+
+    .rejection-container {
+      max-width: 600px;
+      background: white;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .rejection-icon {
+      font-size: 60px;
+      margin-bottom: 16px;
+    }
+
+    .rejection-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #c53030;
+      margin-bottom: 12px;
+    }
+
+    .rejection-reason {
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 20px 0;
+      text-align: left;
+    }
+
+    .rejection-reason-title {
+      font-weight: 600;
+      color: #742a2a;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .rejection-reason-text {
+      color: #742a2a;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    }
+
+    #project-info {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    #project-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 4px;
+    }
+
+    #milestone-name {
+      font-size: 15px;
+      color: #4a5568;
+      margin-bottom: 8px;
+    }
+
+    #project-address {
+      font-size: 13px;
+      color: #718096;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      .success-container,
+      .rejection-container {
+        padding: 30px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Loading State -->
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p style="font-size: 18px; font-weight: 500;">Loading verification...</p>
+    </div>
+  </div>
+
+  <script>
+    // Parse token from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const pathSegments = window.location.pathname.split('/');
+    const token = pathSegments[pathSegments.length - 1] || urlParams.get('token');
+
+    if (!token || token === 'verify.html') {
+      showError('Invalid Verification Link', 'No verification token found in URL.', 'MISSING_TOKEN');
+    } else {
+      loadVerification(token);
+    }
+
+    async function loadVerification(token) {
+      try {
+        // Fetch token details
+        const response = await fetch(`/api/verification/token/${token}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (result.code === 'TOKEN_EXPIRED') {
+            showError('Link Expired', 'This verification link has expired. Verification links are valid for 24 hours. Please request a new link from your project manager.', result.code);
+          } else if (result.code === 'TOKEN_USED') {
+            showError('Already Verified', 'This verification link has already been used. If you need to submit another verification, please request a new link.', result.code);
+          } else {
+            showError('Invalid Link', result.error || 'This verification link is not valid.', result.code);
+          }
+          return;
+        }
+
+        // Show project info and camera interface
+        showCameraInterface(token, result);
+
+      } catch (error) {
+        console.error('Error loading verification:', error);
+        showError('Connection Error', 'Unable to load verification. Please check your internet connection and try again.', 'NETWORK_ERROR');
+      }
+    }
+
+    function showCameraInterface(token, tokenData) {
+      const app = document.getElementById('app');
+
+      app.innerHTML = `
+        <div style="max-width: 600px; width: 100%; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;">
+          <!-- Project Info -->
+          <div id="project-info">
+            <div id="project-title">${escapeHtml(tokenData.project_title)}</div>
+            <div id="milestone-name">📍 Milestone: ${escapeHtml(tokenData.milestone_name)}</div>
+            <div id="project-address">${escapeHtml(tokenData.project_address)}</div>
+          </div>
+
+          <!-- Camera Capture Component -->
+          <div id="camera-container"></div>
+        </div>
+      `;
+
+      // Initialize SecureEvidenceCapture
+      const captureComponent = new SecureEvidenceCapture('camera-container', {
+        verificationToken: token,
+        apiEndpoint: '/api/agents/sentinel/verify',
+
+        onCaptureStart: () => {
+          console.log('Capture started');
+        },
+
+        onSuccess: (result) => {
+          console.log('Verification complete:', result);
+
+          if (result.verification_result === 'approved') {
+            showSuccess(tokenData, result);
+          } else if (result.verification_result === 'rejected') {
+            showRejection(tokenData, result);
+          } else {
+            showPending(tokenData, result);
+          }
+        },
+
+        onError: (error) => {
+          console.error('Verification error:', error);
+          showError('Verification Failed', error.message || 'An error occurred during verification.', 'VERIFICATION_ERROR');
+        }
+      });
+    }
+
+    function showSuccess(tokenData, result) {
+      const app = document.getElementById('app');
+
+      app.innerHTML = `
+        <div class="success-container">
+          <div class="success-icon">✓</div>
+          <h1 class="success-title">Verification Approved!</h1>
+          <p class="success-message">
+            Your milestone completion has been verified and approved. Payment will be processed according to the project agreement.
+          </p>
+
+          <div class="info-card">
+            <div class="info-row">
+              <span class="info-label">Project:</span>
+              <span class="info-value">${escapeHtml(tokenData.project_title)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Milestone:</span>
+              <span class="info-value">${escapeHtml(tokenData.milestone_name)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Location:</span>
+              <span class="info-value">${result.location_verified ? '✓ Verified' : '⚠ Not Verified'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Processing Time:</span>
+              <span class="info-value">${(result.processing_time_ms / 1000).toFixed(1)}s</span>
+            </div>
+          </div>
+
+          <p style="font-size: 14px; color: #718096; margin-bottom: 20px;">
+            You will receive a confirmation email shortly. You can now close this window.
+          </p>
+
+          <button class="btn" onclick="window.close()">Close Window</button>
+        </div>
+      `;
+    }
+
+    function showRejection(tokenData, result) {
+      const app = document.getElementById('app');
+
+      app.innerHTML = `
+        <div class="rejection-container">
+          <div class="rejection-icon">❌</div>
+          <h1 class="rejection-title">Verification Failed</h1>
+          <p style="font-size: 15px; color: #4a5568; margin-bottom: 20px;">
+            Unfortunately, your submission did not pass our security and quality checks.
+          </p>
+
+          <div class="rejection-reason">
+            <div class="rejection-reason-title">Reason for Rejection:</div>
+            <div class="rejection-reason-text">${escapeHtml(result.rejection_reason || 'Quality check failed')}</div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-row">
+              <span class="info-label">Project:</span>
+              <span class="info-value">${escapeHtml(tokenData.project_title)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Milestone:</span>
+              <span class="info-value">${escapeHtml(tokenData.milestone_name)}</span>
+            </div>
+          </div>
+
+          <p style="font-size: 14px; color: #4a5568; line-height: 1.6; margin: 20px 0;">
+            <strong>Next Steps:</strong><br>
+            • Review the rejection reason above<br>
+            • Ensure you are at the job site with location enabled<br>
+            • Take a new live photo showing the completed work<br>
+            • Contact your project manager if you need assistance
+          </p>
+
+          <a href="${window.location.href}" class="btn btn-secondary">Try Again</a>
+        </div>
+      `;
+    }
+
+    function showPending(tokenData, result) {
+      const app = document.getElementById('app');
+
+      app.innerHTML = `
+        <div class="success-container">
+          <div class="success-icon">⏳</div>
+          <h1 class="success-title">Verification Pending</h1>
+          <p class="success-message">
+            Your submission is being reviewed. You will be notified of the result shortly.
+          </p>
+
+          <div class="info-card">
+            <div class="info-row">
+              <span class="info-label">Project:</span>
+              <span class="info-value">${escapeHtml(tokenData.project_title)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Milestone:</span>
+              <span class="info-value">${escapeHtml(tokenData.milestone_name)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Status:</span>
+              <span class="info-value">${result.verification_result}</span>
+            </div>
+          </div>
+
+          <button class="btn" onclick="window.close()">Close Window</button>
+        </div>
+      `;
+    }
+
+    function showError(title, message, code) {
+      const app = document.getElementById('app');
+
+      app.innerHTML = `
+        <div class="error-container">
+          <div class="error-icon">⚠️</div>
+          <h1 class="error-title">${escapeHtml(title)}</h1>
+          <p class="error-message">${escapeHtml(message)}</p>
+          ${code ? `<div class="error-code">Error: ${escapeHtml(code)}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

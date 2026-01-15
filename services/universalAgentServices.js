@@ -765,8 +765,235 @@ class WhipAgent {
 }
 
 // ========================================
-// 5. THE SENTINEL (Vision/QC Inspector)
-// Context-aware code compliance checking
+// 5. THE DIPLOMAT (Communication & SMS Handler)
+// Text-to-Log: Parse SMS from contractors and route to projects
+// ========================================
+class DiplomatAgent {
+  /**
+   * Parse incoming SMS message using GPT-4o
+   * Extracts intent, summary, and milestone_id
+   */
+  static async parseSMS(smsBody, contractorPhone, projectId = null) {
+    console.log(`[Diplomat] Parsing SMS from ${contractorPhone}...`);
+
+    const systemPrompt = `You are a Construction Assistant. Parse SMS messages from subcontractors working on construction projects.
+
+Extract the following information:
+1. intent: One of: 'update', 'blocker', 'question', 'milestone_claim', 'other'
+   - 'update': Progress update (e.g., "Framing is 50% done")
+   - 'blocker': Issue preventing progress (e.g., "Need dumpster emptied", "Missing materials")
+   - 'question': Asking for information or clarification
+   - 'milestone_claim': Claiming a milestone is complete (e.g., "Rough-in complete", "Framing done")
+   - 'other': Doesn't fit above categories
+
+2. summary: Clean, professional summary of the message (1-2 sentences)
+
+3. milestone_id: If they mention a specific phase/milestone, extract it. Common milestones:
+   - excavation, foundation, framing, rough_in, electrical, plumbing, hvac, insulation,
+   - drywall, finish, cabinets, countertops, flooring, painting, punchlist
+
+4. urgency: 'low', 'medium', 'high' (based on tone and content)
+
+Return ONLY valid JSON in this exact format:
+{
+  "intent": "update|blocker|question|milestone_claim|other",
+  "summary": "Clean summary here",
+  "milestone_id": "milestone_name or null",
+  "urgency": "low|medium|high"
+}`;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: `Parse this SMS: "${smsBody}"`
+          }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3
+      });
+
+      const parsed = JSON.parse(response.choices[0].message.content);
+
+      console.log(`[Diplomat] Parsed intent: ${parsed.intent}, milestone: ${parsed.milestone_id || 'none'}`);
+
+      return {
+        success: true,
+        parsed
+      };
+    } catch (error) {
+      console.error('[Diplomat] SMS parsing failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        parsed: {
+          intent: 'other',
+          summary: smsBody,
+          milestone_id: null,
+          urgency: 'medium'
+        }
+      };
+    }
+  }
+
+  /**
+   * Route SMS to correct project based on contractor phone
+   * Returns contractor_id and active project_id
+   */
+  static async routeSMS(fromPhone) {
+    console.log(`[Diplomat] Routing SMS from ${fromPhone}...`);
+
+    // Look up contractor by phone
+    const contractor = await db.query(
+      'SELECT * FROM user_profiles WHERE phone = $1 AND role = $2',
+      [fromPhone, 'contractor']
+    );
+
+    if (contractor.rows.length === 0) {
+      return {
+        success: false,
+        error: 'unrecognized_sender',
+        message: 'Phone number not registered as a contractor'
+      };
+    }
+
+    const contractorData = contractor.rows[0];
+
+    // Find active project assignment
+    const assignment = await db.query(`
+      SELECT cpa.*, j.title as project_title, j.address as project_address
+      FROM contractor_project_assignments cpa
+      JOIN job_postings j ON cpa.project_id = j.id
+      WHERE cpa.contractor_id = $1
+        AND cpa.status = 'active'
+        AND j.status IN ('in_progress', 'active')
+      ORDER BY cpa.assigned_at DESC
+      LIMIT 1
+    `, [contractorData.id]);
+
+    if (assignment.rows.length === 0) {
+      return {
+        success: false,
+        error: 'no_active_project',
+        contractor_id: contractorData.id,
+        contractor_name: `${contractorData.first_name} ${contractorData.last_name}`,
+        message: 'No active project found for this contractor'
+      };
+    }
+
+    const projectAssignment = assignment.rows[0];
+
+    return {
+      success: true,
+      contractor_id: contractorData.id,
+      contractor_email: contractorData.email,
+      contractor_name: `${contractorData.first_name} ${contractorData.last_name}`,
+      project_id: projectAssignment.project_id,
+      project_title: projectAssignment.project_title,
+      project_address: projectAssignment.project_address,
+      trade_type: projectAssignment.trade_type
+    };
+  }
+
+  /**
+   * Log SMS to project_logs and trigger appropriate actions
+   */
+  static async logSMSToProject(projectId, contractorId, smsBody, parsedData, contractorPhone) {
+    console.log(`[Diplomat] Logging SMS to project ${projectId}...`);
+
+    const { intent, summary, milestone_id, urgency } = parsedData;
+
+    // Determine if verification is required
+    const requiresVerification = intent === 'milestone_claim';
+
+    // Insert into project_logs
+    const logResult = await db.query(`
+      INSERT INTO project_logs (
+        project_id, entry_text, source, created_by_email,
+        sms_from_phone, sms_parsed_intent, sms_raw_body,
+        requires_verification, metadata
+      )
+      VALUES ($1, $2, $3, (SELECT email FROM user_profiles WHERE id = $4), $5, $6, $7, $8, $9)
+      RETURNING *
+    `, [
+      projectId,
+      summary,
+      'sms',
+      contractorId,
+      contractorPhone,
+      intent,
+      smsBody,
+      requiresVerification,
+      JSON.stringify({ milestone_id, urgency })
+    ]);
+
+    const logEntry = logResult.rows[0];
+
+    // Log AI agent activity
+    await logAgentActivity(
+      projectId,
+      'diplomat',
+      'log_sms',
+      `Logged SMS from contractor: ${intent}`,
+      { sms_body: smsBody, contractor_phone: contractorPhone },
+      { parsed: parsedData, log_id: logEntry.id },
+      'completed'
+    );
+
+    return {
+      success: true,
+      log_id: logEntry.id,
+      requires_verification: requiresVerification,
+      parsed: parsedData
+    };
+  }
+
+  /**
+   * Generate verification link for milestone claim
+   */
+  static async generateVerificationLink(projectId, milestoneId, contractorId, projectLogId) {
+    console.log(`[Diplomat] Generating verification link for milestone ${milestoneId}...`);
+
+    // Generate short secure token (8 characters)
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(4).toString('hex'); // 8 character hex string
+
+    // Insert verification token
+    await db.query(`
+      INSERT INTO verification_tokens (
+        token, project_id, milestone_id, contractor_id, project_log_id, token_type, status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [token, projectId, milestoneId, contractorId, projectLogId, 'milestone_verification', 'pending']);
+
+    // Update project_log with token
+    await db.query(`
+      UPDATE project_logs
+      SET verification_link_token = $1, verification_sent_at = NOW()
+      WHERE id = $2
+    `, [token, projectLogId]);
+
+    // Construct verification URL (update with your actual domain)
+    const baseUrl = process.env.BASE_URL || 'https://homeprohub.today';
+    const verificationUrl = `${baseUrl}/verify/${token}`;
+
+    return {
+      success: true,
+      token,
+      verification_url: verificationUrl
+    };
+  }
+}
+
+// ========================================
+// 6. THE SENTINEL (Vision/QC Inspector)
+// Context-aware code compliance checking + Forensic Analysis
 // ========================================
 class SentinelAgent {
   /**
@@ -907,6 +1134,267 @@ class SentinelAgent {
       throw error;
     }
   }
+
+  /**
+   * PHASE 5: Forensic Analysis - Anti-Deepfake Detection
+   * Analyzes photo for AI-generated content, screen captures, and fraud indicators
+   */
+  static async performForensicAnalysis(photoUrl, milestoneRequirements = null) {
+    console.log('[Sentinel] Performing forensic analysis on photo...');
+
+    const forensicPrompt = `You are a Forensic Photo Analysis AI specialized in detecting fraudulent construction documentation.
+
+Your job is to analyze construction site photos for authenticity and detect fraud attempts.
+
+FORENSIC CHECKS TO PERFORM:
+
+1. AI-Generated Detection:
+   - Look for signs of AI/CGI generation (unnatural textures, impossible geometry, lighting inconsistencies)
+   - Check for "too perfect" details or synthetic patterns
+   - Verify realistic material properties (wood grain, concrete texture, metal surfaces)
+
+2. Screen Capture Detection:
+   - Look for moiré patterns (interference patterns from photographing a screen)
+   - Check for screen bezels, reflections, or digital artifacts
+   - Verify natural lighting vs. screen backlight
+
+3. Photo Manipulation:
+   - Check for clone stamp artifacts
+   - Look for inconsistent shadows or lighting
+   - Verify perspective consistency
+
+4. Authenticity Indicators (POSITIVE SIGNS):
+   - Natural lighting with appropriate shadows
+   - Realistic depth of field
+   - Authentic material textures
+   - Construction site messiness (sawdust, debris, tools)
+   - Weather/environmental effects
+   - EXIF data presence (if available)
+
+5. Quality Check:
+${milestoneRequirements ? `
+   Milestone-specific requirements: ${milestoneRequirements}
+   - Verify all required elements are visible
+   - Check work quality meets standards
+` : '   - General construction work quality assessment'}
+
+RETURN JSON in this EXACT format:
+{
+  "is_authentic": true/false,
+  "confidence": 0.0-1.0,
+  "fraud_indicators": ["list of suspicious findings"],
+  "authenticity_indicators": ["list of positive signs"],
+  "ai_generated_probability": 0.0-1.0,
+  "screen_capture_detected": true/false,
+  "manipulation_detected": true/false,
+  "quality_assessment": {
+    "meets_requirements": true/false,
+    "observations": ["list of observations"],
+    "issues": ["list of issues if any"]
+  },
+  "recommendation": "approved|rejected|needs_clarification",
+  "reasoning": "Brief explanation of decision"
+}`;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: forensicPrompt
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Perform forensic analysis on this construction site photo:'
+              },
+              {
+                type: 'image_url',
+                image_url: { url: photoUrl }
+              }
+            ]
+          }
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 1500,
+        temperature: 0.2
+      });
+
+      const forensicResult = JSON.parse(response.choices[0].message.content);
+
+      console.log(`[Sentinel] Forensic analysis complete: ${forensicResult.recommendation}`);
+
+      return {
+        success: true,
+        forensic_result: forensicResult
+      };
+    } catch (error) {
+      console.error('[Sentinel] Forensic analysis failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        forensic_result: {
+          is_authentic: false,
+          confidence: 0,
+          recommendation: 'error',
+          reasoning: 'Analysis failed due to technical error'
+        }
+      };
+    }
+  }
+
+  /**
+   * Complete Evidence Verification
+   * Combines GPS validation, forensic analysis, and quality checks
+   */
+  static async verifyEvidence(evidenceId) {
+    console.log(`[Sentinel] Verifying evidence ${evidenceId}...`);
+
+    const startTime = Date.now();
+
+    // Get evidence record
+    const evidenceResult = await db.query(
+      'SELECT * FROM project_evidence WHERE id = $1',
+      [evidenceId]
+    );
+
+    if (evidenceResult.rows.length === 0) {
+      throw new Error(`Evidence ${evidenceId} not found`);
+    }
+
+    const evidence = evidenceResult.rows[0];
+
+    // Get milestone details for context
+    let milestoneRequirements = null;
+    if (evidence.milestone_id) {
+      const milestoneResult = await db.query(
+        'SELECT * FROM project_milestones WHERE id = $1',
+        [evidence.milestone_id]
+      );
+      if (milestoneResult.rows.length > 0) {
+        const milestone = milestoneResult.rows[0];
+        milestoneRequirements = `Milestone: ${milestone.milestone_name}`;
+      }
+    }
+
+    // STEP 1: Perform forensic analysis
+    const forensicAnalysis = await this.performForensicAnalysis(
+      evidence.photo_url,
+      milestoneRequirements
+    );
+
+    // STEP 2: Determine overall result
+    let verificationResult = 'pending';
+    let rejectionReason = null;
+
+    const forensicData = forensicAnalysis.forensic_result;
+
+    // Check location verification
+    if (!evidence.location_verified) {
+      verificationResult = 'rejected';
+      rejectionReason = 'GPS location does not match job site';
+    }
+    // Check forensic analysis
+    else if (!forensicData.is_authentic || forensicData.confidence < 0.6) {
+      verificationResult = 'rejected';
+      rejectionReason = `Photo failed authenticity check: ${forensicData.reasoning}`;
+    }
+    else if (forensicData.screen_capture_detected) {
+      verificationResult = 'rejected';
+      rejectionReason = 'Screen capture detected - live photo required';
+    }
+    else if (forensicData.ai_generated_probability > 0.3) {
+      verificationResult = 'rejected';
+      rejectionReason = 'AI-generated content detected';
+    }
+    else if (forensicData.recommendation === 'rejected') {
+      verificationResult = 'rejected';
+      rejectionReason = forensicData.reasoning;
+    }
+    else if (forensicData.recommendation === 'needs_clarification') {
+      verificationResult = 'needs_resubmission';
+      rejectionReason = forensicData.reasoning;
+    }
+    else if (forensicData.recommendation === 'approved' && forensicData.quality_assessment.meets_requirements) {
+      verificationResult = 'approved';
+    }
+    else {
+      verificationResult = 'needs_resubmission';
+      rejectionReason = 'Quality check inconclusive';
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    // STEP 3: Update evidence record
+    await db.query(`
+      UPDATE project_evidence
+      SET
+        forensic_analysis_status = $1,
+        forensic_checks = $2,
+        quality_check_status = $3,
+        quality_check_result = $4,
+        verification_result = $5,
+        rejection_reason = $6,
+        processed_by_agent = 'sentinel',
+        agent_processing_time_ms = $7,
+        processed_at = NOW(),
+        approved_at = CASE WHEN $5 = 'approved' THEN NOW() ELSE NULL END
+      WHERE id = $8
+    `, [
+      'passed',
+      JSON.stringify({
+        is_authentic: forensicData.is_authentic,
+        confidence: forensicData.confidence,
+        ai_generated_probability: forensicData.ai_generated_probability,
+        screen_capture_detected: forensicData.screen_capture_detected,
+        manipulation_detected: forensicData.manipulation_detected,
+        fraud_indicators: forensicData.fraud_indicators,
+        authenticity_indicators: forensicData.authenticity_indicators
+      }),
+      forensicData.recommendation === 'approved' ? 'approved' : 'rejected',
+      JSON.stringify(forensicData.quality_assessment),
+      verificationResult,
+      rejectionReason,
+      processingTime,
+      evidenceId
+    ]);
+
+    // STEP 4: Update milestone if approved
+    if (verificationResult === 'approved' && evidence.milestone_id) {
+      await db.query(`
+        UPDATE project_milestones
+        SET
+          verification_status = 'approved',
+          verification_approved_at = NOW(),
+          status = CASE WHEN status = 'inspection_pending' THEN 'inspection_passed' ELSE status END
+        WHERE id = $1
+      `, [evidence.milestone_id]);
+
+      // Log agent activity
+      await logAgentActivity(
+        evidence.project_id,
+        'sentinel',
+        'verify_evidence',
+        `Evidence approved for milestone`,
+        { evidence_id: evidenceId },
+        { verification_result: verificationResult, forensic_data: forensicData },
+        'completed'
+      );
+    }
+
+    console.log(`[Sentinel] Evidence verification complete: ${verificationResult}`);
+
+    return {
+      success: true,
+      verification_result: verificationResult,
+      rejection_reason: rejectionReason,
+      forensic_analysis: forensicData,
+      processing_time_ms: processingTime
+    };
+  }
 }
 
 // ========================================
@@ -917,6 +1405,7 @@ module.exports = {
   VisionaryAgent,
   SharkAgent,
   WhipAgent,
+  DiplomatAgent,
   SentinelAgent,
 
   // Helper functions

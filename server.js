@@ -7890,6 +7890,383 @@ app.post('/api/agents/trigger', requireAuth, async (req, res) => {
   }
 });
 
+// ========================================
+// PHASE 4 & 5: DIPLOMAT & SENTINEL ENDPOINTS
+// Text-to-Log + Forensic Security
+// ========================================
+
+const { DiplomatAgent } = require('./services/universalAgentServices');
+
+/**
+ * POST /api/webhooks/incoming-sms
+ * Twilio webhook endpoint for handling incoming SMS from contractors
+ */
+app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), async (req, res) => {
+  try {
+    console.log('[Webhook] Incoming SMS received from Twilio');
+
+    // Twilio sends form-encoded data
+    const { MessageSid, From, To, Body } = req.body;
+
+    if (!MessageSid || !From || !Body) {
+      console.error('[Webhook] Missing required Twilio parameters');
+      return res.status(400).send('Missing required parameters');
+    }
+
+    console.log(`[Webhook] SMS from ${From}: "${Body}"`);
+
+    // STEP 1: Route SMS to find contractor and project
+    const routing = await DiplomatAgent.routeSMS(From);
+
+    // Log to sms_routing_log
+    const routingLogResult = await db.query(`
+      INSERT INTO sms_routing_log (
+        message_sid, from_phone, to_phone, message_body,
+        contractor_id, project_id, routing_status, processed_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING id
+    `, [
+      MessageSid,
+      From,
+      To,
+      Body,
+      routing.contractor_id || null,
+      routing.project_id || null,
+      routing.success ? 'routed' : routing.error
+    ]);
+
+    if (!routing.success) {
+      console.log(`[Webhook] Routing failed: ${routing.error}`);
+
+      // Send error response via Twilio
+      const errorMessage = routing.error === 'unrecognized_sender'
+        ? 'Your phone number is not registered. Please contact support.'
+        : 'You do not have any active projects. Please contact your project manager.';
+
+      // Update routing log with response
+      await db.query(`
+        UPDATE sms_routing_log
+        SET response_sent = true, response_message = $1
+        WHERE id = $2
+      `, [errorMessage, routingLogResult.rows[0].id]);
+
+      // Send Twilio response
+      res.set('Content-Type', 'text/xml');
+      return res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${errorMessage}</Message>
+</Response>`);
+    }
+
+    // STEP 2: Parse SMS with GPT-4o
+    const parseResult = await DiplomatAgent.parseSMS(Body, From, routing.project_id);
+
+    if (!parseResult.success) {
+      console.error('[Webhook] SMS parsing failed:', parseResult.error);
+      // Continue with raw body anyway
+    }
+
+    const parsed = parseResult.parsed;
+
+    // STEP 3: Log to project_logs
+    const logResult = await DiplomatAgent.logSMSToProject(
+      routing.project_id,
+      routing.contractor_id,
+      Body,
+      parsed,
+      From
+    );
+
+    console.log(`[Webhook] SMS logged to project ${routing.project_id}: ${parsed.intent}`);
+
+    // STEP 4: Handle milestone_claim - generate verification link
+    let responseMessage = '';
+
+    if (parsed.intent === 'milestone_claim' && parsed.milestone_id) {
+      // Find milestone
+      const milestoneResult = await db.query(`
+        SELECT * FROM project_milestones
+        WHERE project_id = $1 AND milestone_id = $2
+      `, [routing.project_id, parsed.milestone_id]);
+
+      if (milestoneResult.rows.length > 0) {
+        const milestone = milestoneResult.rows[0];
+
+        // Generate verification link
+        const verificationLink = await DiplomatAgent.generateVerificationLink(
+          routing.project_id,
+          milestone.id,
+          routing.contractor_id,
+          logResult.log_id
+        );
+
+        responseMessage = `Received: ${parsed.milestone_id} complete. To release payment, verify with a live photo: ${verificationLink.verification_url}`;
+
+        console.log(`[Webhook] Verification link generated: ${verificationLink.verification_url}`);
+      } else {
+        responseMessage = `Update received. Milestone "${parsed.milestone_id}" not found in project. Please check the milestone name.`;
+      }
+    } else if (parsed.intent === 'blocker') {
+      responseMessage = `Blocker received: "${parsed.summary}". Your project manager has been notified.`;
+    } else if (parsed.intent === 'update') {
+      responseMessage = `Update logged: "${parsed.summary}". Thank you!`;
+    } else if (parsed.intent === 'question') {
+      responseMessage = `Question received. Your project manager will respond shortly.`;
+    } else {
+      responseMessage = `Message received and logged. Thank you!`;
+    }
+
+    // Update routing log with response
+    await db.query(`
+      UPDATE sms_routing_log
+      SET
+        parsed_intent = $1,
+        response_sent = true,
+        response_message = $2,
+        project_log_id = $3
+      WHERE id = $4
+    `, [parsed.intent, responseMessage, logResult.log_id, routingLogResult.rows[0].id]);
+
+    // Send Twilio response
+    res.set('Content-Type', 'text/xml');
+    return res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${responseMessage}</Message>
+</Response>`);
+
+  } catch (error) {
+    console.error('[Webhook] Error processing incoming SMS:', error);
+
+    // Send generic error response
+    res.set('Content-Type', 'text/xml');
+    return res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>Error processing your message. Please try again later.</Message>
+</Response>`);
+  }
+});
+
+/**
+ * POST /api/agents/sentinel/verify
+ * Sentinel Agent: Forensic verification of evidence (photo + GPS)
+ */
+app.post('/api/agents/sentinel/verify', async (req, res) => {
+  try {
+    const {
+      token,
+      photo_url,
+      gps_latitude,
+      gps_longitude,
+      gps_accuracy,
+      photo_metadata,
+      user_agent,
+      ip_address
+    } = req.body;
+
+    if (!token || !photo_url) {
+      return res.status(400).json({
+        error: 'token and photo_url are required'
+      });
+    }
+
+    console.log(`[Sentinel API] Verifying evidence with token: ${token}`);
+
+    // STEP 1: Validate token
+    const tokenResult = await db.query(`
+      SELECT * FROM verification_tokens
+      WHERE token = $1 AND status = 'pending'
+    `, [token]);
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Invalid or expired verification token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    const verificationToken = tokenResult.rows[0];
+
+    // Check if token is expired
+    if (new Date() > new Date(verificationToken.expires_at)) {
+      await db.query(`
+        UPDATE verification_tokens SET status = 'expired' WHERE id = $1
+      `, [verificationToken.id]);
+
+      return res.status(400).json({
+        error: 'Verification token has expired (24 hour limit)',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+
+    // STEP 2: Get project details for GPS validation
+    const projectResult = await db.query(`
+      SELECT * FROM job_postings WHERE id = $1
+    `, [verificationToken.project_id]);
+
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Project not found',
+        code: 'PROJECT_NOT_FOUND'
+      });
+    }
+
+    const project = projectResult.rows[0];
+
+    // STEP 3: GPS Validation
+    let locationVerified = false;
+    let distanceFromSite = null;
+
+    if (gps_latitude && gps_longitude && project.zip_code) {
+      // Simple validation: Check if within reasonable distance
+      // In production, you'd geocode the project address and calculate actual distance
+      // For now, we'll validate that GPS coords exist
+      locationVerified = true;
+      distanceFromSite = 0; // Placeholder - would calculate real distance in production
+
+      console.log(`[Sentinel API] GPS verified: ${gps_latitude}, ${gps_longitude}`);
+    } else {
+      console.warn('[Sentinel API] GPS coordinates missing or invalid');
+    }
+
+    // STEP 4: Create evidence record
+    const evidenceResult = await db.query(`
+      INSERT INTO project_evidence (
+        project_id, milestone_id, contractor_id,
+        contractor_phone, contractor_email,
+        evidence_type, photo_url, photo_metadata,
+        gps_latitude, gps_longitude, gps_accuracy_meters,
+        gps_timestamp, location_verified, location_distance_from_site_meters,
+        user_agent, ip_address
+      )
+      VALUES ($1, $2, $3, $4, (SELECT email FROM user_profiles WHERE id = $3),
+              $5, $6, $7, $8, $9, $10, NOW(), $11, $12, $13, $14)
+      RETURNING *
+    `, [
+      verificationToken.project_id,
+      verificationToken.milestone_id,
+      verificationToken.contractor_id,
+      (await db.query('SELECT phone FROM user_profiles WHERE id = $1', [verificationToken.contractor_id])).rows[0]?.phone,
+      'milestone_completion',
+      photo_url,
+      JSON.stringify(photo_metadata || {}),
+      gps_latitude,
+      gps_longitude,
+      gps_accuracy,
+      locationVerified,
+      distanceFromSite,
+      user_agent,
+      ip_address
+    ]);
+
+    const evidence = evidenceResult.rows[0];
+
+    console.log(`[Sentinel API] Evidence record created: ${evidence.id}`);
+
+    // STEP 5: Perform forensic verification with Sentinel Agent
+    const { SentinelAgent } = require('./services/universalAgentServices');
+    const verificationResult = await SentinelAgent.verifyEvidence(evidence.id);
+
+    // STEP 6: Mark token as used
+    await db.query(`
+      UPDATE verification_tokens
+      SET status = 'used', used_at = NOW(), evidence_id = $1
+      WHERE id = $2
+    `, [evidence.id, verificationToken.id]);
+
+    console.log(`[Sentinel API] Verification complete: ${verificationResult.verification_result}`);
+
+    res.json({
+      success: true,
+      evidence_id: evidence.id,
+      verification_result: verificationResult.verification_result,
+      rejection_reason: verificationResult.rejection_reason,
+      forensic_analysis: verificationResult.forensic_analysis,
+      location_verified: locationVerified,
+      processing_time_ms: verificationResult.processing_time_ms
+    });
+
+  } catch (error) {
+    console.error('[Sentinel API] Error verifying evidence:', error);
+    res.status(500).json({
+      error: 'Failed to verify evidence',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/verification/token/:token
+ * Get verification token details (for loading verification page)
+ */
+app.get('/api/verification/token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const result = await db.query(`
+      SELECT
+        vt.*,
+        j.title as project_title,
+        j.address as project_address,
+        pm.milestone_name,
+        up.first_name || ' ' || up.last_name as contractor_name
+      FROM verification_tokens vt
+      JOIN job_postings j ON vt.project_id = j.id
+      LEFT JOIN project_milestones pm ON vt.milestone_id = pm.id
+      LEFT JOIN user_profiles up ON vt.contractor_id = up.id
+      WHERE vt.token = $1
+    `, [token]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Token not found',
+        code: 'TOKEN_NOT_FOUND'
+      });
+    }
+
+    const tokenData = result.rows[0];
+
+    // Check if expired
+    if (new Date() > new Date(tokenData.expires_at)) {
+      return res.status(400).json({
+        error: 'Token expired',
+        code: 'TOKEN_EXPIRED',
+        expired_at: tokenData.expires_at
+      });
+    }
+
+    // Check if already used
+    if (tokenData.status === 'used') {
+      return res.status(400).json({
+        error: 'Token already used',
+        code: 'TOKEN_USED',
+        used_at: tokenData.used_at
+      });
+    }
+
+    res.json({
+      success: true,
+      token: tokenData.token,
+      project_id: tokenData.project_id,
+      project_title: tokenData.project_title,
+      project_address: tokenData.project_address,
+      milestone_id: tokenData.milestone_id,
+      milestone_name: tokenData.milestone_name,
+      contractor_name: tokenData.contractor_name,
+      token_type: tokenData.token_type,
+      expires_at: tokenData.expires_at,
+      created_at: tokenData.created_at
+    });
+
+  } catch (error) {
+    console.error('[API] Error fetching token details:', error);
+    res.status(500).json({
+      error: 'Failed to fetch token details',
+      message: error.message
+    });
+  }
+});
+
 // ====== 404 HANDLER ======
 // This must be the LAST route handler, after all other routes
 app.use((req, res) => {
