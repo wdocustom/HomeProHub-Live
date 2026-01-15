@@ -382,10 +382,134 @@
     </div>
   </div>
 
+  <!-- Auto-GC / Trade Opportunities Section (Dynamic) -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+    <div id="autogcSection" style="display: none;">
+      <!-- This will be populated dynamically based on access level -->
+    </div>
+  </div>
+
   <!-- Sanctuary Glass 2.0 Navigation System -->
   <script src="/components/unified-navigation.js"></script>
 
   <script>
+    // Check Auto-GC access and display appropriate card
+    async function checkAutoGCAccess() {
+      try {
+        const response = await window.authService.authenticatedFetch('/api/autogc/access-control');
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          // No access or error - don't show anything
+          return;
+        }
+
+        const access = data.access;
+        const section = document.getElementById('autogcSection');
+
+        if (!section) return;
+
+        let cardHTML = '';
+
+        if (access.access_level === 'full_access' || access.can_create_projects) {
+          // General Contractor - Show Auto-GC Tools card
+          cardHTML = `
+            <div class="bg-white rounded-3xl p-8 shadow-sm border-2 border-blue-200">
+              <div class="flex items-start justify-between mb-6">
+                <div class="flex items-center gap-4">
+                  <div class="p-4 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl">
+                    <i class="fa-solid fa-robot text-3xl"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-2xl font-bold text-slate-900 mb-1">Auto-GC Platform</h3>
+                    <p class="text-slate-600">Manage projects with AI-powered automation</p>
+                  </div>
+                </div>
+                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">FULL ACCESS</span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-slate-50 rounded-xl p-4">
+                  <div class="text-blue-600 text-2xl mb-2">🤖</div>
+                  <div class="font-semibold text-slate-900">9 AI Agents</div>
+                  <div class="text-sm text-slate-600">Automated project management</div>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-4">
+                  <div class="text-green-600 text-2xl mb-2">📋</div>
+                  <div class="font-semibold text-slate-900">Smart Scheduling</div>
+                  <div class="text-sm text-slate-600">Critical path optimization</div>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-4">
+                  <div class="text-purple-600 text-2xl mb-2">🔍</div>
+                  <div class="font-semibold text-slate-900">Contractor Matching</div>
+                  <div class="text-sm text-slate-600">Automatic trade procurement</div>
+                </div>
+              </div>
+
+              <a href="/contractor-tools.html" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
+                Launch Auto-GC Tools <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            </div>
+          `;
+        } else if (access.access_level === 'trade_only') {
+          // Trade-specific contractor - Show Trade Opportunities card
+          const tradeName = access.qualified_trade ?
+            access.qualified_trade.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) :
+            'Your Trade';
+
+          cardHTML = `
+            <div class="bg-white rounded-3xl p-8 shadow-sm border-2 border-green-200">
+              <div class="flex items-start justify-between mb-6">
+                <div class="flex items-center gap-4">
+                  <div class="p-4 bg-gradient-to-br from-green-600 to-emerald-700 text-white rounded-2xl">
+                    <i class="fa-solid fa-briefcase text-3xl"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-2xl font-bold text-slate-900 mb-1">Trade Opportunities</h3>
+                    <p class="text-slate-600">Jobs from Auto-GC projects matched to your trade</p>
+                  </div>
+                </div>
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">${tradeName.toUpperCase()}</span>
+              </div>
+
+              <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6 border border-green-200">
+                <div class="flex items-center gap-3 mb-3">
+                  <i class="fa-solid fa-lightbulb text-yellow-500 text-2xl"></i>
+                  <h4 class="font-semibold text-slate-900">How It Works</h4>
+                </div>
+                <ul class="space-y-2 text-sm text-slate-700">
+                  <li class="flex items-start gap-2">
+                    <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                    <span>View opportunities automatically matched to your ${tradeName.toLowerCase()} trade</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                    <span>See project details, plans, and requirements specific to your work</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                    <span>Accept opportunities and submit competitive bids</span>
+                  </li>
+                </ul>
+              </div>
+
+              <a href="/trade-opportunities.html" class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
+                View Opportunities <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            </div>
+          `;
+        }
+
+        if (cardHTML) {
+          section.innerHTML = cardHTML;
+          section.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error checking Auto-GC access:', error);
+        // Silently fail - just don't show the card
+      }
+    }
+
     // Auth check (app-controller guarantees auth is ready)
     async function checkAuth() {
       try {
@@ -599,6 +723,7 @@
       checkAuth();
       loadStats();
       loadPendingReviews();
+      checkAutoGCAccess(); // Check Auto-GC access and display appropriate card
 
       // Rating star click handlers
       document.querySelectorAll('.rating-star').forEach((star, index) => {

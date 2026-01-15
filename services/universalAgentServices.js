@@ -428,7 +428,7 @@ class VisionaryAgent {
 class SharkAgent {
   /**
    * Hunt for contractors based on template's required trades
-   * PSEUDOCODE IMPLEMENTATION
+   * ENHANCED: Now creates trade opportunities for contractors
    */
   static async huntForContractors(projectId) {
     console.log('[Shark] Hunting for contractors...');
@@ -453,40 +453,21 @@ class SharkAgent {
     // STEP 3: Query Lead Scout database for contractors
     // (This would integrate with the Lead Scout contractor database)
     const searchResults = [];
+    const opportunitiesCreated = [];
 
     for (const trade of requiredTrades) {
-      /*
-       * PSEUDOCODE FOR SHARK LOGIC:
-       *
-       * function huntForTrade(trade_type, project_location):
-       *   # Step 1: Query contractor database
-       *   contractors = DB.query(`
-       *     SELECT * FROM user_profiles
-       *     WHERE role = 'contractor'
-       *       AND trade = ${trade_type}
-       *       AND zip_code IN (nearby_zipcodes(project_location))
-       *       AND profile_complete = true
-       *   `)
-       *
-       *   # Step 2: Filter by license verification
-       *   verified_contractors = contractors.filter(c =>
-       *     c.has_valid_license(trade_type) AND
-       *     c.license_expiration > today()
-       *   )
-       *
-       *   # Step 3: Rank by rating and availability
-       *   ranked = verified_contractors.sort_by(
-       *     rating: DESC,
-       *     reviews_count: DESC,
-       *     years_in_business: DESC
-       *   ).limit(5)
-       *
-       *   # Step 4: Send automated RFQ
-       *   for contractor in ranked:
-       *     send_rfq(contractor, project_details, needed_by_date)
-       *
-       *   return ranked
-       */
+      // Map trade names to database values
+      const tradeMapping = {
+        'Plumber': 'plumbing',
+        'Electrician': 'electrical',
+        'General Contractor': 'general_contractor',
+        'Mechanical Contractor': 'hvac',
+        'Framing': 'framing',
+        'Concrete': 'concrete',
+        'Roofing': 'roofing'
+      };
+
+      const mappedTrade = tradeMapping[trade] || trade.toLowerCase().replace(/\s+/g, '_');
 
       // Simplified implementation
       const result = await db.query(`
@@ -504,23 +485,114 @@ class SharkAgent {
         LIMIT 5
       `, [trade]);
 
+      console.log(`[Shark] Found ${result.rows.length} contractors for ${trade}`);
+
+      // STEP 4: Create trade opportunities for each contractor found
+      for (const contractor of result.rows) {
+        try {
+          // Determine which milestone this trade is needed for
+          const relevantMilestone = upcomingMilestones.find(m =>
+            m.milestone_id.includes(mappedTrade) ||
+            m.milestone_name.toLowerCase().includes(trade.toLowerCase())
+          ) || upcomingMilestones[0];
+
+          // Prepare project details filtered for this trade
+          const projectDetails = {
+            project_title: template.title,
+            address: template.address || 'Address available upon acceptance',
+            homeowner_name: 'Homeowner', // To be filled from actual data
+            milestone_name: relevantMilestone?.milestone_name || 'Trade Work',
+            estimated_start: relevantMilestone?.planned_start_date || null,
+            blueprint_urls: template.blueprints_url ? [template.blueprints_url] : [],
+            trade_specific_notes: `${trade} work required for ${template.template_name}`,
+            template_type: template.template_type,
+            project_scope: template.description || ''
+          };
+
+          // Create scope of work description
+          const scopeOfWork = `${trade} services needed for ${template.template_type} project. ${
+            relevantMilestone ?
+            `Specifically for milestone: ${relevantMilestone.milestone_name}` :
+            'General trade services required.'
+          }`;
+
+          // Set expiration (7 days from now)
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 7);
+
+          // Insert trade opportunity
+          const opportunityResult = await db.query(`
+            INSERT INTO autogc_trade_opportunities (
+              project_id,
+              milestone_id,
+              contractor_id,
+              contractor_email,
+              trade_type,
+              scope_of_work,
+              project_details,
+              expires_at,
+              priority_level,
+              created_by_agent,
+              agent_metadata
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (project_id, contractor_id, milestone_id) DO UPDATE
+            SET
+              scope_of_work = EXCLUDED.scope_of_work,
+              project_details = EXCLUDED.project_details,
+              expires_at = EXCLUDED.expires_at,
+              updated_at = NOW()
+            RETURNING id
+          `, [
+            projectId,
+            relevantMilestone?.milestone_id || null,
+            contractor.id,
+            contractor.email,
+            mappedTrade,
+            scopeOfWork,
+            JSON.stringify(projectDetails),
+            expiresAt,
+            5, // default priority
+            'shark',
+            JSON.stringify({
+              shark_run_timestamp: new Date().toISOString(),
+              contractor_rating: contractor.avg_rating,
+              contractor_review_count: contractor.review_count
+            })
+          ]);
+
+          opportunitiesCreated.push({
+            opportunity_id: opportunityResult.rows[0].id,
+            contractor_email: contractor.email,
+            contractor_name: `${contractor.first_name} ${contractor.last_name}`,
+            trade: mappedTrade,
+            milestone: relevantMilestone?.milestone_id
+          });
+
+          console.log(`[Shark] Created opportunity for ${contractor.email} (${trade})`);
+        } catch (error) {
+          console.error(`[Shark] Error creating opportunity for ${contractor.email}:`, error);
+        }
+      }
+
       searchResults.push({
         trade,
         contractors_found: result.rows.length,
         contractors: result.rows
       });
-
-      console.log(`[Shark] Found ${result.rows.length} contractors for ${trade}`);
     }
 
-    // STEP 4: Log procurement activity
+    // STEP 5: Log procurement activity
     await logAgentActivity(
       projectId,
       'shark',
       'hunt_contractors',
-      `Hunted for ${requiredTrades.length} trade types`,
+      `Hunted for ${requiredTrades.length} trade types and created ${opportunitiesCreated.length} opportunities`,
       { required_trades: requiredTrades },
-      { search_results: searchResults },
+      {
+        search_results: searchResults,
+        opportunities_created: opportunitiesCreated
+      },
       'completed'
     );
 
@@ -528,7 +600,9 @@ class SharkAgent {
       success: true,
       required_trades: requiredTrades,
       search_results: searchResults,
-      total_contractors_found: searchResults.reduce((sum, r) => sum + r.contractors_found, 0)
+      opportunities_created: opportunitiesCreated,
+      total_contractors_found: searchResults.reduce((sum, r) => sum + r.contractors_found, 0),
+      total_opportunities_sent: opportunitiesCreated.length
     };
   }
 

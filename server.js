@@ -8277,6 +8277,330 @@ app.use((req, res) => {
   });
 });
 
+// ====== AUTO-GC TRADE OPPORTUNITIES API ======
+
+/**
+ * GET /api/autogc/access-control
+ * Check contractor's access level for Auto-GC features
+ */
+app.get("/api/autogc/access-control", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Query access control
+    const result = await db.query(`
+      SELECT * FROM get_contractor_autogc_access($1)
+    `, [contractorEmail]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Access control not found',
+        access_level: 'no_access'
+      });
+    }
+
+    res.json({
+      success: true,
+      access: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error checking Auto-GC access:', error);
+    res.status(500).json({
+      error: 'Failed to check access control',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/autogc/trade-opportunities
+ * Get trade opportunities for the current contractor
+ */
+app.get("/api/autogc/trade-opportunities", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get contractor ID
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({ error: 'Contractor profile not found' });
+    }
+
+    // Query trade opportunities using the view
+    const result = await db.query(`
+      SELECT * FROM contractor_trade_opportunities_view
+      WHERE contractor_email = $1
+        AND opportunity_status IN ('pending', 'viewed', 'accepted', 'bid_submitted')
+      ORDER BY
+        CASE opportunity_status
+          WHEN 'pending' THEN 1
+          WHEN 'viewed' THEN 2
+          WHEN 'accepted' THEN 3
+          WHEN 'bid_submitted' THEN 4
+          ELSE 5
+        END,
+        priority_level ASC,
+        sent_at DESC
+    `, [contractorEmail]);
+
+    res.json({
+      success: true,
+      opportunities: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching trade opportunities:', error);
+    res.status(500).json({
+      error: 'Failed to fetch opportunities',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/autogc/trade-opportunities/:opportunityId
+ * Get details of a specific trade opportunity
+ */
+app.get("/api/autogc/trade-opportunities/:opportunityId", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+    const { opportunityId } = req.params;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get opportunity details
+    const result = await db.query(`
+      SELECT * FROM contractor_trade_opportunities_view
+      WHERE opportunity_id = $1 AND contractor_email = $2
+    `, [opportunityId, contractorEmail]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    // Mark as viewed if not already
+    await db.query(`
+      UPDATE autogc_trade_opportunities
+      SET
+        status = CASE
+          WHEN status = 'pending' THEN 'viewed'
+          ELSE status
+        END,
+        viewed_at = CASE
+          WHEN viewed_at IS NULL THEN NOW()
+          ELSE viewed_at
+        END
+      WHERE id = $1
+    `, [opportunityId]);
+
+    res.json({
+      success: true,
+      opportunity: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching opportunity details:', error);
+    res.status(500).json({
+      error: 'Failed to fetch opportunity',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/autogc/trade-opportunities/:opportunityId/respond
+ * Respond to a trade opportunity (accept or decline)
+ */
+app.post("/api/autogc/trade-opportunities/:opportunityId/respond", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+    const { opportunityId } = req.params;
+    const { action, message } = req.body;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!action || !['accept', 'decline'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action. Must be "accept" or "decline"' });
+    }
+
+    // Verify opportunity belongs to contractor
+    const opportunity = await db.query(`
+      SELECT * FROM autogc_trade_opportunities
+      WHERE id = $1 AND contractor_email = $2
+    `, [opportunityId, contractorEmail]);
+
+    if (opportunity.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    const opp = opportunity.rows[0];
+
+    // Check if already responded
+    if (['accepted', 'declined', 'bid_submitted', 'awarded'].includes(opp.status)) {
+      return res.status(400).json({
+        error: 'Opportunity already responded to',
+        current_status: opp.status
+      });
+    }
+
+    // Update opportunity status
+    const newStatus = action === 'accept' ? 'accepted' : 'declined';
+
+    await db.query(`
+      UPDATE autogc_trade_opportunities
+      SET
+        status = $1,
+        contractor_response = $2,
+        responded_at = NOW()
+      WHERE id = $3
+    `, [newStatus, message || null, opportunityId]);
+
+    res.json({
+      success: true,
+      message: `Opportunity ${action}ed successfully`,
+      new_status: newStatus
+    });
+  } catch (error) {
+    console.error('Error responding to opportunity:', error);
+    res.status(500).json({
+      error: 'Failed to respond to opportunity',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/autogc/trade-opportunities/:opportunityId/submit-bid
+ * Submit a bid for an accepted trade opportunity
+ */
+app.post("/api/autogc/trade-opportunities/:opportunityId/submit-bid", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+    const { opportunityId } = req.params;
+    const {
+      bidAmountLow,
+      bidAmountHigh,
+      estimatedDuration,
+      startAvailability,
+      message
+    } = req.body;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Validate required fields
+    if (!bidAmountLow || !bidAmountHigh) {
+      return res.status(400).json({ error: 'Bid amount range is required' });
+    }
+
+    // Get contractor details
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({ error: 'Contractor profile not found' });
+    }
+
+    // Verify opportunity belongs to contractor and is accepted
+    const opportunity = await db.query(`
+      SELECT * FROM autogc_trade_opportunities
+      WHERE id = $1 AND contractor_email = $2
+    `, [opportunityId, contractorEmail]);
+
+    if (opportunity.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    const opp = opportunity.rows[0];
+
+    if (opp.status !== 'accepted') {
+      return res.status(400).json({
+        error: 'Can only submit bid for accepted opportunities',
+        current_status: opp.status
+      });
+    }
+
+    // Update opportunity with bid details
+    await db.query(`
+      UPDATE autogc_trade_opportunities
+      SET
+        status = 'bid_submitted',
+        contractor_bid_amount_low = $1,
+        contractor_bid_amount_high = $2,
+        contractor_estimated_duration = $3,
+        contractor_start_availability = $4,
+        contractor_response = COALESCE($5, contractor_response),
+        updated_at = NOW()
+      WHERE id = $6
+    `, [
+      bidAmountLow,
+      bidAmountHigh,
+      estimatedDuration || null,
+      startAvailability || null,
+      message || null,
+      opportunityId
+    ]);
+
+    // Also create a formal contractor_bid record
+    await db.query(`
+      INSERT INTO contractor_bids (
+        job_id,
+        contractor_email,
+        contractor_id,
+        contractor_business_name,
+        bid_amount_low,
+        bid_amount_high,
+        estimated_duration,
+        start_availability,
+        message,
+        status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+      ON CONFLICT (job_id, contractor_email) DO UPDATE
+      SET
+        bid_amount_low = EXCLUDED.bid_amount_low,
+        bid_amount_high = EXCLUDED.bid_amount_high,
+        estimated_duration = EXCLUDED.estimated_duration,
+        start_availability = EXCLUDED.start_availability,
+        message = EXCLUDED.message,
+        updated_at = NOW()
+    `, [
+      opp.project_id,
+      contractorEmail,
+      contractor.id,
+      contractor.business_name || `${contractor.first_name} ${contractor.last_name}`,
+      bidAmountLow,
+      bidAmountHigh,
+      estimatedDuration || null,
+      startAvailability || null,
+      message || `Bid submitted for ${opp.trade_type} work`
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Bid submitted successfully',
+      opportunity_id: opportunityId,
+      project_id: opp.project_id
+    });
+  } catch (error) {
+    console.error('Error submitting bid:', error);
+    res.status(500).json({
+      error: 'Failed to submit bid',
+      message: error.message
+    });
+  }
+});
+
 // ====== GLOBAL ERROR HANDLER ======
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled error:', err);
