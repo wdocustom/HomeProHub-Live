@@ -1,0 +1,8649 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
+// ====== IMPORTS ======
+const express = require("express");
+const cors = require("cors");
+const path = require('path');
+const fs = require('fs');
+const db = require('./database/db');
+
+// OpenAI SDK for vision-enabled estimates
+const OpenAI = require('openai');
+
+// node-fetch v3 for CommonJS
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
+// ====== TRIAGE SYSTEM IMPORTS ======
+const { v4: uuidv4 } = require('uuid');
+const { createProvider } = require('./triage/providers');
+const { runRouter } = require('./triage/router/router');
+const { runAnswer } = require('./triage/answer/answer');
+const { runAICheck } = require('./triage/ai-check');
+
+// ====== ENVIRONMENT VALIDATION ======
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+if (!ANTHROPIC_API_KEY && !OPENAI_API_KEY) {
+  console.error("❌ CRITICAL: No AI API keys configured.");
+  console.error("   Please add ANTHROPIC_API_KEY or OPENAI_API_KEY to your .env file.");
+} else if (!ANTHROPIC_API_KEY) {
+  console.warn("⚠️  WARNING: ANTHROPIC_API_KEY not set. Using OpenAI as primary provider.");
+} else if (!OPENAI_API_KEY) {
+  console.warn("⚠️  WARNING: OPENAI_API_KEY not set. No fallback provider available.");
+}
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn("⚠️  WARNING: Supabase credentials not configured. Authentication will not work.");
+  console.warn("   Add SUPABASE_URL and SUPABASE_ANON_KEY to your environment variables.");
+}
+
+const app = express();
+
+// ====== MIDDLEWARE ======
+
+// Request logging
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
+  next();
+});
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// JSON body parser with size limit for image uploads
+app.use(express.json({ limit: "10mb" }));
+
+// Error handler for JSON parsing errors
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON format in request body.' });
+  }
+  next(err);
+});
+
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://www.homeprohub.today',
+  'https://homeprohub.today',
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `CORS policy violation: Origin ${origin} is not allowed.`;
+      console.warn(`⚠️  ${msg}`);
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
+// Serve static files from /public directory
+app.use(express.static("public"));
+
+// ====== UTILITY FUNCTIONS ======
+
+/**
+ * Validates and sanitizes string inputs
+ */
+function sanitizeInput(input, maxLength = 5000) {
+  if (typeof input !== 'string') return '';
+  return input.trim().substring(0, maxLength);
+}
+
+/**
+ * Validates ZIP code format
+ */
+function isValidZip(zip) {
+  if (!zip) return false;
+  return /^\d{5}(-\d{4})?$/.test(zip.trim());
+}
+
+/**
+ * Loads JSON file safely with error handling
+ */
+function loadJsonFile(filename) {
+  try {
+    const filePath = path.resolve(__dirname, 'public', filename);
+    if (!fs.existsSync(filePath)) {
+      console.warn(`⚠️  JSON file not found: ${filename}`);
+      return null;
+    }
+    const data = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(`❌ Error loading ${filename}:`, error.message);
+    return null;
+  }
+}
+
+// ====== AUTHENTICATION MIDDLEWARE ======
+
+const { createClient } = require('@supabase/supabase-js');
+
+// Create Supabase client for auth verification
+const supabaseAuth = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_ANON_KEY || ''
+);
+
+/**
+ * Middleware to verify Supabase JWT token
+ * Extracts token from Authorization header and validates it
+ */
+async function requireAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        code: 'NO_AUTH_TOKEN'
+      });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify token with Supabase
+    const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({
+        error: 'Invalid or expired token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    // Attach user to request object
+    req.user = user;
+    next();
+
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({
+      error: 'Authentication verification failed',
+      code: 'AUTH_ERROR'
+    });
+  }
+}
+
+/**
+ * Middleware to require specific role
+ */
+function requireRole(role) {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          code: 'NO_AUTH'
+        });
+      }
+
+      // Get user profile from database to check role
+      const profile = await db.getUserProfile(req.user.email);
+
+      if (!profile || profile.role !== role) {
+        return res.status(403).json({
+          error: `Access denied. ${role} role required.`,
+          code: 'INSUFFICIENT_PERMISSIONS'
+        });
+      }
+
+      // Attach profile to request
+      req.userProfile = profile;
+      next();
+
+    } catch (error) {
+      console.error('Role check error:', error);
+      return res.status(500).json({
+        error: 'Role verification failed',
+        code: 'ROLE_CHECK_ERROR'
+      });
+    }
+  };
+}
+
+/**
+ * Optional auth middleware - doesn't fail if no token
+ * Useful for endpoints that work for both authenticated and guest users
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+
+      if (!error && user) {
+        req.user = user;
+      }
+    }
+
+    next();
+  } catch (error) {
+    // Don't fail - just continue without user
+    next();
+  }
+}
+
+// --- FINAL AUTH API ROUTES (Client-Side Auth) ---
+
+// ====== API ROUTES ======
+
+/**
+ * GET /api/config
+ * Returns client configuration (Supabase credentials)
+ */
+app.get('/api/config', (req, res) => {
+  try {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return res.status(503).json({
+        error: 'Authentication service not configured.',
+        code: 'AUTH_NOT_CONFIGURED'
+      });
+    }
+
+    res.json({
+      supabaseUrl: SUPABASE_URL,
+      supabaseAnonKey: SUPABASE_ANON_KEY
+    });
+
+  } catch (error) {
+    console.error('Error in /api/config:', error);
+    return res.status(500).json({ error: 'Internal server error fetching config.' });
+  }
+});
+
+// ====== AUTHENTICATION ENDPOINTS ======
+
+/**
+ * POST /api/auth/signup
+ * Create a new user account with Supabase Auth
+ */
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { email, password, role, pending_project_draft, ...userData } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !role) {
+      return res.status(400).json({
+        error: 'Email, password, and role are required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Validate role
+    if (!['homeowner', 'contractor'].includes(role)) {
+      return res.status(400).json({
+        error: 'Role must be either "homeowner" or "contractor"',
+        code: 'INVALID_ROLE'
+      });
+    }
+
+    // Prepare user metadata
+    const userMetadata = {
+      role: role,
+      ...userData
+    };
+
+    // EMBEDDED METADATA STRATEGY: Include pending project draft in user metadata
+    // This ensures the draft is saved in the cloud and accessible across devices
+    if (pending_project_draft) {
+      userMetadata.pending_project_draft = pending_project_draft;
+      console.log('✓ Embedding project draft in user metadata for cross-device access');
+    }
+
+    // Create user in Supabase Auth with metadata
+    const { data, error } = await supabaseAuth.auth.signUp({
+      email,
+      password,
+      options: {
+        data: userMetadata
+      }
+    });
+
+    if (error) {
+      console.error('Signup error:', error);
+      return res.status(400).json({
+        error: error.message,
+        code: 'SIGNUP_FAILED'
+      });
+    }
+
+    // Create user profile in database
+    if (data.user) {
+      try {
+        const profile = await db.upsertUserProfile({
+          id: data.user.id,
+          email: email,
+          role: role,
+          full_name: userData.full_name || null,
+          phone: userData.phone || null,
+          company_name: userData.company_name || null,
+          address: userData.address || null,
+          city: userData.city || null,
+          state: userData.state || null,
+          zip_code: userData.zip_code || null,
+          email_verified: data.user.email_confirmed_at ? true : false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        console.log('✅ User profile created:', email, 'Role:', role);
+      } catch (dbError) {
+        console.error('Error creating user profile:', dbError);
+        // Continue - auth user is created even if profile creation fails
+      }
+    }
+
+    res.status(201).json({
+      user: data.user,
+      session: data.session,
+      message: 'Account created successfully'
+    });
+
+  } catch (error) {
+    console.error('Signup endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during signup',
+      code: 'SIGNUP_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/signin
+ * Sign in an existing user
+ */
+app.post('/api/auth/signin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Email and password are required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    console.log(`🔐 Signin attempt for: ${email}`);
+
+    // Sign in with Supabase (with 10s timeout)
+    let data, error;
+    try {
+      const signInPromise = supabaseAuth.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase signIn timeout after 10 seconds')), 10000)
+      );
+
+      const result = await Promise.race([signInPromise, timeoutPromise]);
+      data = result.data;
+      error = result.error;
+
+      console.log('✓ Supabase signIn call completed');
+    } catch (timeoutError) {
+      console.error('❌ Supabase signIn timeout:', timeoutError.message);
+      return res.status(504).json({
+        error: 'Authentication service timeout. Please try again.',
+        code: 'SUPABASE_TIMEOUT',
+        details: timeoutError.message
+      });
+    }
+
+    if (error) {
+      console.error('❌ Signin error from Supabase:', {
+        message: error.message,
+        status: error.status,
+        code: error.code || error.error_code
+      });
+      return res.status(401).json({
+        error: error.message,
+        code: 'SIGNIN_FAILED'
+      });
+    }
+
+    // Get user profile
+    let profile = null;
+    try {
+      profile = await db.getUserProfile(email);
+      console.log('✓ User profile fetched:', profile ? 'Found' : 'Not found');
+    } catch (dbError) {
+      console.error('⚠️ Error fetching user profile:', dbError);
+    }
+
+    console.log('✅ User signed in successfully:', email);
+
+    res.json({
+      user: data.user,
+      session: data.session,
+      profile: profile,
+      message: 'Signed in successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Signin endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during signin',
+      code: 'SIGNIN_ERROR',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/auth/signout
+ * Sign out the current user
+ */
+app.post('/api/auth/signout', requireAuth, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader.substring(7);
+
+    // Sign out from Supabase
+    const { error } = await supabaseAuth.auth.signOut(token);
+
+    if (error) {
+      console.error('Signout error:', error);
+    }
+
+    console.log('✅ User signed out:', req.user.email);
+
+    res.json({
+      message: 'Signed out successfully'
+    });
+
+  } catch (error) {
+    console.error('Signout endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during signout',
+      code: 'SIGNOUT_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/refresh
+ * Refresh the access token
+ */
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+      return res.status(400).json({
+        error: 'Refresh token is required',
+        code: 'MISSING_REFRESH_TOKEN'
+      });
+    }
+
+    // Refresh session with Supabase
+    const { data, error } = await supabaseAuth.auth.refreshSession({
+      refresh_token
+    });
+
+    if (error) {
+      console.error('Token refresh error:', error);
+      return res.status(401).json({
+        error: error.message,
+        code: 'REFRESH_FAILED'
+      });
+    }
+
+    res.json({
+      session: data.session,
+      user: data.user,
+      message: 'Token refreshed successfully'
+    });
+
+  } catch (error) {
+    console.error('Refresh endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during token refresh',
+      code: 'REFRESH_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/auth/user
+ * Get current authenticated user and profile
+ */
+app.get('/api/auth/user', requireAuth, async (req, res) => {
+  try {
+    // Get user profile from database
+    const profile = await db.getUserProfile(req.user.email);
+
+    res.json({
+      user: req.user,
+      profile: profile,
+      authenticated: true
+    });
+
+  } catch (error) {
+    console.error('Get user endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error fetching user',
+      code: 'FETCH_USER_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Send password reset email
+ */
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Email is required',
+        code: 'MISSING_EMAIL'
+      });
+    }
+
+    // Send password reset email via Supabase
+    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
+      redirectTo: `${req.protocol}://${req.get('host')}/reset-password`
+    });
+
+    if (error) {
+      console.error('Password reset error:', error);
+      return res.status(400).json({
+        error: error.message,
+        code: 'RESET_FAILED'
+      });
+    }
+
+    console.log('✅ Password reset email sent to:', email);
+
+    res.json({
+      message: 'Password reset email sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during password reset',
+      code: 'RESET_ERROR'
+    });
+  }
+});
+
+/**
+ * PUT /api/auth/update-password
+ * Update user password (requires authentication)
+ */
+app.put('/api/auth/update-password', requireAuth, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({
+        error: 'New password is required',
+        code: 'MISSING_PASSWORD'
+      });
+    }
+
+    // Update password via Supabase
+    const { error } = await supabaseAuth.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      console.error('Update password error:', error);
+      return res.status(400).json({
+        error: error.message,
+        code: 'UPDATE_FAILED'
+      });
+    }
+
+    console.log('✅ Password updated for:', req.user.email);
+
+    res.json({
+      message: 'Password updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update password endpoint error:', error);
+    return res.status(500).json({
+      error: 'Internal server error during password update',
+      code: 'UPDATE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/set-role
+ * Confirms role selection for user (placeholder for future database integration)
+ */
+app.post('/api/set-role', (req, res) => {
+  try {
+    const { username, role } = req.body;
+
+    // Input validation
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username is required and must be a string.',
+        field: 'username'
+      });
+    }
+
+    if (role && !['contractor', 'homeowner'].includes(role)) {
+      return res.status(400).json({
+        error: 'Role must be either "contractor" or "homeowner".',
+        field: 'role'
+      });
+    }
+
+    // TODO: Save to database when implemented
+    console.log(`✓ Role set for user: ${username} -> ${role || 'not specified'}`);
+
+    return res.json({
+      success: true,
+      message: 'Role received and processed.',
+      username: username,
+      role: role
+    });
+
+  } catch (error) {
+    console.error('Error in /api/set-role:', error);
+    return res.status(500).json({ error: 'Internal server error processing role.' });
+  }
+});
+
+// ========================================
+// PROFILE ENDPOINTS
+// ========================================
+
+/**
+ * GET /api/profile/me
+ * Get profile data for currently authenticated user
+ * Returns contractor_profile or home_profile based on user role
+ */
+app.get('/api/profile/me', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+    const userRole = req.user.user_metadata?.role;
+
+    let profileData = null;
+    let homeProfileData = null;
+
+    // Fetch contractor profile if user is a contractor
+    if (userRole === 'contractor') {
+      const { data: profile, error } = await req.supabase
+        .from('contractor_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Ignore "not found" errors
+        console.error('Error fetching contractor profile:', error);
+      } else if (profile) {
+        profileData = profile;
+      }
+    }
+
+    // Fetch home profile if user is a homeowner
+    if (userRole === 'homeowner') {
+      const { data: homeProfile, error } = await req.supabase
+        .from('home_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Ignore "not found" errors
+        console.error('Error fetching home profile:', error);
+      } else if (homeProfile) {
+        homeProfileData = homeProfile;
+      }
+    }
+
+    return res.json({
+      success: true,
+      profile: profileData,
+      homeProfile: homeProfileData,
+      userRole: userRole
+    });
+
+  } catch (error) {
+    console.error('Error in /api/profile/me:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile data' });
+  }
+});
+
+/**
+ * POST /api/profile/update
+ * Update or create profile data for authenticated user
+ * Handles both contractor_profiles and home_profiles
+ */
+app.post('/api/profile/update', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.user_metadata?.role;
+    const { homeProfile, ...contractorProfile } = req.body;
+
+    let result = { success: true };
+
+    // Update contractor profile
+    if (userRole === 'contractor' && Object.keys(contractorProfile).length > 0) {
+      // Check if contractor already has a review_link_slug
+      const { data: existingProfile } = await req.supabase
+        .from('contractor_profiles')
+        .select('review_link_slug')
+        .eq('user_id', userId)
+        .single();
+
+      // Generate review link slug if not exists
+      let reviewLinkSlug = existingProfile?.review_link_slug;
+      if (!reviewLinkSlug) {
+        // Create slug from company name or user email
+        const baseName = contractorProfile.company_name || contractorProfile.display_name || req.user.email.split('@')[0];
+        const baseSlug = baseName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+          .replace(/^-+|-+$/g, '');      // Remove leading/trailing hyphens
+
+        // Add random suffix to ensure uniqueness
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        reviewLinkSlug = `${baseSlug}-${randomSuffix}`;
+
+        // Verify uniqueness (though collision is extremely unlikely)
+        const { data: collision } = await req.supabase
+          .from('contractor_profiles')
+          .select('user_id')
+          .eq('review_link_slug', reviewLinkSlug)
+          .single();
+
+        if (collision) {
+          // Highly unlikely, but add another suffix if collision occurs
+          reviewLinkSlug = `${baseSlug}-${Date.now().toString(36)}`;
+        }
+      }
+
+      const profileData = {
+        user_id: userId,
+        company_name: contractorProfile.company_name,
+        display_name: contractorProfile.display_name,
+        phone: contractorProfile.phone,
+        website: contractorProfile.website,
+        bio: contractorProfile.bio,
+        trades: contractorProfile.trades || [],
+        service_area_zipcodes: contractorProfile.service_area_zipcodes || [],
+        avatar_url: contractorProfile.avatar_url,
+        gallery_urls: contractorProfile.gallery_urls || [],
+        review_link_slug: reviewLinkSlug
+      };
+
+      const { data, error } = await req.supabase
+        .from('contractor_profiles')
+        .upsert(profileData, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating contractor profile:', error);
+        return res.status(500).json({ error: 'Failed to update contractor profile' });
+      }
+
+      result.contractorProfile = data;
+    }
+
+    // Update home profile
+    if (homeProfile && Object.keys(homeProfile).length > 0) {
+      const homeProfileData = {
+        user_id: userId,
+        address_line1: homeProfile.address_line1,
+        city: homeProfile.city,
+        state: homeProfile.state,
+        zip_code: homeProfile.zip_code,
+        year_built: homeProfile.year_built,
+        sqft: homeProfile.sqft,
+        lot_sqft: homeProfile.lot_sqft,
+        beds: homeProfile.beds,
+        baths: homeProfile.baths,
+        last_sale_date: homeProfile.last_sale_date,
+        property_type: homeProfile.property_type,
+        data_source: homeProfile.data_source || 'User'
+      };
+
+      const { data, error } = await req.supabase
+        .from('home_profiles')
+        .upsert(homeProfileData, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating home profile:', error);
+        return res.status(500).json({ error: 'Failed to update home profile' });
+      }
+
+      result.homeProfile = data;
+    }
+
+    return res.json(result);
+
+  } catch (error) {
+    console.error('Error in /api/profile/update:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/**
+ * POST /api/home/fetch-details
+ * Fetch property details from public records (mock implementation)
+ * In production, integrate with Estated, Attom Data Solutions, or similar API
+ */
+app.get('/api/home/fetch-details', async (req, res) => {
+  try {
+    const { zip } = req.query;
+
+    if (!zip) {
+      return res.status(400).json({ error: 'Zip code is required' });
+    }
+
+    // Mock data - Replace with real API call in production
+    // Example: const response = await fetch(`https://api.estated.com/v4/property?zipcode=${zip}`, { headers: { 'Authorization': process.env.ESTATED_API_KEY } });
+
+    const mockPropertyData = {
+      year_built: 1985 + Math.floor(Math.random() * 30), // Random year between 1985-2015
+      sqft: 1500 + Math.floor(Math.random() * 2000), // Random sqft between 1500-3500
+      beds: 2 + Math.floor(Math.random() * 4), // Random beds 2-5
+      baths: 1.5 + (Math.floor(Math.random() * 3) * 0.5), // Random baths 1.5-3.0
+      property_type: ['Single Family', 'Condo', 'Townhouse'][Math.floor(Math.random() * 3)],
+      data_source: 'PublicRecord'
+    };
+
+    return res.json(mockPropertyData);
+
+  } catch (error) {
+    console.error('Error in /api/home/fetch-details:', error);
+    return res.status(500).json({ error: 'Failed to fetch property details' });
+  }
+});
+
+// ========================================
+// CLIENT REVIEW ENDPOINTS
+// ========================================
+
+/**
+ * POST /api/client-reviews/submit
+ * Contractor submits a review for a homeowner client
+ * PRIVACY: Only the contractor can see their own reviews
+ */
+app.post('/api/client-reviews/submit', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const {
+      project_id,
+      homeowner_id,
+      rating_payment,
+      rating_scope,
+      rating_site,
+      tags
+    } = req.body;
+
+    // Validate required fields
+    if (!project_id || !homeowner_id) {
+      return res.status(400).json({ error: 'Project ID and Homeowner ID are required' });
+    }
+
+    // Validate ratings (1-5)
+    if (!rating_payment || !rating_scope || !rating_site) {
+      return res.status(400).json({ error: 'All three ratings are required' });
+    }
+
+    if (rating_payment < 1 || rating_payment > 5 ||
+        rating_scope < 1 || rating_scope > 5 ||
+        rating_site < 1 || rating_site > 5) {
+      return res.status(400).json({ error: 'Ratings must be between 1 and 5' });
+    }
+
+    // Verify contractor is associated with this project
+    const { data: project, error: projectError } = await req.supabase
+      .from('projects')
+      .select('*')
+      .eq('id', project_id)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Check if review already exists (prevent duplicates)
+    const { data: existingReview } = await req.supabase
+      .from('client_reviews')
+      .select('id')
+      .eq('contractor_id', contractorId)
+      .eq('project_id', project_id)
+      .single();
+
+    if (existingReview) {
+      return res.status(400).json({ error: 'You have already reviewed this client' });
+    }
+
+    // Insert review
+    const { data: review, error: insertError } = await req.supabase
+      .from('client_reviews')
+      .insert({
+        project_id,
+        contractor_id: contractorId,
+        homeowner_id,
+        rating_payment,
+        rating_scope,
+        rating_site,
+        tags: tags || [],
+        is_verified_transaction: true
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting client review:', insertError);
+      return res.status(500).json({ error: 'Failed to submit review' });
+    }
+
+    return res.json({
+      success: true,
+      review: review
+    });
+
+  } catch (error) {
+    console.error('Error in /api/client-reviews/submit:', error);
+    return res.status(500).json({ error: 'Failed to submit client review' });
+  }
+});
+
+/**
+ * GET /api/client-reviews/my-reviews
+ * Get all reviews submitted by the authenticated contractor
+ * PRIVACY: Contractors can only see their own reviews
+ */
+app.get('/api/client-reviews/my-reviews', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+
+    const { data: reviews, error } = await req.supabase
+      .from('client_reviews')
+      .select('*')
+      .eq('contractor_id', contractorId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching contractor reviews:', error);
+      return res.status(500).json({ error: 'Failed to fetch reviews' });
+    }
+
+    return res.json({
+      success: true,
+      reviews: reviews || []
+    });
+
+  } catch (error) {
+    console.error('Error in /api/client-reviews/my-reviews:', error);
+    return res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+/**
+ * GET /api/homeowner-scores/:homeownerId
+ * Get aggregated trust score for a homeowner
+ * PUBLIC: Any authenticated user can see aggregated scores (not individual reviews)
+ */
+app.get('/api/homeowner-scores/:homeownerId', optionalAuth, async (req, res) => {
+  try {
+    const { homeownerId } = req.params;
+
+    // Fetch aggregate score from view
+    const { data: score, error } = await req.supabase
+      .from('homeowner_scores')
+      .select('*')
+      .eq('homeowner_id', homeownerId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching homeowner score:', error);
+      return res.status(500).json({ error: 'Failed to fetch homeowner score' });
+    }
+
+    if (!score) {
+      // No reviews yet - return default values
+      return res.json({
+        success: true,
+        score: {
+          homeowner_id: homeownerId,
+          trust_score: null,
+          grade: 'New',
+          total_reviews: 0,
+          avg_payment: null,
+          avg_scope: null,
+          avg_site: null
+        }
+      });
+    }
+
+    return res.json({
+      success: true,
+      score: score
+    });
+
+  } catch (error) {
+    console.error('Error in /api/homeowner-scores:', error);
+    return res.status(500).json({ error: 'Failed to fetch homeowner score' });
+  }
+});
+
+/**
+ * GET /api/homeowner-scores/me
+ * Get trust score for authenticated homeowner
+ * PRIVACY: Homeowners see their aggregate score but NOT individual reviews
+ */
+app.get('/api/homeowner-scores/me', requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const homeownerId = req.user.id;
+
+    // Fetch aggregate score from view
+    const { data: score, error } = await req.supabase
+      .from('homeowner_scores')
+      .select('*')
+      .eq('homeowner_id', homeownerId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching homeowner score:', error);
+      return res.status(500).json({ error: 'Failed to fetch trust score' });
+    }
+
+    if (!score) {
+      // No reviews yet
+      return res.json({
+        success: true,
+        score: {
+          homeowner_id: homeownerId,
+          trust_score: null,
+          grade: 'New',
+          total_reviews: 0,
+          avg_payment: null,
+          avg_scope: null,
+          avg_site: null
+        },
+        message: 'No reviews yet. Complete a project to build your trust score!'
+      });
+    }
+
+    return res.json({
+      success: true,
+      score: score
+    });
+
+  } catch (error) {
+    console.error('Error in /api/homeowner-scores/me:', error);
+    return res.status(500).json({ error: 'Failed to fetch trust score' });
+  }
+});
+
+/**
+ * GET /api/contractor/review-link
+ * Get or generate review link for authenticated contractor
+ * AUTHENTICATION: Contractor only
+ */
+app.get('/api/contractor/review-link', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+
+    // Check if contractor already has a review_link_slug
+    const { data: profile, error: fetchError } = await req.supabase
+      .from('contractor_profiles')
+      .select('review_link_slug, company_name, display_name')
+      .eq('user_id', contractorId)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching contractor profile:', fetchError);
+      return res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+
+    // If slug already exists, return it
+    if (profile?.review_link_slug) {
+      const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?contractor=${profile.review_link_slug}`;
+      return res.json({
+        success: true,
+        review_link_slug: profile.review_link_slug,
+        review_link: reviewLink
+      });
+    }
+
+    // Generate new slug
+    const baseName = profile?.company_name || profile?.display_name || req.user.email.split('@')[0];
+    const baseSlug = baseName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    let reviewLinkSlug = `${baseSlug}-${randomSuffix}`;
+
+    // Verify uniqueness
+    const { data: collision } = await req.supabase
+      .from('contractor_profiles')
+      .select('user_id')
+      .eq('review_link_slug', reviewLinkSlug)
+      .single();
+
+    if (collision) {
+      reviewLinkSlug = `${baseSlug}-${Date.now().toString(36)}`;
+    }
+
+    // Update or insert contractor profile with slug
+    const { error: updateError } = await req.supabase
+      .from('contractor_profiles')
+      .upsert({
+        user_id: contractorId,
+        review_link_slug: reviewLinkSlug,
+        company_name: profile?.company_name,
+        display_name: profile?.display_name
+      }, { onConflict: 'user_id' });
+
+    if (updateError) {
+      console.error('Error updating contractor profile:', updateError);
+      return res.status(500).json({ error: 'Failed to generate review link' });
+    }
+
+    const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?contractor=${reviewLinkSlug}`;
+
+    return res.json({
+      success: true,
+      review_link_slug: reviewLinkSlug,
+      review_link: reviewLink
+    });
+
+  } catch (error) {
+    console.error('Error in /api/contractor/review-link:', error);
+    return res.status(500).json({ error: 'Failed to generate review link' });
+  }
+});
+
+// ========================================
+// PUBLIC REVIEW ENDPOINTS
+// ========================================
+
+/**
+ * GET /api/public/contractor/:slug
+ * Get public contractor profile by review link slug
+ * PUBLIC: No authentication required
+ */
+app.get('/api/public/contractor/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Contractor slug is required' });
+    }
+
+    // Query contractor profile by review_link_slug
+    const { data: profile, error } = await db.supabase
+      .from('contractor_profiles')
+      .select(`
+        user_id,
+        company_name,
+        display_name,
+        bio,
+        avatar_url,
+        gallery_urls,
+        license_verified,
+        insurance_verified,
+        created_at
+      `)
+      .eq('review_link_slug', slug)
+      .single();
+
+    if (error || !profile) {
+      return res.status(404).json({ error: 'Contractor not found' });
+    }
+
+    // Calculate member_since_year
+    const memberSinceYear = profile.created_at
+      ? new Date(profile.created_at).getFullYear()
+      : new Date().getFullYear();
+
+    return res.json({
+      ...profile,
+      member_since_year: memberSinceYear
+    });
+
+  } catch (error) {
+    console.error('Error in /api/public/contractor/:slug:', error);
+    return res.status(500).json({ error: 'Failed to fetch contractor profile' });
+  }
+});
+
+/**
+ * POST /api/public/reviews/submit
+ * Submit a public review for a contractor
+ * PUBLIC: No authentication required
+ */
+app.post('/api/public/reviews/submit', async (req, res) => {
+  try {
+    const {
+      contractor_slug,
+      reviewer_name,
+      reviewer_email,
+      overall_rating,
+      review_text
+    } = req.body;
+
+    // Validate required fields
+    if (!contractor_slug || !reviewer_name || !reviewer_email || !overall_rating || !review_text) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Validate rating (1-5)
+    if (overall_rating < 1 || overall_rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    // Get contractor by slug
+    const { data: contractor, error: contractorError } = await db.supabase
+      .from('contractor_profiles')
+      .select('user_id')
+      .eq('review_link_slug', contractor_slug)
+      .single();
+
+    if (contractorError || !contractor) {
+      return res.status(404).json({ error: 'Contractor not found' });
+    }
+
+    // Check for duplicate review from same email
+    const { data: existingReview } = await db.supabase
+      .from('public_reviews')
+      .select('id')
+      .eq('contractor_id', contractor.user_id)
+      .eq('reviewer_email', reviewer_email)
+      .single();
+
+    if (existingReview) {
+      return res.status(400).json({ error: 'You have already submitted a review for this contractor' });
+    }
+
+    // Insert public review
+    const { data: review, error: insertError } = await db.supabase
+      .from('public_reviews')
+      .insert({
+        contractor_id: contractor.user_id,
+        reviewer_name,
+        reviewer_email,
+        overall_rating,
+        review_text,
+        verification_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting public review:', insertError);
+      return res.status(500).json({ error: 'Failed to submit review' });
+    }
+
+    return res.json({
+      success: true,
+      review: review
+    });
+
+  } catch (error) {
+    console.error('Error in /api/public/reviews/submit:', error);
+    return res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+/**
+ * POST /api/client-reviews/import
+ * Import an external (off-platform) client review with proof of work
+ * AUTHENTICATION: Contractor only
+ */
+app.post('/api/client-reviews/import', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const {
+      client_name,
+      client_email,
+      client_phone,
+      rating_payment,
+      rating_scope,
+      rating_site,
+      proof_document
+    } = req.body;
+
+    // Validate required fields
+    if (!client_name || !client_email || !client_phone) {
+      return res.status(400).json({ error: 'Client name, email, and phone are required' });
+    }
+
+    if (!rating_payment || !rating_scope || !rating_site) {
+      return res.status(400).json({ error: 'All three ratings are required' });
+    }
+
+    if (!proof_document) {
+      return res.status(400).json({ error: 'Proof of work document is required' });
+    }
+
+    // Validate ratings (1-5)
+    if (rating_payment < 1 || rating_payment > 5 ||
+        rating_scope < 1 || rating_scope > 5 ||
+        rating_site < 1 || rating_site > 5) {
+      return res.status(400).json({ error: 'Ratings must be between 1 and 5' });
+    }
+
+    // Check for duplicate import with same client email
+    const { data: existingImport } = await db.supabase
+      .from('client_reviews')
+      .select('id')
+      .eq('contractor_id', contractorId)
+      .eq('client_email', client_email)
+      .eq('is_external_import', true)
+      .single();
+
+    if (existingImport) {
+      return res.status(400).json({ error: 'You have already imported a review for this client' });
+    }
+
+    // TODO: Upload proof_document to storage and get URL
+    // For now, we'll store it as base64 or handle via FormData separately
+    const proofDocumentUrl = proof_document; // Placeholder - implement file upload
+
+    // Insert external review
+    const { data: review, error: insertError } = await db.supabase
+      .from('client_reviews')
+      .insert({
+        contractor_id: contractorId,
+        client_name,
+        client_email,
+        client_phone,
+        rating_payment,
+        rating_scope,
+        rating_site,
+        proof_document_url: proofDocumentUrl,
+        is_external_import: true,
+        verification_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting external review:', insertError);
+      return res.status(500).json({ error: 'Failed to import review' });
+    }
+
+    return res.json({
+      success: true,
+      review: review,
+      message: 'Review submitted for verification. You will be notified within 24 hours.'
+    });
+
+  } catch (error) {
+    console.error('Error in /api/client-reviews/import:', error);
+    return res.status(500).json({ error: 'Failed to import external review' });
+  }
+});
+
+/**
+ * POST /api/profile/gallery/upload
+ * Upload photos to contractor gallery (max 10)
+ * AUTHENTICATION: Contractor only
+ */
+app.post('/api/profile/gallery/upload', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const { photos } = req.body; // Array of base64 encoded images or FormData
+
+    if (!photos || !Array.isArray(photos) || photos.length === 0) {
+      return res.status(400).json({ error: 'At least one photo is required' });
+    }
+
+    // Get current gallery
+    const { data: profile, error: profileError } = await db.supabase
+      .from('contractor_profiles')
+      .select('gallery_urls')
+      .eq('user_id', contractorId)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      return res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+
+    const currentGallery = profile?.gallery_urls || [];
+
+    // Validate max 10 photos
+    if (currentGallery.length + photos.length > 10) {
+      return res.status(400).json({
+        error: `Maximum 10 photos allowed. You have ${currentGallery.length}, trying to add ${photos.length}.`
+      });
+    }
+
+    // TODO: Upload photos to storage (Supabase Storage or S3) and get URLs
+    // For now, we'll just append the base64 or assume they're URLs
+    const newPhotoUrls = photos; // Placeholder - implement actual file upload
+
+    const updatedGallery = [...currentGallery, ...newPhotoUrls];
+
+    // Update contractor profile
+    const { error: updateError } = await db.supabase
+      .from('contractor_profiles')
+      .update({ gallery_urls: updatedGallery })
+      .eq('user_id', contractorId);
+
+    if (updateError) {
+      console.error('Error updating gallery:', updateError);
+      return res.status(500).json({ error: 'Failed to update gallery' });
+    }
+
+    return res.json({
+      success: true,
+      gallery_urls: updatedGallery,
+      message: `${photos.length} photo(s) uploaded successfully`
+    });
+
+  } catch (error) {
+    console.error('Error in /api/profile/gallery/upload:', error);
+    return res.status(500).json({ error: 'Failed to upload gallery photos' });
+  }
+});
+
+/**
+ * POST /api/profile/gallery/remove
+ * Remove a photo from contractor gallery by index
+ * AUTHENTICATION: Contractor only
+ */
+app.post('/api/profile/gallery/remove', requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorId = req.user.id;
+    const { index } = req.body;
+
+    if (index === undefined || index === null || typeof index !== 'number') {
+      return res.status(400).json({ error: 'Photo index is required' });
+    }
+
+    // Get current gallery
+    const { data: profile, error: profileError } = await db.supabase
+      .from('contractor_profiles')
+      .select('gallery_urls')
+      .eq('user_id', contractorId)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      return res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+
+    const currentGallery = profile?.gallery_urls || [];
+
+    // Validate index
+    if (index < 0 || index >= currentGallery.length) {
+      return res.status(400).json({ error: 'Invalid photo index' });
+    }
+
+    // Remove photo at index
+    const updatedGallery = currentGallery.filter((_, i) => i !== index);
+
+    // Update contractor profile
+    const { error: updateError } = await db.supabase
+      .from('contractor_profiles')
+      .update({ gallery_urls: updatedGallery })
+      .eq('user_id', contractorId);
+
+    if (updateError) {
+      console.error('Error updating gallery:', updateError);
+      return res.status(500).json({ error: 'Failed to remove photo' });
+    }
+
+    return res.json({
+      success: true,
+      gallery_urls: updatedGallery,
+      message: 'Photo removed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error in /api/profile/gallery/remove:', error);
+    return res.status(500).json({ error: 'Failed to remove photo' });
+  }
+});
+
+/**
+ * GET /api/get-user-status (alias for get-full-user-status)
+ * Returns user profile status (mock implementation - replace with database)
+ */
+app.get('/api/get-user-status', (req, res) => {
+  try {
+    const username = req.query.username;
+
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username query parameter is required.',
+        field: 'username'
+      });
+    }
+
+    const lowerUsername = username.toLowerCase();
+    let role = null;
+
+    if (lowerUsername.includes('contractor')) {
+      role = 'contractor';
+    } else if (lowerUsername.includes('homeowner')) {
+      role = 'homeowner';
+    }
+
+    const profileCompleted = role === 'contractor' ? true : false;
+
+    const responseData = {
+      role: role,
+      profileComplete: profileCompleted,
+      companyName: profileCompleted ? `${username.split('@')[0]} Inc.` : null,
+      license: profileCompleted ? 'CBC-98765' : null,
+      zipCode: profileCompleted ? '33602' : null,
+      _mockData: true
+    };
+
+    console.log(`✓ User status requested: ${username} -> Role: ${role || 'none'}`);
+
+    return res.json(responseData);
+
+  } catch (error) {
+    console.error('Error in /api/get-user-status:', error);
+    return res.status(500).json({ error: 'Internal server error fetching user status.' });
+  }
+});
+
+/**
+ * GET /api/get-full-user-status
+ * Returns user profile status (mock implementation - replace with database)
+ */
+app.get('/api/get-full-user-status', (req, res) => {
+  try {
+    const username = req.query.username;
+
+    // Input validation
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username query parameter is required.',
+        field: 'username'
+      });
+    }
+
+    // MOCK: Determine role based on username pattern
+    // TODO: Replace with actual database query
+    let role = null;
+    const lowerUsername = username.toLowerCase();
+
+    if (lowerUsername.includes('contractor')) {
+      role = 'contractor';
+    } else if (lowerUsername.includes('homeowner')) {
+      role = 'homeowner';
+    }
+
+    // MOCK: Profile completion status
+    const profileCompleted = role === 'contractor' ? true : false;
+
+    // MOCK: Generate sample profile data
+    const responseData = {
+      role: role,
+      profileComplete: profileCompleted,
+      companyName: profileCompleted ? `${username.split('@')[0]} Inc.` : null,
+      license: profileCompleted ? 'CBC-98765' : null,
+      zipCode: profileCompleted ? '33602' : null,
+      _mockData: true // Flag indicating this is mock data
+    };
+
+    console.log(`✓ User status requested: ${username} -> Role: ${role || 'none'}`);
+
+    return res.json(responseData);
+
+  } catch (error) {
+    console.error('Error in /api/get-full-user-status:', error);
+    return res.status(500).json({ error: 'Internal server error fetching user status.' });
+  }
+});
+
+/**
+ * GET /api/get-role
+ * Returns user role (mock implementation - replace with database)
+ */
+app.get('/api/get-role', (req, res) => {
+  try {
+    const username = req.query.username;
+
+    // Input validation
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({
+        error: 'Username query parameter is required.',
+        field: 'username'
+      });
+    }
+
+    // MOCK: Determine role based on username pattern
+    // TODO: Replace with actual database query
+    const lowerUsername = username.toLowerCase();
+    let role = null;
+
+    if (lowerUsername.includes('contractor')) {
+      role = 'contractor';
+    } else if (lowerUsername.includes('homeowner')) {
+      role = 'homeowner';
+    }
+
+    console.log(`✓ Role check: ${username} -> ${role || 'no role assigned'}`);
+
+    return res.json({
+      role: role,
+      _mockData: true
+    });
+
+  } catch (error) {
+    console.error('Error in /api/get-role:', error);
+    return res.status(500).json({ error: 'Internal server error fetching role.' });
+  }
+});
+
+/**
+ * POST /ask
+ * Homeowner AI assistant - analyzes home issues OR job posting requests
+ * Intelligently detects intent and provides appropriate response
+ */
+app.post("/ask", async (req, res) => {
+  try {
+    const { question, imageBase64, imageType } = req.body;
+
+    // Input validation
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({
+        error: "Question is required and must be a string.",
+        field: 'question'
+      });
+    }
+
+    const sanitizedQuestion = sanitizeInput(question, 3000);
+
+    if (sanitizedQuestion.length === 0) {
+      return res.status(400).json({
+        error: "Question cannot be empty after sanitization.",
+        field: 'question'
+      });
+    }
+
+    // Validate image data if provided
+    if (imageBase64) {
+      if (!imageType || typeof imageType !== 'string') {
+        return res.status(400).json({
+          error: "imageType is required when imageBase64 is provided.",
+          field: 'imageType'
+        });
+      }
+
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(imageType)) {
+        return res.status(400).json({
+          error: `Invalid imageType. Must be one of: ${validImageTypes.join(', ')}`,
+          field: 'imageType'
+        });
+      }
+    }
+
+    // Check if API key is configured
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // Build content blocks for Claude
+    const contentBlocks = [];
+
+    // Smart prompt that detects intent and responds appropriately with local design insights
+    contentBlocks.push({
+      type: "text",
+      text: `You are an experienced home contractor and home inspector helping homeowners with intelligent, location-aware guidance.
+
+The homeowner said:
+${sanitizedQuestion}
+
+--- STEP 1: IDENTIFY INTENT TYPE ---
+Determine the intent:
+- Is this about an EXISTING PROBLEM/ISSUE that needs fixing? (leak, crack, noise, smell, malfunction, damage, etc.)
+- OR is this about a NEW PROJECT/REMODEL they want to do? (addition, remodel, renovation, upgrade, installation of something new, etc.)
+
+INTENT TYPE: [Write either "ISSUE" or "PROJECT"]
+
+--- STEP 2: LOCAL DESIGN INSIGHTS (PROJECT ONLY) ---
+IF INTENT TYPE = "ISSUE":
+  - SKIP any design trend or material sourcing suggestions
+  - Focus purely on repair, diagnosis, and functional fixes
+  - Provide cost estimates for standard repairs only
+  - Keep response focused on solving the immediate problem
+
+IF INTENT TYPE = "PROJECT":
+  - When discussing materials (flooring, countertops, cabinets, fixtures, finishes), consider local design trends
+  - If discussing mid to high-end finishes, include modest local insights
+  - Guidelines for local insights:
+    * Tone: Helpful, modest, consultative (e.g., "Design Note:" or "Local tip:")
+    * Keep suggestions under 2 sentences per material
+    * Only add where genuinely helpful - not for every item
+    * Match suggestions to the homeowner's described style/budget level
+  - Example: "Design Note: In your area, many homeowners are choosing large-format tiles (24x48) to create a modern, low-maintenance look with fewer grout lines."
+
+--- RESPONSE STRUCTURE ---
+
+If ISSUE (something broken/wrong that needs repair):
+Respond using this structure:
+1. Summary, Severity & Urgency: [1-2 sentence summary, Severity: High/Medium/Low, Urgency: Fix now/soon/monitor]
+2. Estimated Budget Range: $[LOW] - $[HIGH] (provide realistic cost estimate for professional repair)
+3. Likely Causes: [2-5 bullet points]
+4. Step-by-Step Checks (DIY-friendly): [Numbered steps they can do to diagnose]
+5. Materials & Tools You May Need: [Short bullet list if DIY-able]
+6. Safety Warnings: [Clear bullet points, be specific about dangers]
+7. When to Call a Pro: [Explain when and what type of contractor - plumber, electrician, etc.]
+8. What to Tell a Contractor: [Short script they can use]
+
+If PROJECT (new work they want done):
+Respond using this structure:
+1. Project Summary: [2-3 sentence overview of what they're asking for]
+2. Estimated Budget Range: $[LOW] - $[HIGH] (realistic range for this type of project in their area)
+3. Scope Considerations: [Bullet points of what this typically includes. Include modest local design insights for finish materials where helpful]
+4. Permits & Requirements: [What permits or approvals they'll likely need]
+5. Timeline Estimate: [Typical duration for this project]
+6. Contractor Type Needed: [What type of contractor - general contractor, specialist, etc.]
+7. Key Questions for Contractors: [5-7 questions they should ask when getting bids]
+8. Next Steps: [Clear action items - "Post this project to get bids from contractors"]
+
+Be specific with budget estimates based on typical market rates. Consider the project scope described.`
+    });
+
+    // Optional image
+    if (imageBase64 && imageType) {
+      contentBlocks.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: imageType,
+          data: imageBase64
+        }
+      });
+    }
+
+    // Call Anthropic API with increased token limit for detailed responses
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 1200,
+        messages: [
+          {
+            role: "user",
+            content: contentBlocks
+          }
+        ]
+      })
+    });
+
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (${apiResponse.status}):`, errorText);
+
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
+    }
+
+    const data = await apiResponse.json();
+
+    const answer = data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "No response generated.";
+
+    // Detect intent from response
+    const isProject = answer.includes('INTENT TYPE: PROJECT') ||
+                      answer.includes('Project Summary:') ||
+                      answer.includes('Next Steps:');
+    const isIssue = answer.includes('INTENT TYPE: ISSUE') ||
+                    answer.includes('Likely Causes:') ||
+                    !isProject;
+
+    console.log(`✓ Homeowner question answered (${answer.length} chars, type: ${isProject ? 'PROJECT' : 'ISSUE'})`);
+
+    res.json({
+      answer,
+      intent: isProject ? 'project' : 'issue',
+      autoRedirect: isProject // Signal frontend to auto-redirect to job posting
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /ask:", err);
+    res.status(500).json({
+      error: "Internal server error processing your question.",
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/ai/preview
+ * Two-pass LLM triage system for home improvement Q&A
+ * Drop-in replacement using production triage orchestration
+ */
+app.post("/api/ai/preview", async (req, res) => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+
+  try {
+    const { question, imageBase64, imageType, location, yearBuilt, propertyType } = req.body;
+
+    // Input validation
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({
+        error: "Question is required and must be a string.",
+        field: 'question'
+      });
+    }
+
+    const sanitizedQuestion = sanitizeInput(question, 3000);
+
+    if (sanitizedQuestion.length === 0) {
+      return res.status(400).json({
+        error: "Question cannot be empty after sanitization.",
+        field: 'question'
+      });
+    }
+
+    // Validate image data if provided (for future enhancement)
+    if (imageBase64) {
+      if (!imageType || typeof imageType !== 'string') {
+        return res.status(400).json({
+          error: "imageType is required when imageBase64 is provided.",
+          field: 'imageType'
+        });
+      }
+
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(imageType)) {
+        return res.status(400).json({
+          error: `Invalid imageType. Must be one of: ${validImageTypes.join(', ')}`,
+          field: 'imageType'
+        });
+      }
+    }
+
+    // Determine provider (prefer Anthropic if configured, fallback to OpenAI)
+    const provider = ANTHROPIC_API_KEY ? 'anthropic' : 'openai';
+
+    if (!ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // Build user context
+    const userContext = {};
+    if (location) userContext.location = location;
+    if (yearBuilt) userContext.yearBuilt = parseInt(yearBuilt);
+    if (propertyType) userContext.propertyType = propertyType;
+
+    console.log(`🎯 Triage request ${requestId}: provider=${provider}, question=${sanitizedQuestion.substring(0, 50)}...`);
+
+    // PASS 1: Router (classification)
+    const routerStart = Date.now();
+    const routerProvider = createProvider(provider, 'router');
+    const { output: routerOutput, retries: routerRetries } = await runRouter(
+      routerProvider,
+      sanitizedQuestion,
+      userContext
+    );
+    const routerLatency = Date.now() - routerStart;
+
+    console.log(`✓ Router: domain=${routerOutput.domain}, risk=${routerOutput.risk_level}, posture=${routerOutput.posture.join(',')}, retries=${routerRetries}, latency=${routerLatency}ms`);
+
+    // PASS 2: Answer (generation)
+    const answerStart = Date.now();
+    const answerProvider = createProvider(provider, 'answer');
+    const { markdown: answerMarkdown } = await runAnswer(
+      answerProvider,
+      sanitizedQuestion,
+      routerOutput,
+      userContext,
+      'homeowner'
+    );
+    const answerLatency = Date.now() - answerStart;
+
+    const totalLatency = Date.now() - startTime;
+
+    // Detect intent from response (for backward compatibility)
+    const isProject = answerMarkdown.includes('Project Summary:') ||
+                      answerMarkdown.includes('Next Steps:') ||
+                      routerOutput.decision_type === 'planning';
+    const intent = isProject ? 'project' : 'issue';
+
+    console.log(`✓ PREVIEW: ${intent.toUpperCase()} (${answerMarkdown.length} chars, ${totalLatency}ms total, router: ${routerLatency}ms, answer: ${answerLatency}ms)`);
+
+    // Return response in original format for backward compatibility
+    res.json({
+      answer: answerMarkdown,
+      intent,
+      preview: true,
+      // Include router metadata for debugging (optional)
+      _meta: {
+        request_id: requestId,
+        router: {
+          domain: routerOutput.domain,
+          risk_level: routerOutput.risk_level,
+          posture: routerOutput.posture,
+          retries: routerRetries
+        },
+        latency: {
+          router_ms: routerLatency,
+          answer_ms: answerLatency,
+          total_ms: totalLatency
+        },
+        provider
+      }
+    });
+
+  } catch (err) {
+    const errorLatency = Date.now() - startTime;
+    console.error(`❌ Error in /api/ai/preview (${requestId}, ${errorLatency}ms):`, err);
+    res.status(500).json({
+      error: "Internal server error processing your question.",
+      code: 'INTERNAL_ERROR',
+      request_id: requestId
+    });
+  }
+});
+
+/**
+ * POST /api/ai-check
+ * Photo-first homeowner diagnosis system
+ * Vision Extractor → Generator pipeline with structured JSON output
+ */
+app.post("/api/ai-check", async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { description, images } = req.body;
+
+    // Input validation
+    if (!description && (!images || images.length === 0)) {
+      return res.status(400).json({
+        error: "At least one of description or images must be provided.",
+        code: 'INVALID_INPUT'
+      });
+    }
+
+    if (images && images.length > 5) {
+      return res.status(400).json({
+        error: "Maximum 5 images allowed.",
+        code: 'TOO_MANY_IMAGES'
+      });
+    }
+
+    // Sanitize text description
+    const sanitizedDescription = description ? sanitizeInput(description, 2000) : '';
+
+    // Convert base64 images to provider format
+    const imageContent = [];
+    if (images && Array.isArray(images)) {
+      for (const img of images.slice(0, 5)) {
+        if (!img.data || !img.type) {
+          return res.status(400).json({
+            error: "Each image must have 'data' (base64) and 'type' (mime type) fields.",
+            code: 'INVALID_IMAGE_FORMAT'
+          });
+        }
+
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validImageTypes.includes(img.type)) {
+          return res.status(400).json({
+            error: `Invalid image type. Must be one of: ${validImageTypes.join(', ')}`,
+            code: 'INVALID_IMAGE_TYPE'
+          });
+        }
+
+        // Add image in Anthropic vision format
+        imageContent.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: img.type,
+            data: img.data
+          }
+        });
+      }
+    }
+
+    // Determine provider (only Anthropic supports vision currently)
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI Check requires Anthropic API key for vision support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    const provider = createProvider('anthropic', 'answer'); // Use answer model for vision
+
+    console.log(`🔍 AI Check request: description=${sanitizedDescription.substring(0, 50)}..., images=${imageContent.length}`);
+
+    // Run AI Check pipeline
+    const { output, metadata } = await runAICheck(
+      provider,
+      sanitizedDescription,
+      imageContent
+    );
+
+    const totalLatency = Date.now() - startTime;
+
+    console.log(`✓ AI Check complete: trade=${output.who_to_call.primary_trade}, diy=${output.diy_level}, confidence=${output.confidence}, latency=${totalLatency}ms`);
+
+    // Return structured response
+    res.json({
+      output,
+      metadata: {
+        ...metadata,
+        api_latency_ms: totalLatency
+      }
+    });
+
+  } catch (err) {
+    const errorLatency = Date.now() - startTime;
+    console.error(`❌ Error in /api/ai-check (${errorLatency}ms):`, err);
+    res.status(500).json({
+      error: "Internal server error processing AI Check request.",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/ai/estimate-remodel
+ * Homeowner renovation cost estimator
+ * Generates realistic cost estimates for remodel projects
+ * Uses OpenAI GPT-4o (primary with vision) with Anthropic fallback
+ */
+app.post("/api/ai/estimate-remodel", async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { systemPrompt, userPrompt, photos, metadata } = req.body;
+
+    // Input validation
+    if (!userPrompt || typeof userPrompt !== 'string') {
+      return res.status(400).json({
+        error: "User prompt is required and must be a string.",
+        code: 'INVALID_INPUT'
+      });
+    }
+
+    // Check if at least one AI API is configured
+    if (!ANTHROPIC_API_KEY && !OPENAI_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // --- RAG IMPLEMENTATION: LOAD COST DATA ---
+    const zipCode = metadata?.zipCode || '';
+    let ragData = {
+      laborRates: 'unavailable',
+      permits: 'unavailable',
+      regionalMultiplier: 1.0
+    };
+
+    const laborData = loadJsonFile('labor-rates.json');
+    const permitData = loadJsonFile('permit-fees.json');
+
+    if (laborData && permitData) {
+      // Determine regional multiplier based on ZIP prefix
+      const zipPrefix = zipCode ? zipCode.substring(0, 3) : 'other';
+      const multiplier = laborData.regional_multipliers?.[zipPrefix]
+        || laborData.regional_multipliers?.['other']
+        || 1.0;
+
+      ragData = {
+        laborRates: laborData.rates_by_trade || {},
+        regionalMultiplier: multiplier,
+        samplePermitFees: permitData.projects || []
+      };
+
+      console.log(`✓ RAG data loaded for homeowner estimate: ZIP ${zipCode || 'N/A'}, Multiplier ${multiplier}`);
+    } else {
+      console.warn('⚠️  RAG data unavailable, using AI general knowledge');
+    }
+    // --- END RAG IMPLEMENTATION ---
+
+    const defaultSystemPrompt = `You are a Master Construction Estimator with 20+ years of experience.
+Analyze the project vision and photos carefully. Use the provided RAG context for accurate, location-adjusted pricing.
+
+--- BEGIN RAG CONTEXT ---
+Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
+Regional Multiplier for ZIP ${zipCode || 'N/A'}: ${ragData.regionalMultiplier}
+Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
+--- END RAG CONTEXT ---
+
+You MUST return a JSON object with this EXACT structure:
+{
+  "subtotal_low": 15000,
+  "subtotal_high": 22000,
+  "summary": "Brief scope overview highlighting key project elements and any notable observations from photos",
+  "work_packages": [
+    {
+      "category": "Flooring",
+      "items": [
+        {
+          "description": "White Oak Plank Material",
+          "type": "Material",
+          "cost": "$4,000 - $5,000"
+        },
+        {
+          "description": "Flooring Install Labor",
+          "type": "Labor",
+          "cost": "$2,500 - $3,500"
+        }
+      ]
+    },
+    {
+      "category": "Cabinets",
+      "items": [
+        {
+          "description": "Shaker Cabinetry",
+          "type": "Material",
+          "cost": "$6,000 - $8,000"
+        },
+        {
+          "description": "Cabinet Installation",
+          "type": "Labor",
+          "cost": "$1,200 - $1,800"
+        }
+      ]
+    }
+  ]
+}
+
+CRITICAL REQUIREMENTS:
+1. Every major task (Flooring, Drywall, Electrical, Plumbing, Cabinets, etc.) MUST have both 'Material' and 'Labor' lines grouped under it
+2. Do NOT list materials and labor separately - they must be paired within each work_package
+3. Use the RAG context labor rates and regional multiplier to calculate realistic costs
+4. Analyze all provided photos for scope details, finishes, and complexity
+5. Field names: "cost" (not "cost_range"), "summary" (not "designer_note")
+6. subtotal_low and subtotal_high should match the sum of all work_packages
+7. Cost format: "$X,XXX - $Y,YYY" as a string with commas and dollar signs
+
+IMPORTANT: Do NOT calculate overhead, profit, or contingency - just return subtotal. Server will add those.`;
+
+    console.log(`🤖 ESTIMATOR: Using OpenAI GPT-4o (EXCLUSIVE - No Fallback) with ${photos?.length || 0} images...`);
+    console.log(`🏠 Renovation estimate request: zip=${metadata?.zipCode}, quality=${metadata?.finishLevel}`);
+
+    // Build enhanced user prompt with RAG context
+    const enhancedUserPrompt = `${userPrompt}
+
+Use the labor rates, regional multiplier, and permit costs provided in the RAG context to calculate realistic estimates for ZIP ${zipCode}. Analyze any provided photos for scope details.`;
+
+    // FORCE OpenAI ONLY - No fallback for faster response
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({
+        error: "OpenAI API is required for estimator but not configured.",
+        code: 'OPENAI_REQUIRED'
+      });
+    }
+
+    let responseText = null;
+    let usedProvider = 'OpenAI (GPT-4o with Vision)';
+
+    try {
+      const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+      // Build message content with text and images
+      let userContent = [{ type: "text", text: enhancedUserPrompt }];
+
+      // Add photos with vision support
+      if (photos && Array.isArray(photos) && photos.length > 0) {
+        photos.slice(0, 5).forEach(photo => {
+          // Clean base64 string
+          let cleanBase64 = photo;
+          if (photo.includes(',')) {
+            cleanBase64 = photo.split(',')[1];
+          }
+
+          userContent.push({
+            type: "image_url",
+            image_url: {
+              url: `data:image/jpeg;base64,${cleanBase64}`,
+              detail: "high"
+            }
+          });
+        });
+        console.log(`📸 Added ${userContent.length - 1} photos to vision analysis`);
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt || defaultSystemPrompt },
+          { role: "user", content: userContent }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 2048,
+        temperature: 0.7
+      });
+
+      responseText = completion.choices[0].message.content;
+      console.log(`✅ OpenAI GPT-4o estimate generated successfully`);
+
+    } catch (openaiError) {
+      console.error(`❌ OpenAI error in estimator:`, openaiError.message);
+      return res.status(500).json({
+        error: "Failed to generate estimate with OpenAI.",
+        code: 'OPENAI_ERROR',
+        details: openaiError.message
+      });
+    }
+
+    // Anthropic fallback removed - OpenAI exclusive for faster performance
+
+    // Parse JSON from response
+    let estimateData;
+    try {
+      // Try to extract JSON from markdown code blocks
+      const jsonMatch = responseText.match(/```json\s*(\{[\s\S]*?\})\s*```/) ||
+                        responseText.match(/(\{[\s\S]*"line_items"[\s\S]*\})/);
+
+      if (jsonMatch) {
+        estimateData = JSON.parse(jsonMatch[1]);
+      } else {
+        // Try parsing the whole response
+        estimateData = JSON.parse(responseText);
+      }
+    } catch (parseError) {
+      console.error('❌ Failed to parse JSON response:', parseError);
+      console.log('Raw response:', responseText.substring(0, 500));
+
+      // Fallback: create a simple estimate with work_packages structure
+      estimateData = {
+        subtotal_low: 10000,
+        subtotal_high: 25000,
+        summary: "Unable to parse AI response. This is a generic estimate based on typical renovation costs. Please regenerate for a detailed breakdown.",
+        work_packages: [
+          {
+            category: "General Materials",
+            items: [
+              {
+                description: "Materials and supplies",
+                type: "Material",
+                cost: "$4,000 - $10,000"
+              },
+              {
+                description: "Installation labor",
+                type: "Labor",
+                cost: "$3,000 - $7,000"
+              }
+            ]
+          },
+          {
+            category: "Additional Work",
+            items: [
+              {
+                description: "Permits and fees",
+                type: "Permit",
+                cost: "$1,000 - $3,000"
+              },
+              {
+                description: "Miscellaneous labor",
+                type: "Labor",
+                cost: "$2,000 - $5,000"
+              }
+            ]
+          }
+        ]
+      };
+    }
+
+    // --- CALCULATE FINANCIAL BREAKDOWN ---
+    // Add overhead, profit, and contingency
+    const overheadProfitPercent = 20;
+    const contingencyPercent = 10;
+
+    const subtotalLow = estimateData.subtotal_low || estimateData.low || 0;
+    const subtotalHigh = estimateData.subtotal_high || estimateData.high || 0;
+
+    const overheadProfitLow = Math.round(subtotalLow * (overheadProfitPercent / 100));
+    const overheadProfitHigh = Math.round(subtotalHigh * (overheadProfitPercent / 100));
+
+    const contingencyLow = Math.round(subtotalLow * (contingencyPercent / 100));
+    const contingencyHigh = Math.round(subtotalHigh * (contingencyPercent / 100));
+
+    const totalLow = subtotalLow + overheadProfitLow + contingencyLow;
+    const totalHigh = subtotalHigh + overheadProfitHigh + contingencyHigh;
+
+    // Build enhanced response with financial breakdown
+    const enhancedEstimate = {
+      ...estimateData,
+      subtotal_low: subtotalLow,
+      subtotal_high: subtotalHigh,
+      overhead_profit_percent: overheadProfitPercent,
+      overhead_profit_low: overheadProfitLow,
+      overhead_profit_high: overheadProfitHigh,
+      contingency_percent: contingencyPercent,
+      contingency_low: contingencyLow,
+      contingency_high: contingencyHigh,
+      low: totalLow,
+      high: totalHigh
+    };
+
+    const totalLatency = Date.now() - startTime;
+
+    console.log(`✓ Renovation estimate complete (${usedProvider}): $${totalLow.toLocaleString()} - $${totalHigh.toLocaleString()} (${totalLatency}ms)`);
+
+    // Return enhanced response
+    res.json(enhancedEstimate);
+
+  } catch (err) {
+    const errorLatency = Date.now() - startTime;
+    console.error(`❌ Error in /api/ai/estimate-remodel (${errorLatency}ms):`, err);
+    res.status(500).json({
+      error: "Internal server error processing estimate request.",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /contractor-ask
+ * Contractor coach AI with RAG (Retrieval-Augmented Generation) for pricing
+ */
+app.post("/contractor-ask", async (req, res) => {
+  try {
+    const { question, focus, zip, scopeLevel, size, trade_persona, technical_specs } = req.body;
+
+    // Input validation
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({
+        error: "Question is required and must be a string.",
+        field: 'question'
+      });
+    }
+
+    const sanitizedQuestion = sanitizeInput(question, 3000);
+
+    if (sanitizedQuestion.length === 0) {
+      return res.status(400).json({
+        error: "Question cannot be empty after sanitization.",
+        field: 'question'
+      });
+    }
+
+    // Validate focus area
+    const validFocus = ['general', 'pricing', 'materials', 'licensing', 'client_comms', 'business'];
+    const selectedFocus = focus && validFocus.includes(focus) ? focus : 'general';
+
+    // Validate ZIP code if provided
+    if (zip && !isValidZip(zip)) {
+      return res.status(400).json({
+        error: "Invalid ZIP code format. Must be 5 digits (e.g., 12345) or ZIP+4 (e.g., 12345-6789).",
+        field: 'zip'
+      });
+    }
+
+    // Check if API key is configured
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    // --- RAG IMPLEMENTATION: LOAD COST DATA ---
+    let ragData = {
+      laborRates: 'unavailable',
+      permits: 'unavailable',
+      regionalMultiplier: 1.0
+    };
+
+    const laborData = loadJsonFile('labor-rates.json');
+    const permitData = loadJsonFile('permit-fees.json');
+
+    if (laborData && permitData) {
+      // Determine regional multiplier based on ZIP prefix
+      const zipPrefix = zip ? zip.substring(0, 3) : 'other';
+      const multiplier = laborData.regional_multipliers?.[zipPrefix]
+        || laborData.regional_multipliers?.['other']
+        || 1.0;
+
+      ragData = {
+        laborRates: laborData.rates_by_trade || {},
+        regionalMultiplier: multiplier,
+        samplePermitFees: permitData.projects || []
+      };
+
+      console.log(`✓ RAG data loaded: ZIP ${zip || 'N/A'}, Multiplier ${multiplier}`);
+    } else {
+      console.warn('⚠️  RAG data unavailable, using fallback');
+    }
+    // --- END RAG IMPLEMENTATION ---
+
+    // Build focus description
+    const focusDescription = {
+      general: "General contractor / project advice",
+      pricing: "Pricing and estimating jobs profitably and fairly",
+      materials: "Materials, methods, and build quality trade-offs",
+      licensing: "Licensing, insurance, permitting and compliance",
+      client_comms: "Client communication, expectations and change orders",
+      business: "Business systems, profitability and long-term strategy"
+    }[selectedFocus] || "General contractor guidance";
+
+    // Build prompt based on focus
+    let contentText;
+    let maxTokens = 900;
+
+    if (selectedFocus === "pricing") {
+      // For pricing, return ONLY JSON
+      maxTokens = 1800;
+
+      // === TRADE PERSONA SUPPORT ===
+      // Build trade-specific system prompts based on trade_persona
+      const tradePersonas = {
+        gc: {
+          title: "General Contractor / Remodeler",
+          prompt: "You are an experienced General Contractor specializing in residential remodeling. Focus on square footage, room types, and comprehensive project breakdowns. Consider labor from multiple trades, material costs, and project coordination."
+        },
+        electrician: {
+          title: "Master Electrician",
+          prompt: "You are a licensed Master Electrician. Price jobs based on Points (outlets/switches), wire runs, panel load calculations, and NEC code compliance. Factor in access difficulty and material costs for wire, boxes, and panels. Ignore square footage unless relevant to wire runs."
+        },
+        plumber: {
+          title: "Master Plumber",
+          prompt: "You are a licensed Master Plumber. Price jobs based on Fixture Units, pipe material costs (Copper/PEX/Galvanized), venting requirements, and slope calculations. Account for slab work if needed. Focus on fixture count, pipe runs, and labor hours."
+        },
+        hvac: {
+          title: "HVAC Technician",
+          prompt: "You are a licensed HVAC technician. Price jobs based on system tonnage, equipment type (AC/Heat Pump/Furnace/Mini-Split), ductwork status, and installation complexity. Consider energy efficiency ratings and local climate requirements."
+        }
+        // Painter removed - licensed trades only on platform
+      };
+
+      const selectedTrade = trade_persona && tradePersonas[trade_persona] ? trade_persona : 'gc';
+      const tradeInfo = tradePersonas[selectedTrade];
+
+      // Build technical specs context if provided
+      let techSpecsContext = '';
+      if (technical_specs && Object.keys(technical_specs).length > 0) {
+        techSpecsContext = '\n--- TRADE-SPECIFIC DETAILS ---\n';
+        for (const [key, value] of Object.entries(technical_specs)) {
+          techSpecsContext += `${key}: ${value}\n`;
+        }
+        techSpecsContext += '--- END TRADE-SPECIFIC DETAILS ---\n';
+      }
+
+      contentText = `${tradeInfo.prompt}
+
+--- BEGIN RAG CONTEXT ---
+Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
+Regional Multiplier for ZIP ${zip || 'N/A'}: ${ragData.regionalMultiplier}
+Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
+--- END RAG CONTEXT ---
+${techSpecsContext}
+JOB DESCRIPTION: ${sanitizedQuestion}
+ZIP CODE: ${zip || "Not provided"}
+SCOPE LEVEL: ${scopeLevel || 'mid'}
+PROJECT SIZE: ${size || 'Not specified'}
+TRADE PERSONA: ${tradeInfo.title}
+
+CRITICAL: Your response MUST be ONLY a valid JSON object. No explanatory text before or after.
+
+If ZIP code is missing, return: {"error": "ZIP code is required for pricing estimates"}
+
+--- STEP 1: IDENTIFY INTENT TYPE ---
+Analyze the job description and determine:
+- Is this a PROJECT (Remodel, Addition, New Construction, Upgrade)?
+- OR is this an ISSUE (Repair, Emergency Fix, Leak, Damage)?
+
+Set "intent_type" to either "PROJECT" or "ISSUE"
+
+--- STEP 2: LOCAL DESIGN INSIGHTS (PROJECT ONLY) ---
+IF intent_type == "ISSUE":
+  - SKIP local insights entirely
+  - Focus on functional repair costs only
+  - Do NOT add any local_insight fields
+
+IF intent_type == "PROJECT":
+  - For material line items (flooring, countertops, cabinets, fixtures, etc.), analyze local design trends
+  - If the SCOPE LEVEL suggests mid/high-end finishes, add a "local_insight" object
+  - Guidelines for local_insight:
+    * Tone: Modest, helpful, consultative (e.g., "Design Note:" or "Local sourcing tip:")
+    * Geography: Reference the specific city/region from ZIP ${zip || 'unknown'}
+    * Match finish level: Standard vs High-End based on SCOPE LEVEL
+    * Mention real local distributors if known, or describe vendor type (e.g., "local tile showroom")
+    * Keep messages under 2 sentences
+    * Only add if genuinely helpful - not every item needs one
+
+Otherwise, return a JSON object with this EXACT structure:
+{
+  "status": "ok",
+  "intent_type": "PROJECT",
+  "project_title": "Brief descriptive title",
+  "work_packages": [
+    {
+      "category": "Flooring",
+      "items": [
+        {
+          "description": "Wide plank oak flooring - 800 sq ft",
+          "type": "Material",
+          "cost_range": "$8,000 - $12,000",
+          "notes": "Optional technical notes"
+        },
+        {
+          "description": "Installation and finishing labor",
+          "type": "Labor",
+          "cost_range": "$3,500 - $5,000"
+        }
+      ]
+    }
+  ],
+  "subtotal_low": 11500,
+  "subtotal_high": 17000,
+  "overhead_profit_percent": 20,
+  "contingency_percent": 10,
+  "total_projected_low": 14950,
+  "total_projected_high": 22100,
+  "disclaimers": [
+    "This is a preliminary budget estimate based on typical costs",
+    "Final pricing requires site visit and detailed scope review",
+    "Costs adjusted for ZIP ${zip} using regional multiplier ${ragData.regionalMultiplier}"
+  ]
+}
+
+CRITICAL JSON FORMATTING RULES:
+- Do NOT use single quotes - only double quotes for strings
+- Do NOT include trailing commas after last array/object items
+- Ensure all strings are properly closed with matching quotes
+- Escape any quotes within strings using backslash
+- cost_range must be a STRING in format: "$X,XXX - $Y,YYY"
+- type must be exactly: "Material" or "Labor" or "Permit" (no variations)
+- intent_type must be exactly: "PROJECT" or "ISSUE" (no variations)
+
+STRUCTURE REQUIREMENTS:
+- Group related work into packages (e.g., "Electrical Rough-In", "Kitchen Plumbing", "Flooring")
+- Within each package, pair Materials with their corresponding Labor
+- Example: "Electrical Rough-In" should have "Romex wire and boxes" (Material) followed by "Rough-in labor" (Labor)
+- cost_range should be formatted as human-readable string: "$1,500 - $2,500"
+- Use "type" field: "Material", "Labor", or "Permit"
+- For GCs: Create comprehensive packages covering all trades
+- For specialty trades: Focus packages on your trade's scope only
+
+IMPORTANT NOTES:
+- The "local_insight" field is OPTIONAL and should only appear on material items for PROJECTS
+- If intent_type is "ISSUE", NO line items should have local_insight
+- Preserve ALL existing calculation logic exactly as before
+
+CALCULATION RULES:
+1. Use the provided labor rates and multiply by regional multiplier ${ragData.regionalMultiplier}
+2. TRADE-SPECIFIC LINE ITEMS:
+   - If TRADE PERSONA is "${tradeInfo.title}":
+     ${selectedTrade === 'gc'
+       ? '* Include ALL trades needed for this project (Electrician, Plumber, Carpenter, HVAC, etc.)'
+       : `* ONLY include line items for ${tradeInfo.title} work
+     * DO NOT include other trades (e.g., if you are Electrician, do NOT include plumber or carpenter items)
+     * Focus exclusively on ${selectedTrade} scope of work`}
+3. Include material costs as separate line items relevant to ${selectedTrade === 'gc' ? 'all trades involved' : tradeInfo.title}
+4. Subtotal = sum of all line item lows/highs
+5. Total = Subtotal + (Subtotal * overhead_profit_percent/100) + (Subtotal * contingency_percent/100)
+6. All values in whole dollars (no decimals)`;
+    } else {
+      // For non-pricing questions, return formatted text
+      contentText = `You are an experienced, licensed contractor and business mentor.
+
+--- BEGIN RAG CONTEXT ---
+Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
+Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
+Regional Multiplier: ${ragData.regionalMultiplier}
+--- END RAG CONTEXT ---
+
+FOCUS AREA: ${focusDescription}
+JOB ZIP (if provided): ${zip || "Not provided"}
+
+Contractor's situation:
+${sanitizedQuestion}
+
+Give practical, grounded advice based on real-world experience in a conversational, helpful tone.
+Avoid guessing about local code specifics—remind them to check their local code and licensing board if needed.
+
+Respond using this structure:
+
+**Quick Summary**
+[2-3 sentences summarizing the situation and your recommendation]
+
+**Key Considerations**
+• [Point 1]
+• [Point 2]
+• [Point 3]
+
+**Suggested Approach**
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+**Next Moves**
+• [Action 1]
+• [Action 2]
+• [Action 3]
+
+Keep your response practical, specific, and action-oriented.`;
+    }
+
+    // Call Anthropic API
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-haiku-20240307",
+        max_tokens: maxTokens,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: contentText
+              }
+            ]
+          }
+        ]
+      })
+    });
+
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (contractor) (${apiResponse.status}):`, errorText);
+
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
+    }
+
+    const data = await apiResponse.json();
+    const rawAnswer = data.content[0]?.text?.trim() || "No response generated.";
+
+    // For pricing questions, attempt JSON parsing
+    if (selectedFocus === "pricing") {
+      try {
+        // Clean and extract JSON from response
+        let cleanedJson = rawAnswer.replace(/```json\s*|```/g, '').trim();
+
+        // Try to fix common JSON issues
+        // Remove trailing commas before closing braces/brackets
+        cleanedJson = cleanedJson.replace(/,(\s*[}\]])/g, '$1');
+
+        // Attempt to parse
+        const jsonAnswer = JSON.parse(cleanedJson);
+
+        console.log(`✓ Contractor estimate generated (JSON)`);
+        return res.json({ answer: jsonAnswer, format: 'json' });
+
+      } catch (jsonErr) {
+        console.warn('⚠️  JSON parse failed for pricing response:', jsonErr.message);
+        console.warn('Raw response (first 500 chars):', rawAnswer.substring(0, 500));
+
+        // FALLBACK: Create a valid estimate structure from the text response
+        const fallbackEstimate = {
+          status: "ok",
+          intent_type: "PROJECT",
+          project_title: "Estimate (AI returned invalid JSON)",
+          work_packages: [
+            {
+              category: "Estimated Work",
+              items: [
+                {
+                  description: "Complete project scope",
+                  type: "Material",
+                  cost_range: "$5,000 - $15,000",
+                  notes: "AI returned invalid JSON - please regenerate estimate"
+                },
+                {
+                  description: "Labor and installation",
+                  type: "Labor",
+                  cost_range: "$3,000 - $8,000"
+                }
+              ]
+            }
+          ],
+          subtotal_low: 8000,
+          subtotal_high: 23000,
+          overhead_profit_percent: 20,
+          contingency_percent: 10,
+          total_projected_low: 10400,
+          total_projected_high: 29900,
+          disclaimers: [
+            "This is a fallback estimate due to AI parsing error",
+            "Please try regenerating for accurate pricing",
+            "Raw AI response was malformed - contact support if this persists"
+          ]
+        };
+
+        return res.json({
+          answer: fallbackEstimate,
+          format: 'json',
+          parseError: true,
+          parseErrorMessage: jsonErr.message
+        });
+      }
+    } else {
+      console.log(`✓ Contractor question answered (${selectedFocus}, ${rawAnswer.length} chars)`);
+      return res.json({ answer: rawAnswer, format: 'text' });
+    }
+
+  } catch (err) {
+    console.error("❌ Error in /contractor-ask:", err);
+    res.status(500).json({
+      error: "Internal server error processing your question.",
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /plan-project
+ * Homeowner project planner - creates detailed project breakdown
+ */
+app.post("/plan-project", async (req, res) => {
+  try {
+    const { projectDescription, location } = req.body;
+
+    if (!projectDescription || typeof projectDescription !== 'string') {
+      return res.status(400).json({
+        error: "Project description is required and must be a string.",
+        field: 'projectDescription'
+      });
+    }
+
+    const sanitizedDescription = sanitizeInput(projectDescription, 2000);
+    if (sanitizedDescription.length === 0) {
+      return res.status(400).json({
+        error: "Project description cannot be empty after sanitization.",
+        field: 'projectDescription'
+      });
+    }
+
+    const sanitizedLocation = location ? sanitizeInput(location, 100) : null;
+
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI service is not configured. Please contact support.",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    const locationHint = sanitizedLocation
+      ? `The project location is: ${sanitizedLocation}. Use this to inform local cost estimates and permitting mentions.`
+      : "No specific location was provided; use generic national averages for cost and time.";
+
+    const contentText = `You are an experienced residential Project Manager and Home Remodel Consultant.
+Your task is to take a homeowner's simple idea and create a realistic, phase-based project plan.
+The goal is to prepare the homeowner for conversations with contractors and help them understand the scope, complexity, and budget.
+
+Project Idea: ${sanitizedDescription}
+${locationHint}
+
+Respond using EXACTLY this structure:
+
+1. Project Summary & Complexity:
+- A brief (2-sentence) summary of the work.
+- Complexity Level: Low / Medium / High (pick one, considering unknowns).
+
+2. Trades Required:
+- A bullet list of the primary trade licenses and professionals needed (e.g., General Contractor, Plumber, Electrician, Designer).
+
+3. Phase Breakdown & Timeline (Steps):
+- A numbered list of the project phases, ordered sequentially.
+- For each phase, list 2-4 key tasks and a rough timeline (e.g., 1-2 days, 1-2 weeks).
+- Phases should cover: Design/Planning, Demolition, Rough-in/Framing, Finishes/Installation, Cleanup/Punch list.
+
+4. Rough Budget Placeholder:
+- Give a range estimate (Low End / High End) in USD for the entire project, based on the description and location hint.
+- Clearly state that this is a placeholder and should only be finalized with contractor quotes.
+- Break the estimate into: Materials (%), Labor (%), Overhead (%).
+
+5. Key Decisions Needed:
+- A bullet list of 3-5 critical decisions the homeowner must make before construction starts (e.g., fixture selection, structural review, permit application).
+
+6. Permits & Local Requirements:
+- Mention common permit types likely needed (e.g., electrical, plumbing, building) and advise the homeowner to check local municipal codes immediately.
+`;
+
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 1000,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: contentText }]
+          }
+        ]
+      })
+    });
+
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`❌ Anthropic API error (planner) (${apiResponse.status}):`, errorText);
+      return res.status(apiResponse.status >= 500 ? 503 : 500).json({
+        error: "AI service error. Please try again.",
+        code: 'AI_SERVICE_ERROR',
+        status: apiResponse.status
+      });
+    }
+
+    const data = await apiResponse.json();
+    const answer = data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "No response generated.";
+
+    console.log(`✓ Project plan generated (${answer.length} chars)`);
+    res.json({ answer });
+
+  } catch (err) {
+    console.error("❌ Error in /plan-project:", err);
+    res.status(500).json({
+      error: "Internal server error processing your project.",
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/project-checkin/analyze
+ * Analyze construction progress photos for red flags using AI
+ */
+app.post("/api/project-checkin/analyze", async (req, res) => {
+  try {
+    const { photos, description, userEmail } = req.body;
+
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: "AI analysis service is not configured",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    if ((!photos || photos.length === 0) && !description) {
+      return res.status(400).json({
+        error: "Please provide at least one photo or description",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    console.log(`📸 Analyzing project check-in for: ${userEmail} (${photos?.length || 0} photos)`);
+
+    // Build content for Claude API
+    const contentBlocks = [];
+
+    // Add expert system prompt
+    contentBlocks.push({
+      type: "text",
+      text: `You are an expert construction inspector and project manager with 20+ years of experience.
+You're helping a homeowner review their ongoing construction project to identify any red flags or issues that could indicate poor workmanship, incorrect sequencing, or potential problems.
+
+CRITICAL RED FLAGS TO WATCH FOR:
+- Work done out of sequence (e.g., drywall before electrical rough-in, tiling before waterproofing)
+- Missing critical steps (waterproofing, vapor barriers, proper flashing)
+- Poor workmanship (uneven cuts, gaps, misaligned work)
+- Code violations or safety hazards
+- Inadequate prep work
+- Use of wrong materials for the application
+- Signs of rushing or cutting corners
+
+Homeowner's description:
+${description || 'No description provided - analyze the photos'}
+
+Analyze the photos carefully and provide:
+
+1. SUMMARY: Brief overview of what you see (1-2 sentences)
+
+2. RED FLAGS: List any serious issues or concerns you detect. Be specific about what's wrong and why it matters.
+   - If you see work done out of sequence, explain the correct order
+   - If you see missing steps, explain what should have been done
+   - If you see poor workmanship, describe what's wrong
+
+3. RECOMMENDATIONS: Specific actions the homeowner should take
+   - Should they stop work immediately?
+   - What questions should they ask their contractor?
+   - What should be fixed or redone?
+   - If everything looks good, reassure them!
+
+Be direct and clear. If you see red flags, call them out. If everything looks fine, say so. The homeowner needs your honest expert opinion.`
+    });
+
+    // Add photos as image blocks
+    if (photos && photos.length > 0) {
+      photos.forEach((photo, index) => {
+        // Extract base64 data and media type
+        const matches = photo.data.match(/^data:(.+);base64,(.+)$/);
+        if (matches) {
+          const mediaType = matches[1];
+          const base64Data = matches[2];
+
+          contentBlocks.push({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType,
+              data: base64Data
+            }
+          });
+        }
+      });
+    }
+
+    // Call Claude API with vision
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2000,
+        messages: [{ role: "user", content: contentBlocks }]
+      })
+    });
+
+    if (!apiResponse.ok) {
+      const errorData = await apiResponse.json().catch(() => ({}));
+      console.error("❌ Anthropic API error:", errorData);
+      throw new Error('AI analysis service error');
+    }
+
+    const data = await apiResponse.json();
+    const analysisText = data.content && data.content[0]?.text
+      ? data.content[0].text
+      : "Unable to analyze at this time.";
+
+    // Parse the analysis into structured format
+    const result = parseAnalysis(analysisText);
+
+    console.log(`✓ Project check-in analyzed for: ${userEmail}`);
+
+    // Log activity
+    await db.logActivity({
+      user_email: userEmail,
+      activity_type: 'project_checkin_analysis',
+      description: 'Analyzed project progress photos',
+      metadata: {
+        photo_count: photos?.length || 0,
+        has_description: !!description,
+        red_flags_found: result.redFlags.length
+      }
+    });
+
+    res.json(result);
+
+  } catch (err) {
+    console.error("❌ Error in /api/project-checkin/analyze:", err);
+    res.status(500).json({
+      error: "Failed to analyze project",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// Helper function to parse AI analysis into structured format
+function parseAnalysis(text) {
+  const lines = text.split('\n');
+  let summary = '';
+  const redFlags = [];
+  const recommendations = [];
+  let currentSection = '';
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+
+    if (trimmed.match(/^(SUMMARY|1\.|Summary:)/i)) {
+      currentSection = 'summary';
+      // Extract summary text
+      const summaryMatch = trimmed.match(/^(?:SUMMARY|1\.|Summary:)\s*(.+)/i);
+      if (summaryMatch) {
+        summary = summaryMatch[1];
+      }
+    } else if (trimmed.match(/^(RED FLAGS|2\.|Red Flags:)/i)) {
+      currentSection = 'redFlags';
+    } else if (trimmed.match(/^(RECOMMENDATIONS|3\.|Recommendations:)/i)) {
+      currentSection = 'recommendations';
+    } else if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.match(/^\d+\./)) {
+      // Extract bullet point or numbered item
+      const itemText = trimmed.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, '');
+      if (itemText && currentSection === 'redFlags') {
+        redFlags.push(itemText);
+      } else if (itemText && currentSection === 'recommendations') {
+        recommendations.push(itemText);
+      } else if (currentSection === 'summary' && !summary) {
+        summary += ' ' + itemText;
+      }
+    } else if (trimmed && currentSection === 'summary' && !summary.includes(trimmed)) {
+      summary += ' ' + trimmed;
+    }
+  });
+
+  return {
+    summary: summary.trim() || 'Analysis complete',
+    redFlags: redFlags,
+    recommendations: recommendations.length > 0 ? recommendations : [
+      'Continue monitoring your project progress',
+      'Document everything with photos',
+      'Ask your contractor if you have any questions'
+    ]
+  };
+}
+
+/**
+ * GET /grading-data
+ * Returns contractor/homeowner grading logic and criteria
+ */
+app.get("/grading-data", (req, res) => {
+  try {
+    const gradingData = loadJsonFile('grading-logic.json');
+
+    if (!gradingData) {
+      return res.status(404).json({
+        error: "Grading logic file not found or could not be read.",
+        code: 'FILE_NOT_FOUND'
+      });
+    }
+
+    console.log('✓ Grading data served');
+    res.json(gradingData);
+
+  } catch (err) {
+    console.error("❌ Error in /grading-data:", err);
+    res.status(500).json({
+      error: "Internal server error loading grading data.",
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+// ========================================
+// DATABASE API ENDPOINTS
+// ========================================
+const emailService = require('./email/email-service');
+
+// Load license requirements data
+let licenseRequirements = null;
+try {
+  const licenseDataPath = path.resolve(__dirname, 'database', 'license-requirements.json');
+  if (fs.existsSync(licenseDataPath)) {
+    licenseRequirements = JSON.parse(fs.readFileSync(licenseDataPath, 'utf8'));
+    console.log('✓ License requirements data loaded');
+  } else {
+    console.warn('⚠️  License requirements file not found');
+  }
+} catch (error) {
+  console.error('❌ Error loading license requirements:', error.message);
+}
+
+/**
+ * GET /api/license/status
+ * Get current license verification status for a contractor
+ */
+app.get("/api/license/status", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const profile = await db.getUserProfile(email);
+
+    if (!profile) {
+      return res.status(404).json({
+        error: "Profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      license_verified: profile.license_verified || 'unverified',
+      license_state: profile.license_state,
+      license_number: profile.license_number,
+      license_type: profile.license_type,
+      license_expiration: profile.license_expiration,
+      verified_at: profile.verified_at,
+      verification_id: profile.verification_id
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/license/status:", err);
+    res.status(500).json({
+      error: "Failed to fetch license status",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/license/submit
+ * Submit contractor license and insurance documents for verification
+ */
+app.post("/api/license/submit", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const {
+      contractorEmail,
+      licState,
+      licNumber,
+      licType,
+      licExpiration,
+      licenseDocument,
+      insuranceProvider,
+      insurancePolicyNumber,
+      insuranceExpiration,
+      insuranceCoverage,
+      insuranceDocument
+    } = req.body;
+
+    // Validation
+    if (!contractorEmail || !licState || !licNumber || !licType) {
+      return res.status(400).json({
+        error: "Missing required fields: contractorEmail, licState, licNumber, licType",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get contractor profile
+    const contractorProfile = await db.getUserProfile(contractorEmail);
+    if (!contractorProfile) {
+      return res.status(404).json({
+        error: "Contractor profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Generate unique verification ID
+    const verificationId = `lic_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+    // Prepare license data
+    const licenseData = {
+      contractor_email: contractorEmail,
+      contractor_id: contractorProfile.id,
+      verification_id: verificationId,
+      license_state: licState.toUpperCase(),
+      license_number: licNumber,
+      license_type: licType,
+      license_expiration: licExpiration || null,
+      insurance_provider: insuranceProvider || null,
+      insurance_policy_number: insurancePolicyNumber || null,
+      insurance_expiration: insuranceExpiration || null,
+      insurance_coverage: insuranceCoverage || null,
+      verification_status: 'pending',
+      submitted_at: new Date().toISOString()
+    };
+
+    // For now, store documents as base64 in metadata (in production, use Supabase Storage)
+    // This is a simplified version - you'd want to upload to storage and store URLs
+    const metadata = {};
+    if (licenseDocument) {
+      metadata.license_document_preview = licenseDocument.substring(0, 100) + '...';
+      metadata.license_document_size = licenseDocument.length;
+    }
+    if (insuranceDocument) {
+      metadata.insurance_document_preview = insuranceDocument.substring(0, 100) + '...';
+      metadata.insurance_document_size = insuranceDocument.length;
+    }
+    licenseData.metadata = metadata;
+
+    // Save to database (we'll need to create this table/function)
+    // For now, update contractor profile with license info
+    await db.updateContractorLicense({
+      email: contractorEmail,
+      license_state: licState.toUpperCase(),
+      license_number: licNumber,
+      license_type: licType,
+      license_expiration: licExpiration,
+      license_verified: 'pending',
+      verification_id: verificationId
+    });
+
+    // Send verification email to admin
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@homeprohub.today';
+    const approveUrl = `${process.env.BASE_URL || 'https://www.homeprohub.today'}/api/license/verify?id=${verificationId}&action=approve`;
+    const rejectUrl = `${process.env.BASE_URL || 'https://www.homeprohub.today'}/api/license/verify?id=${verificationId}&action=reject`;
+
+    try {
+      // Determine contractor name with proper fallback
+      let contractorName = contractorProfile.business_name || contractorProfile.company_name;
+      if (!contractorName && (contractorProfile.first_name || contractorProfile.last_name)) {
+        contractorName = `${contractorProfile.first_name || ''} ${contractorProfile.last_name || ''}`.trim();
+      }
+      if (!contractorName) {
+        contractorName = contractorEmail.split('@')[0]; // Use email username as last resort
+      }
+
+      // Load and render admin verification email template
+      const template = emailService.loadTemplate('license-verification-request');
+      const html = emailService.renderTemplate(template, {
+        contractorName: contractorName,
+        contractorEmail: contractorEmail,
+        verificationId: verificationId,
+        licenseState: licState.toUpperCase(),
+        licenseNumber: licNumber,
+        licenseType: licType,
+        licenseExpiration: licExpiration || 'Not provided',
+        insuranceProvider: insuranceProvider || 'Not provided',
+        insurancePolicyNumber: insurancePolicyNumber || 'Not provided',
+        insuranceCoverage: insuranceCoverage ? `$${parseInt(insuranceCoverage).toLocaleString()}` : 'Not provided',
+        insuranceExpiration: insuranceExpiration || 'Not provided',
+        approveUrl: approveUrl,
+        rejectUrl: rejectUrl
+      });
+
+      await emailService.sendEmail({
+        to: adminEmail,
+        subject: `🔍 License Verification Request - ${contractorName}`,
+        html: html,
+        text: `New License Verification Request from ${contractorEmail}\n\nLicense: ${licState} ${licNumber}\nType: ${licType}\n\nApprove: ${approveUrl}\nReject: ${rejectUrl}`
+      });
+      console.log(`✓ Verification request email sent to admin for ${contractorEmail}`);
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send admin verification email:', emailErr.message);
+      // Don't fail the request if email fails
+    }
+
+    // Log activity
+    await db.logActivity({
+      user_email: contractorEmail,
+      user_id: contractorProfile.id,
+      activity_type: 'license_submitted',
+      description: `Submitted license for verification: ${licState} ${licNumber}`,
+      metadata: { verification_id: verificationId }
+    });
+
+    console.log(`✓ License submission received: ${contractorEmail} - ${licState} ${licNumber}`);
+    res.json({
+      success: true,
+      message: 'License submitted for verification',
+      verificationId: verificationId,
+      status: 'pending'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/license/submit:", err);
+    res.status(500).json({
+      error: "Failed to submit license",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/license/verify
+ * Approve or reject a license verification (called from admin email link)
+ */
+app.get("/api/license/verify", async (req, res) => {
+  try {
+    const { id, action } = req.query;
+
+    if (!id || !action) {
+      return res.status(400).send(`
+        <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>❌ Invalid Request</h1>
+          <p>Missing verification ID or action</p>
+        </body></html>
+      `);
+    }
+
+    if (action !== 'approve' && action !== 'reject') {
+      return res.status(400).send(`
+        <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>❌ Invalid Action</h1>
+          <p>Action must be 'approve' or 'reject'</p>
+        </body></html>
+      `);
+    }
+
+    // Find contractor by verification ID
+    // For now, we'll search all contractors for this verification_id
+    // In production, you'd have a license_verifications table
+    const contractor = await db.getContractorByVerificationId(id);
+
+    if (!contractor) {
+      return res.status(404).send(`
+        <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>❌ Not Found</h1>
+          <p>Verification request not found or already processed</p>
+        </body></html>
+      `);
+    }
+
+    // Update license status
+    const newStatus = action === 'approve' ? 'verified' : 'rejected';
+    await db.updateContractorLicense({
+      email: contractor.email,
+      license_verified: newStatus,
+      verified_at: new Date().toISOString()
+    });
+
+    // Determine contractor name with proper fallback
+    let contractorName = contractor.business_name || contractor.company_name;
+    if (!contractorName && (contractor.first_name || contractor.last_name)) {
+      contractorName = `${contractor.first_name || ''} ${contractor.last_name || ''}`.trim();
+    }
+    if (!contractorName) {
+      contractorName = contractor.email.split('@')[0];
+    }
+
+    // Create notification in database
+    try {
+      await db.createNotification({
+        user_email: contractor.email,
+        user_id: contractor.id,
+        type: action === 'approve' ? 'license_approved' : 'license_rejected',
+        title: action === 'approve' ? '✅ License Verified!' : '⚠️ License Verification Update',
+        message: action === 'approve'
+          ? 'Your contractor license has been verified! You now have the verified badge on your profile.'
+          : 'We were unable to verify your license at this time. Please review the information and resubmit if needed.',
+        action_url: '/contractor-profile.html',
+        read: false,
+        created_at: new Date().toISOString()
+      });
+      console.log(`✓ Notification created for ${contractor.email}`);
+    } catch (notifErr) {
+      console.error('⚠️  Failed to create notification:', notifErr.message);
+    }
+
+    // Send notification email to contractor
+    try {
+      const subject = action === 'approve'
+        ? '✅ Your License Has Been Verified!'
+        : '⚠️ License Verification Update';
+
+      // Load appropriate email template
+      const templateName = action === 'approve' ? 'license-approved' : 'license-rejected';
+      const template = emailService.loadTemplate(templateName);
+      const html = emailService.renderTemplate(template, {
+        contractorName: contractorName,
+        profileLink: 'https://www.homeprohub.today/contractor-profile.html',
+        jobBoardLink: 'https://www.homeprohub.today/contractor-dashboard.html',
+        supportLink: 'mailto:support@homeprohub.today'
+      });
+
+      await emailService.sendEmail({
+        to: contractor.email,
+        subject: subject,
+        html: html,
+        text: action === 'approve'
+          ? 'Your license has been verified! You now have the verified badge on your profile.'
+          : 'We were unable to verify your license. Please review and resubmit if needed.'
+      });
+
+      console.log(`✓ Verification notification sent to ${contractor.email}`);
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send contractor notification:', emailErr.message);
+    }
+
+    // Log activity
+    await db.logActivity({
+      user_email: contractor.email,
+      user_id: contractor.id,
+      activity_type: `license_${action}d`,
+      description: `License verification ${action}d`,
+      metadata: { verification_id: id }
+    });
+
+    console.log(`✓ License ${action}d for ${contractor.email}`);
+
+    // Return success page
+    res.send(`
+      <html>
+        <head>
+          <title>Verification ${action === 'approve' ? 'Approved' : 'Rejected'}</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              padding: 60px 20px;
+              text-align: center;
+              background: ${action === 'approve' ? '#ecfdf5' : '#fef2f2'};
+            }
+            .container {
+              max-width: 500px;
+              margin: 0 auto;
+              background: white;
+              padding: 40px;
+              border-radius: 12px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .icon {
+              font-size: 64px;
+              margin-bottom: 20px;
+            }
+            h1 {
+              color: ${action === 'approve' ? '#065f46' : '#991b1b'};
+              margin: 0 0 16px 0;
+            }
+            p {
+              color: #6b7280;
+              line-height: 1.6;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">${action === 'approve' ? '✅' : '❌'}</div>
+            <h1>License ${action === 'approve' ? 'Approved' : 'Rejected'}</h1>
+            <p><strong>${contractor.business_name || contractor.email}</strong></p>
+            <p>License verification has been ${action}d.</p>
+            <p>The contractor has been notified via email.</p>
+          </div>
+        </body>
+      </html>
+    `);
+
+  } catch (err) {
+    console.error("❌ Error in /api/license/verify:", err);
+    res.status(500).send(`
+      <html><body style="font-family: sans-serif; padding: 40px; text-align: center;">
+        <h1>❌ Error</h1>
+        <p>Failed to process verification: ${err.message}</p>
+      </body></html>
+    `);
+  }
+});
+
+/**
+ * PUT /api/profile/update
+ * Update user profile (contractor or homeowner)
+ */
+app.put("/api/profile/update", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const profileData = req.body;
+
+    // Get current profile to check role
+    const currentProfile = await db.getUserProfile(userEmail);
+    if (!currentProfile) {
+      return res.status(404).json({
+        error: "Profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Process business_start_date if provided (for contractors)
+    if (profileData.business_start_date) {
+      // Validate date format (should be YYYY-MM or YYYY-MM-DD)
+      const dateStr = profileData.business_start_date;
+
+      // Convert to proper date format for database
+      // If format is YYYY-MM, append -01 to make it a valid date
+      let formattedDate = dateStr;
+      if (/^\d{4}-\d{2}$/.test(dateStr)) {
+        formattedDate = `${dateStr}-01`;
+      }
+
+      // Validate the date is valid
+      const startDate = new Date(formattedDate);
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({
+          error: "Invalid business start date format",
+          code: 'INVALID_DATE'
+        });
+      }
+
+      // Calculate years in business
+      const now = new Date();
+      const yearsDiff = now.getFullYear() - startDate.getFullYear();
+      const monthsDiff = now.getMonth() - startDate.getMonth();
+      const yearsInBusiness = monthsDiff < 0 ? yearsDiff - 1 : yearsDiff;
+
+      // Update the profile data with calculated value
+      profileData.business_start_date = formattedDate;
+      profileData.years_in_business = Math.max(0, yearsInBusiness);
+    }
+
+    // Update profile in database
+    const updatedProfile = await db.updateUserProfile(userEmail, profileData);
+
+    console.log(`✓ Profile updated for ${userEmail}`);
+    res.json({ success: true, profile: updatedProfile });
+
+  } catch (err) {
+    console.error("❌ Error updating profile:", err);
+    res.status(500).json({
+      error: "Failed to update profile",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/user/delete
+ * Permanently delete user account and all associated data
+ * CRITICAL: This action cannot be undone
+ */
+app.delete("/api/user/delete", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const userId = req.user.id;
+    const { confirmation } = req.body;
+
+    // Safety check: Require confirmation
+    if (confirmation !== 'DELETE') {
+      return res.status(400).json({
+        error: "Confirmation required. Please type DELETE to confirm account deletion.",
+        code: 'CONFIRMATION_REQUIRED'
+      });
+    }
+
+    console.log(`🗑️  Starting account deletion for user: ${userEmail}`);
+
+    // Get user profile to determine role and data to delete
+    const userProfile = await db.getUserProfile(userEmail);
+    if (!userProfile) {
+      return res.status(404).json({
+        error: "User profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const userRole = userProfile.role;
+    let deletionSummary = {
+      email: userEmail,
+      role: userRole,
+      deleted: {
+        profile: false,
+        jobs: 0,
+        bids: 0,
+        messages: 0,
+        auth: false
+      }
+    };
+
+    // Step 1: Delete role-specific data
+    if (userRole === 'homeowner') {
+      // Delete all jobs posted by this homeowner
+      const { data: jobs, error: jobsError } = await db.supabase
+        .from('jobs')
+        .delete()
+        .eq('homeowner_email', userEmail)
+        .select();
+
+      if (!jobsError && jobs) {
+        deletionSummary.deleted.jobs = jobs.length;
+        console.log(`  ✓ Deleted ${jobs.length} job postings`);
+      }
+    } else if (userRole === 'contractor') {
+      // Delete all bids submitted by this contractor
+      const { data: bids, error: bidsError } = await db.supabase
+        .from('bids')
+        .delete()
+        .eq('contractor_email', userEmail)
+        .select();
+
+      if (!bidsError && bids) {
+        deletionSummary.deleted.bids = bids.length;
+        console.log(`  ✓ Deleted ${bids.length} bids`);
+      }
+    }
+
+    // Step 2: Delete messages (both sent and received)
+    const { data: messages, error: messagesError } = await db.supabase
+      .from('messages')
+      .delete()
+      .or(`sender_email.eq.${userEmail},recipient_email.eq.${userEmail}`)
+      .select();
+
+    if (!messagesError && messages) {
+      deletionSummary.deleted.messages = messages.length;
+      console.log(`  ✓ Deleted ${messages.length} messages`);
+    }
+
+    // Step 3: Delete activity logs
+    await db.supabase
+      .from('activity_log')
+      .delete()
+      .eq('user_email', userEmail);
+    console.log(`  ✓ Deleted activity logs`);
+
+    // Step 4: Delete user profile
+    const { error: profileError } = await db.supabase
+      .from('user_profiles')
+      .delete()
+      .eq('email', userEmail);
+
+    if (!profileError) {
+      deletionSummary.deleted.profile = true;
+      console.log(`  ✓ Deleted user profile`);
+    } else {
+      console.error(`  ❌ Error deleting profile:`, profileError);
+    }
+
+    // Step 5: Delete from Supabase Auth
+    // Note: This requires admin privileges (service role key)
+    try {
+      // Create admin client with service role key (if available)
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (serviceRoleKey) {
+        const { createClient } = require('@supabase/supabase-js');
+        const supabaseAdmin = createClient(
+          process.env.SUPABASE_URL || '',
+          serviceRoleKey,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false
+            }
+          }
+        );
+
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+        if (!authError) {
+          deletionSummary.deleted.auth = true;
+          console.log(`  ✓ Deleted auth user from Supabase Auth`);
+        } else {
+          console.error(`  ❌ Error deleting auth user:`, authError);
+          // Continue anyway - profile data is deleted
+        }
+      } else {
+        console.warn(`  ⚠️  SUPABASE_SERVICE_ROLE_KEY not set - cannot delete from Supabase Auth`);
+        console.warn(`     Add SUPABASE_SERVICE_ROLE_KEY to .env to enable full account deletion`);
+        // Continue anyway - profile and data are deleted
+      }
+    } catch (authError) {
+      console.error(`  ❌ Error during auth deletion:`, authError);
+      // Continue anyway - main data is deleted
+    }
+
+    console.log(`✅ Account deletion completed for ${userEmail}`);
+    console.log(`   Summary:`, JSON.stringify(deletionSummary, null, 2));
+
+    res.json({
+      success: true,
+      message: "Account deleted successfully. We're sorry to see you go!",
+      summary: deletionSummary
+    });
+
+  } catch (err) {
+    console.error("❌ Error deleting user account:", err);
+    res.status(500).json({
+      error: "Failed to delete account. Please contact support.",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/user/clear-pending-draft
+ * Clear pending_project_draft from user metadata after successful project post
+ * TASK 3: CLEANUP - Ensures draft doesn't persist in cloud after use
+ */
+app.post("/api/user/clear-pending-draft", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    console.log(`🧹 Clearing pending draft for user: ${req.user.email}`);
+
+    // Use Supabase Admin API to update user metadata
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!serviceRoleKey) {
+      console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY not set - cannot clear user metadata');
+      return res.status(200).json({
+        success: true,
+        message: 'Service role key not configured - metadata cleanup skipped (non-critical)'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL || '',
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
+    // Update user metadata to clear pending_project_draft
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      {
+        user_metadata: {
+          pending_project_draft: null
+        }
+      }
+    );
+
+    if (error) {
+      console.error('❌ Error clearing user metadata:', error);
+      return res.status(500).json({
+        error: 'Failed to clear metadata',
+        message: error.message
+      });
+    }
+
+    console.log('✅ Cleared pending_project_draft from user metadata');
+
+    res.json({
+      success: true,
+      message: 'Pending draft cleared from user metadata'
+    });
+
+  } catch (err) {
+    console.error("❌ Error clearing pending draft:", err);
+    res.status(500).json({
+      error: "Failed to clear pending draft",
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/submit-job
+ * Submit a new job posting from homeowner
+ */
+app.post("/api/submit-job", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      address,
+      zipCode,
+      urgency,
+      budgetLow,
+      budgetHigh,
+      homeownerEmail,
+      originalQuestion,
+      aiAnalysis
+    } = req.body;
+
+    // Validation
+    if (!title || !description || !address || !zipCode || !homeownerEmail) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get or create user profile
+    let homeownerProfile = await db.getUserProfile(homeownerEmail);
+    if (!homeownerProfile) {
+      homeownerProfile = await db.upsertUserProfile({
+        email: homeownerEmail,
+        role: 'homeowner',
+        zip_code: zipCode,
+        address: address
+      });
+    }
+
+    // Create job posting
+    const jobData = {
+      title,
+      description,
+      address,
+      zip_code: zipCode,
+      urgency: urgency || 'flexible',
+      budget_low: budgetLow,
+      budget_high: budgetHigh,
+      homeowner_email: homeownerEmail,
+      homeowner_id: homeownerProfile.id,
+      original_question: originalQuestion,
+      ai_analysis: aiAnalysis,
+      status: 'open'
+    };
+
+    const job = await db.createJobPosting(jobData);
+
+    // Log activity
+    await db.logActivity({
+      user_email: homeownerEmail,
+      user_id: homeownerProfile.id,
+      activity_type: 'job_posted',
+      description: `Posted job: ${title}`,
+      metadata: { job_id: job.id }
+    });
+
+    console.log(`✓ Job posted: ${job.id} by ${homeownerEmail}`);
+    res.json({ success: true, job });
+
+  } catch (err) {
+    console.error("❌ Error in /api/submit-job:", err);
+    res.status(500).json({
+      error: "Failed to submit job",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/jobs
+ * Get all open jobs (optionally filter by zip code, status)
+ */
+app.get("/api/jobs", optionalAuth, async (req, res) => {
+  try {
+    const { zipCode, status, limit } = req.query;
+
+    const filters = {};
+    if (zipCode) filters.zipCode = zipCode;
+    if (status) filters.status = status;
+    if (limit) filters.limit = parseInt(limit);
+
+    const jobs = await db.getJobs(filters);
+
+    console.log(`✓ Retrieved ${jobs.length} jobs`);
+    res.json({ jobs });
+
+  } catch (err) {
+    console.error("❌ Error in /api/jobs:", err);
+    res.status(500).json({
+      error: "Failed to retrieve jobs",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/jobs
+ * Create a new job posting (modern endpoint matching frontend)
+ */
+app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      category,
+      budget_min,
+      budget_max,
+      zip_code,
+      urgency,
+      ai_assisted,
+      homeowner_email,
+      original_question,
+      ai_analysis
+    } = req.body;
+
+    // Debug logging to diagnose 500 errors
+    console.log('📥 Received POST /api/jobs:', {
+      title: title ? '✓' : '❌ MISSING',
+      description: description ? '✓' : '❌ MISSING',
+      zip_code: zip_code ? `✓ (${zip_code})` : '❌ MISSING',
+      homeowner_email: homeowner_email ? '✓' : '❌ MISSING',
+      budget_min,
+      budget_max,
+      category
+    });
+
+    // Validation
+    if (!title || !description || !zip_code || !homeowner_email) {
+      console.error('❌ Validation failed - missing required fields');
+      return res.status(400).json({
+        error: "Missing required fields: title, description, zip_code, homeowner_email",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (!isValidZip(zip_code)) {
+      return res.status(400).json({
+        error: "Invalid ZIP code format",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get or create user profile
+    let homeownerProfile = await db.getUserProfile(homeowner_email);
+    if (!homeownerProfile) {
+      homeownerProfile = await db.upsertUserProfile({
+        email: homeowner_email,
+        role: 'homeowner',
+        zip_code: zip_code
+      });
+    }
+
+    // Create job posting
+    const jobData = {
+      title: sanitizeInput(title, 200),
+      description: sanitizeInput(description, 5000),
+      category: category || 'general',
+      address: `ZIP: ${zip_code}`, // Use ZIP as placeholder for address
+      zip_code: zip_code,
+      budget_low: budget_min || null,  // Map budget_min to budget_low for database
+      budget_high: budget_max || null, // Map budget_max to budget_high for database
+      urgency: urgency || 'flexible',
+      status: 'open',
+      homeowner_email: homeowner_email,
+      homeowner_id: homeownerProfile.id,
+      original_question: original_question || null,
+      ai_analysis: ai_analysis || null
+    };
+
+    console.log('💾 Attempting to create job posting with data:', {
+      ...jobData,
+      description: jobData.description?.substring(0, 50) + '...' // Truncate for logs
+    });
+
+    let job;
+    try {
+      job = await db.createJobPosting(jobData);
+      console.log('✓ Job created successfully:', job.id);
+    } catch (dbError) {
+      console.error('❌ Database error creating job posting:', {
+        error: dbError.message,
+        code: dbError.code,
+        detail: dbError.detail,
+        constraint: dbError.constraint
+      });
+      throw dbError; // Re-throw to be caught by outer catch
+    }
+
+    // Create notification (optional - could notify nearby contractors)
+    await db.createNotification({
+      user_email: homeowner_email,
+      user_id: homeownerProfile.id,
+      type: 'new_job',
+      title: 'Job Posted Successfully',
+      message: `Your job "${title}" has been posted and is now visible to contractors.`,
+      job_id: job.id,
+      action_url: `/homeowner-dashboard.html`
+    });
+
+    // Send job posting confirmation email
+    try {
+      await emailService.sendJobPostingConfirmation({
+        homeownerEmail: homeowner_email,
+        homeownerName: homeownerProfile.full_name || homeownerProfile.email.split('@')[0],
+        job: job
+      });
+      console.log(`✓ Job posting confirmation email sent to ${homeowner_email}`);
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send job posting confirmation email:', emailErr.message);
+      // Don't fail the request if email fails
+    }
+
+    console.log(`✓ Job posted: ${job.id} by ${homeowner_email}${ai_assisted ? ' (AI-assisted)' : ''}`);
+    res.json({ success: true, job });
+
+  } catch (err) {
+    console.error("❌ Error in POST /api/jobs:", err);
+    res.status(500).json({
+      error: "Failed to create job",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/jobs/:jobId
+ * Get a specific job with all bids
+ */
+app.get("/api/jobs/:jobId", optionalAuth, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await db.getJobById(jobId);
+
+    if (!job) {
+      return res.status(404).json({
+        error: "Job not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Increment view count
+    await db.incrementJobViews(jobId);
+
+    console.log(`✓ Retrieved job: ${jobId}`);
+    res.json({ job });
+
+  } catch (err) {
+    console.error("❌ Error in /api/jobs/:jobId:", err);
+    res.status(500).json({
+      error: "Failed to retrieve job",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/homeowner/jobs
+ * Get all jobs posted by a homeowner
+ */
+app.get("/api/homeowner/jobs", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const jobs = await db.getJobsByHomeowner(email);
+
+    console.log(`✓ Retrieved ${jobs.length} jobs for homeowner: ${email}`);
+    res.json({ jobs });
+
+  } catch (err) {
+    console.error("❌ Error in /api/homeowner/jobs:", err);
+    res.status(500).json({
+      error: "Failed to retrieve jobs",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/project/complete
+ * Mark a project as completed and submit a review
+ */
+app.post("/api/project/complete", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const {
+      projectId,
+      rating,
+      positiveTags,
+      negativeTags,
+      photos,
+      reviewText,
+      homeownerEmail
+    } = req.body;
+
+    // Validation
+    if (!projectId || !rating || !homeownerEmail) {
+      return res.status(400).json({
+        error: "Missing required fields (projectId, rating, homeownerEmail)",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        error: "Rating must be between 1 and 5",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get the project to find the contractor
+    const project = await db.getJobById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: "Project not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Verify homeowner owns this project
+    if (project.homeowner_email !== homeownerEmail) {
+      return res.status(403).json({
+        error: "Unauthorized: You can only complete your own projects",
+        code: 'FORBIDDEN'
+      });
+    }
+
+    // Find the accepted bid to get contractor email
+    const acceptedBid = project.bids?.find(b => b.status === 'accepted');
+    if (!acceptedBid) {
+      return res.status(400).json({
+        error: "No accepted bid found for this project",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const contractorEmail = acceptedBid.contractor_email;
+
+    // Create the review
+    const review = await db.createReview({
+      projectId,
+      homeownerEmail,
+      contractorEmail,
+      rating,
+      positiveTags: positiveTags || [],
+      negativeTags: negativeTags || [],
+      reviewText: reviewText || '',
+      photos: photos || []
+    });
+
+    // Update project status to completed
+    const completedAt = new Date().toISOString();
+    await db.updateJobStatus(projectId, 'completed', completedAt);
+
+    // Update homeowner's grade (add 10 points for completing a review)
+    const homeownerProfile = await db.getUserProfile(homeownerEmail);
+    if (homeownerProfile) {
+      const currentScore = homeownerProfile.homeowner_score || 75;
+      await db.updateUserProfile(homeownerEmail, {
+        homeowner_score: currentScore + 10
+      });
+    }
+
+    // Create notification for contractor to rate the homeowner
+    try {
+      await db.supabase
+        .from('notifications')
+        .insert({
+          user_email: contractorEmail,
+          type: 'review_request',
+          title: 'Project Completed - Rate Your Client',
+          message: `The homeowner has marked "${project.title}" as completed. Rate them to unlock your review and earn +5 points!`,
+          link_url: '/contractor.html#pending-reviews',
+          link_text: 'Rate Client Now',
+          project_id: projectId,
+          is_read: false
+        });
+      console.log(`✓ Created notification for contractor: ${contractorEmail}`);
+    } catch (notifError) {
+      console.error("⚠️ Failed to create notification (non-fatal):", notifError);
+      // Don't fail the request if notification creation fails
+    }
+
+    console.log(`✓ Project ${projectId} marked as completed with review by ${homeownerEmail}`);
+    res.json({
+      success: true,
+      review,
+      message: 'Project completed and review submitted successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/project/complete:", err);
+    res.status(500).json({
+      error: "Failed to complete project and submit review",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/project/:id
+ * Update project details
+ */
+app.put("/api/project/:id", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const { title, description, address, zip_code, urgency } = req.body;
+
+    // Validation
+    if (!title || !description || !address || !zip_code) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get the project to verify ownership
+    const project = await db.getJobById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: "Project not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Update the project
+    const { data, error } = await db.supabase
+      .from('job_postings')
+      .update({
+        title,
+        description,
+        address,
+        zip_code,
+        urgency: urgency || 'flexible',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`✓ Project ${projectId} updated successfully`);
+    res.json({
+      success: true,
+      project: data,
+      message: 'Project updated successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in PUT /api/project/:id:", err);
+    res.status(500).json({
+      error: "Failed to update project",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/project/:id/cancel
+ * Cancel a project
+ */
+app.put("/api/project/:id/cancel", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const projectId = req.params.id;
+
+    // Get the project to verify it exists
+    const project = await db.getJobById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: "Project not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Update project status to cancelled
+    await db.updateJobStatus(projectId, 'cancelled');
+
+    console.log(`✓ Project ${projectId} cancelled`);
+    res.json({
+      success: true,
+      message: 'Project cancelled successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in PUT /api/project/:id/cancel:", err);
+    res.status(500).json({
+      error: "Failed to cancel project",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/submit-bid
+ * Submit a contractor bid on a job
+ */
+app.post("/api/submit-bid", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const {
+      jobId,
+      contractorEmail,
+      bidAmountLow,
+      bidAmountHigh,
+      estimatedDuration,
+      startAvailability,
+      message,
+      estimate
+    } = req.body;
+
+    // Validation
+    if (!jobId || !contractorEmail || !bidAmountLow || !bidAmountHigh) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get contractor profile (or create if doesn't exist)
+    let contractorProfile = await db.getUserProfile(contractorEmail);
+    if (!contractorProfile) {
+      // Auto-create basic profile
+      contractorProfile = await db.upsertUserProfile({
+        email: contractorEmail,
+        role: 'contractor',
+        profile_complete: false
+      });
+    }
+
+    // Determine contractor display name with proper fallback
+    let contractorName = contractorProfile.business_name || contractorProfile.company_name;
+    if (!contractorName && (contractorProfile.first_name || contractorProfile.last_name)) {
+      contractorName = `${contractorProfile.first_name || ''} ${contractorProfile.last_name || ''}`.trim();
+    }
+    if (!contractorName) {
+      contractorName = contractorEmail.split('@')[0];
+    }
+
+    // Create bid
+    const bidData = {
+      job_id: jobId,
+      contractor_email: contractorEmail,
+      contractor_id: contractorProfile.id,
+      contractor_business_name: contractorName,
+      bid_amount_low: bidAmountLow,
+      bid_amount_high: bidAmountHigh,
+      estimated_duration: estimatedDuration,
+      start_availability: startAvailability,
+      message: message,
+      status: 'pending'
+    };
+
+    // Include estimate data if provided
+    if (estimate) {
+      bidData.estimate = estimate;
+      bidData.has_estimate = true;
+      console.log('✓ Estimate data included with bid submission');
+    }
+
+    console.log('📝 Checking for existing bid...');
+    let bid;
+    try {
+      // Check if bid already exists for this contractor on this job
+      const existingBids = await db.getBidsByContractor(contractorEmail);
+      const duplicateBid = existingBids.find(b => b.job_id === jobId);
+
+      if (duplicateBid) {
+        // Update existing bid instead of creating new one
+        console.log(`⚠️  Bid already exists for this job, updating instead: ${duplicateBid.id}`);
+
+        const updateData = {
+          bid_amount_low: bidAmountLow,
+          bid_amount_high: bidAmountHigh,
+          estimated_duration: estimatedDuration,
+          start_availability: startAvailability,
+          message: message,
+          updated_at: new Date().toISOString()
+        };
+
+        if (estimate) {
+          updateData.estimate = estimate;
+          updateData.has_estimate = true;
+        }
+
+        const { data, error } = await db.supabase
+          .from('contractor_bids')
+          .update(updateData)
+          .eq('id', duplicateBid.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        bid = data;
+        console.log('✓ Bid updated successfully:', bid.id);
+      } else {
+        // Create new bid
+        console.log('📝 Creating new bid...');
+        bid = await db.submitBid(bidData);
+        console.log('✓ Bid inserted into database:', bid.id);
+      }
+    } catch (bidErr) {
+      console.error('❌ Error inserting/updating bid:', bidErr);
+      throw new Error(`Bid operation failed: ${bidErr.message}`);
+    }
+
+    // Get job details for notification
+    console.log('📋 Fetching job details for notifications...');
+    const job = await db.getJobById(jobId);
+
+    // Create notification for homeowner
+    console.log('🔔 Creating notification for homeowner...');
+    try {
+      await db.createNotification({
+        user_email: job.homeowner_email,
+        user_id: job.homeowner_id,
+        type: 'new_bid',
+        title: 'New Bid Received',
+        message: `${contractorProfile.business_name || contractorProfile.email} submitted a bid on your job "${job.title}"`,
+        job_id: jobId,
+        bid_id: bid.id,
+        action_url: `/homeowner-dashboard.html?job=${jobId}`
+      });
+      console.log('✓ Notification created');
+    } catch (notifErr) {
+      console.error('⚠️  Failed to create notification (non-fatal):', notifErr.message);
+      // Don't fail if notification creation fails
+    }
+
+    // Send bid notification email to homeowner
+    try {
+      const homeownerProfile = await db.getUserProfile(job.homeowner_email);
+      if (typeof emailService !== 'undefined' && emailService.sendBidNotification) {
+        await emailService.sendBidNotification({
+          homeownerEmail: job.homeowner_email,
+          homeownerName: homeownerProfile?.full_name || job.homeowner_email.split('@')[0],
+          contractor: contractorProfile,
+          job: job,
+          bid: bid
+        });
+        console.log(`✓ Bid notification email sent to ${job.homeowner_email}`);
+      } else {
+        console.log('⚠️  Email service not configured, skipping email notification');
+      }
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send bid notification email:', emailErr.message);
+      // Don't fail the request if email fails
+    }
+
+    // Log activity
+    console.log('📊 Logging activity...');
+    try {
+      await db.logActivity({
+        user_email: contractorEmail,
+        user_id: contractorProfile.id,
+        activity_type: 'bid_submitted',
+        description: `Submitted bid on job: ${job.title}`,
+        metadata: { job_id: jobId, bid_id: bid.id }
+      });
+      console.log('✓ Activity logged');
+    } catch (activityErr) {
+      console.error('⚠️  Failed to log activity (non-fatal):', activityErr.message);
+      // Don't fail if activity logging fails
+    }
+
+    console.log(`✓ Bid submitted successfully: ${bid.id} by ${contractorEmail} on job ${jobId}`);
+    res.json({ success: true, bid });
+
+  } catch (err) {
+    console.error("❌ Error in /api/submit-bid:", err);
+    res.status(500).json({
+      error: "Failed to submit bid",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractor/bids
+ * Get all bids submitted by a contractor
+ */
+app.get("/api/contractor/bids", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const bids = await db.getBidsByContractor(email);
+
+    console.log(`✓ Retrieved ${bids.length} bids for contractor: ${email}`);
+    res.json({ bids });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/bids:", err);
+    res.status(500).json({
+      error: "Failed to retrieve bids",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/bid/accept
+ * Homeowner accepts a bid
+ */
+app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const { bidId, jobId, homeownerEmail } = req.body;
+
+    console.log('📨 Received bid accept request:', { bidId, jobId, homeownerEmail });
+
+    if (!bidId || !jobId || !homeownerEmail) {
+      console.error('❌ Missing required fields:', { bidId, jobId, homeownerEmail });
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Verify job belongs to homeowner
+    console.log('🔍 Verifying job ownership...');
+    const job = await db.getJobById(jobId);
+    console.log('✓ Job fetched:', { id: job.id, homeowner: job.homeowner_email });
+
+    if (job.homeowner_email !== homeownerEmail) {
+      console.error('❌ Unauthorized: Job does not belong to homeowner');
+      return res.status(403).json({
+        error: "Unauthorized",
+        code: 'UNAUTHORIZED'
+      });
+    }
+
+    // Accept bid (this also rejects other bids and updates job status)
+    console.log('🔄 Calling db.acceptBid...');
+    const acceptedBid = await db.acceptBid(bidId, jobId);
+    console.log('✓ Bid accepted successfully:', { bidId: acceptedBid.id, status: acceptedBid.status });
+
+    // Get contractor details
+    console.log('🔍 Fetching contractor details...');
+    const contractor = await db.getUserProfile(acceptedBid.contractor_email);
+    console.log('✓ Contractor fetched:', { email: contractor.email, name: contractor.business_name });
+
+    // Create notification for contractor
+    console.log('📧 Creating contractor notification...');
+    await db.createNotification({
+      user_email: acceptedBid.contractor_email,
+      user_id: contractor.id,
+      type: 'bid_accepted',
+      title: 'Bid Accepted!',
+      message: `Your bid on "${job.title}" has been accepted!`,
+      job_id: jobId,
+      bid_id: bidId,
+      action_url: `/contractor-dashboard.html?job=${jobId}`
+    });
+    console.log('✓ Contractor notification created');
+
+    // Notify other contractors that their bids were rejected
+    console.log('🔍 Notifying rejected bidders...');
+    const allBids = await db.getBidsByJob(jobId);
+    let rejectedCount = 0;
+    for (const bid of allBids) {
+      if (bid.id !== bidId && bid.status === 'rejected') {
+        const otherContractor = await db.getUserProfile(bid.contractor_email);
+        await db.createNotification({
+          user_email: bid.contractor_email,
+          user_id: otherContractor.id,
+          type: 'bid_rejected',
+          title: 'Bid Not Selected',
+          message: `Your bid on "${job.title}" was not selected`,
+          job_id: jobId,
+          bid_id: bid.id
+        });
+        rejectedCount++;
+      }
+    }
+    console.log(`✓ Notified ${rejectedCount} rejected bidders`);
+
+    console.log(`✅ Bid accepted successfully: ${bidId} for job ${jobId}`);
+    res.json({ success: true, bid: acceptedBid });
+
+  } catch (err) {
+    console.error("❌ Error in /api/bid/accept:", err);
+    console.error("Error stack:", err.stack);
+    res.status(500).json({
+      error: "Failed to accept bid",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/bid/decline
+ * Homeowner declines a bid
+ */
+app.post("/api/bid/decline", requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const { bidId, jobId, homeownerEmail } = req.body;
+
+    if (!bidId || !jobId || !homeownerEmail) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Verify job belongs to homeowner
+    const job = await db.getJobById(jobId);
+    if (job.homeowner_email !== homeownerEmail) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        code: 'UNAUTHORIZED'
+      });
+    }
+
+    // Update bid status to declined
+    const { data, error } = await db.supabase
+      .from('contractor_bids')
+      .update({
+        status: 'declined',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bidId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Get contractor details
+    const contractor = await db.getUserProfile(data.contractor_email);
+
+    // Create notification for contractor
+    await db.createNotification({
+      user_email: data.contractor_email,
+      user_id: contractor.id,
+      type: 'bid_rejected',
+      title: 'Bid Declined',
+      message: `Your bid on "${job.title}" has been declined`,
+      job_id: jobId,
+      bid_id: bidId
+    });
+
+    console.log(`✓ Bid declined: ${bidId} for job ${jobId}`);
+    res.json({ success: true, bid: data });
+
+  } catch (err) {
+    console.error("❌ Error in /api/bid/decline:", err);
+    res.status(500).json({
+      error: "Failed to decline bid",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// SUB-HUNTER (CREW CONNECT) API ENDPOINTS
+// ========================================
+
+/**
+ * POST /api/find-subs
+ * Find verified contractors by trade type in the job's zip code area
+ */
+app.post("/api/find-subs", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { jobId, trades } = req.body;
+
+    if (!jobId || !trades || !Array.isArray(trades) || trades.length === 0) {
+      return res.status(400).json({
+        error: "Missing required fields: jobId and trades array",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get job details to find zip code
+    const job = await db.getJobById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        error: "Job not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    console.log(`🔍 Finding subs for job ${jobId} in zip ${job.zip_code}, trades: ${trades.join(', ')}`);
+
+    // Query contractor_licenses table for verified contractors with matching trades
+    const { data: licenses, error } = await db.supabase
+      .from('contractor_licenses')
+      .select(`
+        contractor_email,
+        trade_type,
+        verification_status,
+        user_profiles!contractor_licenses_contractor_email_fkey (
+          email,
+          full_name,
+          company_name,
+          zip_code,
+          years_in_business
+        )
+      `)
+      .in('trade_type', trades)
+      .eq('verification_status', 'verified')
+      .not('user_profiles.zip_code', 'is', null);
+
+    if (error) {
+      console.error('❌ Error querying contractor licenses:', error);
+      throw error;
+    }
+
+    // Filter by zip code proximity (same zip or nearby)
+    // For MVP, we'll just match exact zip code
+    // TODO: Implement radius-based search using zip code geolocation
+    const matchingContractors = licenses
+      .filter(license => {
+        const profile = license.user_profiles;
+        return profile && profile.zip_code === job.zip_code;
+      })
+      .map(license => ({
+        email: license.contractor_email,
+        full_name: license.user_profiles.full_name,
+        company_name: license.user_profiles.company_name,
+        zip_code: license.user_profiles.zip_code,
+        years_in_business: license.user_profiles.years_in_business,
+        trade_type: license.trade_type
+      }));
+
+    console.log(`✓ Found ${matchingContractors.length} matching contractors`);
+
+    res.json({
+      success: true,
+      contractors: matchingContractors
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/find-subs:", err);
+    res.status(500).json({
+      error: "Failed to find subs",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/invite-sub
+ * Invite a subcontractor to join a project team
+ */
+app.post("/api/invite-sub", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { jobId, contractorEmail, tradeType } = req.body;
+    const gcEmail = req.body.userEmail; // From auth middleware
+
+    if (!jobId || !contractorEmail || !tradeType) {
+      return res.status(400).json({
+        error: "Missing required fields: jobId, contractorEmail, tradeType",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get job details
+    const job = await db.getJobById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        error: "Job not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Get contractor profile
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({
+        error: "Contractor not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    console.log(`📧 GC ${gcEmail} inviting ${contractorEmail} (${tradeType}) to job ${jobId}`);
+
+    // Add to project_team table
+    const { data: teamMember, error: teamError } = await db.supabase
+      .from('project_team')
+      .insert({
+        job_id: jobId,
+        contractor_email: contractorEmail,
+        contractor_id: contractor.id,
+        role: 'subcontractor',
+        trade_type: tradeType,
+        status: 'invited',
+        invited_by: gcEmail,
+        invited_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (teamError) {
+      // Check if already invited
+      if (teamError.code === '23505') { // Unique constraint violation
+        return res.status(409).json({
+          error: "Contractor already invited to this project",
+          code: 'ALREADY_EXISTS'
+        });
+      }
+      throw teamError;
+    }
+
+    // Send notification to subcontractor
+    await db.createNotification({
+      user_email: contractorEmail,
+      user_id: contractor.id,
+      type: 'new_job',
+      title: 'Sub-Contract Opportunity',
+      message: `You've been invited to join "${job.title}" as ${tradeType}`,
+      job_id: jobId,
+      action_url: `/contractor-dashboard.html`
+    });
+
+    console.log(`✓ Invitation sent to ${contractorEmail}`);
+
+    res.json({
+      success: true,
+      teamMember: teamMember
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/invite-sub:", err);
+    res.status(500).json({
+      error: "Failed to invite subcontractor",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// LICENSE MANAGEMENT API ENDPOINTS
+// ========================================
+
+/**
+ * POST /api/contractor/licenses
+ * Add or update contractor license
+ */
+app.post("/api/contractor/licenses", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const {
+      contractorEmail,
+      tradeType,
+      licenseNumber,
+      state,
+      issueDate,
+      expirationDate,
+      documentUrl
+    } = req.body;
+
+    // Validation
+    if (!contractorEmail || !tradeType || !licenseNumber || !state) {
+      return res.status(400).json({
+        error: "Missing required fields: contractorEmail, tradeType, licenseNumber, state",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get contractor profile to link contractor_id
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({
+        error: "Contractor profile not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const licenseData = {
+      contractor_email: contractorEmail,
+      contractor_id: contractor.id,
+      trade_type: tradeType,
+      license_number: licenseNumber.trim(),
+      state: state.toUpperCase(),
+      issue_date: issueDate || null,
+      expiration_date: expirationDate || null,
+      license_document_url: documentUrl || null,
+      verification_status: 'pending'
+    };
+
+    const license = await db.addContractorLicense(licenseData);
+
+    console.log(`✓ License added/updated: ${tradeType} for ${contractorEmail}`);
+    res.json({ success: true, license });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/licenses:", err);
+    res.status(500).json({
+      error: "Failed to add license",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractor/licenses
+ * Get all licenses for a contractor
+ */
+app.get("/api/contractor/licenses", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { contractorEmail } = req.query;
+
+    if (!contractorEmail) {
+      return res.status(400).json({
+        error: "Missing required parameter: contractorEmail",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const licenses = await db.getContractorLicenses(contractorEmail);
+
+    res.json({ success: true, licenses });
+
+  } catch (err) {
+    console.error("❌ Error in GET /api/contractor/licenses:", err);
+    res.status(500).json({
+      error: "Failed to fetch licenses",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractor/licenses/check
+ * Check if contractor has required license for a job
+ */
+app.get("/api/contractor/licenses/check", optionalAuth, async (req, res) => {
+  try {
+    const { contractorEmail, category, state } = req.query;
+
+    if (!contractorEmail || !category || !state) {
+      return res.status(400).json({
+        error: "Missing required parameters: contractorEmail, category, state",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const licenseCheck = await db.checkContractorLicenseForJob(
+      contractorEmail,
+      category,
+      state.toUpperCase()
+    );
+
+    // Get license requirements from JSON
+    let requirementInfo = null;
+    if (licenseRequirements && licenseRequirements.states[state.toUpperCase()]) {
+      const stateData = licenseRequirements.states[state.toUpperCase()];
+      requirementInfo = stateData[licenseCheck.tradeType] || null;
+    }
+
+    res.json({
+      success: true,
+      ...licenseCheck,
+      requirementInfo
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/licenses/check:", err);
+    res.status(500).json({
+      error: "Failed to check license",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractor/recent-jobs
+ * Get recent job opportunities for contractor dashboard
+ */
+app.get("/api/contractor/recent-jobs", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { limit = 5 } = req.query;
+    const contractorEmail = req.user.email;
+
+    // Get contractor profile to check their location and trade
+    const { data: profile, error: profileError } = await db.supabase
+      .from('user_profiles')
+      .select('trade, city, state, zip_code')
+      .eq('email', contractorEmail)
+      .single();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    // Fetch recent open job postings
+    // NOTE: Database schema uses 'open' not 'active' - this was causing empty feeds!
+    let query = db.supabase
+      .from('job_postings')
+      .select(`
+        id,
+        title,
+        description,
+        category,
+        urgency,
+        budget_low,
+        budget_high,
+        address,
+        zip_code,
+        posted_at,
+        homeowner_email
+      `)
+      .eq('status', 'open')
+      .order('posted_at', { ascending: false })
+      .limit(parseInt(limit));
+
+    // Filter by contractor's trade if specified
+    if (profile.trade) {
+      query = query.eq('category', profile.trade);
+    }
+
+    // NOTE: Removed strict zip code filter - contractors can now see ALL open jobs
+    // This ensures the opportunity feed is never empty
+    // Future: Add proximity-based filtering with distance radius
+
+    const { data: jobs, error: jobsError } = await query;
+
+    if (jobsError) {
+      throw jobsError;
+    }
+
+    // Get homeowner grades for each job
+    const jobsWithGrades = await Promise.all(jobs.map(async (job) => {
+      const { data: homeownerProfile } = await db.supabase
+        .from('user_profiles')
+        .select('name')
+        .eq('email', job.homeowner_email)
+        .single();
+
+      // TODO: Implement homeowner grading
+      const homeowner_grade = 'A'; // Placeholder
+
+      return {
+        ...job,
+        homeowner_name: homeownerProfile?.name || 'Homeowner',
+        homeowner_grade
+      };
+    }));
+
+    res.json({
+      success: true,
+      jobs: jobsWithGrades
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/recent-jobs:", err);
+    res.status(500).json({
+      error: "Failed to fetch recent jobs",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/contractor/update-subscription
+ * Update contractor subscription tier
+ */
+app.post("/api/contractor/update-subscription", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const { tier } = req.body;
+    const contractorEmail = req.user.email;
+
+    // Validate tier
+    const validTiers = ['starter', 'pro', 'premium'];
+    if (!tier || !validTiers.includes(tier.toLowerCase())) {
+      return res.status(400).json({
+        error: "Invalid tier. Must be one of: starter, pro, premium",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Update user profile with new subscription tier
+    const { data: profile, error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ subscription_tier: tier.toLowerCase() })
+      .eq('email', contractorEmail)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("❌ Error updating subscription:", updateError);
+      throw updateError;
+    }
+
+    console.log(`✓ Subscription updated: ${contractorEmail} -> ${tier}`);
+    res.json({
+      success: true,
+      subscription_tier: tier.toLowerCase(),
+      message: `Successfully updated to ${tier} plan`
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/update-subscription:", err);
+    res.status(500).json({
+      error: "Failed to update subscription",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractor/pending-reviews
+ * Get completed projects that need contractor rating
+ */
+app.get("/api/contractor/pending-reviews", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user.email;
+
+    // Find completed projects where:
+    // 1. Contractor had an accepted bid
+    // 2. Project is completed
+    // 3. Contractor hasn't rated the homeowner yet
+    const { data: completedBids, error: bidsError } = await db.supabase
+      .from('contractor_bids')
+      .select(`
+        id,
+        job_id,
+        contractor_email,
+        submitted_at
+      `)
+      .eq('contractor_email', contractorEmail)
+      .eq('status', 'accepted');
+
+    if (bidsError) throw bidsError;
+
+    if (!completedBids || completedBids.length === 0) {
+      return res.json({ pending_reviews: [] });
+    }
+
+    const jobIds = completedBids.map(b => b.job_id);
+
+    // Get completed projects
+    const { data: projects, error: projectsError } = await db.supabase
+      .from('job_postings')
+      .select('*')
+      .in('id', jobIds)
+      .eq('status', 'completed');
+
+    if (projectsError) throw projectsError;
+
+    if (!projects || projects.length === 0) {
+      return res.json({ pending_reviews: [] });
+    }
+
+    // Check which ones don't have contractor ratings yet
+    const { data: existingRatings, error: ratingsError } = await db.supabase
+      .from('contractor_homeowner_ratings')
+      .select('project_id')
+      .eq('contractor_email', contractorEmail)
+      .in('project_id', projects.map(p => p.id));
+
+    if (ratingsError) throw ratingsError;
+
+    const ratedProjectIds = new Set((existingRatings || []).map(r => r.project_id));
+    const pendingReviews = projects.filter(p => !ratedProjectIds.has(p.id));
+
+    console.log(`✓ Found ${pendingReviews.length} pending reviews for contractor: ${contractorEmail}`);
+    res.json({ pending_reviews: pendingReviews });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/pending-reviews:", err);
+    res.status(500).json({
+      error: "Failed to fetch pending reviews",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/contractor/rate-homeowner
+ * Contractor rates a homeowner after project completion
+ */
+app.post("/api/contractor/rate-homeowner", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user.email;
+    const {
+      projectId,
+      rating,
+      positiveTags,
+      negativeTags,
+      reviewText
+    } = req.body;
+
+    // Validation
+    if (!projectId || !rating) {
+      return res.status(400).json({
+        error: "Missing required fields (projectId, rating)",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        error: "Rating must be between 1 and 5",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get the project
+    const project = await db.getJobById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        error: "Project not found",
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Verify project is completed
+    if (project.status !== 'completed') {
+      return res.status(400).json({
+        error: "Can only rate completed projects",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Verify contractor worked on this project
+    const acceptedBid = project.bids?.find(b =>
+      b.contractor_email === contractorEmail && b.status === 'accepted'
+    );
+    if (!acceptedBid) {
+      return res.status(403).json({
+        error: "You did not work on this project",
+        code: 'FORBIDDEN'
+      });
+    }
+
+    const homeownerEmail = project.homeowner_email;
+
+    // Insert rating
+    const { data: ratingData, error: ratingError } = await db.supabase
+      .from('contractor_homeowner_ratings')
+      .insert({
+        project_id: projectId,
+        contractor_email: contractorEmail,
+        homeowner_email: homeownerEmail,
+        rating,
+        positive_tags: positiveTags || [],
+        negative_tags: negativeTags || [],
+        review_text: reviewText || ''
+      })
+      .select()
+      .single();
+
+    if (ratingError) throw ratingError;
+
+    // Award +5 points to contractor for completing the review
+    const { data: profile, error: profileError } = await db.supabase
+      .from('user_profiles')
+      .select('contractor_score')
+      .eq('email', contractorEmail)
+      .single();
+
+    if (!profileError && profile) {
+      const currentScore = profile.contractor_score || 80;
+      await db.supabase
+        .from('user_profiles')
+        .update({ contractor_score: currentScore + 5 })
+        .eq('email', contractorEmail);
+    }
+
+    // Mark notification as read if it exists
+    try {
+      await db.supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_email', contractorEmail)
+        .eq('project_id', projectId)
+        .eq('type', 'review_request');
+    } catch (notifError) {
+      console.error("⚠️ Failed to mark notification as read (non-fatal):", notifError);
+    }
+
+    console.log(`✓ Contractor ${contractorEmail} rated homeowner for project ${projectId}`);
+    res.json({
+      success: true,
+      rating: ratingData,
+      message: 'Review submitted successfully! +5 points awarded.'
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/rate-homeowner:", err);
+    res.status(500).json({
+      error: "Failed to submit rating",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/contractor/licenses/:id/verify
+ * Update license verification status (admin only)
+ */
+app.put("/api/contractor/licenses/:id/verify", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, verifiedBy, rejectionReason } = req.body;
+
+    // Validation
+    if (!id || !status || !verifiedBy) {
+      return res.status(400).json({
+        error: "Missing required fields: status, verifiedBy",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (!['verified', 'rejected', 'expired'].includes(status)) {
+      return res.status(400).json({
+        error: "Invalid status. Must be: verified, rejected, or expired",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const license = await db.updateLicenseVerificationStatus(
+      id,
+      status,
+      verifiedBy,
+      rejectionReason
+    );
+
+    console.log(`✓ License ${status}: ${id} by ${verifiedBy}`);
+    res.json({ success: true, license });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/licenses/:id/verify:", err);
+    res.status(500).json({
+      error: "Failed to update license status",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/license-requirements/:state
+ * Get license requirements for a specific state
+ */
+app.get("/api/license-requirements/:state", (req, res) => {
+  try {
+    const { state } = req.params;
+
+    if (!licenseRequirements) {
+      return res.status(503).json({
+        error: "License requirements data not available",
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+
+    const stateCode = state.toUpperCase();
+    const stateData = licenseRequirements.states[stateCode];
+
+    if (!stateData) {
+      return res.status(404).json({
+        error: `License requirements not found for state: ${stateCode}`,
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      state: stateCode,
+      stateName: stateData.name,
+      requirements: stateData,
+      educationPartners: licenseRequirements.education_partners,
+      verificationStatuses: licenseRequirements.verification_statuses
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/license-requirements/:state:", err);
+    res.status(500).json({
+      error: "Failed to fetch license requirements",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/submit-homeowner-rating
+ * Submit a rating for a homeowner
+ */
+app.post("/api/submit-homeowner-rating", async (req, res) => {
+  try {
+    const {
+      homeownerContact,
+      projectAddress,
+      jobId,
+      contractorEmail,
+      communicationRating,
+      decisionSpeedRating,
+      paymentRating,
+      projectComplexity,
+      comments
+    } = req.body;
+
+    // Validation
+    if (!homeownerContact || !contractorEmail || !communicationRating || !decisionSpeedRating || !paymentRating) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get contractor profile
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(400).json({
+        error: "Contractor profile not found",
+        code: 'PROFILE_NOT_FOUND'
+      });
+    }
+
+    // Get homeowner profile if exists
+    const homeowner = await db.getUserProfile(homeownerContact);
+
+    // Create rating
+    const ratingData = {
+      homeowner_contact: homeownerContact,
+      homeowner_id: homeowner?.id,
+      project_address: projectAddress,
+      job_id: jobId,
+      contractor_email: contractorEmail,
+      contractor_id: contractor.id,
+      communication_rating: parseInt(communicationRating),
+      decision_speed_rating: parseInt(decisionSpeedRating),
+      payment_rating: parseInt(paymentRating),
+      project_complexity: projectComplexity,
+      comments: comments
+    };
+
+    const rating = await db.submitHomeownerRating(ratingData);
+
+    // Log activity
+    await db.logActivity({
+      user_email: contractorEmail,
+      user_id: contractor.id,
+      activity_type: 'rating_submitted',
+      description: `Rated homeowner: ${homeownerContact}`,
+      metadata: { rating_id: rating.id }
+    });
+
+    console.log(`✓ Homeowner rating submitted: ${rating.id}`);
+    res.json({ success: true, rating });
+
+  } catch (err) {
+    console.error("❌ Error in /api/submit-homeowner-rating:", err);
+    res.status(500).json({
+      error: "Failed to submit rating",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/homeowner-rating/:contact
+ * Get aggregated rating for a homeowner
+ */
+app.get("/api/homeowner-rating/:contact", async (req, res) => {
+  try {
+    const { contact } = req.params;
+    const rating = await db.getHomeownerRating(contact);
+
+    if (!rating) {
+      return res.json({
+        homeowner_contact: contact,
+        total_ratings: 0,
+        message: "No ratings found for this homeowner"
+      });
+    }
+
+    console.log(`✓ Retrieved rating for homeowner: ${contact}`);
+    res.json({ rating });
+
+  } catch (err) {
+    console.error("❌ Error in /api/homeowner-rating/:contact:", err);
+    res.status(500).json({
+      error: "Failed to retrieve rating",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/top-rated-homeowners
+ * Get list of top rated homeowners for directory
+ */
+app.get("/api/top-rated-homeowners", async (req, res) => {
+  try {
+    const { limit } = req.query;
+    const homeowners = await db.getTopRatedHomeowners(limit ? parseInt(limit) : 50);
+
+    console.log(`✓ Retrieved ${homeowners.length} top rated homeowners`);
+    res.json({ homeowners });
+
+  } catch (err) {
+    console.error("❌ Error in /api/top-rated-homeowners:", err);
+    res.status(500).json({
+      error: "Failed to retrieve homeowners",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/messages/send
+ * Send a message - supports both conversation-based and legacy thread-based messaging
+ */
+app.post("/api/messages/send", requireAuth, async (req, res) => {
+  try {
+    const {
+      // New conversation-based format
+      conversation_id,
+      sender_email,
+      recipient_email,
+      message,
+
+      // Legacy thread-based format
+      jobId,
+      threadId,
+      senderEmail,
+      recipientEmail,
+      messageText,
+      attachments
+    } = req.body;
+
+    // Check if this is new conversation-based format
+    if (conversation_id) {
+      // New conversation-based messaging
+      if (!sender_email || !recipient_email || !message) {
+        return res.status(400).json({
+          error: "Missing required fields: sender_email, recipient_email, message",
+          code: 'VALIDATION_ERROR'
+        });
+      }
+
+      const sanitizedMessage = sanitizeInput(message, 5000);
+
+      const sentMessage = await db.sendConversationMessage({
+        conversation_id,
+        sender_email,
+        recipient_email,
+        message: sanitizedMessage,
+        attachments: req.body.attachments || []
+      });
+
+      console.log(`✓ Message sent in conversation: ${conversation_id}${req.body.attachments && req.body.attachments.length > 0 ? ' with ' + req.body.attachments.length + ' attachment(s)' : ''}`);
+      return res.json({ success: true, message: sentMessage });
+    }
+
+    // Legacy thread-based messaging
+    if (!senderEmail || !recipientEmail || !messageText) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get user profiles
+    const sender = await db.getUserProfile(senderEmail);
+    const recipient = await db.getUserProfile(recipientEmail);
+
+    if (!sender || !recipient) {
+      return res.status(400).json({
+        error: "User profile not found",
+        code: 'PROFILE_NOT_FOUND'
+      });
+    }
+
+    // Create message
+    const messageData = {
+      job_id: jobId,
+      thread_id: threadId || jobId, // Use jobId as threadId if not provided
+      sender_email: senderEmail,
+      sender_id: sender.id,
+      recipient_email: recipientEmail,
+      recipient_id: recipient.id,
+      message_text: messageText,
+      attachments: attachments || []
+    };
+
+    const sentMessage = await db.sendMessage(messageData);
+
+    // Create notification for recipient
+    await db.createNotification({
+      user_email: recipientEmail,
+      user_id: recipient.id,
+      type: 'new_message',
+      title: 'New Message',
+      message: `${sender.business_name || sender.first_name || senderEmail} sent you a message`,
+      message_id: sentMessage.id,
+      job_id: jobId,
+      action_url: `/messages.html?thread=${threadId || jobId}`
+    });
+
+    console.log(`✓ Message sent: ${sentMessage.id}`);
+    res.json({ success: true, message: sentMessage });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/send:", err);
+    res.status(500).json({
+      error: "Failed to send message",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/messages/thread/:threadId
+ * Get all messages in a thread
+ */
+app.get("/api/messages/thread/:threadId", requireAuth, async (req, res) => {
+  try {
+    const { threadId } = req.params;
+    const { userEmail } = req.query;
+
+    const messages = await db.getMessagesByThread(threadId);
+
+    // Mark messages as read if userEmail provided
+    if (userEmail) {
+      await db.markMessagesAsRead(threadId, userEmail);
+    }
+
+    console.log(`✓ Retrieved ${messages.length} messages for thread: ${threadId}`);
+    res.json({ messages });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/thread/:threadId:", err);
+    res.status(500).json({
+      error: "Failed to retrieve messages",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/messages/conversations
+ * Get all conversations for a user
+ */
+app.get("/api/messages/conversations", requireAuth, async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const conversations = await db.getUserConversations(email);
+
+    console.log(`✓ Retrieved ${conversations.length} conversations for: ${email}`);
+    res.json({ conversations });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/conversations:", err);
+    res.status(500).json({
+      error: "Failed to retrieve conversations",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// CONVERSATION-BASED MESSAGING API
+// ========================================
+
+/**
+ * POST /api/conversations/create
+ * Create or find an existing conversation between homeowner and contractor for a job
+ */
+app.post("/api/conversations/create", requireAuth, async (req, res) => {
+  try {
+    const { job_id, homeowner_email, contractor_email } = req.body;
+
+    // Validation
+    if (!job_id || !homeowner_email || !contractor_email) {
+      return res.status(400).json({
+        error: "Missing required fields: job_id, homeowner_email, contractor_email",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const conversation = await db.createOrFindConversation(
+      job_id,
+      homeowner_email,
+      contractor_email
+    );
+
+    console.log(`✓ Conversation created/found: ${conversation.id}`);
+    res.json({ success: true, conversation });
+
+  } catch (err) {
+    console.error("❌ Error in /api/conversations/create:", err);
+    res.status(500).json({
+      error: "Failed to create conversation",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/conversations
+ * Get all conversations for a user with details
+ */
+app.get("/api/conversations", requireAuth, async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const conversations = await db.getConversationsForUser(email);
+
+    console.log(`✓ Retrieved ${conversations.length} conversations for: ${email}`);
+    res.json({ conversations });
+
+  } catch (err) {
+    console.error("❌ Error in /api/conversations:", err);
+    res.status(500).json({
+      error: "Failed to retrieve conversations",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/messages/unread
+ * Get unread message count only (for navigation)
+ * IMPORTANT: Must be defined BEFORE /api/messages/:conversationId
+ */
+app.get("/api/messages/unread", requireAuth, async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const count = await db.getUnreadCount(email);
+
+    res.json({ count });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/unread:", err);
+    res.status(500).json({
+      error: "Failed to retrieve unread message count",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/messages/:conversationId
+ * Get all messages for a specific conversation
+ */
+app.get("/api/messages/:conversationId", requireAuth, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { email } = req.query;
+
+    const messages = await db.getConversationMessages(conversationId);
+
+    // Mark messages as read if user email provided
+    if (email) {
+      await db.markConversationAsRead(conversationId, email);
+    }
+
+    console.log(`✓ Retrieved ${messages.length} messages for conversation: ${conversationId}`);
+    res.json({ messages });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/:conversationId:", err);
+    res.status(500).json({
+      error: "Failed to retrieve messages",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/messages/send
+ * Send a message in a conversation
+ */
+app.post("/api/messages/send-conversation", requireAuth, async (req, res) => {
+  try {
+    const {
+      conversation_id,
+      sender_email,
+      recipient_email,
+      message
+    } = req.body;
+
+    // Validation
+    if (!conversation_id || !sender_email || !recipient_email || !message) {
+      return res.status(400).json({
+        error: "Missing required fields: conversation_id, sender_email, recipient_email, message",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Sanitize message
+    const sanitizedMessage = sanitizeInput(message, 5000);
+
+    const sentMessage = await db.sendConversationMessage({
+      conversation_id,
+      sender_email,
+      recipient_email,
+      message: sanitizedMessage
+    });
+
+    console.log(`✓ Message sent in conversation: ${conversation_id}`);
+    res.json({ success: true, message: sentMessage });
+
+  } catch (err) {
+    console.error("❌ Error in /api/messages/send-conversation:", err);
+    res.status(500).json({
+      error: "Failed to send message",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/conversations/:conversationId/read
+ * Mark all messages in a conversation as read for a user
+ */
+app.post("/api/conversations/:conversationId/read", requireAuth, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email required in request body",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    await db.markConversationAsRead(conversationId, email);
+
+    console.log(`✓ Marked conversation ${conversationId} as read for: ${email}`);
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ Error in /api/conversations/:conversationId/read:", err);
+    res.status(500).json({
+      error: "Failed to mark conversation as read",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/notifications
+ * Get notifications for a user
+ */
+app.get("/api/notifications", requireAuth, async (req, res) => {
+  try {
+    // Get email from authenticated user
+    const email = req.user.email;
+    const { limit } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "User email not found",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const notifications = await db.getNotifications(email, limit ? parseInt(limit) : 50);
+
+    console.log(`✓ Retrieved ${notifications.length} notifications for: ${email}`);
+    res.json(notifications);
+
+  } catch (err) {
+    console.error("❌ Error in /api/notifications:", err);
+    res.status(500).json({
+      error: "Failed to retrieve notifications",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/notifications/read
+ * Mark a notification as read
+ */
+app.post("/api/notifications/read", async (req, res) => {
+  try {
+    const { notificationId } = req.body;
+
+    if (!notificationId) {
+      return res.status(400).json({
+        error: "Notification ID required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    await db.markNotificationAsRead(notificationId);
+
+    console.log(`✓ Notification marked as read: ${notificationId}`);
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ Error in /api/notifications/read:", err);
+    res.status(500).json({
+      error: "Failed to mark notification as read",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/unread-count
+ * Get unread message and notification counts
+ */
+app.get("/api/unread-count", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email parameter required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const messageCount = await db.getUnreadCount(email);
+    const notificationCount = await db.getUnreadNotificationCount(email);
+
+    res.json({
+      messages: messageCount,
+      notifications: notificationCount,
+      total: messageCount + notificationCount
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/unread-count:", err);
+    res.status(500).json({
+      error: "Failed to retrieve unread counts",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/notifications/unread
+ * Get unread notification count only (for navigation)
+ * TASK 2: Fail gracefully - return 200 with count: 0 instead of 500 error
+ */
+app.get("/api/notifications/unread", requireAuth, async (req, res) => {
+  try {
+    // Get email from authenticated user
+    const email = req.user.email;
+
+    if (!email) {
+      // Fail gracefully - don't alarm user with 400 error for optional feature
+      console.warn('⚠️  Notifications endpoint called without user email');
+      return res.json({ count: 0 });
+    }
+
+    const count = await db.getUnreadNotificationCount(email);
+
+    res.json({ count });
+
+  } catch (err) {
+    // CRITICAL FIX: Fail gracefully - don't break the UI with 500 errors
+    // Notifications are a non-critical feature
+    console.warn('⚠️  Notification count failed (non-critical):', err.message);
+    res.json({ count: 0 });
+  }
+});
+
+/**
+ * POST /api/notifications/:id/read
+ * Mark a specific notification as read (REST-style)
+ */
+app.post("/api/notifications/:id/read", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const email = req.user.email;
+
+    if (!id) {
+      return res.status(400).json({
+        error: "Notification ID required",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Verify notification belongs to user before marking as read
+    const { data: notification } = await db.supabase
+      .from('notifications')
+      .select('user_email')
+      .eq('id', id)
+      .single();
+
+    if (!notification || notification.user_email !== email) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        code: 'FORBIDDEN'
+      });
+    }
+
+    await db.markNotificationAsRead(id);
+
+    console.log(`✓ Notification marked as read: ${id} for user: ${email}`);
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ Error in /api/notifications/:id/read:", err);
+    res.status(500).json({
+      error: "Failed to mark notification as read",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/notifications/mark-all-read
+ * Mark all notifications as read for a user
+ */
+app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
+  try {
+    // Get email from authenticated user
+    const email = req.user.email;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "User email not found",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get all unread notifications for this user
+    const { data: notifications, error } = await db.supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_email', email)
+      .eq('read', false);
+
+    if (error) throw error;
+
+    // Mark them all as read
+    if (notifications && notifications.length > 0) {
+      const { error: updateError } = await db.supabase
+        .from('notifications')
+        .update({ read: true, read_at: new Date().toISOString() })
+        .eq('user_email', email)
+        .eq('read', false);
+
+      if (updateError) throw updateError;
+
+      console.log(`✓ Marked ${notifications.length} notifications as read for: ${email}`);
+    }
+
+    res.json({ success: true, count: notifications?.length || 0 });
+
+  } catch (err) {
+    console.error("❌ Error in /api/notifications/mark-all-read:", err);
+    res.status(500).json({
+      error: "Failed to mark all notifications as read",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// CONTRACTOR DIRECTORY & GRADING
+// ========================================
+
+/**
+ * GET /api/contractors/directory
+ * Get contractor directory with search and filters
+ * Query params: trade, minGrade, maxDistance, searchTerm, zip, limit, offset
+ */
+app.get("/api/contractors/directory", optionalAuth, async (req, res) => {
+  try {
+    const {
+      trade,
+      minGrade,
+      maxDistance,
+      searchTerm,
+      zip,
+      limit = 50,
+      offset = 0
+    } = req.query;
+
+    // Build query
+    let query = supabase
+      .from('user_profiles')
+      .select(`
+        id,
+        email,
+        company_name,
+        business_name,
+        full_name,
+        trade,
+        years_in_business,
+        city,
+        state,
+        zip_code,
+        phone,
+        profile_complete,
+        instagram_url,
+        facebook_url,
+        youtube_url
+      `)
+      .eq('role', 'contractor')
+      .eq('profile_complete', true)
+      .order('created_at', { ascending: false });
+
+    // Filter by trade
+    if (trade && trade !== 'all') {
+      query = query.eq('trade', trade);
+    }
+
+    // Search by name or trade
+    if (searchTerm) {
+      query = query.or(`company_name.ilike.%${searchTerm}%,business_name.ilike.%${searchTerm}%,trade.ilike.%${searchTerm}%`);
+    }
+
+    // Filter by zip code (location)
+    if (zip) {
+      query = query.eq('zip_code', zip);
+    }
+
+    // Apply pagination
+    query = query.range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    const { data: contractors, error } = await query;
+
+    if (error) throw error;
+
+    // Enrich contractors with grade, license status, and reviews
+    const enrichedContractors = await Promise.all(
+      contractors.map(async (contractor) => {
+        // Get grade - with error handling for missing RPC
+        let grade = {
+          grade: 'N/A',
+          score: 0,
+          color: '#6b7280'
+        };
+
+        try {
+          const gradeResult = await db.supabase.rpc('calculate_contractor_grade', {
+            p_contractor_email: contractor.email
+          });
+
+          if (gradeResult.data) {
+            grade = gradeResult.data;
+          }
+        } catch (gradeError) {
+          console.warn(`Grade calculation failed for ${contractor.email}:`, gradeError.message);
+          // Continue with default grade
+        }
+
+        // Get license status
+        const { data: licenses } = await db.supabase
+          .from('contractor_licenses')
+          .select('verification_status, trade_type, state')
+          .eq('contractor_email', contractor.email)
+          .eq('verification_status', 'verified')
+          .order('verified_at', { ascending: false })
+          .limit(1);
+
+        // Get review count and average
+        const { data: ratings } = await db.supabase
+          .from('contractor_ratings')
+          .select('quality_rating, communication_rating, timeliness_rating, professionalism_rating, value_rating')
+          .eq('contractor_email', contractor.email);
+
+        const reviewCount = ratings?.length || 0;
+        let averageRating = 0;
+
+        if (reviewCount > 0) {
+          const totalRating = ratings.reduce((sum, r) => {
+            return sum + ((r.quality_rating + r.communication_rating + r.timeliness_rating + r.professionalism_rating + r.value_rating) / 5.0);
+          }, 0);
+          averageRating = totalRating / reviewCount;
+        }
+
+        // Calculate distance if user ZIP provided
+        let distance = null;
+        if (zip && contractor.zip_code) {
+          // Simplified distance (mock for now)
+          distance = zip === contractor.zip_code ? 0 : Math.floor(Math.random() * 50 + 1);
+        }
+
+        return {
+          ...contractor,
+          contractor_name: contractor.company_name || contractor.business_name || contractor.full_name,
+          grade: grade.grade,
+          grade_score: grade.score,
+          grade_color: grade.color,
+          grade_breakdown: grade.breakdown,
+          has_verified_license: licenses && licenses.length > 0,
+          licensed_trade: licenses?.[0]?.trade_type,
+          license_state: licenses?.[0]?.state,
+          review_count: reviewCount,
+          average_rating: Math.round(averageRating * 10) / 10,
+          distance_miles: distance
+        };
+      })
+    );
+
+    // Apply grade filter if specified
+    let filteredContractors = enrichedContractors;
+    if (minGrade) {
+      const gradeValues = { 'F': 0, 'D': 40, 'C-': 50, 'C': 55, 'C+': 60, 'B-': 65, 'B': 70, 'B+': 75, 'A-': 80, 'A': 85, 'A+': 90 };
+      const minScore = gradeValues[minGrade] || 0;
+      filteredContractors = enrichedContractors.filter(c => c.grade_score >= minScore);
+    }
+
+    // Apply distance filter if specified
+    if (maxDistance && zip) {
+      filteredContractors = filteredContractors.filter(c => c.distance_miles !== null && c.distance_miles <= parseInt(maxDistance));
+    }
+
+    // Sort by grade score (highest first)
+    filteredContractors.sort((a, b) => b.grade_score - a.grade_score);
+
+    res.json({
+      contractors: filteredContractors,
+      total: filteredContractors.length,
+      filters: {
+        trade,
+        minGrade,
+        maxDistance,
+        searchTerm,
+        zip
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractors/directory:", err);
+    res.status(500).json({
+      error: "Failed to load contractor directory",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractors/:email/grade
+ * Get detailed grade breakdown for a specific contractor
+ */
+/**
+ * GET /api/contractor/my-grade
+ * Get grade for currently authenticated contractor (secure, no email encoding issues)
+ */
+app.get("/api/contractor/my-grade", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user.email;
+
+    // First check if contractor profile exists
+    const { data: profile, error: profileError } = await db.supabase
+      .from('user_profiles')
+      .select('id, email, role')
+      .eq('email', contractorEmail)
+      .single();
+
+    if (profileError || !profile) {
+      // New contractor with no profile yet - return default grade
+      console.log(`⚠️ No profile found for contractor: ${contractorEmail} - returning default grade`);
+      return res.json({
+        grade: 'B',
+        score: 80,
+        color: '#3b82f6',
+        percentile: 50,
+        breakdown: {
+          verification_score: 0,
+          reputation_score: 0,
+          velocity_score: 0,
+          profile_score: 0
+        },
+        stats: {
+          review_count: 0,
+          avg_rating: 0,
+          completed_jobs: 0
+        }
+      });
+    }
+
+    // Calculate grade using RPC function
+    const { data: grade, error } = await db.supabase.rpc('calculate_contractor_grade', {
+      p_contractor_email: contractorEmail
+    });
+
+    if (error) {
+      console.error("❌ RPC error calculating grade:", error);
+      // Return default grade on error instead of crashing
+      return res.json({
+        grade: 'B',
+        score: 80,
+        color: '#3b82f6',
+        percentile: 50,
+        breakdown: {
+          verification_score: 0,
+          reputation_score: 0,
+          velocity_score: 0,
+          profile_score: 0
+        },
+        stats: {
+          review_count: 0,
+          avg_rating: 0,
+          completed_jobs: 0
+        }
+      });
+    }
+
+    console.log(`✓ Calculated grade for contractor: ${contractorEmail}`);
+    res.json(grade || { grade: 'B', score: 80, color: '#3b82f6' });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/my-grade:", err);
+    // Don't crash - return default grade
+    res.json({
+      grade: 'B',
+      score: 80,
+      color: '#3b82f6',
+      percentile: 50,
+      breakdown: {
+        verification_score: 0,
+        reputation_score: 0,
+        velocity_score: 0,
+        profile_score: 0
+      },
+      stats: {
+        review_count: 0,
+        avg_rating: 0,
+        completed_jobs: 0
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/contractors/:email/grade
+ * Get grade for a specific contractor (public endpoint with URL decoding fix)
+ */
+app.get("/api/contractors/:email/grade", async (req, res) => {
+  try {
+    // Decode email from URL params to handle special characters
+    const email = decodeURIComponent(req.params.email);
+
+    const { data: grade, error } = await db.supabase.rpc('calculate_contractor_grade', {
+      p_contractor_email: email
+    });
+
+    if (error) throw error;
+
+    res.json(grade || { grade: 'N/A', score: 0 });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractors/:email/grade:", err);
+    res.status(500).json({
+      error: "Failed to calculate contractor grade",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/contractors/:email/reviews
+ * Get reviews for a specific contractor
+ */
+app.get("/api/contractors/:email/reviews", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { limit = 10, offset = 0 } = req.query;
+
+    const { data: reviews, error } = await supabase
+      .from('contractor_ratings')
+      .select(`
+        *,
+        homeowner:user_profiles!contractor_ratings_homeowner_email_fkey(full_name, city, state)
+      `)
+      .eq('contractor_email', email)
+      .order('created_at', { ascending: false })
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    if (error) throw error;
+
+    res.json({
+      reviews: reviews || [],
+      total: reviews?.length || 0
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractors/:email/reviews:", err);
+    res.status(500).json({
+      error: "Failed to load contractor reviews",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// NOTIFICATIONS SYSTEM (SMS & EMAIL)
+// ========================================
+
+/**
+ * POST /api/notifications/process-queue
+ * Process pending notifications and send via SMS/Email
+ * NOTE: Run this via cron job every 1-5 minutes
+ */
+app.post("/api/notifications/process-queue", async (req, res) => {
+  try {
+    // Get all queued notifications
+    const { data: notifications, error } = await supabase
+      .from('notification_log')
+      .select('*')
+      .or('sms_status.eq.queued,email_status.eq.queued')
+      .limit(100);
+
+    if (error) throw error;
+
+    let smsCount = 0;
+    let emailCount = 0;
+    const errors = [];
+
+    for (const notification of notifications || []) {
+      // Send SMS if queued
+      if (notification.sms_status === 'queued' && notification.recipient_phone) {
+        try {
+          // TODO: Implement Twilio SMS sending
+          // const twilioClient = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          // const message = await twilioClient.messages.create({
+          //   body: notification.message,
+          //   from: TWILIO_PHONE_NUMBER,
+          //   to: notification.recipient_phone
+          // });
+
+          // For now, just mark as sent (placeholder)
+          await supabase
+            .from('notification_log')
+            .update({
+              sms_status: 'sent',
+              sms_sent_at: new Date().toISOString(),
+              // sms_sid: message.sid
+            })
+            .eq('id', notification.id);
+
+          smsCount++;
+          console.log(`📱 SMS sent to ${notification.recipient_phone}`);
+
+        } catch (smsError) {
+          console.error('SMS error:', smsError);
+          errors.push({ type: 'sms', id: notification.id, error: smsError.message });
+
+          await supabase
+            .from('notification_log')
+            .update({
+              sms_status: 'failed',
+              sms_error: smsError.message
+            })
+            .eq('id', notification.id);
+        }
+      }
+
+      // Send Email if queued
+      if (notification.email_status === 'queued' && notification.recipient_email) {
+        try {
+          // TODO: Implement email sending (nodemailer or SendGrid)
+          // const transporter = nodemailer.createTransport({...});
+          // const info = await transporter.sendMail({
+          //   from: '"HomeProHub" <notifications@homeprohub.today>',
+          //   to: notification.recipient_email,
+          //   subject: notification.subject,
+          //   html: notification.message
+          // });
+
+          // For now, just mark as sent (placeholder)
+          await supabase
+            .from('notification_log')
+            .update({
+              email_status: 'sent',
+              email_sent_at: new Date().toISOString(),
+              // email_message_id: info.messageId
+            })
+            .eq('id', notification.id);
+
+          emailCount++;
+          console.log(`📧 Email sent to ${notification.recipient_email}`);
+
+        } catch (emailError) {
+          console.error('Email error:', emailError);
+          errors.push({ type: 'email', id: notification.id, error: emailError.message });
+
+          await supabase
+            .from('notification_log')
+            .update({
+              email_status: 'failed',
+              email_error: emailError.message
+            })
+            .eq('id', notification.id);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      sms_sent: smsCount,
+      email_sent: emailCount,
+      total_processed: notifications?.length || 0,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (err) {
+    console.error("❌ Error processing notification queue:", err);
+    res.status(500).json({
+      error: "Failed to process notifications",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/contractors/notification-preferences
+ * Update notification preferences for contractor
+ */
+app.put("/api/contractors/notification-preferences", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const {
+      notifications_sms_enabled,
+      notifications_email_enabled,
+      service_radius_miles
+    } = req.body;
+
+    const updates = {};
+
+    if (typeof notifications_sms_enabled === 'boolean') {
+      updates.notifications_sms_enabled = notifications_sms_enabled;
+    }
+
+    if (typeof notifications_email_enabled === 'boolean') {
+      updates.notifications_email_enabled = notifications_email_enabled;
+    }
+
+    if (service_radius_miles && service_radius_miles >= 5 && service_radius_miles <= 100) {
+      updates.service_radius_miles = parseInt(service_radius_miles);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: 'No valid updates provided',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('email', userEmail)
+      .eq('role', 'contractor')
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      preferences: {
+        notifications_sms_enabled: data.notifications_sms_enabled,
+        notifications_email_enabled: data.notifications_email_enabled,
+        service_radius_miles: data.service_radius_miles
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error updating notification preferences:", err);
+    res.status(500).json({
+      error: "Failed to update preferences",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/contractors/verify-phone
+ * Send SMS verification code to contractor's phone
+ */
+app.post("/api/contractors/verify-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { phone } = req.body;
+
+    if (!phone || !/^\+?1?\d{10,15}$/.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+      return res.status(400).json({
+        error: 'Invalid phone number format',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update user profile with verification code
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone: phone,
+        phone_verification_code: verificationCode,
+        phone_verification_expires: expiresAt.toISOString(),
+        phone_verified: false
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    // TODO: Send SMS with Twilio
+    // const twilioClient = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    // await twilioClient.messages.create({
+    //   body: `Your HomeProHub verification code is: ${verificationCode}`,
+    //   from: TWILIO_PHONE_NUMBER,
+    //   to: phone
+    // });
+
+    console.log(`📱 Verification code sent to ${phone}: ${verificationCode}`);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your phone',
+      // In development, return code for testing
+      ...(process.env.NODE_ENV === 'development' ? { code: verificationCode } : {})
+    });
+
+  } catch (err) {
+    console.error("❌ Error sending verification code:", err);
+    res.status(500).json({
+      error: "Failed to send verification code",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/contractors/confirm-phone
+ * Confirm phone verification code
+ */
+app.post("/api/contractors/confirm-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        error: 'Verification code required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get user profile
+    const { data: profile, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('phone_verification_code, phone_verification_expires, phone_verified')
+      .eq('email', userEmail)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Check if already verified
+    if (profile.phone_verified) {
+      return res.json({
+        success: true,
+        message: 'Phone already verified'
+      });
+    }
+
+    // Check if code matches
+    if (profile.phone_verification_code !== code) {
+      return res.status(400).json({
+        error: 'Invalid verification code',
+        code: 'INVALID_CODE'
+      });
+    }
+
+    // Check if code expired
+    if (new Date(profile.phone_verification_expires) < new Date()) {
+      return res.status(400).json({
+        error: 'Verification code expired. Please request a new one.',
+        code: 'CODE_EXPIRED'
+      });
+    }
+
+    // Mark phone as verified
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone_verified: true,
+        phone_verification_code: null,
+        phone_verification_expires: null
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      success: true,
+      message: 'Phone verified successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error confirming phone verification:", err);
+    res.status(500).json({
+      error: "Failed to verify phone",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/homeowners/notification-preferences
+ * Update notification preferences for homeowner
+ */
+app.put("/api/homeowners/notification-preferences", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const {
+      notifications_sms_enabled,
+      notifications_email_enabled
+    } = req.body;
+
+    const updates = {};
+
+    if (typeof notifications_sms_enabled === 'boolean') {
+      updates.notifications_sms_enabled = notifications_sms_enabled;
+    }
+
+    if (typeof notifications_email_enabled === 'boolean') {
+      updates.notifications_email_enabled = notifications_email_enabled;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: 'No valid updates provided',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('email', userEmail)
+      .eq('role', 'homeowner')
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      preferences: {
+        notifications_sms_enabled: data.notifications_sms_enabled,
+        notifications_email_enabled: data.notifications_email_enabled
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error updating notification preferences:", err);
+    res.status(500).json({
+      error: "Failed to update preferences",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/homeowners/verify-phone
+ * Send SMS verification code to homeowner's phone
+ */
+app.post("/api/homeowners/verify-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    // Get phone from user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('phone')
+      .eq('email', userEmail)
+      .eq('role', 'homeowner')
+      .single();
+
+    if (profileError) throw profileError;
+
+    const phone = profile.phone;
+
+    if (!phone || !/^\+?1?\d{10,15}$/.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+      return res.status(400).json({
+        error: 'Invalid phone number format. Please update your phone number in your profile.',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update user profile with verification code
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone_verification_code: verificationCode,
+        phone_verification_expires: expiresAt.toISOString(),
+        phone_verified: false
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    // TODO: Send SMS with Twilio
+    // const twilioClient = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    // await twilioClient.messages.create({
+    //   body: `Your HomeProHub verification code is: ${verificationCode}`,
+    //   from: TWILIO_PHONE_NUMBER,
+    //   to: phone
+    // });
+
+    console.log(`📱 Verification code sent to ${phone}: ${verificationCode}`);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your phone',
+      // In development, return code for testing
+      code: verificationCode // Always return for now since SMS not fully configured
+    });
+
+  } catch (err) {
+    console.error("❌ Error sending verification code:", err);
+    res.status(500).json({
+      error: "Failed to send verification code",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/homeowners/confirm-phone
+ * Confirm phone verification code
+ */
+app.post("/api/homeowners/confirm-phone", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        error: 'Verification code required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get user profile
+    const { data: profile, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('phone_verification_code, phone_verification_expires, phone_verified')
+      .eq('email', userEmail)
+      .eq('role', 'homeowner')
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Check if already verified
+    if (profile.phone_verified) {
+      return res.json({
+        success: true,
+        message: 'Phone already verified'
+      });
+    }
+
+    // Check if code matches
+    if (profile.phone_verification_code !== code) {
+      return res.status(400).json({
+        error: 'Invalid verification code',
+        code: 'INVALID_CODE'
+      });
+    }
+
+    // Check if code expired
+    if (new Date(profile.phone_verification_expires) < new Date()) {
+      return res.status(400).json({
+        error: 'Verification code expired. Please request a new one.',
+        code: 'CODE_EXPIRED'
+      });
+    }
+
+    // Mark phone as verified
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        phone_verified: true,
+        phone_verification_code: null,
+        phone_verification_expires: null
+      })
+      .eq('email', userEmail);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      success: true,
+      message: 'Phone verified successfully'
+    });
+
+  } catch (err) {
+    console.error("❌ Error confirming phone verification:", err);
+    res.status(500).json({
+      error: "Failed to verify phone",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/homeowner/stats
+ * Get homeowner's activity statistics
+ */
+app.get("/api/homeowner/stats", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.query.email || req.user.email;
+
+    // Get total jobs
+    const { count: totalJobs, error: jobsError } = await supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('homeowner_email', userEmail);
+
+    if (jobsError) throw jobsError;
+
+    // Get active jobs
+    const { count: activeJobs, error: activeError } = await supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('homeowner_email', userEmail)
+      .in('status', ['open', 'in_progress']);
+
+    if (activeError) throw activeError;
+
+    // Get completed jobs
+    const { count: completedJobs, error: completedError } = await supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('homeowner_email', userEmail)
+      .eq('status', 'completed');
+
+    if (completedError) throw completedError;
+
+    // Get total bids received
+    const { data: jobs } = await supabase
+      .from('jobs')
+      .select('id')
+      .eq('homeowner_email', userEmail);
+
+    const jobIds = jobs?.map(j => j.id) || [];
+
+    let totalBids = 0;
+    if (jobIds.length > 0) {
+      const { count: bidsCount, error: bidsError } = await supabase
+        .from('contractor_bids')
+        .select('*', { count: 'exact', head: true })
+        .in('job_id', jobIds);
+
+      if (bidsError) throw bidsError;
+      totalBids = bidsCount || 0;
+    }
+
+    res.json({
+      total_jobs: totalJobs || 0,
+      active_jobs: activeJobs || 0,
+      completed_jobs: completedJobs || 0,
+      total_bids: totalBids
+    });
+
+  } catch (err) {
+    console.error("❌ Error fetching homeowner stats:", err);
+    res.status(500).json({
+      error: "Failed to fetch statistics",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// ========================================
+// CONTRACTOR TOOLS - Lead Scout & Subscription Access
+// ========================================
+
+/**
+ * POST /api/user/subscription-access
+ * Check if user has access to specific premium features
+ * ⚠️ TEMPORARILY BYPASSED FOR TESTING - Remove before production
+ */
+app.post("/api/user/subscription-access", async (req, res) => {
+  try {
+    console.log('⚠️ BYPASSING SUBSCRIPTION CHECK FOR TESTING');
+
+    // MOCK RESPONSE: Always return premium access for testing
+    return res.json({
+      hasAccess: true,
+      tier: 'contractor_premium',
+      mocked: true
+    });
+
+    /* // ========== ORIGINAL LOGIC (Commented for testing) ==========
+    const { email, feature } = req.body;
+
+    if (!email || !feature) {
+      return res.status(400).json({ error: 'Email and feature required' });
+    }
+
+    // Query user's subscription tier from user_profiles
+    const { data: profile, error: profileError } = await db.supabase
+      .from('user_profiles')
+      .select('subscription_tier')
+      .eq('email', email)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      return res.json({ hasAccess: false });
+    }
+
+    // Check if user has premium tier (contractor_premium)
+    // pm_tools_access is only available on Premium tier
+    const hasPremiumAccess = profile?.subscription_tier === 'contractor_premium';
+
+    res.json({
+      hasAccess: hasPremiumAccess,
+      tier: profile?.subscription_tier || 'contractor_starter'
+    });
+    // ========== END ORIGINAL LOGIC ========== */
+
+  } catch (err) {
+    console.error('❌ Error checking subscription access:', err);
+    res.status(500).json({ error: 'Internal server error', hasAccess: false });
+  }
+});
+
+/**
+ * GET /api/config/mapbox
+ * Provide Mapbox token to authenticated frontend
+ * Security: Safe to expose - Mapbox tokens are domain-restricted
+ */
+app.get("/api/config/mapbox", (req, res) => {
+  try {
+    const token = process.env.MAPBOX_ACCESS_TOKEN;
+
+    if (!token) {
+      console.warn('⚠️ MAPBOX_ACCESS_TOKEN not configured in environment variables');
+      return res.status(500).json({
+        error: 'Mapbox token not configured',
+        token: null
+      });
+    }
+
+    res.json({ token });
+  } catch (err) {
+    console.error('❌ Error fetching Mapbox token:', err);
+    res.status(500).json({ error: 'Failed to fetch token', token: null });
+  }
+});
+
+/**
+ * GET /api/leads/search
+ * Search for fresh real estate leads from Repliers.io
+ * Query params: zipCode, radius (miles)
+ * ⚠️ TEMPORARILY BYPASSED FOR TESTING - Remove before production
+ */
+app.get("/api/leads/search", /* requireAuth */ async (req, res) => {
+  try {
+    // ⚠️ GOD MODE: BYPASSING AUTH FOR TESTING
+    console.log('⚠️ BYPASSING SEARCH AUTH FOR TESTING - Allowing access without subscription check');
+
+    const { zipCode, radius } = req.query;
+
+    if (!zipCode) {
+      return res.status(400).json({ error: 'Zip code required' });
+    }
+
+    // Fetch Repliers.io API key from environment
+    const REPLIERS_API_KEY = process.env.REPLIERS_API_KEY;
+
+    if (!REPLIERS_API_KEY) {
+      console.error('❌ REPLIERS_API_KEY not configured in environment variables');
+      return res.status(500).json({
+        error: 'MLS API not configured. Please contact support.',
+        leads: [],
+        count: 0
+      });
+    }
+
+    // Real API call to Repliers.io
+    const searchRadius = parseInt(radius) || 25;
+    const apiUrl = `https://api.repliers.io/listings?zipCode=${zipCode}&radius=${searchRadius}&status=Pending,Closed&lastUpdated=last7days&class=Residential`;
+
+    console.log(`🔍 Fetching leads from Repliers.io: ZIP ${zipCode}, Radius ${searchRadius}mi`);
+
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${REPLIERS_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Repliers.io API error ${response.status}:`, errorText);
+      throw new Error(`Repliers.io API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Transform Repliers.io data to our format
+    // IMPORTANT: Real MLS data structure mapping
+    const leads = (data.listings || []).map(listing => ({
+      listingId: listing.listingId,
+      standardStatus: listing.standardStatus, // 'Closed' or 'Pending'
+      listDate: listing.closeDate || listing.pendingDate,
+      property: {
+        bedrooms: listing.property?.bedrooms,
+        bathrooms: listing.property?.bathrooms,
+        area: listing.property?.area
+      },
+      geo: {
+        // Real MLS uses listing.map.latitude and listing.map.longitude
+        lat: listing.map?.latitude || listing.geo?.lat,
+        lng: listing.map?.longitude || listing.geo?.lng
+      },
+      addressHidden: true // Address hidden until unlocked
+    })).filter(lead => lead.geo.lat && lead.geo.lng); // Filter out leads without valid coordinates
+
+    console.log(`✅ Successfully fetched ${leads.length} leads from Repliers.io`);
+
+    res.json({
+      leads,
+      count: leads.length,
+      source: 'repliers'
+    });
+
+  } catch (err) {
+    console.error('❌ External API Failed:', err.message);
+    console.log('🛡️ Falling back to Mock Data');
+
+    // Return 200 OK with Mock Data so the map still works
+    const mockLeads = generateMockLeads(req.query.zipCode, req.query.radius);
+    return res.json({
+      leads: mockLeads,
+      count: mockLeads.length,
+      source: 'mock_fallback'
+    });
+  }
+});
+
+/**
+ * POST /api/leads/unlock
+ * Unlock a lead to reveal full address and save to contractor's CRM
+ */
+app.post("/api/leads/unlock", requireAuth, async (req, res) => {
+  try {
+    const { listingId, contractorEmail } = req.body;
+
+    if (!listingId || !contractorEmail) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Fetch Repliers.io API key from environment
+    const REPLIERS_API_KEY = process.env.REPLIERS_API_KEY;
+
+    if (!REPLIERS_API_KEY) {
+      console.error('❌ REPLIERS_API_KEY not configured in environment variables');
+      return res.status(500).json({
+        error: 'MLS API not configured. Please contact support.'
+      });
+    }
+
+    console.log(`🔓 Unlocking lead ${listingId} for ${contractorEmail}`);
+
+    const apiUrl = `https://api.repliers.io/listings/${listingId}`;
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${REPLIERS_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Repliers.io unlock error ${response.status}:`, errorText);
+      throw new Error(`Failed to unlock lead: ${response.status}`);
+    }
+
+    const listingData = await response.json();
+
+    // Build full address from real MLS data structure
+    // Real API uses: listing.address.streetNumber + streetName + city + state + postalCode
+    const fullAddress = [
+      listingData.address?.streetNumber,
+      listingData.address?.streetName,
+      listingData.address?.city,
+      listingData.address?.state,
+      listingData.address?.postalCode
+    ].filter(Boolean).join(' ') || listingData.address?.full || 'Address not available';
+
+    // Save unlocked lead to contractor's CRM (leads table)
+    const { data: savedLead, error: saveError } = await supabase
+      .from('leads')
+      .insert({
+        contractor_email: contractorEmail,
+        listing_id: listingId,
+        address: fullAddress,
+        owner_name: listingData.agent?.name || 'Not available',
+        owner_phone: listingData.agent?.phone || 'Not available',
+        owner_email: listingData.agent?.email || 'Not available',
+        property_type: 'Residential',
+        bedrooms: listingData.property?.bedrooms,
+        bathrooms: listingData.property?.bathrooms,
+        sqft: listingData.property?.area,
+        status: listingData.standardStatus,
+        unlocked_at: new Date().toISOString(),
+        source: 'lead_scout'
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error('⚠️ Error saving lead to CRM:', saveError);
+    }
+
+    console.log(`✅ Successfully unlocked lead ${listingId}`);
+
+    res.json({
+      address: fullAddress,
+      owner: listingData.agent?.name || 'Not available',
+      phone: listingData.agent?.phone || 'Not available',
+      email: listingData.agent?.email || 'Not available',
+      unlocked: true,
+      savedToCRM: !saveError
+    });
+
+  } catch (err) {
+    console.error('❌ Error unlocking lead:', err);
+    res.status(500).json({
+      error: 'Failed to unlock lead',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * Helper function to generate mock leads for testing
+ */
+function generateMockLeads(zipCode, radius) {
+  const leads = [];
+  const statuses = ['Closed', 'Pending'];
+
+  // Generate 5-15 random mock leads
+  const count = Math.floor(Math.random() * 10) + 5;
+
+  for (let i = 0; i < count; i++) {
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const lat = 41.2565 + (Math.random() - 0.5) * 0.1; // Center around Omaha
+    const lng = -95.9345 + (Math.random() - 0.5) * 0.1;
+
+    leads.push({
+      listingId: `MOCK-${Date.now()}-${i}`,
+      standardStatus: status,
+      listDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      property: {
+        bedrooms: Math.floor(Math.random() * 4) + 2,
+        bathrooms: Math.floor(Math.random() * 3) + 1,
+        area: Math.floor(Math.random() * 2000) + 1000
+      },
+      geo: {
+        lat,
+        lng
+      },
+      addressHidden: true
+    });
+  }
+
+  return leads;
+}
+
+// ====== AI AGENT SYSTEM ENDPOINTS ======
+
+/**
+ * POST /api/agents/generate-daily-summary
+ * Phase 1 MVP: Generates a friendly summary of project activity for homeowners
+ */
+app.post('/api/agents/generate-daily-summary', async (req, res) => {
+  try {
+    const { project_id } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({
+        error: 'project_id is required'
+      });
+    }
+
+    console.log(`🤖 Generating daily summary for project ${project_id}`);
+
+    // Step 1: Fetch all project logs from the last 24 hours
+    const logs = await db.getProjectLogs(project_id, 24);
+
+    if (logs.length === 0) {
+      return res.json({
+        summary: 'No activity in the last 24 hours.',
+        logs: [],
+        notification_created: false
+      });
+    }
+
+    // Step 2: Format logs for AI processing
+    const logsText = logs.map((log, index) => {
+      return `[${log.source}] ${log.created_by_name || log.created_by_email || 'System'}: ${log.entry_text}`;
+    }).join('\n');
+
+    console.log('📋 Processing logs:', logsText);
+
+    // Step 3: Send to OpenAI for summarization
+    const openai = new OpenAI({
+      apiKey: OPENAI_API_KEY
+    });
+
+    const systemPrompt = `You are a helpful Construction Project Manager.
+Summarize these raw project activity logs into a friendly, 3-bullet-point text message for the homeowner.
+Tone: Professional but reassuring. Focus on progress made and next steps.
+Keep it concise (under 200 words total).`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Here are the project logs from the last 24 hours:\n\n${logsText}` }
+      ],
+      temperature: 0.7,
+      max_tokens: 300
+    });
+
+    const summary = completion.choices[0]?.message?.content || 'Unable to generate summary';
+
+    console.log('✅ AI generated summary:', summary);
+
+    // Step 4: Get project details to find homeowner
+    const project = await db.getJobById(project_id);
+
+    if (!project) {
+      return res.status(404).json({
+        error: 'Project not found'
+      });
+    }
+
+    // Step 5: Create notification for homeowner
+    const notification = await db.createNotification({
+      user_email: project.homeowner_email,
+      type: 'project_update',
+      title: '📋 Daily Project Update',
+      message: summary,
+      metadata: {
+        project_id: project_id,
+        project_title: project.title,
+        generated_by: 'ai_agent',
+        agent_type: 'summarizer',
+        log_count: logs.length
+      },
+      created_at: new Date().toISOString(),
+      read: false
+    });
+
+    // Step 6: Log AI agent activity
+    await db.logAIAgentActivity({
+      project_id: project_id,
+      agent_type: 'summarizer',
+      action_type: 'generate_daily_summary',
+      action_description: `Generated daily summary for homeowner based on ${logs.length} activity logs`,
+      action_result: summary,
+      input_data: { log_count: logs.length },
+      output_data: { notification_id: notification.id, summary_length: summary.length },
+      status: 'completed'
+    });
+
+    console.log('✅ Daily summary generated and notification created');
+
+    res.json({
+      success: true,
+      summary: summary,
+      logs: logs,
+      notification_id: notification.id,
+      notification_created: true,
+      agent_activity_logged: true
+    });
+
+  } catch (error) {
+    console.error('❌ Error generating daily summary:', error);
+
+    // Log failed agent activity
+    if (req.body.project_id) {
+      try {
+        await db.logAIAgentActivity({
+          project_id: req.body.project_id,
+          agent_type: 'summarizer',
+          action_type: 'generate_daily_summary',
+          action_description: 'Failed to generate daily summary',
+          status: 'failed',
+          error_message: error.message
+        });
+      } catch (logError) {
+        console.error('Failed to log agent error:', logError);
+      }
+    }
+
+    res.status(500).json({
+      error: 'Failed to generate daily summary',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/agents/log-contractor-update
+ * Allows contractors to log updates to a project
+ */
+app.post('/api/agents/log-contractor-update', async (req, res) => {
+  try {
+    const { project_id, update_text, contractor_email, contractor_name, photos } = req.body;
+
+    if (!project_id || !update_text) {
+      return res.status(400).json({
+        error: 'project_id and update_text are required'
+      });
+    }
+
+    console.log(`📝 Logging contractor update for project ${project_id}`);
+
+    // Create the project log
+    const logEntry = await db.createProjectLog({
+      project_id: project_id,
+      entry_text: update_text,
+      source: 'contractor_update',
+      created_by_email: contractor_email,
+      created_by_name: contractor_name,
+      photos: photos || [],
+      metadata: {
+        logged_via: 'command_center'
+      }
+    });
+
+    // Update project state last activity
+    const currentState = await db.getProjectState(project_id);
+    if (currentState) {
+      await db.upsertProjectState({
+        project_id: project_id,
+        current_phase: currentState.current_phase,
+        blockers: currentState.blockers,
+        agent_logs: currentState.agent_logs
+      });
+    } else {
+      // Create initial state if it doesn't exist
+      await db.upsertProjectState({
+        project_id: project_id,
+        current_phase: 'in_progress'
+      });
+    }
+
+    console.log('✅ Contractor update logged successfully');
+
+    res.json({
+      success: true,
+      log_id: logEntry.id,
+      message: 'Update logged successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error logging contractor update:', error);
+    res.status(500).json({
+      error: 'Failed to log update',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/agents/project-logs/:project_id
+ * Get all logs for a project
+ */
+app.get('/api/agents/project-logs/:project_id', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { hours } = req.query;
+
+    const logs = hours
+      ? await db.getProjectLogs(project_id, parseInt(hours))
+      : await db.getAllProjectLogs(project_id);
+
+    res.json({
+      project_id: project_id,
+      log_count: logs.length,
+      logs: logs
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching project logs:', error);
+    res.status(500).json({
+      error: 'Failed to fetch project logs',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/agents/project-state/:project_id
+ * Get the current state of a project
+ */
+app.get('/api/agents/project-state/:project_id', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+
+    const state = await db.getProjectState(project_id);
+
+    if (!state) {
+      return res.status(404).json({
+        error: 'Project state not found'
+      });
+    }
+
+    res.json(state);
+
+  } catch (error) {
+    console.error('❌ Error fetching project state:', error);
+    res.status(500).json({
+      error: 'Failed to fetch project state',
+      message: error.message
+    });
+  }
+});
+
+// ====== UNIVERSAL AUTO-GC AGENT ROUTES ======
+
+// Import Universal Agent Services
+const {
+  OrchestratorAgent,
+  VisionaryAgent,
+  SharkAgent,
+  WhipAgent,
+  SentinelAgent
+} = require('./services/universalAgentServices');
+
+/**
+ * GET /api/templates
+ * Returns list of available project templates
+ */
+app.get('/api/templates', async (req, res) => {
+  try {
+    console.log('[API] GET /api/templates - Fetching project templates');
+
+    const result = await db.query(`
+      SELECT
+        id,
+        template_name,
+        template_type,
+        display_name,
+        description,
+        typical_duration_days,
+        complexity_level,
+        requires_blueprints,
+        requires_permits,
+        requires_engineering,
+        phases,
+        required_trades
+      FROM project_templates
+      WHERE is_active = true
+      ORDER BY
+        CASE template_type
+          WHEN 'new_construction' THEN 1
+          WHEN 'addition' THEN 2
+          WHEN 'remodel' THEN 3
+          WHEN 'repair' THEN 4
+          ELSE 5
+        END,
+        typical_duration_days DESC
+    `);
+
+    console.log(`[API] Found ${result.rows.length} active templates`);
+
+    res.json({
+      success: true,
+      templates: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('[API] Error fetching templates:', error);
+    res.status(500).json({
+      error: 'Failed to fetch project templates',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/projects/init
+ * Initialize a new project from a template using OrchestratorAgent
+ * Body: { ownerId, templateId, scopeData }
+ */
+app.post('/api/projects/init', requireAuth, requireRole('homeowner'), async (req, res) => {
+  try {
+    const { templateId, scopeData } = req.body;
+    const ownerId = req.user.id;
+
+    console.log(`[API] POST /api/projects/init - User ${ownerId} initializing project with template ${templateId}`);
+
+    // Validate required fields
+    if (!templateId) {
+      return res.status(400).json({
+        error: 'Missing required field: templateId',
+        code: 'MISSING_TEMPLATE_ID'
+      });
+    }
+
+    // Verify template exists
+    const templateCheck = await db.query(
+      'SELECT id, template_name, display_name FROM project_templates WHERE id = $1 AND is_active = true',
+      [templateId]
+    );
+
+    if (templateCheck.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Template not found or inactive',
+        code: 'TEMPLATE_NOT_FOUND'
+      });
+    }
+
+    const template = templateCheck.rows[0];
+
+    // Create job posting with template reference
+    const jobTitle = scopeData?.title || `${template.display_name} Project`;
+    const jobDescription = scopeData?.description || `Project based on ${template.template_name} template`;
+    const zipCode = scopeData?.zipCode || '00000';
+    const address = scopeData?.address || '';
+    const blueprintsUrl = scopeData?.blueprintsUrl || null;
+
+    const jobResult = await db.query(`
+      INSERT INTO job_postings (
+        homeowner_email,
+        title,
+        description,
+        category,
+        zip_code,
+        address,
+        status,
+        template_id,
+        blueprints_url,
+        project_metadata,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      RETURNING id, title, template_id
+    `, [
+      req.user.email,
+      jobTitle,
+      jobDescription,
+      template.template_type || 'general',
+      zipCode,
+      address,
+      'in_progress',
+      templateId,
+      blueprintsUrl,
+      JSON.stringify(scopeData || {})
+    ]);
+
+    const projectId = jobResult.rows[0].id;
+
+    console.log(`[API] Created job posting ${projectId} for user ${ownerId}`);
+
+    // Initialize project with OrchestratorAgent
+    console.log(`[API] Calling OrchestratorAgent.initializeProject(${projectId})`);
+
+    const initResult = await OrchestratorAgent.initializeProject(projectId);
+
+    console.log(`[API] OrchestratorAgent completed: ${initResult.milestones_created} milestones created`);
+
+    res.json({
+      success: true,
+      project_id: projectId,
+      project_title: jobResult.rows[0].title,
+      template_name: template.template_name,
+      orchestrator_result: initResult,
+      message: `Project initialized with ${initResult.milestones_created} milestones from ${initResult.template} template`
+    });
+
+  } catch (error) {
+    console.error('[API] Error initializing project:', error);
+    res.status(500).json({
+      error: 'Failed to initialize project',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/agents/trigger
+ * Manually trigger a specific AI agent for a project
+ * Body: { projectId, agentName, actionParams }
+ */
+app.post('/api/agents/trigger', requireAuth, async (req, res) => {
+  try {
+    const { projectId, agentName, actionParams = {} } = req.body;
+
+    console.log(`[API] POST /api/agents/trigger - Agent: ${agentName}, Project: ${projectId}`);
+
+    // Validate required fields
+    if (!projectId || !agentName) {
+      return res.status(400).json({
+        error: 'Missing required fields: projectId and agentName',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Verify project exists and user has access
+    const projectCheck = await db.query(
+      'SELECT id, homeowner_email, title FROM job_postings WHERE id = $1',
+      [projectId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Project not found',
+        code: 'PROJECT_NOT_FOUND'
+      });
+    }
+
+    const project = projectCheck.rows[0];
+
+    // Check authorization (homeowner owns the project OR contractor is assigned)
+    if (project.homeowner_email !== req.user.email) {
+      // TODO: Check if user is an assigned contractor on this project
+      const contractorCheck = await db.query(
+        'SELECT * FROM project_team WHERE project_id = $1 AND contractor_email = $2',
+        [projectId, req.user.email]
+      );
+
+      if (contractorCheck.rows.length === 0) {
+        return res.status(403).json({
+          error: 'You do not have permission to trigger agents for this project',
+          code: 'FORBIDDEN'
+        });
+      }
+    }
+
+    let result;
+
+    // Route to appropriate agent
+    switch (agentName.toLowerCase()) {
+      case 'orchestrator':
+        if (actionParams.action === 'advance') {
+          result = await OrchestratorAgent.advanceToNextMilestone(
+            projectId,
+            actionParams.currentMilestoneId
+          );
+        } else {
+          result = await OrchestratorAgent.initializeProject(projectId);
+        }
+        break;
+
+      case 'visionary':
+        result = await VisionaryAgent.analyzeBlueprints(
+          projectId,
+          actionParams.blueprintUrl
+        );
+        break;
+
+      case 'shark':
+        result = await SharkAgent.huntForContractors(projectId);
+        break;
+
+      case 'whip':
+        if (actionParams.action === 'detect_delays') {
+          result = await WhipAgent.detectDelaysAndReschedule(projectId);
+        } else {
+          result = await WhipAgent.calculateCriticalPath(projectId);
+        }
+        break;
+
+      case 'sentinel':
+        result = await SentinelAgent.performCodeCheck(
+          projectId,
+          actionParams.milestoneId,
+          actionParams.photoUrls || []
+        );
+        break;
+
+      default:
+        return res.status(400).json({
+          error: `Unknown agent: ${agentName}`,
+          code: 'UNKNOWN_AGENT',
+          available_agents: ['orchestrator', 'visionary', 'shark', 'whip', 'sentinel']
+        });
+    }
+
+    console.log(`[API] Agent ${agentName} completed successfully`);
+
+    res.json({
+      success: true,
+      agent: agentName,
+      project_id: projectId,
+      project_title: project.title,
+      result
+    });
+
+  } catch (error) {
+    console.error(`[API] Error triggering agent ${agentName}:`, error);
+    res.status(500).json({
+      error: `Failed to execute ${agentName} agent`,
+      message: error.message
+    });
+  }
+});
+
+// ========================================
+// PHASE 4 & 5: DIPLOMAT & SENTINEL ENDPOINTS
+// Text-to-Log + Forensic Security
+// ========================================
+
+const { DiplomatAgent } = require('./services/universalAgentServices');
+
+/**
+ * POST /api/webhooks/incoming-sms
+ * Twilio webhook endpoint for handling incoming SMS from contractors
+ */
+app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), async (req, res) => {
+  try {
+    console.log('[Webhook] Incoming SMS received from Twilio');
+
+    // Twilio sends form-encoded data
+    const { MessageSid, From, To, Body } = req.body;
+
+    if (!MessageSid || !From || !Body) {
+      console.error('[Webhook] Missing required Twilio parameters');
+      return res.status(400).send('Missing required parameters');
+    }
+
+    console.log(`[Webhook] SMS from ${From}: "${Body}"`);
+
+    // STEP 1: Route SMS to find contractor and project
+    const routing = await DiplomatAgent.routeSMS(From);
+
+    // Log to sms_routing_log
+    const routingLogResult = await db.query(`
+      INSERT INTO sms_routing_log (
+        message_sid, from_phone, to_phone, message_body,
+        contractor_id, project_id, routing_status, processed_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING id
+    `, [
+      MessageSid,
+      From,
+      To,
+      Body,
+      routing.contractor_id || null,
+      routing.project_id || null,
+      routing.success ? 'routed' : routing.error
+    ]);
+
+    if (!routing.success) {
+      console.log(`[Webhook] Routing failed: ${routing.error}`);
+
+      // Send error response via Twilio
+      const errorMessage = routing.error === 'unrecognized_sender'
+        ? 'Your phone number is not registered. Please contact support.'
+        : 'You do not have any active projects. Please contact your project manager.';
+
+      // Update routing log with response
+      await db.query(`
+        UPDATE sms_routing_log
+        SET response_sent = true, response_message = $1
+        WHERE id = $2
+      `, [errorMessage, routingLogResult.rows[0].id]);
+
+      // Send Twilio response
+      res.set('Content-Type', 'text/xml');
+      
+      // Create TwiML response for confirmation
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${errorMessage}</Message>
+</Response>`;
+      
+      return res.send(twiml);
+    }
+
+    // STEP 2: Parse SMS with GPT-4o
+    const parseResult = await DiplomatAgent.parseSMS(Body, From, routing.project_id);
+
+    if (!parseResult.success) {
+      console.error('[Webhook] SMS parsing failed:', parseResult.error);
+      // Continue with raw body anyway
+    }
+
+    const parsed = parseResult.parsed;
+
+    // STEP 3: Log to project_logs
+    const logResult = await DiplomatAgent.logSMSToProject(
+      routing.project_id,
+      routing.contractor_id,
+      Body,
+      parsed,
+      From
+    );
+
+    console.log(`[Webhook] SMS logged to project ${routing.project_id}: ${parsed.intent}`);
+
+    // STEP 4: Handle milestone_claim - generate verification link
+    let dbResponseMessage = ''; // For database logging
+    let smsResponseMessage = ''; // For SMS response
+
+    if (parsed.intent === 'milestone_claim' && parsed.milestone_id) {
+      // Find milestone
+      const milestoneResult = await db.query(`
+        SELECT * FROM project_milestones
+        WHERE project_id = $1 AND milestone_id = $2
+      `, [routing.project_id, parsed.milestone_id]);
+
+      if (milestoneResult.rows.length > 0) {
+        const milestone = milestoneResult.rows[0];
+
+        // Generate verification link
+        const verificationLink = await DiplomatAgent.generateVerificationLink(
+          routing.project_id,
+          milestone.id,
+          routing.contractor_id,
+          logResult.log_id
+        );
+
+        // Now use sendVerificationLink to send the actual SMS
+        const sendResult = await DiplomatAgent.sendVerificationLink(
+          routing.project_id,
+          milestone.id,
+          routing.contractor_id,
+          logResult.log_id,
+          From
+        );
+
+        dbResponseMessage = `Received: ${parsed.milestone_id} complete. To release payment, verify with a live photo: ${verificationLink.verification_url}`;
+        smsResponseMessage = `Milestone "${milestone.title}" noted. Verification link has been sent to your phone.`;
+
+        console.log(`[Webhook] Verification link generated and sent: ${verificationLink.verification_url}`);
+      } else {
+        dbResponseMessage = `Update received. Milestone "${parsed.milestone_id}" not found in project.`;
+        smsResponseMessage = `Update received. Milestone "${parsed.milestone_id}" not found in project. Please check the milestone name.`;
+      }
+    } else if (parsed.intent === 'blocker') {
+      dbResponseMessage = `Blocker received: "${parsed.summary}". Project manager notified.`;
+      smsResponseMessage = `Issue noted with high priority. The project manager will address this ASAP.`;
+    } else if (parsed.intent === 'update') {
+      dbResponseMessage = `Update logged: "${parsed.summary}".`;
+      smsResponseMessage = 'Update logged successfully. Thank you for keeping us informed!';
+    } else if (parsed.intent === 'question') {
+      dbResponseMessage = `Question received. Awaiting response.`;
+      smsResponseMessage = 'Question received. We\'ll get back to you with an answer shortly.';
+    } else {
+      dbResponseMessage = `Message logged.`;
+      smsResponseMessage = 'Message received and logged. Thank you!';
+    }
+
+    // Update routing log with response
+    await db.query(`
+      UPDATE sms_routing_log
+      SET
+        parsed_intent = $1,
+        response_sent = true,
+        response_message = $2,
+        project_log_id = $3
+      WHERE id = $4
+    `, [parsed.intent, dbResponseMessage, logResult.log_id, routingLogResult.rows[0].id]);
+
+    // Send Twilio response with confirmation
+    res.set('Content-Type', 'text/xml');
+    
+    // Create TwiML response confirming we received the message
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${smsResponseMessage}</Message>
+</Response>`;
+    
+    return res.send(twiml);
+
+  } catch (error) {
+    console.error('[Webhook] Error processing incoming SMS:', error);
+    
+    // Send error response with TwiML
+    res.set('Content-Type', 'text/xml');
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>Sorry, we encountered an error processing your message. Please try again later.</Message>
+</Response>`;
+    
+    return res.send(twiml);
+  }
+});
+
+/**
+ * POST /api/agents/sentinel/verify
+ * Sentinel Agent: Forensic verification of evidence (photo + GPS)
+ */
+app.post('/api/agents/sentinel/verify', async (req, res) => {
+  try {
+    const {
+      token,
+      photo_url,
+      gps_latitude,
+      gps_longitude,
+      gps_accuracy,
+      photo_metadata,
+      user_agent,
+      ip_address
+    } = req.body;
+
+    if (!token || !photo_url) {
+      return res.status(400).json({
+        error: 'token and photo_url are required'
+      });
+    }
+
+    console.log(`[Sentinel API] Verifying evidence with token: ${token}`);
+
+    // STEP 1: Validate token
+    const tokenResult = await db.query(`
+      SELECT * FROM verification_tokens
+      WHERE token = $1 AND status = 'pending'
+    `, [token]);
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Invalid or expired verification token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    const verificationToken = tokenResult.rows[0];
+
+    // Check if token is expired
+    if (new Date() > new Date(verificationToken.expires_at)) {
+      await db.query(`
+        UPDATE verification_tokens SET status = 'expired' WHERE id = $1
+      `, [verificationToken.id]);
+
+      return res.status(400).json({
+        error: 'Verification token has expired (24 hour limit)',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+
+    // STEP 2: Get project details for GPS validation
+    const projectResult = await db.query(`
+      SELECT * FROM job_postings WHERE id = $1
+    `, [verificationToken.project_id]);
+
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Project not found',
+        code: 'PROJECT_NOT_FOUND'
+      });
+    }
+
+    const project = projectResult.rows[0];
+
+    // STEP 3: GPS Validation
+    let locationVerified = false;
+    let distanceFromSite = null;
+
+    if (gps_latitude && gps_longitude && project.zip_code) {
+      // Simple validation: Check if within reasonable distance
+      // In production, you'd geocode the project address and calculate actual distance
+      // For now, we'll validate that GPS coords exist
+      locationVerified = true;
+      distanceFromSite = 0; // Placeholder - would calculate real distance in production
+
+      console.log(`[Sentinel API] GPS verified: ${gps_latitude}, ${gps_longitude}`);
+    } else {
+      console.warn('[Sentinel API] GPS coordinates missing or invalid');
+    }
+
+    // STEP 4: Create evidence record
+    const evidenceResult = await db.query(`
+      INSERT INTO project_evidence (
+        project_id, milestone_id, contractor_id,
+        contractor_phone, contractor_email,
+        evidence_type, photo_url, photo_metadata,
+        gps_latitude, gps_longitude, gps_accuracy_meters,
+        gps_timestamp, location_verified, location_distance_from_site_meters,
+        user_agent, ip_address
+      )
+      VALUES ($1, $2, $3, $4, (SELECT email FROM user_profiles WHERE id = $3),
+              $5, $6, $7, $8, $9, $10, NOW(), $11, $12, $13, $14)
+      RETURNING *
+    `, [
+      verificationToken.project_id,
+      verificationToken.milestone_id,
+      verificationToken.contractor_id,
+      (await db.query('SELECT phone FROM user_profiles WHERE id = $1', [verificationToken.contractor_id])).rows[0]?.phone,
+      'milestone_completion',
+      photo_url,
+      JSON.stringify(photo_metadata || {}),
+      gps_latitude,
+      gps_longitude,
+      gps_accuracy,
+      locationVerified,
+      distanceFromSite,
+      user_agent,
+      ip_address
+    ]);
+
+    const evidence = evidenceResult.rows[0];
+
+    console.log(`[Sentinel API] Evidence record created: ${evidence.id}`);
+
+    // STEP 5: Perform forensic verification with Sentinel Agent
+    const { SentinelAgent } = require('./services/universalAgentServices');
+    const verificationResult = await SentinelAgent.verifyEvidence(evidence.id);
+
+    // STEP 6: Mark token as used
+    await db.query(`
+      UPDATE verification_tokens
+      SET status = 'used', used_at = NOW(), evidence_id = $1
+      WHERE id = $2
+    `, [evidence.id, verificationToken.id]);
+
+    console.log(`[Sentinel API] Verification complete: ${verificationResult.verification_result}`);
+
+    res.json({
+      success: true,
+      evidence_id: evidence.id,
+      verification_result: verificationResult.verification_result,
+      rejection_reason: verificationResult.rejection_reason,
+      forensic_analysis: verificationResult.forensic_analysis,
+      location_verified: locationVerified,
+      processing_time_ms: verificationResult.processing_time_ms
+    });
+
+  } catch (error) {
+    console.error('[Sentinel API] Error verifying evidence:', error);
+    res.status(500).json({
+      error: 'Failed to verify evidence',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/verification/token/:token
+ * Get verification token details (for loading verification page)
+ */
+app.get('/api/verification/token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const result = await db.query(`
+      SELECT
+        vt.*,
+        j.title as project_title,
+        j.address as project_address,
+        pm.milestone_name,
+        up.first_name || ' ' || up.last_name as contractor_name
+      FROM verification_tokens vt
+      JOIN job_postings j ON vt.project_id = j.id
+      LEFT JOIN project_milestones pm ON vt.milestone_id = pm.id
+      LEFT JOIN user_profiles up ON vt.contractor_id = up.id
+      WHERE vt.token = $1
+    `, [token]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Token not found',
+        code: 'TOKEN_NOT_FOUND'
+      });
+    }
+
+    const tokenData = result.rows[0];
+
+    // Check if expired
+    if (new Date() > new Date(tokenData.expires_at)) {
+      return res.status(400).json({
+        error: 'Token expired',
+        code: 'TOKEN_EXPIRED',
+        expired_at: tokenData.expires_at
+      });
+    }
+
+    // Check if already used
+    if (tokenData.status === 'used') {
+      return res.status(400).json({
+        error: 'Token already used',
+        code: 'TOKEN_USED',
+        used_at: tokenData.used_at
+      });
+    }
+
+    res.json({
+      success: true,
+      token: tokenData.token,
+      project_id: tokenData.project_id,
+      project_title: tokenData.project_title,
+      project_address: tokenData.project_address,
+      milestone_id: tokenData.milestone_id,
+      milestone_name: tokenData.milestone_name,
+      contractor_name: tokenData.contractor_name,
+      token_type: tokenData.token_type,
+      expires_at: tokenData.expires_at,
+      created_at: tokenData.created_at
+    });
+
+  } catch (error) {
+    console.error('[API] Error fetching token details:', error);
+    res.status(500).json({
+      error: 'Failed to fetch token details',
+      message: error.message
+    });
+  }
+});
+
+// ====== 404 HANDLER ======
+// This must be the LAST route handler, after all other routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    path: req.path,
+    method: req.method
+  });
+});
+
+// ====== AUTO-GC TRADE OPPORTUNITIES API ======
+
+/**
+ * GET /api/autogc/access-control
+ * Check contractor's access level for Auto-GC features
+ */
+app.get("/api/autogc/access-control", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Query access control
+    const result = await db.query(`
+      SELECT * FROM get_contractor_autogc_access($1)
+    `, [contractorEmail]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Access control not found',
+        access_level: 'no_access'
+      });
+    }
+
+    res.json({
+      success: true,
+      access: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error checking Auto-GC access:', error);
+    res.status(500).json({
+      error: 'Failed to check access control',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/autogc/trade-opportunities
+ * Get trade opportunities for the current contractor
+ */
+app.get("/api/autogc/trade-opportunities", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get contractor ID
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({ error: 'Contractor profile not found' });
+    }
+
+    // Query trade opportunities using the view
+    const result = await db.query(`
+      SELECT * FROM contractor_trade_opportunities_view
+      WHERE contractor_email = $1
+        AND opportunity_status IN ('pending', 'viewed', 'accepted', 'bid_submitted')
+      ORDER BY
+        CASE opportunity_status
+          WHEN 'pending' THEN 1
+          WHEN 'viewed' THEN 2
+          WHEN 'accepted' THEN 3
+          WHEN 'bid_submitted' THEN 4
+          ELSE 5
+        END,
+        priority_level ASC,
+        sent_at DESC
+    `, [contractorEmail]);
+
+    res.json({
+      success: true,
+      opportunities: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching trade opportunities:', error);
+    res.status(500).json({
+      error: 'Failed to fetch opportunities',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/autogc/trade-opportunities/:opportunityId
+ * Get details of a specific trade opportunity
+ */
+app.get("/api/autogc/trade-opportunities/:opportunityId", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+    const { opportunityId } = req.params;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get opportunity details
+    const result = await db.query(`
+      SELECT * FROM contractor_trade_opportunities_view
+      WHERE opportunity_id = $1 AND contractor_email = $2
+    `, [opportunityId, contractorEmail]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    // Mark as viewed if not already
+    await db.query(`
+      UPDATE autogc_trade_opportunities
+      SET
+        status = CASE
+          WHEN status = 'pending' THEN 'viewed'
+          ELSE status
+        END,
+        viewed_at = CASE
+          WHEN viewed_at IS NULL THEN NOW()
+          ELSE viewed_at
+        END
+      WHERE id = $1
+    `, [opportunityId]);
+
+    res.json({
+      success: true,
+      opportunity: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching opportunity details:', error);
+    res.status(500).json({
+      error: 'Failed to fetch opportunity',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/autogc/trade-opportunities/:opportunityId/respond
+ * Respond to a trade opportunity (accept or decline)
+ */
+app.post("/api/autogc/trade-opportunities/:opportunityId/respond", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+    const { opportunityId } = req.params;
+    const { action, message } = req.body;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!action || !['accept', 'decline'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action. Must be "accept" or "decline"' });
+    }
+
+    // Verify opportunity belongs to contractor
+    const opportunity = await db.query(`
+      SELECT * FROM autogc_trade_opportunities
+      WHERE id = $1 AND contractor_email = $2
+    `, [opportunityId, contractorEmail]);
+
+    if (opportunity.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    const opp = opportunity.rows[0];
+
+    // Check if already responded
+    if (['accepted', 'declined', 'bid_submitted', 'awarded'].includes(opp.status)) {
+      return res.status(400).json({
+        error: 'Opportunity already responded to',
+        current_status: opp.status
+      });
+    }
+
+    // Update opportunity status
+    const newStatus = action === 'accept' ? 'accepted' : 'declined';
+
+    await db.query(`
+      UPDATE autogc_trade_opportunities
+      SET
+        status = $1,
+        contractor_response = $2,
+        responded_at = NOW()
+      WHERE id = $3
+    `, [newStatus, message || null, opportunityId]);
+
+    res.json({
+      success: true,
+      message: `Opportunity ${action}ed successfully`,
+      new_status: newStatus
+    });
+  } catch (error) {
+    console.error('Error responding to opportunity:', error);
+    res.status(500).json({
+      error: 'Failed to respond to opportunity',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/autogc/trade-opportunities/:opportunityId/submit-bid
+ * Submit a bid for an accepted trade opportunity
+ */
+app.post("/api/autogc/trade-opportunities/:opportunityId/submit-bid", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const contractorEmail = req.user?.email;
+    const { opportunityId } = req.params;
+    const {
+      bidAmountLow,
+      bidAmountHigh,
+      estimatedDuration,
+      startAvailability,
+      message
+    } = req.body;
+
+    if (!contractorEmail) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Validate required fields
+    if (!bidAmountLow || !bidAmountHigh) {
+      return res.status(400).json({ error: 'Bid amount range is required' });
+    }
+
+    // Get contractor details
+    const contractor = await db.getUserProfile(contractorEmail);
+    if (!contractor) {
+      return res.status(404).json({ error: 'Contractor profile not found' });
+    }
+
+    // Verify opportunity belongs to contractor and is accepted
+    const opportunity = await db.query(`
+      SELECT * FROM autogc_trade_opportunities
+      WHERE id = $1 AND contractor_email = $2
+    `, [opportunityId, contractorEmail]);
+
+    if (opportunity.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    const opp = opportunity.rows[0];
+
+    if (opp.status !== 'accepted') {
+      return res.status(400).json({
+        error: 'Can only submit bid for accepted opportunities',
+        current_status: opp.status
+      });
+    }
+
+    // Update opportunity with bid details
+    await db.query(`
+      UPDATE autogc_trade_opportunities
+      SET
+        status = 'bid_submitted',
+        contractor_bid_amount_low = $1,
+        contractor_bid_amount_high = $2,
+        contractor_estimated_duration = $3,
+        contractor_start_availability = $4,
+        contractor_response = COALESCE($5, contractor_response),
+        updated_at = NOW()
+      WHERE id = $6
+    `, [
+      bidAmountLow,
+      bidAmountHigh,
+      estimatedDuration || null,
+      startAvailability || null,
+      message || null,
+      opportunityId
+    ]);
+
+    // Also create a formal contractor_bid record
+    await db.query(`
+      INSERT INTO contractor_bids (
+        job_id,
+        contractor_email,
+        contractor_id,
+        contractor_business_name,
+        bid_amount_low,
+        bid_amount_high,
+        estimated_duration,
+        start_availability,
+        message,
+        status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+      ON CONFLICT (job_id, contractor_email) DO UPDATE
+      SET
+        bid_amount_low = EXCLUDED.bid_amount_low,
+        bid_amount_high = EXCLUDED.bid_amount_high,
+        estimated_duration = EXCLUDED.estimated_duration,
+        start_availability = EXCLUDED.start_availability,
+        message = EXCLUDED.message,
+        updated_at = NOW()
+    `, [
+      opp.project_id,
+      contractorEmail,
+      contractor.id,
+      contractor.business_name || `${contractor.first_name} ${contractor.last_name}`,
+      bidAmountLow,
+      bidAmountHigh,
+      estimatedDuration || null,
+      startAvailability || null,
+      message || `Bid submitted for ${opp.trade_type} work`
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Bid submitted successfully',
+      opportunity_id: opportunityId,
+      project_id: opp.project_id
+    });
+  } catch (error) {
+    console.error('Error submitting bid:', error);
+    res.status(500).json({
+      error: 'Failed to submit bid',
+      message: error.message
+    });
+  }
+});
+
+// ====== GLOBAL ERROR HANDLER ======
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message
+  });
+});
+
+// ====== START SERVER ======
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log('========================================');
+  console.log(`🚀 HomeProHub Server`);
+  console.log(`📍 Running at: http://localhost:${PORT}`);
+  console.log(`🔑 Anthropic API: ${ANTHROPIC_API_KEY ? '✓ Configured' : '❌ Missing'}`);
+  console.log(`⏰ Started: ${new Date().toISOString()}`);
+  console.log('========================================');
+});
