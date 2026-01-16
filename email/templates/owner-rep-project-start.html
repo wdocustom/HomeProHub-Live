@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Project is Starting - HomeProHub</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      padding: 40px 30px;
+      line-height: 1.6;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 20px;
+    }
+    .intro {
+      font-size: 16px;
+      color: #4b5563;
+      margin-bottom: 24px;
+    }
+    .congrats-box {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #6ee7b7;
+      text-align: center;
+    }
+    .congrats-box h3 {
+      color: #065f46;
+      margin: 0 0 12px 0;
+      font-size: 20px;
+    }
+    .congrats-box p {
+      color: #047857;
+      margin: 0;
+      font-size: 16px;
+    }
+    .critical-steps {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .critical-steps h3 {
+      color: #1f2937;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      margin: 20px 0;
+      padding: 16px;
+      background-color: white;
+      border-radius: 6px;
+      border-left: 4px solid #06b6d4;
+    }
+    .step-number {
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+    .step-content h4 {
+      margin: 0 0 8px 0;
+      color: #1f2937;
+      font-size: 16px;
+    }
+    .step-content p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .documentation-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .documentation-box h3 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .documentation-box p {
+      color: #78350f;
+      margin: 8px 0;
+    }
+    .documentation-box ul {
+      margin: 12px 0;
+      padding-left: 20px;
+      color: #78350f;
+    }
+    .documentation-box li {
+      margin: 6px 0;
+    }
+    .red-flags-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+    }
+    .red-flags-box h3 {
+      color: #991b1b;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .red-flags-box ul {
+      margin: 8px 0;
+      padding-left: 20px;
+      color: #991b1b;
+    }
+    .red-flags-box li {
+      margin: 8px 0;
+    }
+    .checkin-feature {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #93c5fd;
+    }
+    .checkin-feature h3 {
+      color: #1e40af;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .checkin-feature p {
+      color: #1e3a8a;
+      margin: 8px 0;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+      color: white !important;
+      padding: 16px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 12px 8px;
+      text-align: center;
+    }
+    .cta-button.secondary {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #06b6d4;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon">🚀</div>
+      <h1>Your Project is Starting!</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <p class="greeting">Hi {{homeownerName}},</p>
+
+      <p class="intro">
+        Congratulations on selecting a contractor for <strong>{{jobTitle}}</strong>! As your owner's representative, we want to help you start this project on the right foot. The first few days set the tone for the entire job.
+      </p>
+
+      <!-- Congrats -->
+      <div class="congrats-box">
+        <h3>🎉 You've Made a Great Choice</h3>
+        <p>You selected a licensed, insured, and bonded contractor. Now let's make sure the project goes smoothly from day one.</p>
+      </div>
+
+      <!-- Critical First Steps -->
+      <div class="critical-steps">
+        <h3>✅ Critical First Steps (Before Work Begins)</h3>
+
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Get Everything in Writing</h4>
+            <p>Make sure you have a signed contract that includes the scope of work, timeline, payment schedule, and materials list. No verbal agreements—everything should be documented.</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Verify Permits</h4>
+            <p>If your project requires permits, confirm they've been pulled before work starts. Working without required permits can cause serious problems later.</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Establish Communication Protocol</h4>
+            <p>Agree on how you'll communicate (text, phone, in-person) and how often. Daily quick updates work best for most projects.</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h4>Walkthrough Together</h4>
+            <p>Do a pre-project walkthrough with your contractor. Discuss where materials will be stored, bathroom access for crew, work hours, and cleanup expectations.</p>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <h4>Document Everything</h4>
+            <p>Take "before" photos of the entire work area. This protects both you and the contractor if any questions arise later.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documentation -->
+      <div class="documentation-box">
+        <h3>📸 Document Your Project Progress</h3>
+        <p>Take photos at each major milestone:</p>
+        <ul>
+          <li>Before work begins (baseline photos)</li>
+          <li>After demolition/prep work</li>
+          <li>Rough-in stages (plumbing, electrical, framing)</li>
+          <li>Before drywall or finish work covers anything</li>
+          <li>Daily progress (quick phone photos)</li>
+          <li>Final completion</li>
+        </ul>
+        <p><strong>Why this matters:</strong> Photos help resolve disputes, document quality, and give you a record of what's behind your walls.</p>
+      </div>
+
+      <!-- Red Flags -->
+      <div class="red-flags-box">
+        <h3>🚩 Early Red Flags to Watch For</h3>
+        <ul>
+          <li>Crew shows up late consistently or skips days without notice</li>
+          <li>Work begins before permits are approved</li>
+          <li>Different materials than agreed upon without discussion</li>
+          <li>Contractor avoids answering questions or gets defensive</li>
+          <li>Work quality looks sloppy or rushed</li>
+          <li>Unexpected "additional costs" in the first few days</li>
+        </ul>
+      </div>
+
+      <!-- Check-in Feature -->
+      <div class="checkin-feature">
+        <h3>🤖 Use Our Project Check-in Feature</h3>
+        <p>As your owner's representative, we've built a tool specifically for you: <strong>AI-powered project progress analysis</strong>.</p>
+        <p>Simply upload photos of your project and describe any concerns. Our AI expert will review the work and alert you to any red flags like:</p>
+        <ul style="margin: 12px 0; padding-left: 20px;">
+          <li>Work done out of sequence</li>
+          <li>Missing critical steps (waterproofing, proper flashing, etc.)</li>
+          <li>Poor workmanship or potential code violations</li>
+        </ul>
+        <p><strong>Use this tool anytime you're uncertain about the work being done.</strong></p>
+      </div>
+
+      <!-- CTA Buttons -->
+      <div class="cta-container">
+        <a href="{{checkinLink}}" class="cta-button">
+          📸 Upload Project Photos
+        </a>
+        <a href="{{messagesLink}}" class="cta-button secondary">
+          💬 Message Your Contractor
+        </a>
+      </div>
+
+      <p style="color: #6b7280; line-height: 1.6; margin-top: 30px;">
+        <strong>We're here throughout your entire project.</strong> If something doesn't look right, if you have questions about the work, or if you just want a second opinion—reach out. Reply to this email or contact us via text, phone, or video call. As your owner's representative, we're in your corner.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>HomeProHub</strong> - Your Owner's Representative</p>
+      <p>Here to protect your interests throughout the project</p>
+      <p style="margin-top: 20px;">
+        <a href="https://www.homeprohub.today">www.homeprohub.today</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

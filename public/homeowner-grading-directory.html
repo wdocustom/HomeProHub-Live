@@ -1,0 +1,520 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <title>HomeProHub – Homeowner Grading Directory</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/components/sanctuary-glass.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <script src="/scripts/unified-navigation.js"></script>
+  <style>
+    .hero {
+      max-width: 900px;
+      margin: 48px auto 24px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #111827;
+    }
+    .hero-subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .directory-list-container {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+    }
+    .job-card {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f3f4f6;
+      padding-bottom: 10px;
+    }
+    .job-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .job-status {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      background: #f0fdf4;
+      color: #16a34a;
+      font-weight: 600;
+      border: 1px solid #dcfce7;
+    }
+    .grade-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      margin-left: 10px;
+    }
+    .grade-a { background: #10b981; } 
+    .grade-b { background: #3b82f6; } 
+    .grade-c { background: #f59e0b; } 
+    .grade-d { background: #fb923c; } 
+    .grade-f { background: #ef4444; } 
+    .job-meta {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .job-meta strong {
+      color: #1f2937;
+    }
+    .job-details {
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .grade-A-color { color: #10b981; }
+    .grade-B-color { color: #3b82f6; }
+    .grade-C-color { color: #f59e0b; }
+    .grade-F-color { color: #ef4444; }
+    .star-rating { display: flex; gap: 8px; margin-top: 8px; }
+    .star { font-size: 32px; cursor: pointer; color: #d1d5db; transition: color 0.2s; }
+    .star.active { color: #fbbf24; }
+    .star:hover { color: #fbbf24; }
+  </style></head><body class="zone-d app-page"><header class="navbar">
+  <div class="nav-inner">
+    <div class="brand-area">
+      <div class="brand-logo">HH</div>
+      <div class="brand-name">HomeProHub</div>
+    </div>
+    <div class="nav-links">
+      <a href="contractor-dashboard.html">Dashboard</a>
+      <div class="profile-area">
+        <a href="user-profile.html" class="profile-link" id="profileLink">Profile</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div></header><main>
+  <section class="hero">
+    <h1 class="hero-title">Homeowner Grading Directory.</h1>
+    <p class="hero-subtitle">
+      View and filter active job leads. Homeowner Grades (A+ to F) reflect communication, clarity, and payment history to help you qualify leads faster.
+    </p>
+  </section>
+
+  <section class="directory-list-container">
+    <div class="card" style="margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 18px;">Filter Leads</h3>
+            <button class="btn-primary" onclick="showRatingModal()" style="padding: 8px 16px; font-size: 14px;">Rate a Homeowner</button>
+        </div>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <input type="text" class="input" id="searchBar" placeholder="Search by job title or description..." style="flex-grow: 1;">
+
+            <select id="gradeFilter" class="input" style="width: 150px;">
+                <option value="">Grade (All)</option>
+                <option value="A+">A+ / A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="F">D / F</option>
+            </select>
+
+            <select id="tradeFilter" class="input" style="width: 150px;">
+                <option value="">Trade (All)</option>
+                <option value="GC">General Contractor</option>
+                <option value="Plumber">Plumber</option>
+                <option value="Electrician">Electrician</option>
+                <option value="HVAC">HVAC</option>
+            </select>
+
+            <button class="btn-primary" id="applyFilters" style="padding: 8px 16px; font-size: 14px;">Apply Filters</button>
+        </div>
+    </div>
+
+    <div id="jobListings">
+        <p style="text-align: center; color: #6b7280;">Loading job leads...</p>
+    </div>
+
+    <div id="ratingModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 24px;">
+      <div style="background: white; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 style="margin: 0; font-size: 24px;">Rate Homeowner</h2>
+          <button onclick="closeRatingModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #9ca3af;">&times;</button>
+        </div>
+
+        <form id="ratingForm">
+          <div class="form-group">
+            <label>Homeowner Email or Phone</label>
+            <input id="homeownerContact" type="text" placeholder="Enter email or phone number" required />
+            <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">This helps us track ratings across addresses</p>
+          </div>
+
+          <div class="form-group">
+            <label>Project Address</label>
+            <input id="projectAddress" type="text" placeholder="123 Main St, City, State ZIP" required />
+          </div>
+
+          <div class="form-group">
+            <label>Communication Quality (1-5 stars)</label>
+            <div id="commStars" class="star-rating"></div>
+            <input type="hidden" id="commRating" required />
+          </div>
+
+          <div class="form-group">
+            <label>Decision Speed (1-5 stars)</label>
+            <div id="decisionStars" class="star-rating"></div>
+            <input type="hidden" id="decisionRating" required />
+          </div>
+
+          <div class="form-group">
+            <label>Payment Reliability (1-5 stars)</label>
+            <div id="paymentStars" class="star-rating"></div>
+            <input type="hidden" id="paymentRating" required />
+          </div>
+
+          <div class="form-group">
+            <label>Project Complexity</label>
+            <select id="projectComplexity" required>
+              <option value="">Select...</option>
+              <option value="simple">Simple/Straightforward</option>
+              <option value="moderate">Moderate</option>
+              <option value="complex">Complex/Challenging</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Additional Comments (Optional)</label>
+            <textarea id="ratingComments" rows="3" placeholder="Any notable experiences or red flags..."></textarea>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn-primary" id="submitRating">Submit Rating</button>
+            <button type="button" class="btn-secondary" onclick="closeRatingModal()">Cancel</button>
+          </div>
+          <div id="ratingStatus" style="margin-top: 12px; font-size: 14px;"></div>
+        </form>
+      </div>
+    </div>
+  </section></main><script>
+  // --- MOCK DATA ---
+  const MOCK_JOBS = [
+      { id: 1, title: "Full Kitchen Remodel & Load-Bearing Wall Removal", grade: "A+", trade: "GC", zip: "68105", status: "New Lead - 2 Bids", details: "Client has detailed architectural plans, budget is confirmed in the high range, and all fixture selections are finalized. Requires structural engineer and plumbing permit." },
+      { id: 2, title: "Basement Bathroom Addition (Rough-in Only)", grade: "C", trade: "Plumber", zip: "90210", status: "Needs Bids - 1 Bid", details: "Homeowner description is vague and budget is not finalized. They have requested 3 separate scope changes in pre-bid messaging." },
+      { id: 3, title: "Panel Upgrade to 200 Amp Service", grade: "B", trade: "Electrician", zip: "78701", status: "New Lead - 0 Bids", details: "Straightforward panel replacement, photos of existing setup provided. Clear requirements, homeowner is responsive." },
+      { id: 4, title: "Emergency Water Heater Replacement", grade: "A", trade: "Plumber", zip: "33602", status: "Urgent - 4 Bids", details: "Water heater burst, needs immediate replacement with similar model. Homeowner is ready to approve quote immediately." },
+      { id: 5, title: "HVAC System Tune-Up & Duct Cleaning", grade: "F", trade: "HVAC", zip: "01001", status: "Old Lead - 5 Bids", details: "Homeowner has a history of delaying payments and cancelling appointments last minute. Low budget expectations." }
+  ];
+
+  // --- UTILITY FUNCTIONS ---
+  function getGradeClass(grade) {
+      if (grade === 'A' || grade === 'A+') return 'grade-a';
+      if (grade === 'B') return 'grade-b';
+      if (grade === 'C') return 'grade-c';
+      return 'grade-f';
+  }
+
+  function renderJobCard(job) {
+      const gradeClass = getGradeClass(job.grade);
+      return `
+          <div class="job-card">
+              <div class="job-header">
+                  <h4 class="job-title">${job.title}</h4>
+                  <span class="job-status">${job.status}</span>
+              </div>
+              <div class="job-meta">
+                  Homeowner Grade: <span class="grade-tag ${gradeClass}">${job.grade}</span> | 
+                  <strong>Trade Needed:</strong> ${job.trade} | 
+                  <strong>Location:</strong> ${job.zip} | 
+                  <strong>Posted:</strong> ${job.id % 2 === 0 ? '1 day ago' : '3 days ago'}
+              </div>
+              <p class="job-details">${job.details}</p>
+              <a href="#" class="btn-primary" style="width: 150px; font-size: 14px; padding: 8px;">View & Bid</a>
+          </div>
+      `;
+  }
+
+  function filterJobs() {
+      const search = document.getElementById('searchBar').value.toLowerCase();
+      const gradeFilter = document.getElementById('gradeFilter').value;
+      const tradeFilter = document.getElementById('tradeFilter').value;
+      const jobListingsEl = document.getElementById('jobListings');
+
+      let filteredJobs = MOCK_JOBS.filter(job => {
+          // 1. Search Filter (Job title or details)
+          const matchesSearch = job.title.toLowerCase().includes(search) || job.details.toLowerCase().includes(search);
+
+          // 2. Grade Filter
+          let matchesGrade = true;
+          if (gradeFilter === 'A+') {
+              matchesGrade = job.grade === 'A' || job.grade === 'A+';
+          } else if (gradeFilter === 'F') {
+              matchesGrade = job.grade === 'D' || job.grade === 'F';
+          } else if (gradeFilter) {
+              matchesGrade = job.grade === gradeFilter;
+          }
+
+          // 3. Trade Filter
+          const matchesTrade = !tradeFilter || job.trade === tradeFilter;
+
+          return matchesSearch && matchesGrade && matchesTrade;
+      });
+
+      if (filteredJobs.length === 0) {
+          jobListingsEl.innerHTML = `<p style="text-align: center; color: #ef4444; margin-top: 30px; font-weight: 600;">No leads found matching your criteria. Try adjusting your filters.</p>`;
+      } else {
+          jobListingsEl.innerHTML = filteredJobs.map(renderJobCard).join('');
+      }
+  }
+
+  // --- AUTH AND EVENT LISTENERS ---
+  /**
+   * Sanitize text for display (prevent XSS)
+   */
+  function sanitizeText(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  /**
+   * Check authentication using Supabase
+   */
+  async function checkAuth() {
+    try {
+      // Wait for authService to be ready
+      if (!window.authService || !window.authService.initialized) {
+        await new Promise((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 50;
+          const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.authService && window.authService.initialized) {
+              clearInterval(checkInterval);
+              resolve();
+            } else if (attempts >= maxAttempts) {
+              clearInterval(checkInterval);
+              reject(new Error('AuthService timeout'));
+            }
+          }, 100);
+        });
+      }
+
+      const user = await window.authService.getCurrentUser();
+      if (!user) {
+        window.location.href = "index.html";
+        return null;
+      }
+
+      const profile = await window.authService.getUserProfile();
+      if (!profile || profile.role !== 'contractor') {
+        window.location.href = "index.html";
+        return null;
+      }
+
+      return { user, profile };
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      window.location.href = "index.html";
+      return null;
+    }
+  }
+
+  /**
+   * Logout function
+   */
+  async function logout() {
+    try {
+      await window.authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    window.location.href = 'index.html';
+  }
+
+  // --- RATING MODAL FUNCTIONS ---
+  function showRatingModal() {
+    const modal = document.getElementById('ratingModal');
+    modal.style.display = 'flex';
+    initializeStarRatings();
+  }
+
+  function closeRatingModal() {
+    const modal = document.getElementById('ratingModal');
+    modal.style.display = 'none';
+    document.getElementById('ratingForm').reset();
+    document.getElementById('ratingStatus').textContent = '';
+  }
+
+  function initializeStarRatings() {
+    const ratings = [
+      { containerId: 'commStars', hiddenId: 'commRating' },
+      { containerId: 'decisionStars', hiddenId: 'decisionRating' },
+      { containerId: 'paymentStars', hiddenId: 'paymentRating' }
+    ];
+
+    ratings.forEach(rating => {
+      const container = document.getElementById(rating.containerId);
+      if (!container) return;
+
+      container.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const star = document.createElement('span');
+        star.className = 'star';
+        star.textContent = '★';
+        star.dataset.value = i;
+        star.addEventListener('click', function() {
+          const value = this.dataset.value;
+          document.getElementById(rating.hiddenId).value = value;
+
+          const stars = container.querySelectorAll('.star');
+          stars.forEach((s, idx) => {
+            if (idx < value) {
+              s.classList.add('active');
+            } else {
+              s.classList.remove('active');
+            }
+          });
+        });
+        container.appendChild(star);
+      }
+    });
+  }
+
+  /**
+   * Initialize page
+   */
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize unified navigation for Zone D
+    if (window.unifiedNavigation && typeof window.unifiedNavigation.init === 'function') {
+      window.window.SanctuaryNavigation.init('D');
+    }
+
+    const profileLinkEl = document.getElementById('profileLink');
+
+    // Check authentication
+    const authResult = await checkAuth();
+    if (!authResult) {
+      return; // checkAuth handles redirect
+    }
+
+    const { user, profile } = authResult;
+
+    // Set profile link (sanitized)
+    if (profileLinkEl) {
+      const displayName = profile.business_name || profile.first_name || user.email.split('@')[0];
+      const firstName = sanitizeText(displayName.split(' ')[0]);
+      profileLinkEl.textContent = firstName;
+    }
+
+    // Initial load and wire up filters
+    try {
+      filterJobs();
+
+      const applyFiltersBtn = document.getElementById('applyFilters');
+      const searchBar = document.getElementById('searchBar');
+
+      if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', filterJobs);
+      }
+
+      if (searchBar) {
+        searchBar.addEventListener('keyup', (e) => {
+          if (e.key === 'Enter') filterJobs();
+        });
+      }
+    } catch (error) {
+      // Error initializing filters
+      const jobListingsEl = document.getElementById('jobListings');
+      if (jobListingsEl) {
+        jobListingsEl.innerHTML = '<p style="text-align: center; color: #ef4444;">Error loading job listings. Please refresh the page.</p>';
+      }
+    }
+
+    // Handle rating form submission
+    const ratingForm = document.getElementById('ratingForm');
+    if (ratingForm) {
+      ratingForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submitRating');
+        const statusEl = document.getElementById('ratingStatus');
+
+        const ratingData = {
+          homeownerContact: document.getElementById('homeownerContact').value.trim(),
+          projectAddress: document.getElementById('projectAddress').value.trim(),
+          communication: document.getElementById('commRating').value,
+          decisionSpeed: document.getElementById('decisionRating').value,
+          paymentReliability: document.getElementById('paymentRating').value,
+          projectComplexity: document.getElementById('projectComplexity').value,
+          comments: document.getElementById('ratingComments').value.trim(),
+          contractorId: user.email,
+          timestamp: new Date().toISOString()
+        };
+
+        if (!ratingData.communication || !ratingData.decisionSpeed || !ratingData.paymentReliability) {
+          statusEl.textContent = 'Please provide all star ratings';
+          statusEl.style.color = '#ef4444';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        statusEl.textContent = 'Submitting your rating...';
+        statusEl.style.color = '#6b7280';
+
+        try {
+          // Store locally for now (in production, this would go to backend)
+          const existingRatings = JSON.parse(localStorage.getItem('homeprohub_homeowner_ratings') || '[]');
+          existingRatings.push(ratingData);
+          localStorage.setItem('homeprohub_homeowner_ratings', JSON.stringify(existingRatings));
+
+          // TODO: Send to backend API
+          // await fetch('/api/submit-homeowner-rating', {
+          //   method: 'POST',
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //     'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+          //   },
+          //   body: JSON.stringify(ratingData)
+          // });
+
+          statusEl.textContent = 'Rating submitted successfully! Thank you for helping the contractor community.';
+          statusEl.style.color = '#10b981';
+
+          setTimeout(() => {
+            closeRatingModal();
+          }, 2000);
+
+        } catch (err) {
+          statusEl.textContent = 'Error submitting rating. Please try again.';
+          statusEl.style.color = '#ef4444';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Rating';
+        }
+      });
+    }
+  });
+</script>
+<script src="/services/app-controller.js"></script>
+</body></html>

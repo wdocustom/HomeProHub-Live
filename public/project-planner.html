@@ -1,0 +1,292 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8" />
+  <meta name="sanctuary-zone" content="C">
+  <title>HomeScope AI – Project Planner</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .hero {
+      max-width: 900px;
+      margin: 48px auto 24px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .hero-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #111827;
+    }
+    .hero-subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #6b7280;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .planner-layout {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .small-hint {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    .answer-card {
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+    }
+  </style></head><body class="zone-c app-page">
+  <div id="nav-container"></div>
+<main>
+  <section class="hero">
+    <div class="hero-kicker">Project planning assistant</div>
+    <h1 class="hero-title">Plan Your Remodel Project.</h1>
+    <p class="hero-subtitle">
+      Describe your remodel idea (e.g., "Full kitchen renovation") and get a structured, multi-phase plan, required trades, rough timeline, and placeholder budget.
+    </p>
+  </section>
+
+  <section class="planner-layout">
+    <div class="card">
+      <label for="project" style="font-size:13px; color:#374151;">Project Description</label>
+      <textarea
+        id="project"
+        class="textarea"
+        placeholder="Example: We want to tear down the wall between the kitchen and dining room, add an island, and install new floors and cabinets throughout the first floor. Budget is mid-range."
+      ></textarea>
+
+      <label for="location" style="font-size:13px; color:#374151; margin-top:12px;">Job Location (City, State or ZIP)</label>
+      <input id="location" class="input" type="text" placeholder="e.g. 33602 or Tampa, FL" />
+
+      <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button id="planBtn" class="btn-primary">🏗️ Generate Project Plan</button>
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+    
+    <div id="answer" class="answer-box" style="display:none;"></div>
+  </section></main>
+<script>
+(function() {
+  'use strict';
+
+  // Standardized localStorage keys
+  const STORAGE_KEYS = {
+    USER_PROFILE: 'homeprohub_user',
+    USER_ROLE: 'homeprohub_user_role',
+    AUTH_TOKEN: 'homeprohub_auth_token',
+    USERNAME: 'homeprohub_username',
+    PROFILE_COMPLETE: 'homeprohub_profile_complete',
+    CONTRACTOR_PROFILE: 'homeprohub_contractor_profile',
+    HISTORY: 'homeprohub_history_v1'
+  };
+
+  // DOM Elements
+  const planBtn = document.getElementById('planBtn');
+  const projectInput = document.getElementById('project');
+  const locationInput = document.getElementById('location');
+  const statusText = document.getElementById('status');
+  const answerBox = document.getElementById('answer');
+  const profileLinkEl = document.getElementById('profileLink');
+
+  /**
+   * Sanitize text for display (prevent XSS)
+   */
+  function sanitizeText(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
+  /**
+   * Sanitize input to prevent injection
+   */
+  function sanitizeInput(input) {
+    if (typeof input !== 'string') return '';
+    return input.trim().replace(/[<>]/g, '');
+  }
+
+  /**
+   * Get user data from localStorage
+   */
+  function getUserData() {
+    try {
+      const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const rawProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+
+      if (!role || !authToken) {
+        return null;
+      }
+
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      return {
+        role: role,
+        name: profile.name || 'User',
+        email: profile.email || ''
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Clear all user data from localStorage
+   */
+  function clearAllData() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Silent fail
+      }
+    });
+  }
+
+  /**
+   * Logout function
+   */
+  window.logout = function() {
+    clearAllData();
+
+    try {
+      const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      if (authToken) {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    window.location.href = 'index.html';
+  };
+
+  /**
+   * Call backend to plan project
+   */
+  async function planProject(projectDescription, location) {
+    const authToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+
+    const response = await fetch('/plan-project', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        projectDescription: sanitizeInput(projectDescription),
+        location: sanitizeInput(location)
+      })
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Request failed';
+      try {
+        const data = await response.json();
+        errorMessage = data.error || errorMessage;
+      } catch (e) {
+        // Failed to parse error response
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.answer || 'No plan generated';
+  }
+
+  /**
+   * Handle plan button click
+   */
+  async function handlePlanClick() {
+    const projectDescription = projectInput.value.trim();
+    const location = locationInput.value.trim();
+
+    // Validation
+    if (!projectDescription) {
+      statusText.textContent = 'Please describe your project first.';
+      statusText.style.color = '#ef4444';
+      return;
+    }
+
+    if (projectDescription.length < 10) {
+      statusText.textContent = 'Please provide a more detailed project description (at least 10 characters).';
+      statusText.style.color = '#ef4444';
+      return;
+    }
+
+    // Set loading state
+    planBtn.disabled = true;
+    projectInput.disabled = true;
+    locationInput.disabled = true;
+    statusText.textContent = 'Generating plan...';
+    statusText.style.color = '#6b7280';
+    answerBox.textContent = '';
+    answerBox.style.display = 'none';
+
+    try {
+      const plan = await planProject(projectDescription, location);
+      answerBox.textContent = plan;
+      statusText.textContent = 'Plan ready.';
+      statusText.style.color = '#10b981';
+      answerBox.style.display = 'block';
+    } catch (err) {
+      statusText.textContent = 'Error: ' + (err.message || 'Failed to generate plan. Please try again.');
+      statusText.style.color = '#ef4444';
+    } finally {
+      planBtn.disabled = false;
+      projectInput.disabled = false;
+      locationInput.disabled = false;
+    }
+  }
+
+  /**
+   * Initialize the page (app-controller guarantees auth is ready)
+   */
+  window.addEventListener('app-ready', () => {
+    const user = window.currentUser;
+
+    // Check authentication and role
+    if (!user || (user.role !== 'homeowner' && user.role !== 'contractor')) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Add event listener
+    if (planBtn) {
+      planBtn.addEventListener('click', handlePlanClick);
+    }
+
+    // Add Enter key support for textarea
+    if (projectInput) {
+      projectInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          handlePlanClick();
+        }
+      });
+    }
+  });
+})();
+</script>
+<script src="/services/app-controller.js"></script>
+</body>
+</html>

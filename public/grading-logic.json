@@ -1,0 +1,57 @@
+{
+  "system_version": "1.2",
+  "contractor_grading_criteria": {
+    "description": "Criteria used to compute the Contractor Grade (A+ to F). Based on public records, platform activity, and homeowner feedback.",
+    "grade_weighting": {
+      "state_license_verification": 30,
+      "completed_projects_volume": 20,
+      "completion_on_time": 15,
+      "client_complaints": 15,
+      "average_response_time": 10,
+      "clarity_of_scope": 10,
+      "payment_disputes": 10
+    },
+    "score_ranges": {
+      "A+": "95-100",
+      "A": "90-94",
+      "B": "80-89",
+      "C": "70-79",
+      "D": "60-69",
+      "F": "0-59"
+    },
+    "data_points_required": [
+      "State/City License Verification (Includes proof of Bond/Insurance)",
+      "Completed Projects (Volume and Diversity)",
+      "Completion on Time (Adherence to contract timelines)",
+      "Number of client complaints (past 2 years)",
+      "Average response time on platform (for communication score)",
+      "Clarity of scope language in uploaded bids (AI assessed)",
+      "Historical data on payment disputes (low score on financial risk)"
+    ]
+  },
+  "homeowner_grading_criteria": {
+    "description": "Criteria used to compute the Homeowner Grade (A+ to F). Only visible to Contractors.",
+    "grade_weighting": {
+      "communication_clarity": 30,
+      "decision_making_speed": 20,
+      "financial_reliability": 25,
+      "scope_creep_frequency": 15,
+      "respect_for_contractor_time": 10
+    },
+    "score_ranges": {
+      "A+": "95-100",
+      "A": "90-94",
+      "B": "80-89",
+      "C": "70-79",
+      "D": "60-69",
+      "F": "0-59"
+    },
+    "data_points_required": [
+      "Response time to messages on platform",
+      "Number of requested changes after contract signing",
+      "Timeliness of payments (platform assessed)",
+      "Clarity of initial project description",
+      "Cancellations of scheduled meetings"
+    ]
+  }
+}

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
+  <title>Renovation Planner – HomeProHub</title>
+
+  <!-- Sanctuary Glass 2.0 Design System -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Supabase Auth (for optional login checks) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <!-- html2pdf.js for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    @keyframes fade-in-up {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fade-in-up 0.6s ease-out;
+    }
+
+    #photo-preview-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .photo-preview {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid #e5e7eb;
+    }
+
+    .photo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-center: center;
+      font-size: 14px;
+    }
+
+    /* Designer Note Card */
+    .designer-note-card {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: start;
+      gap: 16px;
+    }
+
+    .designer-note-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .designer-note-content {
+      flex: 1;
+    }
+
+    .designer-note-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1e40af;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .designer-note-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #1e3a8a;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body class="zone-a public-page">
+
+  <!-- TASK 1: THE "DREAM INPUT" HERO -->
+  <div class="relative bg-gradient-to-b from-blue-50/50 to-slate-50 pt-20 pb-16 px-4 text-center">
+
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-blue-100 shadow-sm mb-6">
+      <span class="text-xs font-bold text-blue-600 uppercase tracking-wide">Renovation Planner</span>
+    </div>
+
+    <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
+      What are we building?
+    </h1>
+    <p class="text-xl text-slate-500 max-w-2xl mx-auto mb-10">
+      Describe your vision. Our AI calculates materials, labor, and local permit costs instantly.
+    </p>
+
+    <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl ring-1 ring-slate-900/5 p-8 text-left">
+
+      <div class="mb-6">
+        <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Project Vision</label>
+        <textarea
+          id="project-vision"
+          rows="4"
+          class="w-full rounded-xl border-slate-200 bg-slate-50 p-4 text-slate-900 focus:ring-blue-500 placeholder:text-slate-400 font-medium resize-none text-lg"
+          placeholder="e.g. I want to finish my basement (approx 800 sq ft). Needs a wet bar, a half bath, and LVP flooring throughout..."
+        ></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div>
+          <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Finish Quality</label>
+          <select id="finish-level" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900 h-12">
+            <option value="economy">Economy (Budget-Friendly)</option>
+            <option value="mid-range" selected>Mid-Range (Standard)</option>
+            <option value="premium">Premium (High-End)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Zip Code</label>
+          <div class="relative">
+            <i class="fa-solid fa-location-dot absolute left-4 top-4 text-slate-400"></i>
+            <input type="text" id="zip-code" class="w-full rounded-xl border-slate-200 bg-slate-50 pl-10 p-3 font-semibold text-slate-900 h-12" placeholder="Local Pricing">
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-8">
+        <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Current Space (Optional)</label>
+        <div onclick="document.getElementById('hidden-file-input').click()" class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:bg-slate-50 transition-colors group">
+          <div class="h-12 w-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <p class="text-sm text-slate-500 font-bold">Upload photos of the room</p>
+        </div>
+        <input type="file" id="hidden-file-input" accept="image/*" multiple class="hidden">
+        <div id="photo-preview-container"></div>
+      </div>
+
+      <button onclick="generateRemodelEstimate()" id="generate-btn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.01] flex items-center justify-center gap-2 text-lg">
+        <i class="fa-solid fa-calculator"></i> Generate Estimate
+      </button>
+
+      <div id="loading-message" class="hidden text-center mt-6 text-slate-600 font-medium">
+        <i class="fa-solid fa-spinner fa-spin text-blue-600 text-2xl mb-2"></i>
+        <p>Calculating costs based on your specifications...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASK 2: THE "ESTIMATED RECEIPT" (RESULTS SECTION) -->
+  <div id="estimate-result" class="hidden max-w-4xl mx-auto px-4 pb-24 animate-fade-in-up">
+
+    <div class="bg-slate-900 rounded-3xl p-10 text-white shadow-2xl mb-8 relative overflow-hidden text-center">
+      <div class="absolute top-0 right-0 p-12 opacity-10"><i class="fa-solid fa-file-invoice-dollar text-9xl"></i></div>
+
+      <h2 class="text-xl font-bold text-blue-200 mb-2 uppercase tracking-widest">Estimated Market Value</h2>
+      <div class="flex justify-center items-baseline gap-4 mb-4">
+        <span class="text-5xl md:text-6xl font-black tracking-tight" id="total-low">$15,000</span>
+        <span class="text-3xl text-slate-500 font-light">-</span>
+        <span class="text-5xl md:text-6xl font-black tracking-tight" id="total-high">$22,000</span>
+      </div>
+      <p class="text-sm text-slate-400">*Based on labor & material rates in <span id="display-zip" class="text-white font-bold">68105</span></p>
+    </div>
+
+    <!-- Designer Note (if available) -->
+    <div id="designer-note-section" style="display: none;">
+      <div class="designer-note-card">
+        <span class="designer-note-icon">💡</span>
+        <div class="designer-note-content">
+          <div class="designer-note-label">Pro Tip</div>
+          <div class="designer-note-text" id="designer-note-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 mb-8">
+      <h3 class="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4 flex items-center gap-2">
+        <i class="fa-solid fa-list-check text-blue-500"></i> Scope Breakdown
+      </h3>
+
+      <div id="line-items-container" class="space-y-4"></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <button onclick="checkAuthAndAction('download')" class="bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-2xl py-4 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-3">
+        <i class="fa-solid fa-file-pdf text-red-500 text-xl"></i>
+        Download Official PDF
+      </button>
+
+      <button onclick="checkAuthAndAction('post')" class="bg-blue-600 text-white font-bold rounded-2xl py-4 shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-3">
+        <i class="fa-solid fa-hammer text-xl"></i>
+        Post Project for Bids
+      </button>
+    </div>
+
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-2xl p-6 text-center">
+      <p class="text-sm text-slate-700 font-medium">
+        <i class="fa-solid fa-info-circle text-blue-600 mr-2"></i>
+        This is a preliminary estimate. Final costs may vary based on site conditions, material availability, and contractor rates.
+      </p>
+    </div>
+  </div>
+
+  <!-- Sanctuary Glass 2.0 Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+  <script>
+
+    // Photo upload handling
+    let selectedPhotos = [];
+
+    document.getElementById('hidden-file-input').addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      const container = document.getElementById('photo-preview-container');
+
+      files.forEach((file, index) => {
+        if (selectedPhotos.length >= 5) {
+          alert('Maximum 5 photos allowed');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          selectedPhotos.push(event.target.result);
+
+          const preview = document.createElement('div');
+          preview.className = 'photo-preview';
+          preview.innerHTML = `
+            <img src="${event.target.result}" alt="Preview">
+            <button class="photo-remove" onclick="removePhoto(${selectedPhotos.length - 1})">×</button>
+          `;
+          container.appendChild(preview);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    window.removePhoto = function(index) {
+      selectedPhotos.splice(index, 1);
+      const container = document.getElementById('photo-preview-container');
+      container.innerHTML = '';
+
+      selectedPhotos.forEach((photo, i) => {
+        const preview = document.createElement('div');
+        preview.className = 'photo-preview';
+        preview.innerHTML = `
+          <img src="${photo}" alt="Preview">
+          <button class="photo-remove" onclick="removePhoto(${i})">×</button>
+        `;
+        container.appendChild(preview);
+      });
+    };
+
+    // TASK 3: THE BACKEND PROMPT (AI LOGIC)
+    window.generateRemodelEstimate = async function() {
+      const vision = document.getElementById('project-vision').value.trim();
+      const finishLevel = document.getElementById('finish-level').value;
+      const zipCode = document.getElementById('zip-code').value.trim();
+
+      if (!vision) {
+        alert('Please describe your project vision');
+        return;
+      }
+
+      if (!zipCode) {
+        alert('Please enter your zip code for accurate local pricing');
+        return;
+      }
+
+      // Show loading state
+      document.getElementById('generate-btn').disabled = true;
+      document.getElementById('loading-message').classList.remove('hidden');
+      document.getElementById('estimate-result').classList.add('hidden');
+
+      try {
+        // DON'T pass systemPrompt - let server use its default work_packages prompt
+        // The server has a comprehensive prompt with RAG data and work packages structure
+        const userPrompt = `Project Description: ${vision}\n\nFinish Quality: ${finishLevel}\nZip Code: ${zipCode}\n\nProvide a realistic cost estimate broken down by category. Include materials, labor, and permits if applicable.`;
+
+        // Call AI API (server will use its default system prompt)
+        const response = await fetch('/api/ai/estimate-remodel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            // systemPrompt removed - server will use its comprehensive default
+            userPrompt: userPrompt,
+            photos: selectedPhotos.length > 0 ? selectedPhotos : null,
+            metadata: {
+              finishLevel: finishLevel,
+              zipCode: zipCode
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate estimate');
+        }
+
+        const data = await response.json();
+
+        // Display results
+        displayEstimate(data, zipCode);
+
+      } catch (error) {
+        console.error('Error generating estimate:', error);
+        alert('Failed to generate estimate. Please try again or contact support.');
+      } finally {
+        document.getElementById('generate-btn').disabled = false;
+        document.getElementById('loading-message').classList.add('hidden');
+      }
+    };
+
+    function displayEstimate(data, zipCode) {
+      // Update totals
+      document.getElementById('total-low').textContent = '$' + data.low.toLocaleString();
+      document.getElementById('total-high').textContent = '$' + data.high.toLocaleString();
+      document.getElementById('display-zip').textContent = zipCode;
+
+      // Render work packages (grouped line items)
+      const container = document.getElementById('line-items-container');
+      container.innerHTML = '';
+
+      // Check for new work_packages structure
+      if (data.work_packages) {
+        data.work_packages.forEach(pkg => {
+          // A. Create Category Wrapper (e.g. "Flooring")
+          const wrapper = document.createElement('div');
+          wrapper.className = "mb-6 border-b border-slate-100 pb-2 last:border-0";
+
+          // B. Category Header
+          const header = document.createElement('h4');
+          header.className = "font-extrabold text-slate-900 uppercase tracking-wider text-sm mb-3 bg-slate-50 inline-block px-3 py-1 rounded-lg";
+          header.innerText = pkg.category;
+          wrapper.appendChild(header);
+
+          // C. Loop through Items (Material + Labor)
+          pkg.items.forEach(item => {
+            const isLabor = item.type === 'Labor';
+            // distinct colors for visual separation
+            const badgeClass = isLabor ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
+            const icon = isLabor ? '<i class="fa-solid fa-person-digging"></i>' : '<i class="fa-solid fa-box-open"></i>';
+
+            const row = document.createElement('div');
+            row.className = "flex justify-between items-start mb-2 pl-2";
+            row.innerHTML = `
+              <div class="flex items-start gap-3">
+                <span class="${badgeClass} text-[10px] font-bold px-2 py-1 rounded min-w-[85px] text-center flex items-center justify-center gap-1">
+                  ${icon} ${item.type}
+                </span>
+                <span class="text-sm text-slate-600 font-medium leading-tight pt-0.5">${item.description}</span>
+              </div>
+              <span class="text-sm font-bold text-slate-900 font-mono whitespace-nowrap ml-4">${item.cost || item.cost_range}</span>
+            `;
+            wrapper.appendChild(row);
+          });
+          container.appendChild(wrapper);
+        });
+      } else if (data.line_items) {
+        // LEGACY FORMAT: Fall back to old line_items rendering for backwards compatibility
+        data.line_items.forEach(item => {
+          const lineItem = document.createElement('div');
+          lineItem.className = 'flex justify-between items-start py-4 border-b border-slate-100 last:border-0';
+
+          let itemHTML = `
+            <div class="flex-1">
+              <div class="font-bold text-slate-900">${item.category}</div>
+              <div class="text-sm text-slate-500 mt-1">${item.description}</div>
+          `;
+
+          // Add local insight if available
+          if (item.local_insight && item.local_insight.message) {
+            itemHTML += `
+              <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+                <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+              </div>
+            `;
+          }
+
+          itemHTML += `
+            </div>
+            <div class="text-right ml-4">
+              <div class="font-bold text-slate-900">$${item.low.toLocaleString()} - $${item.high.toLocaleString()}</div>
+            </div>
+          `;
+
+          lineItem.innerHTML = itemHTML;
+          container.appendChild(lineItem);
+        });
+      }
+
+      // Add financial breakdown rows
+      const subtotalLow = data.subtotal_low || data.low || 0;
+      const subtotalHigh = data.subtotal_high || data.high || 0;
+      const overheadProfitLow = data.overhead_profit_low || 0;
+      const overheadProfitHigh = data.overhead_profit_high || 0;
+      const contingencyLow = data.contingency_low || 0;
+      const contingencyHigh = data.contingency_high || 0;
+
+      // Subtotal row
+      const subtotalRow = document.createElement('div');
+      subtotalRow.className = 'flex justify-between items-center py-4 border-t-2 border-slate-300 mt-2';
+      subtotalRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-bold text-slate-900">Subtotal</div>
+          <div class="text-xs text-slate-500 mt-1">Materials + Labor + Permits</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-bold text-slate-900">$${subtotalLow.toLocaleString()} - $${subtotalHigh.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(subtotalRow);
+
+      // Overhead & Profit row
+      const overheadRow = document.createElement('div');
+      overheadRow.className = 'flex justify-between items-center py-4 border-b border-slate-100';
+      overheadRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-semibold text-slate-700">Overhead & Profit (${data.overhead_profit_percent || 20}%)</div>
+          <div class="text-xs text-slate-500 mt-1">Business operations & margin</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-semibold text-slate-700">$${overheadProfitLow.toLocaleString()} - $${overheadProfitHigh.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(overheadRow);
+
+      // Contingency row
+      const contingencyRow = document.createElement('div');
+      contingencyRow.className = 'flex justify-between items-center py-4 border-b border-slate-100';
+      contingencyRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-semibold text-slate-700">Contingency (${data.contingency_percent || 10}%)</div>
+          <div class="text-xs text-slate-500 mt-1">Unexpected costs & changes</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-semibold text-slate-700">$${contingencyLow.toLocaleString()} - $${contingencyHigh.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(contingencyRow);
+
+      // Total row
+      const totalRow = document.createElement('div');
+      totalRow.className = 'flex justify-between items-center py-4 bg-blue-50 rounded-xl px-4 mt-2';
+      totalRow.innerHTML = `
+        <div class="flex-1">
+          <div class="font-black text-slate-900 text-lg">TOTAL PROJECT COST</div>
+        </div>
+        <div class="text-right ml-4">
+          <div class="font-black text-blue-600 text-lg">$${data.low.toLocaleString()} - $${data.high.toLocaleString()}</div>
+        </div>
+      `;
+      container.appendChild(totalRow);
+
+      // Display designer note if available
+      if (data.designer_note && typeof data.designer_note === 'string' && data.designer_note.trim().length > 0) {
+        document.getElementById('designer-note-text').textContent = data.designer_note;
+        document.getElementById('designer-note-section').style.display = 'block';
+      } else {
+        document.getElementById('designer-note-section').style.display = 'none';
+      }
+
+      // Store estimate data for later use
+      window.currentEstimate = {
+        vision: document.getElementById('project-vision').value,
+        finishLevel: document.getElementById('finish-level').value,
+        zipCode: zipCode,
+        photos: selectedPhotos,
+        estimate: data
+      };
+
+      // Show results, scroll to them
+      document.getElementById('estimate-result').classList.remove('hidden');
+      document.getElementById('estimate-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Auth check for download/post actions
+    window.checkAuthAndAction = function(action) {
+      // 1. Scrape current estimate data
+      const draft = {
+        title: "My Renovation Project",
+        description: document.getElementById('project-vision').value,
+        budget_range: `${document.getElementById('total-low').innerText} - ${document.getElementById('total-high').innerText}`,
+        zip: document.getElementById('zip-code').value,
+        status: 'draft'
+      };
+
+      // 2. SAVE (Critical Step)
+      localStorage.setItem('pending_project_estimate', JSON.stringify(draft));
+
+      // 3. Redirect
+      if (action === 'post') {
+        window.location.href = '/post-project.html';
+      } else if (action === 'download') {
+        window.generatePDF();
+      }
+    };
+
+    window.generatePDF = function() {
+      const resultCard = document.getElementById('estimate-result');
+      if (resultCard.classList.contains('hidden')) return alert("Please generate an estimate first.");
+
+      // 1. Copy Data to Hidden Template
+      document.getElementById('pdf-low').innerText = document.getElementById('total-low').innerText;
+      document.getElementById('pdf-high').innerText = document.getElementById('total-high').innerText;
+      document.getElementById('pdf-zip').innerText = document.getElementById('display-zip').innerText;
+
+      // Clone the clean list we generated in Task 1
+      document.getElementById('pdf-lines').innerHTML = document.getElementById('line-items-container').innerHTML;
+
+      // 2. Feedback
+      const btn = document.querySelector('button[onclick*="generatePDF"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+
+      // 3. Print the Hidden Div
+      const element = document.getElementById('pdf-invoice-template');
+      html2pdf().set({
+        margin: 0.5,
+        filename: 'HomeProHub_Estimate.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      }).from(element).save().then(() => {
+        btn.innerHTML = originalText;
+      });
+    }
+
+    // On page load, check if returning from signup
+    window.addEventListener('load', async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const returning = urlParams.get('returning');
+
+      if (returning === 'true') {
+        const pendingEstimate = localStorage.getItem('pending_estimate');
+        if (pendingEstimate) {
+          const estimate = JSON.parse(pendingEstimate);
+
+          // Repopulate form
+          document.getElementById('project-vision').value = estimate.vision;
+          document.getElementById('finish-level').value = estimate.finishLevel;
+          document.getElementById('zip-code').value = estimate.zipCode;
+
+          // Display estimate
+          displayEstimate(estimate.estimate, estimate.zipCode);
+
+          // Clear pending
+          localStorage.removeItem('pending_estimate');
+        }
+      }
+    });
+  </script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
+
+  <!-- Hidden PDF Template (Off-Screen for html2pdf) -->
+  <div id="pdf-invoice-template" style="position: fixed; top: 0; left: -9999px; width: 800px; background: white; color: black; font-family: sans-serif; padding: 40px; z-index: -100;">
+    <div style="border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
+      <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Renovation Estimate</h1>
+      <p style="margin: 5px 0 0; color: #666;">Generated by HomeProHub</p>
+    </div>
+    <div style="background: #f4f4f4; padding: 20px; margin-bottom: 30px; border-radius: 4px;">
+      <h2 style="margin: 0; font-size: 32px; font-weight: bold;">
+        <span id="pdf-low"></span> - <span id="pdf-high"></span>
+      </h2>
+      <p style="margin: 5px 0 0;">Location: <span id="pdf-zip"></span></p>
+    </div>
+    <div id="pdf-lines" style="line-height: 1.6;"></div>
+    <div style="margin-top: 50px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 10px;">
+      Preliminary estimate. Actual costs may vary.
+    </div>
+  </div>
+
+</body>
+</html>

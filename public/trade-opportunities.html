@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="D">
+  <title>Trade Opportunities – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+  <style>
+    .opportunities-container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
+    .page-header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 40px 24px; border-radius: 16px; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3); }
+    .opportunity-card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s; border-left: 4px solid #2563eb; }
+    .opportunity-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); transform: translateY(-2px); }
+    .opportunity-card.pending { border-left-color: #f59e0b; }
+    .opportunity-card.viewed { border-left-color: #3b82f6; }
+    .opportunity-card.accepted { border-left-color: #10b981; }
+    .opportunity-card.bid_submitted { border-left-color: #8b5cf6; }
+
+    .badge { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+    .badge.viewed { background: #dbeafe; color: #1e40af; }
+    .badge.accepted { background: #d1fae5; color: #065f46; }
+    .badge.bid_submitted { background: #ede9fe; color: #5b21b6; }
+    .badge.expired { background: #fee2e2; color: #991b1b; }
+
+    .priority-indicator { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; }
+    .priority-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .priority-dot.high { background: #ef4444; }
+    .priority-dot.medium { background: #f59e0b; }
+    .priority-dot.low { background: #10b981; }
+
+    .opportunity-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px; }
+    .detail-item { display: flex; align-items: start; gap: 8px; }
+    .detail-icon { color: #6b7280; font-size: 18px; margin-top: 2px; }
+
+    .action-buttons { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; font-size: 14px; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-secondary { background: #f3f4f6; color: #1f2937; border: 1px solid #d1d5db; }
+    .btn-secondary:hover { background: #e5e7eb; }
+
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-state-icon { font-size: 64px; color: #d1d5db; margin-bottom: 16px; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 9999; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: white; padding: 32px; border-radius: 16px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+
+    .filter-bar { background: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .filter-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #e5e7eb; background: white; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; }
+    .filter-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+  </style>
+</head>
+<body class="zone-d app-page">
+  <!-- Navigation component will be injected here by unified-navigation.js -->
+
+  <div class="opportunities-container">
+    <div class="page-header">
+      <h1 style="margin: 0 0 12px 0; font-size: 32px; display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-briefcase"></i>
+        Trade Opportunities
+      </h1>
+      <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        View job opportunities from the Auto-GC platform matched to your trade
+      </p>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <span style="font-weight: 600; color: #6b7280;">Filter:</span>
+      <button class="filter-btn active" onclick="filterOpportunities('all')">All</button>
+      <button class="filter-btn" onclick="filterOpportunities('pending')">New</button>
+      <button class="filter-btn" onclick="filterOpportunities('viewed')">Viewed</button>
+      <button class="filter-btn" onclick="filterOpportunities('accepted')">Accepted</button>
+      <button class="filter-btn" onclick="filterOpportunities('bid_submitted')">Bid Submitted</button>
+    </div>
+
+    <!-- Opportunities List -->
+    <div id="opportunitiesList">
+      <!-- Loading state -->
+      <div id="loadingState" style="text-align: center; padding: 40px;">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size: 48px; color: #2563eb;"></i>
+        <p style="margin-top: 16px; color: #6b7280;">Loading opportunities...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Respond Modal -->
+  <div id="respondModal" class="modal-overlay">
+    <div class="modal-content">
+      <h2 style="margin: 0 0 8px 0;">Respond to Opportunity</h2>
+      <p style="color: #6b7280; margin-bottom: 24px;">Let us know if you're interested in this opportunity</p>
+
+      <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+        <div style="font-weight: 600; margin-bottom: 8px;" id="respondProjectTitle"></div>
+        <div style="color: #6b7280; font-size: 14px;" id="respondScopeOfWork"></div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 8px;">Your Response (Optional)</label>
+        <textarea
+          id="responseMessage"
+          rows="4"
+          placeholder="Add any questions or comments..."
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; resize: vertical;"
+        ></textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="closeRespondModal()">Cancel</button>
+        <button class="btn btn-danger" style="flex: 1;" onclick="submitResponse('decline')">Decline</button>
+        <button class="btn btn-success" style="flex: 1;" onclick="submitResponse('accept')">Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bid Submission Modal -->
+  <div id="bidModal" class="modal-overlay">
+    <div class="modal-content">
+      <h2 style="margin: 0 0 8px 0;">Submit Your Bid</h2>
+      <p style="color: #6b7280; margin-bottom: 24px;">Provide your pricing and timeline for this work</p>
+
+      <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+        <div style="font-weight: 600; margin-bottom: 8px;" id="bidProjectTitle"></div>
+        <div style="color: #6b7280; font-size: 14px;" id="bidScopeOfWork"></div>
+      </div>
+
+      <form id="bidForm">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Low Estimate ($)</label>
+            <input
+              type="number"
+              id="bidAmountLow"
+              required
+              min="0"
+              step="100"
+              placeholder="5000"
+              style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+            />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">High Estimate ($)</label>
+            <input
+              type="number"
+              id="bidAmountHigh"
+              required
+              min="0"
+              step="100"
+              placeholder="7000"
+              style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+            />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 8px;">Estimated Duration</label>
+          <input
+            type="text"
+            id="estimatedDuration"
+            placeholder="e.g., 2-3 weeks"
+            style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+          />
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 8px;">Start Availability</label>
+          <input
+            type="text"
+            id="startAvailability"
+            placeholder="e.g., Available immediately"
+            style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+          />
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 8px;">Additional Message</label>
+          <textarea
+            id="bidMessage"
+            rows="4"
+            placeholder="Include any relevant details about your approach, materials, or warranty..."
+            style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; resize: vertical;"
+          ></textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeBidModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Bid</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentOpportunities = [];
+    let currentFilter = 'all';
+    let selectedOpportunityId = null;
+
+    async function checkAuth() {
+      try {
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = "/index.html";
+          return false;
+        }
+
+        const userProfile = await window.authService.getUserProfile();
+        if (!userProfile || userProfile.role !== 'contractor') {
+          window.location.href = "/index.html";
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = "/index.html";
+        return false;
+      }
+    }
+
+    async function loadOpportunities() {
+      try {
+        const response = await window.authService.authenticatedFetch('/api/autogc/trade-opportunities');
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to load opportunities');
+        }
+
+        currentOpportunities = data.opportunities || [];
+        renderOpportunities();
+      } catch (error) {
+        console.error('Error loading opportunities:', error);
+        document.getElementById('opportunitiesList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">❌</div>
+            <h3 style="margin: 0 0 8px 0;">Error Loading Opportunities</h3>
+            <p style="color: #6b7280;">${error.message}</p>
+            <button class="btn btn-primary" onclick="loadOpportunities()" style="margin-top: 16px;">
+              <i class="fa-solid fa-refresh"></i> Try Again
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    function filterOpportunities(filter) {
+      currentFilter = filter;
+
+      // Update filter buttons
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      renderOpportunities();
+    }
+
+    function renderOpportunities() {
+      const container = document.getElementById('opportunitiesList');
+
+      // Filter opportunities
+      let filtered = currentOpportunities;
+      if (currentFilter !== 'all') {
+        filtered = currentOpportunities.filter(opp => opp.opportunity_status === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <h3 style="margin: 0 0 8px 0;">No Opportunities Found</h3>
+            <p style="color: #6b7280;">
+              ${currentFilter === 'all' ?
+                'Check back later for new opportunities from the Auto-GC platform.' :
+                `No opportunities with status "${currentFilter}".`
+              }
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(opp => {
+        const projectDetails = typeof opp.project_details === 'string' ?
+          JSON.parse(opp.project_details) : opp.project_details;
+
+        const priorityClass = opp.priority_level <= 3 ? 'high' : opp.priority_level <= 6 ? 'medium' : 'low';
+        const priorityText = opp.priority_level <= 3 ? 'High Priority' : opp.priority_level <= 6 ? 'Medium Priority' : 'Low Priority';
+
+        const statusText = {
+          'pending': 'New',
+          'viewed': 'Viewed',
+          'accepted': 'Accepted',
+          'bid_submitted': 'Bid Submitted'
+        }[opp.opportunity_status] || opp.opportunity_status;
+
+        return `
+          <div class="opportunity-card ${opp.opportunity_status}" data-status="${opp.opportunity_status}">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+              <div>
+                <h3 style="margin: 0 0 8px 0; font-size: 20px;">${projectDetails.project_title || 'Untitled Project'}</h3>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                  <span class="badge ${opp.opportunity_status}">${statusText}</span>
+                  <span class="priority-indicator">
+                    <span class="priority-dot ${priorityClass}"></span>
+                    ${priorityText}
+                  </span>
+                  <span style="color: #6b7280; font-size: 14px;">
+                    <i class="fa-solid fa-wrench"></i> ${opp.trade_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+              <div style="font-weight: 600; margin-bottom: 8px;">Scope of Work:</div>
+              <div style="color: #374151;">${opp.scope_of_work}</div>
+            </div>
+
+            <div class="opportunity-details">
+              <div class="detail-item">
+                <i class="fa-solid fa-location-dot detail-icon"></i>
+                <div>
+                  <div style="font-size: 13px; color: #6b7280; margin-bottom: 2px;">Location</div>
+                  <div style="font-weight: 600;">${projectDetails.address || 'Available upon acceptance'}</div>
+                </div>
+              </div>
+
+              ${projectDetails.milestone_name ? `
+              <div class="detail-item">
+                <i class="fa-solid fa-flag-checkered detail-icon"></i>
+                <div>
+                  <div style="font-size: 13px; color: #6b7280; margin-bottom: 2px;">Milestone</div>
+                  <div style="font-weight: 600;">${projectDetails.milestone_name}</div>
+                </div>
+              </div>
+              ` : ''}
+
+              ${projectDetails.estimated_start ? `
+              <div class="detail-item">
+                <i class="fa-solid fa-calendar-days detail-icon"></i>
+                <div>
+                  <div style="font-size: 13px; color: #6b7280; margin-bottom: 2px;">Est. Start</div>
+                  <div style="font-weight: 600;">${new Date(projectDetails.estimated_start).toLocaleDateString()}</div>
+                </div>
+              </div>
+              ` : ''}
+
+              <div class="detail-item">
+                <i class="fa-solid fa-clock detail-icon"></i>
+                <div>
+                  <div style="font-size: 13px; color: #6b7280; margin-bottom: 2px;">Sent</div>
+                  <div style="font-weight: 600;">${new Date(opp.sent_at).toLocaleDateString()}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="action-buttons">
+              ${opp.opportunity_status === 'pending' || opp.opportunity_status === 'viewed' ? `
+                <button class="btn btn-success" onclick="openRespondModal('${opp.opportunity_id}')">
+                  <i class="fa-solid fa-check"></i> Respond
+                </button>
+              ` : ''}
+
+              ${opp.opportunity_status === 'accepted' ? `
+                <button class="btn btn-primary" onclick="openBidModal('${opp.opportunity_id}')">
+                  <i class="fa-solid fa-file-invoice-dollar"></i> Submit Bid
+                </button>
+              ` : ''}
+
+              ${opp.opportunity_status === 'bid_submitted' ? `
+                <div style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #ede9fe; border-radius: 8px;">
+                  <i class="fa-solid fa-circle-check" style="color: #8b5cf6; font-size: 20px;"></i>
+                  <span style="font-weight: 600; color: #5b21b6;">Bid submitted! Waiting for response...</span>
+                </div>
+              ` : ''}
+
+              <button class="btn btn-secondary" onclick="viewOpportunityDetails('${opp.opportunity_id}')">
+                <i class="fa-solid fa-eye"></i> View Details
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openRespondModal(opportunityId) {
+      selectedOpportunityId = opportunityId;
+      const opp = currentOpportunities.find(o => o.opportunity_id === opportunityId);
+
+      if (!opp) return;
+
+      const projectDetails = typeof opp.project_details === 'string' ?
+        JSON.parse(opp.project_details) : opp.project_details;
+
+      document.getElementById('respondProjectTitle').textContent = projectDetails.project_title || 'Untitled Project';
+      document.getElementById('respondScopeOfWork').textContent = opp.scope_of_work;
+      document.getElementById('responseMessage').value = '';
+
+      document.getElementById('respondModal').classList.add('active');
+    }
+
+    function closeRespondModal() {
+      document.getElementById('respondModal').classList.remove('active');
+      selectedOpportunityId = null;
+    }
+
+    async function submitResponse(action) {
+      if (!selectedOpportunityId) return;
+
+      const message = document.getElementById('responseMessage').value.trim();
+
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/autogc/trade-opportunities/${selectedOpportunityId}/respond`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ action, message })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `Failed to ${action} opportunity`);
+        }
+
+        // Close modal and reload opportunities
+        closeRespondModal();
+        await loadOpportunities();
+
+        alert(action === 'accept' ?
+          'Opportunity accepted! You can now submit your bid.' :
+          'Opportunity declined. Thank you for your response.'
+        );
+      } catch (error) {
+        console.error('Error responding to opportunity:', error);
+        alert('Failed to submit response: ' + error.message);
+      }
+    }
+
+    function openBidModal(opportunityId) {
+      selectedOpportunityId = opportunityId;
+      const opp = currentOpportunities.find(o => o.opportunity_id === opportunityId);
+
+      if (!opp) return;
+
+      const projectDetails = typeof opp.project_details === 'string' ?
+        JSON.parse(opp.project_details) : opp.project_details;
+
+      document.getElementById('bidProjectTitle').textContent = projectDetails.project_title || 'Untitled Project';
+      document.getElementById('bidScopeOfWork').textContent = opp.scope_of_work;
+
+      // Clear form
+      document.getElementById('bidForm').reset();
+
+      document.getElementById('bidModal').classList.add('active');
+    }
+
+    function closeBidModal() {
+      document.getElementById('bidModal').classList.remove('active');
+      selectedOpportunityId = null;
+    }
+
+    document.getElementById('bidForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!selectedOpportunityId) return;
+
+      const bidData = {
+        bidAmountLow: parseInt(document.getElementById('bidAmountLow').value),
+        bidAmountHigh: parseInt(document.getElementById('bidAmountHigh').value),
+        estimatedDuration: document.getElementById('estimatedDuration').value.trim(),
+        startAvailability: document.getElementById('startAvailability').value.trim(),
+        message: document.getElementById('bidMessage').value.trim()
+      };
+
+      if (bidData.bidAmountLow > bidData.bidAmountHigh) {
+        alert('Low estimate cannot be higher than high estimate');
+        return;
+      }
+
+      try {
+        const response = await window.authService.authenticatedFetch(
+          `/api/autogc/trade-opportunities/${selectedOpportunityId}/submit-bid`,
+          {
+            method: 'POST',
+            body: JSON.stringify(bidData)
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to submit bid');
+        }
+
+        // Close modal and reload opportunities
+        closeBidModal();
+        await loadOpportunities();
+
+        alert('Bid submitted successfully! The project manager will review your proposal.');
+      } catch (error) {
+        console.error('Error submitting bid:', error);
+        alert('Failed to submit bid: ' + error.message);
+      }
+    });
+
+    function viewOpportunityDetails(opportunityId) {
+      // TODO: Implement detailed view modal with blueprints, requirements, etc.
+      alert('Detailed view coming soon! Opportunity ID: ' + opportunityId);
+    }
+
+    // Initialize page
+    checkAuth().then(isAuthenticated => {
+      if (isAuthenticated) {
+        loadOpportunities();
+      }
+    });
+  </script>
+
+  <!-- Unified Navigation Component -->
+  <script src="/components/unified-navigation.js"></script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
+</body>
+</html>

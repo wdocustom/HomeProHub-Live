@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analysis Complete – HomeProHub</title>
+
+  <!-- Sanctuary Glass 2.0 Design System -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #f8fafc; /* bg-slate-50 */
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .sanctuary-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-bottom: 100px;
+    }
+
+    /* ============================================
+       GLOBAL CARD STYLE - "Soft Lift"
+       ============================================ */
+    .soft-lift-card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+      border: 1px solid #f1f5f9; /* border-slate-100 */
+      padding: 32px;
+      margin-bottom: 24px;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ============================================
+       TASK 1: RISK HERO - FLOATING STATUS CARD
+       ============================================ */
+    .risk-hero {
+      position: relative;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
+      padding: 48px 40px;
+      text-align: center;
+      margin-bottom: 32px;
+      overflow: hidden;
+      animation: slideDown 0.5s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .risk-hero.critical {
+      border-top: 8px solid #ef4444; /* red-500 */
+    }
+
+    .risk-hero.medium {
+      border-top: 8px solid #f59e0b; /* amber-500 */
+    }
+
+    .risk-hero.low {
+      border-top: 8px solid #10b981; /* green-500 */
+    }
+
+    .risk-hero-watermark {
+      position: absolute;
+      top: 0;
+      right: 0;
+      padding: 40px;
+      font-size: 144px;
+      opacity: 0.05;
+      pointer-events: none;
+    }
+
+    .severity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 20px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+    }
+
+    .severity-badge.critical {
+      background: #fef2f2; /* red-50 */
+      color: #b91c1c; /* red-700 */
+    }
+
+    .severity-badge.medium {
+      background: #fffbeb; /* amber-50 */
+      color: #b45309; /* amber-700 */
+    }
+
+    .severity-badge.low {
+      background: #f0fdf4; /* green-50 */
+      color: #15803d; /* green-700 */
+    }
+
+    .pulse-dot {
+      position: relative;
+      display: flex;
+      height: 12px;
+      width: 12px;
+    }
+
+    .pulse-dot-ping {
+      position: absolute;
+      display: inline-flex;
+      height: 100%;
+      width: 100%;
+      border-radius: 9999px;
+      opacity: 0.75;
+      animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    .pulse-dot-ping.critical {
+      background: #f87171; /* red-400 */
+    }
+
+    .pulse-dot-ping.medium {
+      background: #fbbf24; /* amber-400 */
+    }
+
+    .pulse-dot-ping.low {
+      background: #34d399; /* green-400 */
+    }
+
+    @keyframes ping {
+      75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+
+    .pulse-dot-core {
+      position: relative;
+      display: inline-flex;
+      border-radius: 9999px;
+      height: 12px;
+      width: 12px;
+    }
+
+    .pulse-dot-core.critical {
+      background: #ef4444; /* red-500 */
+    }
+
+    .pulse-dot-core.medium {
+      background: #f59e0b; /* amber-500 */
+    }
+
+    .pulse-dot-core.low {
+      background: #10b981; /* green-500 */
+    }
+
+    .risk-title {
+      font-size: 40px;
+      font-weight: 900;
+      color: #0f172a; /* slate-900 */
+      letter-spacing: -0.025em;
+      margin: 0 0 16px 0;
+    }
+
+    .risk-subtitle {
+      font-size: 18px;
+      color: #64748b; /* slate-500 */
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       TASK 4: ACTION CHECKLIST - INTERACTIVE
+       ============================================ */
+    .card-header {
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .card-subtitle {
+      font-size: 14px;
+      color: #64748b;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 18px 20px;
+      background: white;
+      border: 2px solid #f1f5f9;
+      border-radius: 12px;
+      transition: all 0.2s;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .action-item:hover {
+      border-color: #cbd5e1;
+      transform: translateX(4px);
+    }
+
+    .action-item.checked {
+      background: #f0fdf4;
+      border-color: #86efac;
+      opacity: 0.7;
+    }
+
+    .action-checkbox {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #cbd5e1;
+      border-radius: 6px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .action-item.checked .action-checkbox {
+      background: #10b981;
+      border-color: #10b981;
+    }
+
+    .action-item.checked .action-checkbox::after {
+      content: '✓';
+      color: white;
+      font-weight: bold;
+    }
+
+    .action-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #334155;
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .action-item.checked .action-text {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+
+    /* ============================================
+       TASK 4: DIAGNOSTIC GRID - EDITORIAL NUMBERS
+       ============================================ */
+    .diagnostic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .diagnostic-item {
+      position: relative;
+      padding: 32px 28px;
+      background: white;
+      border: 1px solid #f1f5f9;
+      border-radius: 16px;
+      transition: all 0.3s;
+      overflow: hidden;
+    }
+
+    .diagnostic-item:hover {
+      border-color: #e2e8f0;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+
+    .diagnostic-number {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      font-size: 72px;
+      font-weight: 900;
+      color: #f8fafc;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .diagnostic-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #94a3b8;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .diagnostic-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #334155;
+      font-weight: 500;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ============================================
+       TASK 2: FINANCIAL SCOPE - STOCK TICKER
+       ============================================ */
+    .financial-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 32px;
+    }
+
+    .financial-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+
+    .financial-range {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .financial-value {
+      font-size: 40px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .financial-separator {
+      color: #cbd5e1;
+      font-weight: 300;
+      font-size: 28px;
+    }
+
+    .market-badge {
+      background: #dcfce7;
+      color: #15803d;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .cost-range-bar {
+      position: relative;
+      height: 12px;
+      background: #f1f5f9;
+      border-radius: 9999px;
+      width: 100%;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .cost-range-fill {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, #34d399 0%, #059669 100%);
+      border-radius: 9999px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      animation: fillBar 1.2s ease-out;
+    }
+
+    @keyframes fillBar {
+      from {
+        width: 0% !important;
+      }
+    }
+
+    .cost-range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    .cost-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .cost-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #475569;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .cost-tag:hover {
+      background: white;
+      border-color: #cbd5e1;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .cost-tag::before {
+      content: '•';
+      color: #94a3b8;
+      font-size: 16px;
+    }
+
+    /* ============================================
+       TASK 3: VETERAN'S WARNING - DARK INSIGHT CARD
+       ============================================ */
+    .dark-insight-card {
+      background: #0f172a; /* slate-900 */
+      color: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      padding: 40px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dark-insight-card::before {
+      content: '"';
+      position: absolute;
+      top: 20px;
+      left: 30px;
+      font-size: 200px;
+      font-family: Georgia, serif;
+      color: rgba(255, 255, 255, 0.03);
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .dark-insight-card .card-title {
+      color: white;
+      margin-bottom: 24px;
+    }
+
+    .dark-insight-card .card-subtitle {
+      color: #94a3b8;
+    }
+
+    .red-flag-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .red-flag-item {
+      position: relative;
+      padding: 20px 24px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-left: 3px solid #fbbf24;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+
+    .red-flag-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-left-color: #fcd34d;
+    }
+
+    .red-flag-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* ============================================
+       STRATEGY TIMELINE
+       ============================================ */
+    .strategy-timeline {
+      display: grid;
+      gap: 0;
+    }
+
+    .timeline-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+      padding: 28px 0;
+      position: relative;
+    }
+
+    .timeline-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 60px;
+      bottom: -28px;
+      width: 2px;
+      background: linear-gradient(180deg, #cbd5e1 0%, #f1f5f9 100%);
+    }
+
+    .timeline-dot {
+      width: 32px;
+      height: 32px;
+      background: white;
+      border: 3px solid #e2e8f0;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: #64748b;
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+
+    .timeline-step.active .timeline-dot {
+      background: #0f172a;
+      border-color: #0f172a;
+      color: white;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+    }
+
+    .timeline-content {
+      flex: 1;
+      padding-top: 4px;
+    }
+
+    .timeline-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #94a3b8;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .timeline-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #334155;
+      font-weight: 500;
+    }
+
+    /* ============================================
+       QUESTIONS SECTION
+       ============================================ */
+    .questions-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .question-item {
+      padding: 16px 20px;
+      background: #fffbeb;
+      border-left: 3px solid #f59e0b;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #78350f;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       STICKY ACTION BAR
+       ============================================ */
+    .action-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid #f1f5f9;
+      padding: 20px 24px;
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+      z-index: 100;
+    }
+
+    .action-bar-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .action-hint {
+      font-size: 14px;
+      color: #64748b;
+      flex: 1;
+    }
+
+    .approve-button {
+      padding: 14px 40px;
+      background: #0f172a;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .approve-button:hover {
+      background: #1e293b;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
+    }
+
+    /* ============================================
+       LOADING & ERROR STATES
+       ============================================ */
+    .loading {
+      text-align: center;
+      padding: 80px 24px;
+      color: #64748b;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f1f5f9;
+      border-top-color: #0f172a;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 24px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .error {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+      padding: 32px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 768px) {
+      .diagnostic-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .action-bar-content {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .approve-button {
+        width: 100%;
+      }
+
+      .risk-title {
+        font-size: 32px;
+      }
+
+      .financial-value {
+        font-size: 32px;
+      }
+
+      .financial-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body class="zone-c app-page">
+  <div class="sanctuary-container">
+    <!-- Loading State -->
+    <div id="loadingSection" class="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Analyzing your home issue...</div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorSection" class="error" style="display: none;">
+      <h3>Oops! Something went wrong.</h3>
+      <p id="errorMessage">Please try again or contact support.</p>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div id="dashboardSection" style="display: none;">
+      <!-- TASK 1: RISK HERO -->
+      <div id="riskHero"></div>
+
+      <!-- ACTION PLAN -->
+      <div class="soft-lift-card" id="actionPlanCard" style="display: none;">
+        <div class="card-header">
+          <h2 class="card-title">The Action Plan</h2>
+          <p class="card-subtitle">Click to check off completed items</p>
+        </div>
+        <div class="action-list" id="actionList"></div>
+      </div>
+
+      <!-- TASK 4: DIAGNOSTIC GRID -->
+      <div class="soft-lift-card" id="diagnosticCard" style="display: none;">
+        <div class="card-header">
+          <h2 class="card-title">Diagnostic Analysis</h2>
+          <p class="card-subtitle">Likely causes of your issue</p>
+        </div>
+        <div class="diagnostic-grid" id="diagnosticGrid"></div>
+      </div>
+
+      <!-- TASK 2: FINANCIAL SCOPE -->
+      <div class="soft-lift-card" id="financialCard" style="display: none;">
+        <div class="card-header">
+          <h2 class="card-title">Financial Scope</h2>
+          <p class="card-subtitle">Estimated fair value range</p>
+        </div>
+        <div id="financialContent"></div>
+      </div>
+
+      <!-- TASK 3: VETERAN'S WARNING -->
+      <div class="dark-insight-card" id="redFlagsCard" style="display: none;">
+        <div class="card-header">
+          <h2 class="card-title">The Veteran's Warning</h2>
+          <p class="card-subtitle">Insider tips & blind spots</p>
+        </div>
+        <div class="red-flag-list" id="redFlagList"></div>
+      </div>
+
+      <!-- STRATEGY TIMELINE -->
+      <div class="soft-lift-card" id="strategyCard" style="display: none;">
+        <div class="card-header">
+          <h2 class="card-title">Your Journey</h2>
+          <p class="card-subtitle">Step-by-step strategy</p>
+        </div>
+        <div class="strategy-timeline" id="strategyTimeline"></div>
+      </div>
+
+      <!-- QUESTIONS -->
+      <div class="soft-lift-card" id="questionsCard" style="display: none;">
+        <div class="card-header">
+          <h2 class="card-title">Questions to Consider</h2>
+          <p class="card-subtitle">Details that might affect your plan</p>
+        </div>
+        <div class="questions-list" id="questionsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky Action Bar -->
+  <div class="action-bar" id="actionBar" style="display: none;">
+    <div class="action-bar-content">
+      <div class="action-hint">
+        Ready to connect with licensed contractors?
+      </div>
+      <button class="approve-button" onclick="approveAndPost()">
+        Get Professional Bids
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Global state
+    window.triageData = {
+      question: '',
+      router: {},
+      answer: '',
+      parsed: {}
+    };
+
+    // Get question from localStorage (hot_lead_draft), sessionStorage, or URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let question = '';
+
+    // First try to get from hot_lead_draft (saved by home.html)
+    const hotLeadDraft = localStorage.getItem('hot_lead_draft');
+    if (hotLeadDraft) {
+      try {
+        const draft = JSON.parse(hotLeadDraft);
+        question = draft.description || draft.question || '';
+      } catch (e) {
+        console.error('Error parsing hot_lead_draft:', e);
+      }
+    }
+
+    // Fallback to sessionStorage or URL param
+    if (!question) {
+      question = sessionStorage.getItem('pendingQuestion') || urlParams.get('q') || '';
+    }
+
+    if (!question || question.length < 10) {
+      showError('No question provided. Please go back to the homepage and describe your issue.');
+    } else {
+      analyzeQuestion();
+    }
+
+    async function analyzeQuestion() {
+      try {
+        const response = await fetch('/api/ai/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to analyze question');
+        }
+
+        const data = await response.json();
+
+        // Store triage data
+        window.triageData = {
+          question: question,
+          router: data._meta?.router || {},
+          answer: data.answer,
+          parsed: {}
+        };
+
+        // Parse the markdown into sections
+        const parsed = parseTriageOutput(data.answer);
+        window.triageData.parsed = parsed;
+
+        // Render the dashboard
+        renderDashboard(window.triageData.router, parsed);
+
+        // Hide loading, show dashboard
+        document.getElementById('loadingSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+        document.getElementById('actionBar').style.display = 'block';
+
+        // Clear pending question
+        sessionStorage.removeItem('pendingQuestion');
+
+      } catch (error) {
+        console.error('Analysis error:', error);
+        showError(error.message || 'Failed to analyze your question. Please try again.');
+      }
+    }
+
+    function parseTriageOutput(markdown) {
+      const sections = {
+        actions: [],
+        causes: [],
+        costs: '',
+        variables: [],
+        hiring: [],
+        redFlags: [],
+        questions: []
+      };
+
+      if (!markdown) return sections;
+
+      const lines = markdown.split('\n');
+      let currentSection = null;
+      let currentContent = [];
+
+      const sectionPatterns = {
+        actions: /^#+\s*Immediate\s+Actions?/i,
+        causes: /^#+\s*Likely\s+Causes?/i,
+        costs: /^#+\s*Cost\s*(&|and|&amp;)?\s*Effort\s+Range/i,
+        variables: /^#+\s*What\s+Changes?\s+(the\s+)?Price/i,
+        hiring: /^#+\s*Hiring\s*(&|and|&amp;)?\s*Next\s+Steps?/i,
+        redFlags: /^#+\s*Red\s+Flags?\s*(&|and|&amp;)?\s*Don'?ts?/i,
+        questions: /^#+\s*Clarifying\s+Questions?/i
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        let foundSection = null;
+        for (const [key, pattern] of Object.entries(sectionPatterns)) {
+          if (pattern.test(line)) {
+            foundSection = key;
+            break;
+          }
+        }
+
+        if (foundSection) {
+          if (currentSection && currentContent.length > 0) {
+            saveSectionContent(sections, currentSection, currentContent);
+          }
+          currentSection = foundSection;
+          currentContent = [];
+        } else if (currentSection && line.length > 0) {
+          currentContent.push(line);
+        }
+      }
+
+      if (currentSection && currentContent.length > 0) {
+        saveSectionContent(sections, currentSection, currentContent);
+      }
+
+      return sections;
+    }
+
+    function saveSectionContent(sections, sectionKey, lines) {
+      const content = lines.join('\n').trim();
+
+      if (sectionKey === 'costs') {
+        sections.costs = content;
+      } else {
+        const bullets = extractBullets(content);
+        sections[sectionKey] = bullets;
+      }
+    }
+
+    function extractBullets(text) {
+      const bullets = [];
+      const lines = text.split('\n');
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
+        const numberMatch = trimmed.match(/^\d+\.\s+(.+)/);
+
+        if (bulletMatch) {
+          bullets.push(bulletMatch[1].trim());
+        } else if (numberMatch) {
+          bullets.push(numberMatch[1].trim());
+        } else if (trimmed.length > 0 && !trimmed.startsWith('#')) {
+          bullets.push(trimmed);
+        }
+      }
+
+      return bullets;
+    }
+
+    function renderDashboard(router, parsed) {
+      renderRiskHero(router.risk_level || 'medium');
+
+      if (parsed.actions && parsed.actions.length > 0) {
+        renderActionPlan(parsed.actions);
+      }
+
+      if (parsed.causes && parsed.causes.length > 0) {
+        renderDiagnosticGrid(parsed.causes);
+      }
+
+      if (parsed.costs) {
+        renderFinancialScope(parsed.costs, parsed.variables);
+      }
+
+      if (parsed.redFlags && parsed.redFlags.length > 0) {
+        renderRedFlags(parsed.redFlags);
+      }
+
+      if (parsed.hiring && parsed.hiring.length > 0) {
+        renderStrategyTimeline(parsed.hiring);
+      }
+
+      if (parsed.questions && parsed.questions.length > 0) {
+        renderQuestions(parsed.questions);
+      }
+    }
+
+    /**
+     * TASK 1: RISK HERO
+     */
+    function renderRiskHero(riskLevel) {
+      const config = {
+        high: {
+          class: 'critical',
+          icon: '🚨',
+          badge: 'SEVERITY: CRITICAL',
+          title: 'Critical Safety Alert',
+          subtitle: 'This issue requires immediate professional attention to prevent serious damage or injury'
+        },
+        medium: {
+          class: 'medium',
+          icon: '⚠️',
+          badge: 'SEVERITY: ELEVATED',
+          title: 'Attention Required',
+          subtitle: 'Schedule professional evaluation soon to prevent escalation and additional costs'
+        },
+        low: {
+          class: 'low',
+          icon: '✅',
+          badge: 'SEVERITY: ROUTINE',
+          title: 'Routine Maintenance',
+          subtitle: 'Non-urgent issue – plan at your convenience with standard contractor availability'
+        }
+      };
+
+      const c = config[riskLevel] || config.medium;
+
+      document.getElementById('riskHero').innerHTML = `
+        <div class="risk-hero ${c.class}">
+          <div class="risk-hero-watermark">${c.icon}</div>
+          <div class="severity-badge ${c.class}">
+            <span class="pulse-dot">
+              <span class="pulse-dot-ping ${c.class}"></span>
+              <span class="pulse-dot-core ${c.class}"></span>
+            </span>
+            ${c.badge}
+          </div>
+          <h1 class="risk-title">${c.title}</h1>
+          <p class="risk-subtitle">${c.subtitle}</p>
+        </div>
+      `;
+    }
+
+    function renderActionPlan(actions) {
+      const html = actions.map(action => `
+        <div class="action-item" onclick="toggleAction(this)">
+          <div class="action-checkbox"></div>
+          <div class="action-text">${escapeHtml(action)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('actionList').innerHTML = html;
+      document.getElementById('actionPlanCard').style.display = 'block';
+    }
+
+    function toggleAction(element) {
+      element.classList.toggle('checked');
+    }
+
+    /**
+     * TASK 4: DIAGNOSTIC GRID
+     */
+    function renderDiagnosticGrid(causes) {
+      const html = causes.map((cause, index) => `
+        <div class="diagnostic-item">
+          <div class="diagnostic-number">${String(index + 1).padStart(2, '0')}</div>
+          <div class="diagnostic-label">Cause ${index + 1}</div>
+          <div class="diagnostic-text">${escapeHtml(cause)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('diagnosticGrid').innerHTML = html;
+      document.getElementById('diagnosticCard').style.display = 'block';
+    }
+
+    /**
+     * TASK 2: FINANCIAL SCOPE - STOCK TICKER
+     */
+    function renderFinancialScope(costsText, variables) {
+      const costMatch = costsText.match(/\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i);
+
+      let lowCost = 500;
+      let highCost = 2000;
+      let lowLabel = '$500';
+      let highLabel = '$2,000';
+
+      if (costMatch) {
+        lowCost = parseInt(costMatch[1].replace(/,/g, ''));
+        highCost = parseInt(costMatch[2].replace(/,/g, ''));
+        lowLabel = '$' + lowCost.toLocaleString();
+        highLabel = '$' + highCost.toLocaleString();
+      }
+
+      // Calculate bar position (20% to 80% range)
+      const fillLeft = 20;
+      const fillRight = 40;
+
+      let variablesHtml = '';
+      if (variables && variables.length > 0) {
+        variablesHtml = `
+          <div class="cost-tags">
+            ${variables.map(v => `<div class="cost-tag">${escapeHtml(v)}</div>`).join('')}
+          </div>
+        `;
+      }
+
+      document.getElementById('financialContent').innerHTML = `
+        <div class="financial-header">
+          <div>
+            <div class="financial-label">Estimated Fair Value</div>
+            <div class="financial-range">
+              <span class="financial-value">${lowLabel}</span>
+              <span class="financial-separator">–</span>
+              <span class="financial-value">${highLabel}</span>
+            </div>
+          </div>
+          <div>
+            <div class="market-badge">MARKET AVERAGE</div>
+          </div>
+        </div>
+        <div class="cost-range-bar">
+          <div class="cost-range-fill" style="left: ${fillLeft}%; right: ${fillRight}%;"></div>
+        </div>
+        <div class="cost-range-labels">
+          <span>DIY / Band-aid</span>
+          <span>Professional Standard</span>
+          <span>Premium / Structural</span>
+        </div>
+        ${variablesHtml}
+      `;
+
+      document.getElementById('financialCard').style.display = 'block';
+    }
+
+    /**
+     * TASK 3: VETERAN'S WARNING
+     */
+    function renderRedFlags(redFlags) {
+      const html = redFlags.map(flag => `
+        <div class="red-flag-item">
+          <div class="red-flag-text">${escapeHtml(flag)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('redFlagList').innerHTML = html;
+      document.getElementById('redFlagsCard').style.display = 'block';
+    }
+
+    function renderStrategyTimeline(steps) {
+      const labels = ['Immediate', 'Planning', 'Execution', 'Follow-up'];
+
+      const html = steps.map((step, index) => `
+        <div class="timeline-step ${index === 0 ? 'active' : ''}">
+          <div class="timeline-dot">${index + 1}</div>
+          <div class="timeline-content">
+            <div class="timeline-label">${labels[index] || 'Step ' + (index + 1)}</div>
+            <div class="timeline-text">${escapeHtml(step)}</div>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('strategyTimeline').innerHTML = html;
+      document.getElementById('strategyCard').style.display = 'block';
+    }
+
+    function renderQuestions(questions) {
+      const html = questions.map(q => `
+        <div class="question-item">${escapeHtml(q)}</div>
+      `).join('');
+
+      document.getElementById('questionsList').innerHTML = html;
+      document.getElementById('questionsCard').style.display = 'block';
+    }
+
+    async function approveAndPost() {
+      const parsed = window.triageData.parsed;
+
+      let projectTitle = window.triageData.question.split('.')[0].trim();
+      if (projectTitle.length > 60) {
+        projectTitle = projectTitle.substring(0, 57) + '...';
+      }
+
+      const costMatch = parsed.costs?.match(/\$?([\d,]+)\s*[-–to]+\s*\$?([\d,]+)/i);
+      let budgetMin = 5000;
+      let budgetMax = 15000;
+
+      if (costMatch) {
+        budgetMin = parseInt(costMatch[1].replace(/,/g, ''));
+        budgetMax = parseInt(costMatch[2].replace(/,/g, ''));
+      }
+
+      const hotLeadDraft = {
+        title: projectTitle,
+        description: window.triageData.question,
+        aiAnalysis: window.triageData.answer,
+        budgetMin: budgetMin,
+        budgetMax: budgetMax,
+        timeline: '2-4 weeks',
+        tradeType: window.triageData.router.domain || 'general',
+        category: window.triageData.router.domain || 'general',
+        urgency: window.triageData.router.risk_level === 'high' ? 'urgent' : 'flexible',
+        scopeItems: parsed.actions || [],
+        fromTriage: true,
+        timestamp: new Date().toISOString()
+      };
+
+      localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
+
+      if (window.authService && window.authService.initialized) {
+        const user = await window.authService.getCurrentUser();
+        if (user) {
+          window.location.href = 'post-project.html';
+          return;
+        }
+      }
+
+      sessionStorage.setItem('signup_role', 'homeowner');
+      window.location.href = 'signup.html?intent=post_project';
+    }
+
+    function showError(message) {
+      document.getElementById('loadingSection').style.display = 'none';
+      document.getElementById('errorSection').style.display = 'block';
+      document.getElementById('errorMessage').textContent = message;
+    }
+
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+
+  <!-- Unified Navigation System -->
+  <script src="/services/app-controller.js"></script>
+</body>
+</html>

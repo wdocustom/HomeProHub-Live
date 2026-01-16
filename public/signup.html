@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="B">
+  <title>Sign Up – HomeProHub</title>
+
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Preserved Styles */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .auth-container { background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); max-width: 540px; width: 100%; padding: 48px 40px; }
+    .role-option { padding: 20px; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .role-option:hover { border-color: #3b82f6; background: #eff6ff; }
+    .role-option.active { border-color: #3b82f6; background: #eff6ff; }
+    .role-specific-fields { display: none; }
+    .role-specific-fields.active { display: block; }
+    input:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .btn-primary { width: 100%; padding: 14px 24px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+  </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans antialiased opacity-0 transition-opacity duration-300">
+
+  <div id="main-header-container" class="w-full z-50 relative"></div>
+
+  <main class="flex-grow flex items-center justify-center px-4 py-12 relative z-10" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+
+    <div class="auth-container">
+      <div class="logo mb-8 text-center">
+         <a href="/" class="text-2xl font-extrabold text-slate-900 no-underline">HomeProHub</a>
+      </div>
+
+      <h1 id="pageTitle" class="text-2xl font-bold text-slate-900 text-center mb-2">Create Account</h1>
+      <p id="pageSubtitle" class="text-slate-500 text-center mb-8">Join HomeProHub to get started</p>
+
+      <!-- Role Selection -->
+      <div class="mb-6">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">I am a...</label>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="role-option active" data-role="homeowner">
+            <i class="fas fa-home text-2xl mb-2 text-blue-600"></i>
+            <div class="font-bold text-slate-900">Homeowner</div>
+            <div class="text-xs text-slate-500 mt-1">Find pros for projects</div>
+          </div>
+          <div class="role-option" data-role="contractor">
+            <i class="fas fa-hard-hat text-2xl mb-2 text-slate-600"></i>
+            <div class="font-bold text-slate-900">Contractor</div>
+            <div class="text-xs text-slate-500 mt-1">Find new work</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signup Form -->
+      <form id="signup-form" class="space-y-4">
+
+        <!-- Common Fields -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name</label>
+          <input type="text" id="full_name" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900" required>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email</label>
+          <input type="email" id="email" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900" required>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Password</label>
+          <input type="password" id="password" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900" required minlength="6">
+          <p class="text-xs text-slate-400 mt-1">At least 6 characters</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Phone</label>
+          <input type="tel" id="phone" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900">
+        </div>
+
+        <!-- Contractor-Specific Fields -->
+        <div id="contractor-fields" class="role-specific-fields space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Company Name</label>
+            <input type="text" id="company_name" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900">
+          </div>
+        </div>
+
+        <!-- Homeowner-Specific Fields -->
+        <div id="homeowner-fields" class="role-specific-fields active space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Address</label>
+            <input type="text" id="address" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900">
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-1">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">City</label>
+              <input type="text" id="city" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900">
+            </div>
+            <div class="col-span-1">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">State</label>
+              <input type="text" id="state" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900" maxlength="2">
+            </div>
+            <div class="col-span-1">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ZIP</label>
+              <input type="text" id="zip_code" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900" maxlength="5">
+            </div>
+          </div>
+        </div>
+
+        <div id="auth-error" class="hidden text-red-500 text-sm text-center font-bold bg-red-50 p-3 rounded-lg"></div>
+
+        <button type="submit" id="signup-btn" class="btn-primary shadow-lg shadow-blue-500/30">
+          Create Account
+        </button>
+      </form>
+
+      <div class="mt-6 text-center text-sm text-slate-500">
+        Already have an account? <a href="/signin.html" class="font-bold text-blue-600 hover:text-blue-700">Sign in</a>
+      </div>
+
+      <div class="mt-4 text-center">
+        <a href="/" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Back to Home</a>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="mobile-nav-container"></div>
+
+  <script type="module" src="/js/app-controller.js"></script>
+
+  <script>
+    let selectedRole = 'homeowner';
+
+    // Role Selection Logic
+    document.querySelectorAll('.role-option').forEach(option => {
+      option.addEventListener('click', () => {
+        // Update selection
+        document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+
+        selectedRole = option.dataset.role;
+
+        // Toggle role-specific fields
+        if (selectedRole === 'contractor') {
+          document.getElementById('homeowner-fields').classList.remove('active');
+          document.getElementById('contractor-fields').classList.add('active');
+        } else {
+          document.getElementById('contractor-fields').classList.remove('active');
+          document.getElementById('homeowner-fields').classList.add('active');
+        }
+      });
+    });
+
+    // Display error message
+    function displayError(message) {
+      const errorEl = document.getElementById('auth-error');
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    // Loading state
+    function setLoading(loading) {
+      const button = document.getElementById('signup-btn');
+      const inputs = document.querySelectorAll('#signup-form input');
+      button.disabled = loading;
+      inputs.forEach(input => input.disabled = loading);
+
+      if (loading) {
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Account...';
+      } else {
+        button.textContent = 'Create Account';
+      }
+    }
+
+    // Handle form submission
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const full_name = document.getElementById('full_name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+
+      if (!email || !password || !full_name) {
+        return displayError('Please fill in all required fields.');
+      }
+
+      if (password.length < 6) {
+        return displayError('Password must be at least 6 characters.');
+      }
+
+      setLoading(true);
+      document.getElementById('auth-error').classList.add('hidden');
+
+      try {
+        // Check if auth service is ready
+        if (!window.authService) {
+          throw new Error("System initializing... please wait a moment.");
+        }
+
+        // Collect user data based on role
+        const userData = {
+          role: selectedRole,
+          full_name,
+          phone
+        };
+
+        if (selectedRole === 'contractor') {
+          userData.company_name = document.getElementById('company_name').value.trim();
+        } else {
+          userData.address = document.getElementById('address').value.trim();
+          userData.city = document.getElementById('city').value.trim();
+          userData.state = document.getElementById('state').value.trim();
+          userData.zip_code = document.getElementById('zip_code').value.trim();
+        }
+
+        console.log('🔄 Calling signUp...');
+        const result = await window.authService.signUp(email, password, userData);
+
+        if (result.success) {
+          const userRole = result.user?.user_metadata?.role || selectedRole;
+          const dashboardUrl = userRole === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
+          console.log(`✓ Success! Redirecting to ${dashboardUrl}`);
+          window.location.href = dashboardUrl;
+        } else {
+          displayError(result.error || 'Sign up failed. Please try again.');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Sign up error:', error);
+        displayError(error.message || 'An error occurred during sign up.');
+        setLoading(false);
+      }
+    });
+  </script>
+
+  <noscript><style>body { opacity: 1 !important; }</style></noscript>
+</body>
+</html>

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sanctuary-zone" content="A">
+  <title>Your Project Blueprint – HomeProHub</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/navigation.css" />
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: #f9fafb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .page-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 24px 120px;
+    }
+
+    /* ============================================
+       THE BLUEPRINT - Premium Card Design
+       ============================================ */
+    .blueprint-card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+      margin-bottom: 32px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .blueprint-header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+      padding: 40px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .blueprint-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .blueprint-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: white;
+      margin-bottom: 16px;
+    }
+
+    .blueprint-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      margin: 0;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .blueprint-body {
+      padding: 48px;
+    }
+
+    /* Hero Vision Statement */
+    .vision-section {
+      margin-bottom: 40px;
+      padding-bottom: 32px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .vision-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .vision-text {
+      font-size: 20px;
+      line-height: 1.7;
+      color: #111827;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-weight: 400;
+    }
+
+    /* Data Grid (Budget + Timeline) */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .stat-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #111827;
+      line-height: 1.2;
+    }
+
+    .stat-value.budget {
+      color: #10b981;
+    }
+
+    .stat-sublabel {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    /* Scope of Work - Checklist Visualization */
+    .scope-section {
+      margin-bottom: 40px;
+    }
+
+    .scope-header {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .scope-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .scope-item {
+      display: flex;
+      align-items: start;
+      gap: 16px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      transition: all 0.2s ease;
+    }
+
+    .scope-item:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+
+    .scope-icon {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+      margin-top: 2px;
+    }
+
+    .scope-content {
+      flex: 1;
+    }
+
+    .scope-item-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .scope-item-description {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    /* Full AI Response (Collapsible Detail) */
+    .full-response-section {
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 2px solid #e5e7eb;
+    }
+
+    .full-response-toggle {
+      background: transparent;
+      border: 2px solid #d1d5db;
+      color: #6b7280;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      text-align: center;
+    }
+
+    .full-response-toggle:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .full-response-content {
+      display: none;
+      margin-top: 24px;
+      padding: 32px;
+      background: #f9fafb;
+      border-radius: 12px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: #374151;
+    }
+
+    .full-response-content.expanded {
+      display: block;
+    }
+
+    .full-response-content h1,
+    .full-response-content h2,
+    .full-response-content h3 {
+      color: #111827;
+      font-weight: 700;
+      margin-top: 24px;
+      margin-bottom: 12px;
+    }
+
+    .full-response-content ul,
+    .full-response-content ol {
+      margin: 16px 0;
+      padding-left: 24px;
+    }
+
+    .full-response-content li {
+      margin-bottom: 8px;
+    }
+
+    /* Sticky Action Bar */
+    .action-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 2px solid #e5e7eb;
+      padding: 20px 24px;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+      z-index: 1000;
+    }
+
+    .action-bar-content {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .action-bar-text {
+      flex: 1;
+    }
+
+    .action-bar-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .action-bar-subtitle {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .approve-button {
+      padding: 16px 32px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      white-space: nowrap;
+    }
+
+    .approve-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .approve-button:active {
+      transform: translateY(0);
+    }
+
+    /* Loading State */
+    .loading-skeleton {
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s ease-in-out infinite;
+      border-radius: 8px;
+      height: 20px;
+      margin-bottom: 16px;
+    }
+
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .blueprint-header {
+        padding: 32px 24px;
+      }
+
+      .blueprint-body {
+        padding: 32px 24px;
+      }
+
+      .blueprint-title {
+        font-size: 28px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .action-bar-content {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .approve-button {
+        width: 100%;
+      }
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-top: 32px;
+      font-size: 13px;
+      color: #92400e;
+      line-height: 1.6;
+    }
+
+    .disclaimer-icon {
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-container"></div>
+
+  <div class="page-container">
+    <!-- THE BLUEPRINT CARD -->
+    <div class="blueprint-card">
+      <!-- Premium Header -->
+      <div class="blueprint-header">
+        <div class="blueprint-badge">AI-Powered Analysis</div>
+        <h1 class="blueprint-title">Your Project Blueprint</h1>
+      </div>
+
+      <!-- Card Body -->
+      <div class="blueprint-body">
+        <!-- Vision Statement (Project Summary) -->
+        <div class="vision-section" id="visionSection">
+          <div class="vision-label">Your Vision</div>
+          <div class="vision-text" id="visionText">
+            <div class="loading-skeleton"></div>
+            <div class="loading-skeleton" style="width: 90%;"></div>
+          </div>
+        </div>
+
+        <!-- Data Grid: Budget + Timeline -->
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card">
+            <span class="stat-icon">💰</span>
+            <div class="stat-label">Estimated Fair Value</div>
+            <div class="stat-value budget" id="budgetValue">Loading...</div>
+            <div class="stat-sublabel">Typical market range</div>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-icon">⏱️</span>
+            <div class="stat-label">Typical Duration</div>
+            <div class="stat-value" id="timelineValue">Loading...</div>
+            <div class="stat-sublabel">Estimated completion time</div>
+          </div>
+        </div>
+
+        <!-- Scope of Work Checklist -->
+        <div class="scope-section" id="scopeSection">
+          <h3 class="scope-header">Scope of Work</h3>
+          <div class="scope-checklist" id="scopeChecklist">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Full AI Response (Collapsible) -->
+        <div class="full-response-section">
+          <button class="full-response-toggle" id="toggleButton">
+            📋 View Complete Analysis
+          </button>
+          <div class="full-response-content" id="fullResponseContent">
+            <!-- Full AI response rendered here -->
+          </div>
+        </div>
+
+        <!-- Disclaimer -->
+        <div class="disclaimer">
+          <span class="disclaimer-icon">ℹ️</span>
+          <strong>Educational Estimate:</strong> This is an AI-generated assessment based on typical projects.
+          Final pricing and scope require an in-person inspection by a licensed contractor.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky Action Bar -->
+  <div class="action-bar">
+    <div class="action-bar-content">
+      <div class="action-bar-text">
+        <div class="action-bar-title">Ready to move forward?</div>
+        <div class="action-bar-subtitle">Get competitive bids from verified contractors</div>
+      </div>
+      <button class="approve-button" id="approveButton" onclick="approveAndPost()">
+        Approve This Plan & Get Bids
+      </button>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('app-ready', async () => {
+      'use strict';
+
+      // Get diagnosis data from sessionStorage
+      const diagnosisData = sessionStorage.getItem('aiDiagnosis');
+
+      if (!diagnosisData) {
+        // No diagnosis data - redirect back to home
+        window.location.href = 'home.html';
+        return;
+      }
+
+      const data = JSON.parse(diagnosisData);
+      const { question, answer, intent, budgetLow, budgetHigh } = data;
+
+      // Parse the AI response to extract structured data
+      const parsed = parseAIResponse(answer);
+
+      // Populate the Blueprint UI
+      populateBlueprint(parsed, budgetLow, budgetHigh);
+
+      // Store for localStorage handoff
+      window.blueprintData = {
+        question,
+        answer,
+        intent,
+        budgetLow,
+        budgetHigh,
+        parsed
+      };
+
+      // Toggle full response
+      document.getElementById('toggleButton').addEventListener('click', function() {
+        const content = document.getElementById('fullResponseContent');
+        const button = this;
+
+        content.classList.toggle('expanded');
+
+        if (content.classList.contains('expanded')) {
+          button.textContent = '📋 Hide Complete Analysis';
+        } else {
+          button.textContent = '📋 View Complete Analysis';
+        }
+      });
+    });
+
+    /**
+     * Parse AI response to extract key sections
+     */
+    function parseAIResponse(text) {
+      // Remove INTENT TYPE line
+      const cleanedText = text.replace(/^[\s]*INTENT\s*TYPE\s*:\s*(PROJECT|ISSUE)[\s]*$/gim, '').trim();
+
+      // Extract budget range
+      const budgetMatch = cleanedText.match(/\$([0-9,]+)\s*-\s*\$([0-9,]+)/);
+      let budgetLow = null, budgetHigh = null;
+      if (budgetMatch) {
+        budgetLow = parseInt(budgetMatch[1].replace(/,/g, ''));
+        budgetHigh = parseInt(budgetMatch[2].replace(/,/g, ''));
+      }
+
+      // Extract timeline
+      const timelineMatch = cleanedText.match(/(\d+[-–]\d+\s+(?:days?|weeks?|months?))/i) ||
+                           cleanedText.match(/(\d+\s+(?:days?|weeks?|months?))/i);
+      const timeline = timelineMatch ? timelineMatch[1] : null;
+
+      // Extract project summary (first paragraph after headers)
+      const summaryMatch = cleanedText.match(/(?:Project Summary|Summary):?\s*\n([^\n]+(?:\n[^\n]+)*?)(?=\n\n|\n[0-9]\.|\nEstimated Budget)/i);
+      const summary = summaryMatch ? summaryMatch[1].trim() : null;
+
+      // Extract scope items (look for numbered or bulleted lists)
+      const scopeItems = extractScopeItems(cleanedText);
+
+      return {
+        cleanedText,
+        budgetLow,
+        budgetHigh,
+        timeline,
+        summary,
+        scopeItems
+      };
+    }
+
+    /**
+     * Extract scope items from text
+     */
+    function extractScopeItems(text) {
+      const items = [];
+
+      // Match scope considerations section
+      const scopeMatch = text.match(/Scope Considerations:?\s*\n((?:[-•*]\s*.+(?:\n|$))+)/i);
+
+      if (scopeMatch) {
+        const lines = scopeMatch[1].split('\n');
+        lines.forEach(line => {
+          const itemMatch = line.match(/^[-•*]\s*(.+)/);
+          if (itemMatch) {
+            const fullText = itemMatch[1].trim();
+            // Try to split into title and description
+            const parts = fullText.split(':');
+            if (parts.length >= 2) {
+              items.push({
+                title: parts[0].trim(),
+                description: parts.slice(1).join(':').trim()
+              });
+            } else {
+              items.push({
+                title: fullText,
+                description: null
+              });
+            }
+          }
+        });
+      }
+
+      // If no scope items found, try to extract from general bullets
+      if (items.length === 0) {
+        const bulletMatch = text.match(/(?:[-•*]\s*.+(?:\n|$)){3,}/g);
+        if (bulletMatch && bulletMatch[0]) {
+          const lines = bulletMatch[0].split('\n').slice(0, 5); // Take first 5
+          lines.forEach(line => {
+            const itemMatch = line.match(/^[-•*]\s*(.+)/);
+            if (itemMatch) {
+              items.push({
+                title: itemMatch[1].trim(),
+                description: null
+              });
+            }
+          });
+        }
+      }
+
+      return items;
+    }
+
+    /**
+     * Populate the Blueprint UI with parsed data
+     */
+    function populateBlueprint(parsed, budgetLowFallback, budgetHighFallback) {
+      // Vision Statement
+      const visionText = document.getElementById('visionText');
+      if (parsed.summary) {
+        visionText.textContent = parsed.summary;
+      } else {
+        visionText.textContent = 'A comprehensive renovation project designed to enhance your home\'s functionality and value.';
+      }
+
+      // Budget
+      const budgetValue = document.getElementById('budgetValue');
+      const budgetLow = parsed.budgetLow || budgetLowFallback || 5000;
+      const budgetHigh = parsed.budgetHigh || budgetHighFallback || 15000;
+      budgetValue.textContent = `$${budgetLow.toLocaleString()} - $${budgetHigh.toLocaleString()}`;
+
+      // Timeline
+      const timelineValue = document.getElementById('timelineValue');
+      if (parsed.timeline) {
+        timelineValue.textContent = parsed.timeline;
+      } else {
+        timelineValue.textContent = '2-4 Weeks';
+      }
+
+      // Scope Checklist
+      const scopeChecklist = document.getElementById('scopeChecklist');
+      if (parsed.scopeItems && parsed.scopeItems.length > 0) {
+        scopeChecklist.innerHTML = '';
+        parsed.scopeItems.forEach((item, idx) => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'scope-item';
+          itemEl.innerHTML = `
+            <div class="scope-icon">✓</div>
+            <div class="scope-content">
+              <div class="scope-item-title">${item.title}</div>
+              ${item.description ? `<div class="scope-item-description">${item.description}</div>` : ''}
+            </div>
+          `;
+          scopeChecklist.appendChild(itemEl);
+        });
+      } else {
+        // Fallback scope items
+        scopeChecklist.innerHTML = `
+          <div class="scope-item">
+            <div class="scope-icon">✓</div>
+            <div class="scope-content">
+              <div class="scope-item-title">Initial Assessment & Planning</div>
+              <div class="scope-item-description">Site inspection and detailed scope review</div>
+            </div>
+          </div>
+          <div class="scope-item">
+            <div class="scope-icon">✓</div>
+            <div class="scope-content">
+              <div class="scope-item-title">Material Selection & Procurement</div>
+              <div class="scope-item-description">Sourcing quality materials within budget</div>
+            </div>
+          </div>
+          <div class="scope-item">
+            <div class="scope-icon">✓</div>
+            <div class="scope-content">
+              <div class="scope-item-title">Professional Installation</div>
+              <div class="scope-item-description">Expert execution by licensed contractors</div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Full Response Content
+      const fullResponseContent = document.getElementById('fullResponseContent');
+      fullResponseContent.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(parsed.cleanedText)}</pre>`;
+    }
+
+    /**
+     * Approve and Post - NEW "Click-Click-Boom" Flow
+     * Saves detailed draft → Signup with intent → Review & Post confirmation page
+     */
+    async function approveAndPost() {
+      // STEP 1: Extract structured data from Blueprint
+      const parsed = window.blueprintData.parsed;
+
+      // Try to extract better title from summary or use default
+      let projectTitle = 'Home Renovation Project';
+      if (parsed.summary) {
+        // Take first sentence or first 60 chars as title
+        const firstSentence = parsed.summary.split('.')[0].trim();
+        projectTitle = firstSentence.length > 60
+          ? firstSentence.substring(0, 57) + '...'
+          : firstSentence;
+      }
+
+      // Extract trade type from AI response (basic heuristic)
+      const tradeType = extractTradeType(window.blueprintData.answer);
+
+      // STEP 2: Create "hot_lead_draft" with all extracted data
+      const hotLeadDraft = {
+        title: projectTitle,
+        description: window.blueprintData.question, // Original user question
+        aiAnalysis: window.blueprintData.answer, // Full AI response
+        budgetMin: parsed.budgetLow || window.blueprintData.budgetLow || 5000,
+        budgetMax: parsed.budgetHigh || window.blueprintData.budgetHigh || 15000,
+        timeline: parsed.timeline || '2-4 weeks',
+        tradeType: tradeType,
+        category: tradeType || 'general',
+        urgency: 'flexible',
+        scopeItems: parsed.scopeItems || [],
+        fromBlueprint: true,
+        timestamp: new Date().toISOString()
+      };
+
+      localStorage.setItem('hot_lead_draft', JSON.stringify(hotLeadDraft));
+      console.log('✓ Hot lead draft saved to localStorage:', hotLeadDraft);
+
+      // STEP 3: Check authentication and route accordingly (app-controller guarantees auth is ready)
+      const user = window.currentUser;
+
+      if (user) {
+        // User IS logged in - go directly to Review & Post page
+        window.location.href = 'post-project.html';
+      } else {
+        // User NOT logged in - redirect to signup WITH INTENT parameter
+        sessionStorage.setItem('signup_role', 'homeowner');
+        window.location.href = 'signup.html?intent=post_project';
+      }
+    }
+
+    /**
+     * Extract trade type from AI response (simple keyword matching)
+     */
+    function extractTradeType(aiText) {
+      const text = aiText.toLowerCase();
+
+      // Trade type keywords
+      const tradeMap = {
+        'plumbing': ['plumber', 'plumbing', 'pipe', 'leak', 'faucet', 'drain', 'toilet', 'shower'],
+        'electrical': ['electrician', 'electrical', 'wiring', 'outlet', 'breaker', 'circuit', 'light'],
+        'hvac': ['hvac', 'heating', 'cooling', 'furnace', 'air conditioning', 'ac unit', 'thermostat'],
+        'roofing': ['roof', 'roofing', 'shingle', 'gutter', 'flashing'],
+        'flooring': ['flooring', 'floor', 'tile', 'hardwood', 'carpet', 'laminate'],
+        'painting': ['paint', 'painting', 'drywall', 'wall'],
+        'carpentry': ['carpenter', 'carpentry', 'cabinet', 'door', 'window', 'trim'],
+        'landscaping': ['landscape', 'landscaping', 'yard', 'lawn', 'garden', 'fence']
+      };
+
+      // Check each trade type
+      for (const [trade, keywords] of Object.entries(tradeMap)) {
+        if (keywords.some(keyword => text.includes(keyword))) {
+          return trade;
+        }
+      }
+
+      return 'general'; // Default if no match
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+  </script>
+  <script src="/services/app-controller.js"></script>
+</body>
+</html>
