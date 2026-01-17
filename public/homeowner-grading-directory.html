@@ -8,7 +8,10 @@
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
+<<<<<<< HEAD
   <script src="/scripts/unified-navigation.js"></script>
+=======
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   <style>
     .hero {
       max-width: 900px;
@@ -404,11 +407,14 @@
    * Initialize page
    */
   document.addEventListener('DOMContentLoaded', async () => {
+<<<<<<< HEAD
     // Initialize unified navigation for Zone D
     if (window.unifiedNavigation && typeof window.unifiedNavigation.init === 'function') {
       window.window.SanctuaryNavigation.init('D');
     }
 
+=======
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     const profileLinkEl = document.getElementById('profileLink');
 
     // Check authentication
@@ -516,5 +522,11 @@
     }
   });
 </script>
+<<<<<<< HEAD
+=======
+  <!-- Navigation System (must load before app-controller) -->
+  <script src="/components/unified-navigation.js"></script>
+
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 <script src="/services/app-controller.js"></script>
 </body></html>

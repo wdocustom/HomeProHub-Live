@@ -7,6 +7,10 @@ const cors = require("cors");
 const path = require('path');
 const fs = require('fs');
 const db = require('./database/db');
+<<<<<<< HEAD
+=======
+const { runAutoMigrations } = require('./database/auto-migrations');
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
 // OpenAI SDK for vision-enabled estimates
 const OpenAI = require('openai');
@@ -430,6 +434,20 @@ app.post('/api/auth/signin', async (req, res) => {
     try {
       profile = await db.getUserProfile(email);
       console.log('✓ User profile fetched:', profile ? 'Found' : 'Not found');
+<<<<<<< HEAD
+=======
+
+      // If user is a contractor, also get their trade type
+      if (profile && profile.role === 'contractor') {
+        try {
+          const tradeType = await db.getContractorTradeType(email);
+          profile.trade_type = tradeType;
+          console.log('✓ Contractor trade type fetched:', tradeType);
+        } catch (tradeError) {
+          console.warn('⚠️ Could not fetch trade type:', tradeError.message);
+        }
+      }
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     } catch (dbError) {
       console.error('⚠️ Error fetching user profile:', dbError);
     }
@@ -536,9 +554,25 @@ app.get('/api/auth/user', requireAuth, async (req, res) => {
     // Get user profile from database
     const profile = await db.getUserProfile(req.user.email);
 
+<<<<<<< HEAD
     res.json({
       user: req.user,
       profile: profile,
+=======
+    // If user is a contractor, also get their trade type
+    let tradeType = null;
+    if (profile && profile.role === 'contractor') {
+      try {
+        tradeType = await db.getContractorTradeType(req.user.email);
+      } catch (tradeError) {
+        console.warn('Could not fetch trade type:', tradeError.message);
+      }
+    }
+
+    res.json({
+      user: req.user,
+      profile: { ...profile, trade_type: tradeType },
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
       authenticated: true
     });
 
@@ -7627,8 +7661,14 @@ app.get('/api/templates', async (req, res) => {
   try {
     console.log('[API] GET /api/templates - Fetching project templates');
 
+<<<<<<< HEAD
     const result = await db.query(`
       SELECT
+=======
+    const { data: templates, error } = await db.supabase
+      .from('project_templates')
+      .select(`
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
         id,
         template_name,
         template_type,
@@ -7641,6 +7681,7 @@ app.get('/api/templates', async (req, res) => {
         requires_engineering,
         phases,
         required_trades
+<<<<<<< HEAD
       FROM project_templates
       WHERE is_active = true
       ORDER BY
@@ -7660,6 +7701,44 @@ app.get('/api/templates', async (req, res) => {
       success: true,
       templates: result.rows,
       count: result.rows.length
+=======
+      `)
+      .eq('is_active', true)
+      .order('typical_duration_days', { ascending: false });
+
+    if (error) {
+      console.error('[API] Error fetching templates:', error);
+      return res.status(500).json({
+        error: 'Failed to fetch project templates',
+        message: error.message
+      });
+    }
+
+    // Sort templates by type priority (new_construction > addition > remodel > repair > other)
+    const typePriority = {
+      'new_construction': 1,
+      'addition': 2,
+      'remodel': 3,
+      'repair': 4
+    };
+
+    const sortedTemplates = (templates || []).sort((a, b) => {
+      const priorityA = typePriority[a.template_type] || 5;
+      const priorityB = typePriority[b.template_type] || 5;
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      return (b.typical_duration_days || 0) - (a.typical_duration_days || 0);
+    });
+
+    console.log(`[API] Found ${sortedTemplates.length} active templates`);
+
+    res.json({
+      success: true,
+      templates: sortedTemplates,
+      count: sortedTemplates.length
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     });
 
   } catch (error) {
@@ -7953,6 +8032,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 
       // Send Twilio response
       res.set('Content-Type', 'text/xml');
+<<<<<<< HEAD
       
       // Create TwiML response for confirmation
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -7961,6 +8041,12 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 </Response>`;
       
       return res.send(twiml);
+=======
+      return res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${errorMessage}</Message>
+</Response>`);
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     }
 
     // STEP 2: Parse SMS with GPT-4o
@@ -7985,8 +8071,12 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
     console.log(`[Webhook] SMS logged to project ${routing.project_id}: ${parsed.intent}`);
 
     // STEP 4: Handle milestone_claim - generate verification link
+<<<<<<< HEAD
     let dbResponseMessage = ''; // For database logging
     let smsResponseMessage = ''; // For SMS response
+=======
+    let responseMessage = '';
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
     if (parsed.intent === 'milestone_claim' && parsed.milestone_id) {
       // Find milestone
@@ -8006,6 +8096,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
           logResult.log_id
         );
 
+<<<<<<< HEAD
         // Now use sendVerificationLink to send the actual SMS
         const sendResult = await DiplomatAgent.sendVerificationLink(
           routing.project_id,
@@ -8035,6 +8126,22 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
     } else {
       dbResponseMessage = `Message logged.`;
       smsResponseMessage = 'Message received and logged. Thank you!';
+=======
+        responseMessage = `Received: ${parsed.milestone_id} complete. To release payment, verify with a live photo: ${verificationLink.verification_url}`;
+
+        console.log(`[Webhook] Verification link generated: ${verificationLink.verification_url}`);
+      } else {
+        responseMessage = `Update received. Milestone "${parsed.milestone_id}" not found in project. Please check the milestone name.`;
+      }
+    } else if (parsed.intent === 'blocker') {
+      responseMessage = `Blocker received: "${parsed.summary}". Your project manager has been notified.`;
+    } else if (parsed.intent === 'update') {
+      responseMessage = `Update logged: "${parsed.summary}". Thank you!`;
+    } else if (parsed.intent === 'question') {
+      responseMessage = `Question received. Your project manager will respond shortly.`;
+    } else {
+      responseMessage = `Message received and logged. Thank you!`;
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     }
 
     // Update routing log with response
@@ -8046,6 +8153,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
         response_message = $2,
         project_log_id = $3
       WHERE id = $4
+<<<<<<< HEAD
     `, [parsed.intent, dbResponseMessage, logResult.log_id, routingLogResult.rows[0].id]);
 
     // Send Twilio response with confirmation
@@ -8070,6 +8178,26 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 </Response>`;
     
     return res.send(twiml);
+=======
+    `, [parsed.intent, responseMessage, logResult.log_id, routingLogResult.rows[0].id]);
+
+    // Send Twilio response
+    res.set('Content-Type', 'text/xml');
+    return res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${responseMessage}</Message>
+</Response>`);
+
+  } catch (error) {
+    console.error('[Webhook] Error processing incoming SMS:', error);
+
+    // Send generic error response
+    res.set('Content-Type', 'text/xml');
+    return res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>Error processing your message. Please try again later.</Message>
+</Response>`);
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   }
 });
 
@@ -8639,11 +8767,21 @@ app.use((err, req, res, next) => {
 // ====== START SERVER ======
 const PORT = process.env.PORT || 3000;
 
+<<<<<<< HEAD
 app.listen(PORT, () => {
+=======
+app.listen(PORT, async () => {
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   console.log('========================================');
   console.log(`🚀 HomeProHub Server`);
   console.log(`📍 Running at: http://localhost:${PORT}`);
   console.log(`🔑 Anthropic API: ${ANTHROPIC_API_KEY ? '✓ Configured' : '❌ Missing'}`);
   console.log(`⏰ Started: ${new Date().toISOString()}`);
   console.log('========================================');
+<<<<<<< HEAD
+=======
+
+  // Run database auto-migrations
+  await runAutoMigrations();
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 });

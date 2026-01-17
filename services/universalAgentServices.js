@@ -1063,6 +1063,7 @@ Return ONLY valid JSON in this exact format:
       verification_url: verificationUrl
     };
   }
+<<<<<<< HEAD
   
   /**
    * Send SMS message to contractor using Twilio
@@ -1232,6 +1233,8 @@ Return ONLY valid JSON in this exact format:
       };
     }
   }
+=======
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 }
 
 // ========================================

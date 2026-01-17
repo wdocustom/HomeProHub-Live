@@ -94,6 +94,34 @@ async function getContractorByVerificationId(verificationId) {
   return data;
 }
 
+<<<<<<< HEAD
+=======
+/**
+ * Get contractor's trade type from licenses
+ * Returns the first verified license trade type, or first pending license if no verified ones
+ */
+async function getContractorTradeType(email) {
+  const { data, error } = await supabase
+    .from('contractor_licenses')
+    .select('trade_type, verification_status')
+    .eq('contractor_email', email)
+    .order('verification_status', { ascending: true }) // verified comes before pending alphabetically
+    .order('created_at', { ascending: false });
+
+  if (error && error.code !== 'PGRST116') throw error;
+
+  if (!data || data.length === 0) {
+    return null; // No licenses found - default to GC
+  }
+
+  // Prefer verified licenses, fall back to first license
+  const verifiedLicense = data.find(l => l.verification_status === 'verified');
+  const license = verifiedLicense || data[0];
+
+  return license.trade_type;
+}
+
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 // ========================================
 // Job Posting Operations
 // ========================================
@@ -1115,6 +1143,10 @@ module.exports = {
   updateUserProfile,
   updateContractorLicense,
   getContractorByVerificationId,
+<<<<<<< HEAD
+=======
+  getContractorTradeType,
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
   // Job postings
   createJobPosting,

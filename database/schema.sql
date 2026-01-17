@@ -38,6 +38,12 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   youtube_url TEXT,
   reddit_url TEXT,
 
+<<<<<<< HEAD
+=======
+  -- Profile media
+  profile_photo_url TEXT,
+
+>>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   -- Flags
   profile_complete BOOLEAN DEFAULT false,
   email_verified BOOLEAN DEFAULT false,
