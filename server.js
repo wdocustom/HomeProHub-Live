@@ -441,7 +441,6 @@ app.post('/api/auth/signin', async (req, res) => {
           console.warn('⚠️ Could not fetch trade type:', tradeError.message);
         }
       }
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     } catch (dbError) {
       console.error('⚠️ Error fetching user profile:', dbError);
     }
@@ -566,7 +565,6 @@ app.get('/api/auth/user', requireAuth, async (req, res) => {
     res.json({
       user: req.user,
       profile: { ...profile, trade_type: tradeType },
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
       authenticated: true
     });
 
@@ -7662,7 +7660,6 @@ app.get('/api/templates', async (req, res) => {
     const { data: templates, error } = await db.supabase
       .from('project_templates')
       .select(`
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
         id,
         template_name,
         template_type,
@@ -7732,7 +7729,6 @@ app.get('/api/templates', async (req, res) => {
       success: true,
       templates: sortedTemplates,
       count: sortedTemplates.length
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     });
 
   } catch (error) {
@@ -8040,7 +8036,6 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 <Response>
   <Message>${errorMessage}</Message>
 </Response>`);
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     }
 
     // STEP 2: Parse SMS with GPT-4o
@@ -8070,7 +8065,6 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
     let smsResponseMessage = ''; // For SMS response
 
     let responseMessage = '';
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
     if (parsed.intent === 'milestone_claim' && parsed.milestone_id) {
       // Find milestone
@@ -8135,7 +8129,6 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
       responseMessage = `Question received. Your project manager will respond shortly.`;
     } else {
       responseMessage = `Message received and logged. Thank you!`;
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     }
 
     // Update routing log with response
@@ -8191,7 +8184,6 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 <Response>
   <Message>Error processing your message. Please try again later.</Message>
 </Response>`);
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   }
 });
 
@@ -8765,7 +8757,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
 
 app.listen(PORT, async () => {
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   console.log('=====');
   console.log(`🚀 HomeProHub Server`);
   console.log(`📍 Running at: http://localhost:${PORT}`);
@@ -8777,5 +8768,4 @@ app.listen(PORT, async () => {
 
   // Run database auto-migrations
   await runAutoMigrations();
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 });
