@@ -8,7 +8,6 @@
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
-  <script src="/scripts/unified-navigation.js"></script>
   <style>
     .hero {
       max-width: 900px;
@@ -404,11 +403,6 @@
    * Initialize page
    */
   document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize unified navigation for Zone D
-    if (window.unifiedNavigation && typeof window.unifiedNavigation.init === 'function') {
-      window.window.SanctuaryNavigation.init('D');
-    }
-
     const profileLinkEl = document.getElementById('profileLink');
 
     // Check authentication
