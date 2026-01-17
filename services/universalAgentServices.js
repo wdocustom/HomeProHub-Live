@@ -1063,6 +1063,175 @@ Return ONLY valid JSON in this exact format:
       verification_url: verificationUrl
     };
   }
+
+  /**
+   * Send SMS message to contractor using Twilio
+   * @param {string} toPhone - Phone number to send SMS to
+   * @param {string} body - Message body
+   * @param {string} projectId - Optional project ID for logging
+   * @returns {Object} - Twilio response or error
+   */
+  static async sendSMS(toPhone, body, projectId = null) {
+    console.log(`[Diplomat] Sending SMS to ${toPhone}...`);
+
+    try {
+      // Check if Twilio is configured
+      if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+        throw new Error('Twilio credentials not configured');
+      }
+
+      // Initialize Twilio client
+      const twilio = require('twilio');
+      const client = twilio(
+        process.env.TWILIO_ACCOUNT_SID,
+        process.env.TWILIO_AUTH_TOKEN
+      );
+
+      // Send message via Twilio
+      const message = await client.messages.create({
+        body: body,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: toPhone
+      });
+
+      console.log(`[Diplomat] SMS sent successfully: ${message.sid}`);
+
+      // Log the outbound SMS if project ID is provided
+      if (projectId) {
+        await db.query(`
+          INSERT INTO sms_routing_log (
+            message_sid, from_phone, to_phone, message_body, direction, processed,
+            routing_status, contractor_id, project_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7,
+            (SELECT id FROM user_profiles WHERE phone = $3 LIMIT 1),
+            $8
+          )
+        `, [
+          message.sid,
+          process.env.TWILIO_PHONE_NUMBER,
+          toPhone,
+          body,
+          'outbound',
+          true,
+          'sent',
+          projectId
+        ]);
+      }
+
+      return {
+        success: true,
+        message_sid: message.sid,
+        status: message.status
+      };
+
+    } catch (error) {
+      console.error(`[Diplomat] Error sending SMS:`, error);
+
+      // Log the error if project ID is provided
+      if (projectId) {
+        await db.query(`
+          INSERT INTO sms_routing_log (
+            from_phone, to_phone, message_body, direction, processed,
+            routing_status, contractor_id, project_id, error_message
+          )
+          VALUES ($1, $2, $3, $4, $5, $6,
+            (SELECT id FROM user_profiles WHERE phone = $2 LIMIT 1),
+            $7, $8
+          )
+        `, [
+          process.env.TWILIO_PHONE_NUMBER || 'unknown',
+          toPhone,
+          body,
+          'outbound',
+          false,
+          'error',
+          projectId,
+          error.message
+        ]);
+      }
+
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Send a verification link for milestone claim to a contractor
+   * @param {number} projectId - Project ID
+   * @param {number} milestoneId - Milestone ID
+   * @param {number} contractorId - Contractor ID
+   * @param {number} projectLogId - Project Log ID for the milestone claim
+   * @param {string} contractorPhone - Contractor's phone number
+   * @returns {Object} - Result of the operation
+   */
+  static async sendVerificationLink(projectId, milestoneId, contractorId, projectLogId, contractorPhone) {
+    console.log(`[Diplomat] Sending verification link to contractor ${contractorId} for milestone ${milestoneId}...`);
+
+    try {
+      // Get milestone details
+      const milestoneResult = await db.query(`
+        SELECT m.title, m.points, p.title as project_title
+        FROM project_milestones m
+        JOIN projects p ON m.project_id = p.id
+        WHERE m.id = $1 AND m.project_id = $2
+      `, [milestoneId, projectId]);
+
+      if (milestoneResult.rows.length === 0) {
+        throw new Error('Milestone not found');
+      }
+
+      const milestone = milestoneResult.rows[0];
+
+      // Generate verification link
+      const verificationResult = await this.generateVerificationLink(
+        projectId,
+        milestoneId,
+        contractorId,
+        projectLogId
+      );
+
+      if (!verificationResult.success) {
+        throw new Error('Failed to generate verification link');
+      }
+
+      // Format the SMS message
+      const message = `HomeProHub: Milestone "${milestone.title}" noted for ${milestone.project_title}. Tap here to verify and unlock payment: ${verificationResult.verification_url}`;
+
+      // Send the SMS
+      const smsResult = await this.sendSMS(contractorPhone, message, projectId);
+
+      if (!smsResult.success) {
+        throw new Error(`Failed to send SMS: ${smsResult.error}`);
+      }
+
+      // Update project_log with SMS sent status
+      await db.query(`
+        UPDATE project_logs
+        SET verification_sms_sent = TRUE,
+            verification_sms_sent_at = NOW(),
+            verification_sms_sid = $1
+        WHERE id = $2
+      `, [smsResult.message_sid, projectLogId]);
+
+      return {
+        success: true,
+        message: 'Verification link sent successfully',
+        verification_url: verificationResult.verification_url,
+        sms_sid: smsResult.message_sid
+      };
+
+    } catch (error) {
+      console.error(`[Diplomat] Error sending verification link:`, error);
+
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 }
 
 // ========================================
