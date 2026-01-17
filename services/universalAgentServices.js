@@ -1748,6 +1748,256 @@ RETURN JSON in this EXACT format:
 }
 
 // ========================================
+// 7. THE HAWK (Contractor Scout)
+// Real-time contractor/supplier procurement
+// ========================================
+class HawkAgent {
+  /**
+   * Find contractors matching project requirements
+   * @param {Object} projectData - { zipCode, trade, projectType, estimateRange }
+   * @returns {Array} Contractors sorted by rating, distance, and availability
+   */
+  static async findContractors(projectData) {
+    const { zipCode, trade, projectType, estimateRange } = projectData;
+
+    console.log(`[Hawk] Scouting contractors for ${trade} near ${zipCode}...`);
+
+    try {
+      // Query user_profiles for contractors matching trade
+      const query = `
+        SELECT
+          up.id,
+          up.email,
+          up.company_name,
+          up.trade,
+          up.phone,
+          up.location_zip,
+          up.license_verified,
+          COALESCE(AVG(hr.overall_rating), 0) as avg_rating,
+          COUNT(hr.id) as review_count
+        FROM user_profiles up
+        LEFT JOIN homeowner_ratings hr ON up.email = hr.contractor_email
+        WHERE up.role = 'contractor'
+          AND up.trade = $1
+          AND up.license_verified = true
+        GROUP BY up.id, up.email, up.company_name, up.trade, up.phone, up.location_zip, up.license_verified
+        ORDER BY avg_rating DESC, review_count DESC
+        LIMIT 20
+      `;
+
+      const result = await db.query(query, [trade]);
+
+      if (result.rows.length === 0) {
+        console.log(`[Hawk] No contractors found for ${trade}`);
+        return [];
+      }
+
+      // Calculate distances and format results
+      const contractors = result.rows.map(contractor => {
+        const distance = this.calculateZipDistance(zipCode, contractor.location_zip);
+
+        return {
+          id: contractor.id,
+          email: contractor.email,
+          company_name: contractor.company_name,
+          trade: contractor.trade,
+          phone: contractor.phone,
+          location_zip: contractor.location_zip,
+          license_verified: contractor.license_verified,
+          rating: parseFloat(contractor.avg_rating).toFixed(1),
+          review_count: parseInt(contractor.review_count),
+          distance_miles: distance,
+          estimated_response_time: distance < 10 ? '24 hours' : distance < 30 ? '48 hours' : '3-5 days'
+        };
+      });
+
+      // Sort by distance (closest first)
+      contractors.sort((a, b) => a.distance_miles - b.distance_miles);
+
+      // Take top 10 closest with good ratings
+      const topContractors = contractors
+        .filter(c => c.rating >= 3.5 || c.review_count === 0) // Include new contractors
+        .slice(0, 10);
+
+      console.log(`[Hawk] ✅ Found ${topContractors.length} qualified contractors`);
+
+      // Log agent activity
+      await logAgentActivity(
+        null, // No project ID yet for initial scouting
+        'hawk',
+        'find_contractors',
+        `Scouted ${topContractors.length} ${trade} contractors near ${zipCode}`,
+        { trade, zipCode, projectType },
+        { contractors: topContractors.map(c => ({ company: c.company_name, rating: c.rating, distance: c.distance_miles })) },
+        'completed'
+      );
+
+      return topContractors;
+
+    } catch (error) {
+      console.error('[Hawk] Error finding contractors:', error);
+      throw new Error(`Failed to find contractors: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find suppliers for materials
+   * @param {string} zipCode - Project ZIP code
+   * @param {string} trade - Trade type (for material specialization)
+   * @returns {Array} Suppliers sorted by proximity
+   */
+  static async findSuppliers(zipCode, trade) {
+    console.log(`[Hawk] Finding suppliers for ${trade} near ${zipCode}...`);
+
+    try {
+      // Query suppliers table (if exists) or user_profiles with role='supplier'
+      const query = `
+        SELECT
+          up.id,
+          up.email,
+          up.company_name,
+          up.phone,
+          up.location_zip,
+          up.trade as specialty
+        FROM user_profiles up
+        WHERE up.role = 'supplier'
+          AND (up.trade = $1 OR up.trade = 'general')
+        ORDER BY up.company_name
+        LIMIT 10
+      `;
+
+      const result = await db.query(query, [trade]);
+
+      const suppliers = result.rows.map(supplier => {
+        const distance = this.calculateZipDistance(zipCode, supplier.location_zip);
+
+        return {
+          id: supplier.id,
+          company_name: supplier.company_name,
+          email: supplier.email,
+          phone: supplier.phone,
+          location_zip: supplier.location_zip,
+          specialty: supplier.specialty,
+          distance_miles: distance,
+          delivery_estimate: distance < 25 ? 'Same/Next Day' : distance < 50 ? '2-3 Days' : '1 Week'
+        };
+      });
+
+      // Sort by distance
+      suppliers.sort((a, b) => a.distance_miles - b.distance_miles);
+
+      console.log(`[Hawk] ✅ Found ${suppliers.length} suppliers`);
+
+      return suppliers;
+
+    } catch (error) {
+      console.error('[Hawk] Error finding suppliers:', error);
+      // Return empty array if suppliers table doesn't exist yet
+      return [];
+    }
+  }
+
+  /**
+   * Calculate approximate distance between ZIP codes
+   * Uses simplified lat/long estimation (accurate within ~10%)
+   * @param {string} zip1 - First ZIP code
+   * @param {string} zip2 - Second ZIP code
+   * @returns {number} Approximate distance in miles
+   */
+  static calculateZipDistance(zip1, zip2) {
+    if (!zip1 || !zip2) return 999;
+    if (zip1 === zip2) return 0;
+
+    // Simplified ZIP code distance estimation
+    // First 3 digits of ZIP represent sectional center
+    const zip1Prefix = parseInt(zip1.substring(0, 3));
+    const zip2Prefix = parseInt(zip2.substring(0, 3));
+
+    // Rough estimation: Each ZIP prefix difference ≈ 50-100 miles
+    const prefixDiff = Math.abs(zip1Prefix - zip2Prefix);
+
+    if (prefixDiff === 0) {
+      // Same sectional center - check last 2 digits
+      const zip1Suffix = parseInt(zip1.substring(3, 5));
+      const zip2Suffix = parseInt(zip2.substring(3, 5));
+      const suffixDiff = Math.abs(zip1Suffix - zip2Suffix);
+      return Math.round(suffixDiff * 2); // ~2 miles per suffix difference
+    } else {
+      // Different sectional centers
+      return Math.round(prefixDiff * 75); // ~75 miles per prefix difference
+    }
+  }
+
+  /**
+   * Match contractors to project automatically
+   * Used by OrchestratorAgent to pre-populate contractor pool
+   * @param {number} projectId - Project ID
+   * @returns {Object} Matched contractors and suppliers
+   */
+  static async autoMatchContractors(projectId) {
+    console.log(`[Hawk] Auto-matching contractors for project ${projectId}...`);
+
+    try {
+      // Get project details
+      const projectResult = await db.query(
+        'SELECT * FROM projects WHERE id = $1',
+        [projectId]
+      );
+
+      if (projectResult.rows.length === 0) {
+        throw new Error(`Project ${projectId} not found`);
+      }
+
+      const project = projectResult.rows[0];
+
+      // Get milestones to determine required trades
+      const milestonesResult = await db.query(
+        'SELECT DISTINCT assigned_contractor_role FROM project_milestones WHERE project_id = $1',
+        [projectId]
+      );
+
+      const requiredTrades = milestonesResult.rows
+        .map(m => m.assigned_contractor_role)
+        .filter(Boolean);
+
+      // Find contractors for each trade
+      const contractorMatches = {};
+
+      for (const trade of requiredTrades) {
+        const contractors = await this.findContractors({
+          zipCode: project.location_zip,
+          trade: trade,
+          projectType: project.project_type,
+          estimateRange: project.estimated_budget
+        });
+
+        contractorMatches[trade] = contractors;
+      }
+
+      // Find suppliers
+      const suppliers = await this.findSuppliers(
+        project.location_zip,
+        project.project_type
+      );
+
+      console.log(`[Hawk] ✅ Auto-matched contractors for ${requiredTrades.length} trades`);
+
+      return {
+        success: true,
+        contractors_by_trade: contractorMatches,
+        suppliers: suppliers,
+        total_contractors: Object.values(contractorMatches).flat().length,
+        total_suppliers: suppliers.length
+      };
+
+    } catch (error) {
+      console.error('[Hawk] Error auto-matching contractors:', error);
+      throw error;
+    }
+  }
+}
+
+// ========================================
 // Export all agents
 // ========================================
 module.exports = {
@@ -1757,6 +2007,7 @@ module.exports = {
   WhipAgent,
   DiplomatAgent,
   SentinelAgent,
+  HawkAgent,
 
   // Helper functions
   getProjectTemplate,

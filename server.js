@@ -8273,6 +8273,83 @@ app.post('/api/agents/sentinel/verify', async (req, res) => {
 });
 
 /**
+ * POST /api/agents/hawk/scout
+ * The Hawk Agent: Find contractors matching project requirements
+ */
+app.post('/api/agents/hawk/scout', async (req, res) => {
+  try {
+    const { zipCode, trade, projectType, estimateRange } = req.body;
+
+    if (!zipCode || !trade) {
+      return res.status(400).json({
+        error: 'zipCode and trade are required'
+      });
+    }
+
+    console.log(`[Hawk API] Scouting contractors: ${trade} near ${zipCode}`);
+
+    const { HawkAgent } = require('./services/universalAgentServices');
+
+    const contractors = await HawkAgent.findContractors({
+      zipCode,
+      trade,
+      projectType,
+      estimateRange
+    });
+
+    res.json({
+      success: true,
+      contractors: contractors,
+      count: contractors.length,
+      search_criteria: { zipCode, trade, projectType, estimateRange }
+    });
+
+  } catch (error) {
+    console.error('[Hawk API] Error finding contractors:', error);
+    res.status(500).json({
+      error: 'Failed to find contractors',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/agents/hawk/suppliers
+ * The Hawk Agent: Find suppliers for materials
+ */
+app.post('/api/agents/hawk/suppliers', async (req, res) => {
+  try {
+    const { zipCode, trade } = req.body;
+
+    if (!zipCode || !trade) {
+      return res.status(400).json({
+        error: 'zipCode and trade are required'
+      });
+    }
+
+    console.log(`[Hawk API] Finding suppliers: ${trade} near ${zipCode}`);
+
+    const { HawkAgent } = require('./services/universalAgentServices');
+
+    const suppliers = await HawkAgent.findSuppliers(zipCode, trade);
+
+    res.json({
+      success: true,
+      suppliers: suppliers,
+      count: suppliers.length,
+      search_criteria: { zipCode, trade }
+    });
+
+  } catch (error) {
+    console.error('[Hawk API] Error finding suppliers:', error);
+    res.status(500).json({
+      error: 'Failed to find suppliers',
+      message: error.message
+    });
+  }
+});
+
+/**
  * GET /api/verification/token/:token
  * Get verification token details (for loading verification page)
  */
