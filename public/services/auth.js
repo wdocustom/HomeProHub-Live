@@ -237,10 +237,15 @@ class AuthService {
           this.cachedProfile = null;
 
           // 6. Redirect based on role
-          if (role === 'contractor') {
-            window.location.href = '/contractor-dashboard.html';
+          // CRITICAL RACE CONDITION FIX: Check if we're already on the target page
+          // to prevent infinite redirect loops and AbortError from navigation conflicts
+          const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
+          const currentPath = window.location.pathname;
+
+          if (!currentPath.includes(targetUrl.replace('/', ''))) {
+            window.location.href = targetUrl;
           } else {
-            window.location.href = '/home.html';
+            console.log('✓ [Auth] Already on target page, skipping redirect');
           }
         }
       });
@@ -728,12 +733,16 @@ class AuthService {
 
         console.log(`No draft project - redirecting ${role} to dashboard`);
 
-        if (role === 'contractor') {
-          window.location.href = '/contractor-dashboard.html';
+        // CRITICAL RACE CONDITION FIX: Prevent redirect if already on target page
+        const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
+
+        if (!currentPath.includes(targetUrl.replace('/', ''))) {
+          window.location.href = targetUrl;
         } else {
-          window.location.href = '/home.html';
+          console.log('✓ [Auth] Already on target page, skipping redirect');
         }
       } else {
+        console.log('✓ [Auth] User already on protected page, no redirect needed');
       }
     }
   }

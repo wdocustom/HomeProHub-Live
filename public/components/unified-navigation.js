@@ -1,7 +1,7 @@
 /**
- * Sanctuary Glass 2.0 - Unified Navigation System
- * Zone-based navigation for HomeProHub
- * * UPDATED: Robust Logout Fix & Notification Bell Alignment
+ * HomeProHub Unified Navigation System
+ * Zone-based navigation for role-specific user experiences
+ * REFACTORED: Removed legacy branding, improved error handling
  */
 
 (function() {
@@ -555,11 +555,16 @@
     initNavigation(zone);
   }
 
-  window.SanctuaryNavigation = {
+  // Export navigation API
+  const navigationAPI = {
     init: initNavigation,
     zones: Object.keys(ZONE_CONFIG),
     refreshNotifications: fetchNotifications
   };
 
-  console.log('✓ Sanctuary Glass 2.0 Navigation System loaded');
+  // Export under both names for backward compatibility
+  window.UnifiedNavigation = navigationAPI;
+  window.SanctuaryNavigation = navigationAPI; // Legacy support
+
+  console.log('✓ HomeProHub Navigation System loaded');
 })();

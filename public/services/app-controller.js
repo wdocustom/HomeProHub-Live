@@ -1,7 +1,7 @@
 /**
  * HomeProHub Application Controller
  * Central orchestration point for app initialization
- * Eliminates race conditions by enforcing strict boot sequence
+ * REFACTORED: Robust error handling for race conditions and navigation conflicts
  */
 
 (async function initializeApp() {
@@ -10,20 +10,43 @@
 
   try {
     // ============================================
-    // STEP 1: AUTHENTICATE USER (BLOCKING)
+    // STEP 1: AUTHENTICATE USER (NON-BLOCKING)
     // ============================================
 
-    // Wait for AuthService to be available
-    await waitForAuthService();
+    // CRITICAL FIX: Wrap in AbortError handler to prevent crashes during navigation
+    let user = null;
+    let authInitialized = false;
 
-    // Initialize auth and wait for completion
-    await window.authService.init();
+    try {
+      // Wait for AuthService to be available
+      await waitForAuthService();
 
-    const user = window.currentUser;
+      // Initialize auth and wait for completion
+      // This may throw AbortError if page navigation happens during init
+      if (window.authService && !window.authService.initialized) {
+        await window.authService.init();
+      }
+
+      user = window.currentUser;
+      authInitialized = true;
+    } catch (authError) {
+      // Handle AbortError gracefully (happens when navigation interrupts initialization)
+      if (authError.name === 'AbortError' || authError.message?.includes('aborted')) {
+        console.warn('⚠️ [AppController] Auth initialization aborted (likely due to navigation)');
+        // Don't show error UI - this is expected during redirect
+        return; // Exit gracefully
+      }
+
+      // For other errors, log but continue with guest state
+      console.warn('⚠️ [AppController] Auth initialization failed:', authError.message);
+      user = null;
+      authInitialized = false;
+    }
+
     const userState = determineUserState(user);
 
     // ============================================
-    // STEP 2: DETERMINE GLOBAL STATE (BLOCKING)
+    // STEP 2: DETERMINE GLOBAL STATE
     // ============================================
 
     const appState = {
@@ -38,15 +61,25 @@
     window.appState = appState;
 
     // ============================================
-    // STEP 3: RENDER CORE UI (BLOCKING)
+    // STEP 3: RENDER CORE UI (NON-BLOCKING)
     // ============================================
 
-    // Wait for navigation system to be available
-    await waitForNavigationSystem();
+    // REFACTORED: Make navigation system optional, not blocking
+    try {
+      // Wait for navigation system to be available (with timeout)
+      await waitForNavigationSystem();
 
-    // Initialize navigation (this will render header/nav)
-    if (window.SanctuaryNavigation && window.SanctuaryNavigation.init) {
-      await window.SanctuaryNavigation.init(appState.zone);
+      // Initialize navigation (this will render header/nav)
+      if (window.UnifiedNavigation && window.UnifiedNavigation.init) {
+        await window.UnifiedNavigation.init(appState.zone);
+      } else if (window.SanctuaryNavigation && window.SanctuaryNavigation.init) {
+        // Fallback for legacy navigation system
+        await window.SanctuaryNavigation.init(appState.zone);
+      }
+    } catch (navError) {
+      // Navigation errors should not crash the app
+      console.warn('⚠️ [AppController] Navigation system initialization failed:', navError.message);
+      // Continue - page will still be functional
     }
 
     // ============================================
@@ -62,6 +95,13 @@
     hideLoadingState();
 
   } catch (error) {
+    // Handle AbortError from navigation conflicts
+    if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      console.warn('⚠️ [AppController] Initialization aborted due to navigation');
+      hideLoadingState();
+      return; // Exit gracefully without showing error
+    }
+
     console.error('❌ [AppController] Initialization failed:', error);
     handleInitializationError(error);
   }
@@ -94,25 +134,27 @@ function waitForAuthService() {
 
 /**
  * Wait for Navigation System to be loaded
+ * REFACTORED: Support both UnifiedNavigation and legacy SanctuaryNavigation
  */
 function waitForNavigationSystem() {
   return new Promise((resolve) => {
-    if (window.SanctuaryNavigation) {
+    // Check for modern navigation system first
+    if (window.UnifiedNavigation || window.SanctuaryNavigation) {
       resolve();
     } else {
       const checkInterval = setInterval(() => {
-        if (window.SanctuaryNavigation) {
+        if (window.UnifiedNavigation || window.SanctuaryNavigation) {
           clearInterval(checkInterval);
           resolve();
         }
       }, 50);
 
-      // Timeout after 5 seconds
+      // Timeout after 2 seconds (reduced from 5s for faster page load)
       setTimeout(() => {
         clearInterval(checkInterval);
-        console.warn('⚠️ [AppController] Navigation System load timeout');
-        resolve();
-      }, 5000);
+        console.warn('⚠️ [AppController] Navigation System load timeout - continuing without navigation');
+        resolve(); // Continue anyway - navigation is optional
+      }, 2000);
     }
   });
 }
@@ -201,12 +243,37 @@ function hideLoadingState() {
 
 /**
  * Handle initialization errors
+ * ENHANCED: Specific error messages for different failure modes
  */
 function handleInitializationError(error) {
   hideLoadingState();
 
+  // Don't show error UI for AbortError (navigation in progress)
+  if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+    console.warn('⚠️ [AppController] Navigation in progress - skipping error UI');
+    return;
+  }
+
+  // Determine user-friendly error message
+  let errorTitle = 'Initialization Error';
+  let errorMessage = 'We encountered an error loading the application.';
+  let showReloadButton = true;
+
+  if (error.message?.includes('AUTH_NOT_CONFIGURED') || error.message?.includes('PLACEHOLDER_CREDENTIALS')) {
+    errorTitle = 'Authentication Not Configured';
+    errorMessage = 'Supabase credentials are not set up. Please contact the administrator.';
+    showReloadButton = false;
+  } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+    errorTitle = 'Network Error';
+    errorMessage = 'Could not connect to the server. Please check your internet connection.';
+  } else if (error.message?.includes('timeout')) {
+    errorTitle = 'Request Timeout';
+    errorMessage = 'The server is taking too long to respond. Please try again.';
+  }
+
   // Show error message
   const errorDiv = document.createElement('div');
+  errorDiv.id = 'app-error-overlay';
   errorDiv.style.cssText = `
     position: fixed;
     top: 50%;
@@ -216,18 +283,25 @@ function handleInitializationError(error) {
     padding: 32px;
     border-radius: 16px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
+    max-width: 500px;
     text-align: center;
     z-index: 10000;
   `;
 
+  const reloadButtonHTML = showReloadButton
+    ? `<button onclick="location.reload()" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 14px;">
+         Reload Page
+       </button>`
+    : '';
+
   errorDiv.innerHTML = `
     <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-    <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Initialization Error</h2>
-    <p style="font-size: 14px; color: #64748b; margin-bottom: 24px;">We encountered an error loading the application.</p>
-    <button onclick="location.reload()" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">
-      Reload Page
-    </button>
+    <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">${errorTitle}</h2>
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.5;">${errorMessage}</p>
+    ${reloadButtonHTML}
+    <div style="margin-top: 16px; font-size: 12px; color: #94a3b8;">
+      Error: ${error.message}
+    </div>
   `;
 
   document.body.appendChild(errorDiv);
