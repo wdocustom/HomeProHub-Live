@@ -91,14 +91,23 @@ class AuthService {
         const { data, error } = await this.supabase.auth.getSession();
 
         if (error) {
-          console.warn('⚠️ getSession() returned error:', error.message);
+          // Suppress error messages when credentials are placeholder/invalid
+          if (!error.message?.includes('aborted') && !error.message?.includes('Invalid')) {
+            console.warn('⚠️ getSession() returned error:', error.message);
+          }
           session = null;
         } else {
           session = data.session;
         }
       } catch (err) {
-        // Network/timeout errors - don't wipe localStorage
-        console.warn('⚠️ getSession() failed with exception:', err.message);
+        // Suppress expected errors when Supabase is not configured
+        if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+          // This is expected when Supabase project is paused or credentials are invalid
+          // Silently fail - the app will show configuration warning
+        } else {
+          // Log unexpected errors
+          console.warn('⚠️ getSession() failed with exception:', err.message);
+        }
         session = null;
       }
 
@@ -269,28 +278,33 @@ class AuthService {
       }
     } catch (error) {
       // Handle AbortError gracefully (happens when page navigation interrupts initialization)
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Auth initialization was aborted (page navigation or multiple init calls)');
-        console.log('Auth will retry on next page load');
+      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+        // This is expected when Supabase project is paused or credentials are invalid
+        // Silently handle - no need to log warnings
         this.initialized = false;
+
+        // Show configuration warning if on auth pages
+        const path = window.location.pathname;
+        if (path.includes('signin') || path.includes('signup')) {
+          this.showConfigurationWarning();
+        }
         return; // Don't throw - allow graceful degradation
       }
 
       // Handle configuration errors with user-friendly messages
       if (error.message === 'AUTH_NOT_CONFIGURED' || error.message === 'PLACEHOLDER_CREDENTIALS') {
-        console.warn('⚠️ Authentication service not properly configured');
-        console.warn('   To enable authentication features:');
-        console.warn('   1. Create a Supabase project at https://supabase.com');
-        console.warn('   2. Copy your project URL and anon key from Project Settings > API');
-        console.warn('   3. Update SUPABASE_URL and SUPABASE_ANON_KEY in your .env file');
-        console.warn('   4. Restart the server');
+        // Silently handle configuration errors - no console spam
         this.initialized = false;
 
-        // Show user-friendly message in UI
-        this.showConfigurationWarning();
+        // Show user-friendly message in UI only on auth pages
+        const path = window.location.pathname;
+        if (path.includes('signin') || path.includes('signup')) {
+          this.showConfigurationWarning();
+        }
         return; // Don't throw - allow page to load in demo mode
       }
 
+      // For other unexpected errors, log them
       console.error('❌ Failed to initialize AuthService:', error);
       console.error('Error details:', {
         name: error.name,
@@ -423,7 +437,9 @@ class AuthService {
       let userMessage = error.message;
 
       if (error.message.includes('signal is aborted') || error.message.includes('AbortError')) {
-        userMessage = 'Authentication service unavailable. Your Supabase project may be paused. Check your Supabase dashboard and resume the project if needed.';
+        userMessage = 'Authentication service is not configured. Please contact the administrator to set up Supabase credentials.';
+      } else if (error.message.includes('not available') || error.message.includes('not configured')) {
+        userMessage = error.message; // Use the error message from the check at the start of signIn
       } else if (error.message.includes('Invalid login credentials')) {
         userMessage = 'Invalid email or password. Please check your credentials and try again.';
       } else if (error.message.includes('network') || error.message.includes('fetch')) {
