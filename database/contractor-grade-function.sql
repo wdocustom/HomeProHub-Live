@@ -31,7 +31,7 @@ BEGIN
     CASE
       WHEN profile_photo_url IS NOT NULL THEN 15 ELSE 0 END +
     CASE
-      WHEN years_experience IS NOT NULL AND years_experience > 0 THEN 15 ELSE 0 END +
+      WHEN years_in_business IS NOT NULL AND years_in_business > 0 THEN 15 ELSE 0 END +
     CASE
       WHEN service_area IS NOT NULL THEN 15 ELSE 0 END
   INTO profile_score
