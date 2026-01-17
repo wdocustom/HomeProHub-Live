@@ -19,6 +19,7 @@
 
 const OpenAI = require('openai');
 const db = require('../database/db');
+const { convertPDFToImages, isPDFUrl } = require('./blueprintProcessor');
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -356,24 +357,130 @@ class VisionaryAgent {
     }
 
     try {
-      // Note: In production, you'd use GPT-4o Vision API to analyze actual blueprint images
-      // This is a placeholder for the logic
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: analysisPrompt
-          },
-          {
-            role: 'user',
-            content: `Analyze these construction blueprints: ${blueprintPDFUrl}`
-          }
-        ],
-        response_format: { type: 'json_object' }
+      // ===== VISION API IMPLEMENTATION =====
+      // Convert PDF to images for Vision analysis
+      console.log('[Visionary] Converting PDF to images for Vision API...');
+
+      const blueprintImages = await convertPDFToImages(blueprintPDFUrl, {
+        maxPages: 10,  // Analyze up to 10 pages
+        scale: 2.0     // High resolution for technical drawings
       });
 
-      const analysis = JSON.parse(response.choices[0].message.content);
+      console.log(`[Visionary] Analyzing ${blueprintImages.length} blueprint pages with GPT-4o Vision...`);
+
+      // Analyze each page with Vision API
+      const pageAnalyses = [];
+
+      for (let i = 0; i < blueprintImages.length; i++) {
+        console.log(`[Visionary] Analyzing page ${i + 1}/${blueprintImages.length}...`);
+
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: analysisPrompt
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this construction blueprint page ${i + 1}. Extract structured data and measurements.`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: blueprintImages[i],
+                    detail: 'high'  // High resolution analysis for technical drawings
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 2000,
+          response_format: { type: 'json_object' }
+        });
+
+        const pageAnalysis = JSON.parse(response.choices[0].message.content);
+        pageAnalyses.push({
+          page: i + 1,
+          analysis: pageAnalysis
+        });
+
+        console.log(`[Visionary] Page ${i + 1} analyzed successfully`);
+      }
+
+      // Merge results from all pages
+      console.log('[Visionary] Merging multi-page analysis...');
+
+      const analysis = {
+        total_pages: blueprintImages.length,
+        blueprint_url: blueprintPDFUrl,
+        analyzed_at: new Date().toISOString(),
+        template_type: template.template_type,
+        pages: pageAnalyses,
+
+        // Merge common data across pages
+        summary: {
+          square_footage: 0,
+          rooms: [],
+          features: [],
+          materials: {},
+          structural_notes: [],
+          permit_requirements: []
+        }
+      };
+
+      // Combine data from all pages
+      for (const pageData of pageAnalyses) {
+        const page = pageData.analysis;
+
+        // Aggregate square footage
+        if (page.square_footage || page.total_square_footage) {
+          const sqft = parseInt(page.square_footage || page.total_square_footage || 0);
+          if (sqft > analysis.summary.square_footage) {
+            analysis.summary.square_footage = sqft;
+          }
+        }
+
+        // Collect rooms
+        if (page.rooms && Array.isArray(page.rooms)) {
+          analysis.summary.rooms.push(...page.rooms);
+        }
+
+        // Collect features
+        if (page.features && Array.isArray(page.features)) {
+          analysis.summary.features.push(...page.features);
+        } else if (page.special_features && Array.isArray(page.special_features)) {
+          analysis.summary.features.push(...page.special_features);
+        }
+
+        // Merge materials
+        if (page.materials || page.schedule_of_values) {
+          Object.assign(analysis.summary.materials, page.materials || page.schedule_of_values || {});
+        }
+
+        // Collect structural notes
+        if (page.structural_requirements && Array.isArray(page.structural_requirements)) {
+          analysis.summary.structural_notes.push(...page.structural_requirements);
+        }
+
+        // Collect permit requirements
+        if (page.permit_requirements) {
+          if (Array.isArray(page.permit_requirements)) {
+            analysis.summary.permit_requirements.push(...page.permit_requirements);
+          } else {
+            analysis.summary.permit_requirements.push(page.permit_requirements);
+          }
+        }
+      }
+
+      // Deduplicate arrays
+      analysis.summary.features = [...new Set(analysis.summary.features)];
+      analysis.summary.permit_requirements = [...new Set(analysis.summary.permit_requirements)];
+
+      console.log(`[Visionary] ✅ Vision analysis complete: ${analysis.summary.square_footage} sqft, ${analysis.summary.rooms.length} rooms`);
 
       // Store analysis in project metadata
       await db.query(`
