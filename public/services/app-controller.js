@@ -64,17 +64,36 @@
     // STEP 3: RENDER CORE UI (NON-BLOCKING)
     // ============================================
 
-    // REFACTORED: Make navigation system optional, not blocking
+    // REFACTORED: Pass user data to navigation to prevent duplicate auth fetches
     try {
       // Wait for navigation system to be available (with timeout)
       await waitForNavigationSystem();
 
-      // Initialize navigation (this will render header/nav)
+      // Prepare user data for navigation (if authenticated)
+      let userData = null;
+      if (user) {
+        // Fetch user profile synchronously if needed
+        let profile = null;
+        try {
+          if (window.authService && window.authService.getUserProfile) {
+            profile = await window.authService.getUserProfile();
+          }
+        } catch (profileError) {
+          console.warn('⚠️ [AppController] Profile fetch failed:', profileError.message);
+        }
+
+        userData = {
+          email: user.email,
+          name: profile?.full_name || profile?.company_name || user.user_metadata?.full_name || user.email.split('@')[0]
+        };
+      }
+
+      // Initialize navigation (passing userData to prevent duplicate auth fetches)
       if (window.UnifiedNavigation && window.UnifiedNavigation.init) {
-        await window.UnifiedNavigation.init(appState.zone);
+        await window.UnifiedNavigation.init(appState.zone, userData);
       } else if (window.SanctuaryNavigation && window.SanctuaryNavigation.init) {
         // Fallback for legacy navigation system
-        await window.SanctuaryNavigation.init(appState.zone);
+        await window.SanctuaryNavigation.init(appState.zone, userData);
       }
     } catch (navError) {
       // Navigation errors should not crash the app

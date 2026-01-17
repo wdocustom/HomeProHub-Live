@@ -62,13 +62,32 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
     // ============================================
     // STEP 4: RENDER UI (BLOCKING)
     // ============================================
-    
+
     // Verify Containers Exist (Fixes the White Screen Hang)
     ensureLayoutContainers();
 
-    // Initialize Navigation
+    // Prepare user data for navigation (if authenticated)
+    let userData = null;
+    if (user) {
+      // Fetch user profile synchronously if needed
+      let profile = null;
+      try {
+        if (window.authService && window.authService.getUserProfile) {
+          profile = await window.authService.getUserProfile();
+        }
+      } catch (profileError) {
+        console.warn('⚠️ [AppController] Profile fetch failed:', profileError.message);
+      }
+
+      userData = {
+        email: user.email,
+        name: profile?.full_name || profile?.company_name || user.user_metadata?.full_name || user.email.split('@')[0]
+      };
+    }
+
+    // Initialize Navigation (passing userData to prevent duplicate auth fetches)
     if (window.SanctuaryNavigation) {
-        await window.SanctuaryNavigation.init(appState.zone);
+        await window.SanctuaryNavigation.init(appState.zone, userData);
     } else {
         console.warn("⚠️ SanctuaryNavigation missing, skipping nav render");
     }
