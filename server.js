@@ -430,8 +430,6 @@ app.post('/api/auth/signin', async (req, res) => {
     try {
       profile = await db.getUserProfile(email);
       console.log('✓ User profile fetched:', profile ? 'Found' : 'Not found');
-<<<<<<< HEAD
-=======
 
       // If user is a contractor, also get their trade type
       if (profile && profile.role === 'contractor') {
@@ -550,11 +548,11 @@ app.get('/api/auth/user', requireAuth, async (req, res) => {
     // Get user profile from database
     const profile = await db.getUserProfile(req.user.email);
 
-<<<<<<< HEAD
+
     res.json({
       user: req.user,
       profile: profile,
-=======
+
     // If user is a contractor, also get their trade type
     let tradeType = null;
     if (profile && profile.role === 'contractor') {
@@ -706,9 +704,9 @@ app.post('/api/set-role', (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // PROFILE ENDPOINTS
-// ========================================
+// =====
 
 /**
  * GET /api/profile/me
@@ -917,9 +915,9 @@ app.get('/api/home/fetch-details', async (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // CLIENT REVIEW ENDPOINTS
-// ========================================
+// =====
 
 /**
  * POST /api/client-reviews/submit
@@ -1218,9 +1216,9 @@ app.get('/api/contractor/review-link', requireAuth, requireRole('contractor'), a
   }
 });
 
-// ========================================
+// =====
 // PUBLIC REVIEW ENDPOINTS
-// ========================================
+// =====
 
 /**
  * GET /api/public/contractor/:slug
@@ -3144,9 +3142,9 @@ app.get("/grading-data", (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // DATABASE API ENDPOINTS
-// ========================================
+// =====
 const emailService = require('./email/email-service');
 
 // Load license requirements data
@@ -4712,9 +4710,9 @@ app.post("/api/bid/decline", requireAuth, requireRole('homeowner'), async (req, 
   }
 });
 
-// ========================================
+// =====
 // SUB-HUNTER (CREW CONNECT) API ENDPOINTS
-// ========================================
+// =====
 
 /**
  * POST /api/find-subs
@@ -4891,9 +4889,9 @@ app.post("/api/invite-sub", requireAuth, requireRole('contractor'), async (req, 
   }
 });
 
-// ========================================
+// =====
 // LICENSE MANAGEMENT API ENDPOINTS
-// ========================================
+// =====
 
 /**
  * POST /api/contractor/licenses
@@ -5735,9 +5733,9 @@ app.get("/api/messages/conversations", requireAuth, async (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // CONVERSATION-BASED MESSAGING API
-// ========================================
+// =====
 
 /**
  * POST /api/conversations/create
@@ -6157,9 +6155,9 @@ app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // CONTRACTOR DIRECTORY & GRADING
-// ========================================
+// =====
 
 /**
  * GET /api/contractors/directory
@@ -6491,9 +6489,9 @@ app.get("/api/contractors/:email/reviews", async (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // NOTIFICATIONS SYSTEM (SMS & EMAIL)
-// ========================================
+// =====
 
 /**
  * POST /api/notifications/process-queue
@@ -7085,9 +7083,9 @@ app.get("/api/homeowner/stats", requireAuth, async (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // CONTRACTOR TOOLS - Lead Scout & Subscription Access
-// ========================================
+// =====
 
 /**
  * POST /api/user/subscription-access
@@ -7105,7 +7103,7 @@ app.post("/api/user/subscription-access", async (req, res) => {
       mocked: true
     });
 
-    /* // ========== ORIGINAL LOGIC (Commented for testing) ==========
+    /* // === ORIGINAL LOGIC (Commented for testing) ===
     const { email, feature } = req.body;
 
     if (!email || !feature) {
@@ -7132,7 +7130,7 @@ app.post("/api/user/subscription-access", async (req, res) => {
       hasAccess: hasPremiumAccess,
       tier: profile?.subscription_tier || 'contractor_starter'
     });
-    // ========== END ORIGINAL LOGIC ========== */
+    // === END ORIGINAL LOGIC === */
 
   } catch (err) {
     console.error('❌ Error checking subscription access:', err);
@@ -7657,10 +7655,10 @@ app.get('/api/templates', async (req, res) => {
   try {
     console.log('[API] GET /api/templates - Fetching project templates');
 
-<<<<<<< HEAD
+
     const result = await db.query(`
       SELECT
-=======
+
     const { data: templates, error } = await db.supabase
       .from('project_templates')
       .select(`
@@ -7677,7 +7675,7 @@ app.get('/api/templates', async (req, res) => {
         requires_engineering,
         phases,
         required_trades
-<<<<<<< HEAD
+
       FROM project_templates
       WHERE is_active = true
       ORDER BY
@@ -7697,7 +7695,7 @@ app.get('/api/templates', async (req, res) => {
       success: true,
       templates: result.rows,
       count: result.rows.length
-=======
+
       `)
       .eq('is_active', true)
       .order('typical_duration_days', { ascending: false });
@@ -7965,10 +7963,10 @@ app.post('/api/agents/trigger', requireAuth, async (req, res) => {
   }
 });
 
-// ========================================
+// =====
 // PHASE 4 & 5: DIPLOMAT & SENTINEL ENDPOINTS
 // Text-to-Log + Forensic Security
-// ========================================
+// =====
 
 const { DiplomatAgent } = require('./services/universalAgentServices');
 
@@ -8028,7 +8026,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 
       // Send Twilio response
       res.set('Content-Type', 'text/xml');
-<<<<<<< HEAD
+
       
       // Create TwiML response for confirmation
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -8037,7 +8035,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 </Response>`;
       
       return res.send(twiml);
-=======
+
       return res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Message>${errorMessage}</Message>
@@ -8067,10 +8065,10 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
     console.log(`[Webhook] SMS logged to project ${routing.project_id}: ${parsed.intent}`);
 
     // STEP 4: Handle milestone_claim - generate verification link
-<<<<<<< HEAD
+
     let dbResponseMessage = ''; // For database logging
     let smsResponseMessage = ''; // For SMS response
-=======
+
     let responseMessage = '';
 >>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
@@ -8092,7 +8090,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
           logResult.log_id
         );
 
-<<<<<<< HEAD
+
         // Now use sendVerificationLink to send the actual SMS
         const sendResult = await DiplomatAgent.sendVerificationLink(
           routing.project_id,
@@ -8122,7 +8120,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
     } else {
       dbResponseMessage = `Message logged.`;
       smsResponseMessage = 'Message received and logged. Thank you!';
-=======
+
         responseMessage = `Received: ${parsed.milestone_id} complete. To release payment, verify with a live photo: ${verificationLink.verification_url}`;
 
         console.log(`[Webhook] Verification link generated: ${verificationLink.verification_url}`);
@@ -8149,7 +8147,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
         response_message = $2,
         project_log_id = $3
       WHERE id = $4
-<<<<<<< HEAD
+
     `, [parsed.intent, dbResponseMessage, logResult.log_id, routingLogResult.rows[0].id]);
 
     // Send Twilio response with confirmation
@@ -8174,7 +8172,7 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 </Response>`;
     
     return res.send(twiml);
-=======
+
     `, [parsed.intent, responseMessage, logResult.log_id, routingLogResult.rows[0].id]);
 
     // Send Twilio response
@@ -8763,19 +8761,19 @@ app.use((err, req, res, next) => {
 // ====== START SERVER ======
 const PORT = process.env.PORT || 3000;
 
-<<<<<<< HEAD
+
 app.listen(PORT, () => {
-=======
+
 app.listen(PORT, async () => {
 >>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
-  console.log('========================================');
+  console.log('=====');
   console.log(`🚀 HomeProHub Server`);
   console.log(`📍 Running at: http://localhost:${PORT}`);
   console.log(`🔑 Anthropic API: ${ANTHROPIC_API_KEY ? '✓ Configured' : '❌ Missing'}`);
   console.log(`⏰ Started: ${new Date().toISOString()}`);
-  console.log('========================================');
-<<<<<<< HEAD
-=======
+  console.log('=====');
+
+
 
   // Run database auto-migrations
   await runAutoMigrations();
