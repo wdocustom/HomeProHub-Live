@@ -430,6 +430,17 @@ app.post('/api/auth/signin', async (req, res) => {
     try {
       profile = await db.getUserProfile(email);
       console.log('✓ User profile fetched:', profile ? 'Found' : 'Not found');
+
+      // If user is a contractor, also get their trade type
+      if (profile && profile.role === 'contractor') {
+        try {
+          const tradeType = await db.getContractorTradeType(email);
+          profile.trade_type = tradeType;
+          console.log('✓ Contractor trade type fetched:', tradeType);
+        } catch (tradeError) {
+          console.warn('⚠️ Could not fetch trade type:', tradeError.message);
+        }
+      }
     } catch (dbError) {
       console.error('⚠️ Error fetching user profile:', dbError);
     }
@@ -536,9 +547,19 @@ app.get('/api/auth/user', requireAuth, async (req, res) => {
     // Get user profile from database
     const profile = await db.getUserProfile(req.user.email);
 
+    // If user is a contractor, also get their trade type
+    let tradeType = null;
+    if (profile && profile.role === 'contractor') {
+      try {
+        tradeType = await db.getContractorTradeType(req.user.email);
+      } catch (tradeError) {
+        console.warn('Could not fetch trade type:', tradeError.message);
+      }
+    }
+
     res.json({
       user: req.user,
-      profile: profile,
+      profile: { ...profile, trade_type: tradeType },
       authenticated: true
     });
 

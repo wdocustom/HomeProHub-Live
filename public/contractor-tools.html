@@ -1021,6 +1021,124 @@
     // ============================================
     // AUTH & INITIALIZATION
     // ============================================
+
+    /**
+     * Customize UI based on contractor's trade type
+     * Maps database trade_type to UI representation
+     */
+    function customizeUIForTradeType(tradeType) {
+      console.log('[UI Customization] Trade type from profile:', tradeType);
+
+      // Map database trade_type values to UI trade values
+      const tradeMapping = {
+        'general_contractor': 'gc',
+        'plumbing': 'plumber',
+        'electrical': 'electrician',
+        'hvac': 'hvac',
+        // Fallback to GC for unknown types
+        null: 'gc',
+        undefined: 'gc'
+      };
+
+      const uiTradeType = tradeMapping[tradeType] || 'gc';
+      console.log('[UI Customization] Mapped to UI trade type:', uiTradeType);
+
+      // Update the Hawk agent for the specific trade
+      updateHawkAgentForTrade(uiTradeType);
+
+      // Update page title based on trade type
+      const titles = {
+        'gc': 'Contractor Command Center',
+        'plumber': 'Plumber Command Center',
+        'electrician': 'Electrician Command Center',
+        'hvac': 'HVAC Technician Command Center'
+      };
+
+      const pageTitle = document.querySelector('h1');
+      if (pageTitle) {
+        pageTitle.textContent = titles[uiTradeType] || titles['gc'];
+      }
+
+      // Update command center header based on trade type
+      const commandCenterHeader = document.querySelector('#command-center-content .bg-gradient-to-r h2');
+      const commandCenterDesc = document.querySelector('#command-center-content .bg-gradient-to-r p');
+
+      if (uiTradeType !== 'gc') {
+        const tradeNames = {
+          'plumber': 'Plumbing',
+          'electrician': 'Electrical',
+          'hvac': 'HVAC'
+        };
+
+        const tradeName = tradeNames[uiTradeType] || 'Trade';
+
+        if (commandCenterHeader) {
+          commandCenterHeader.innerHTML = `🔧 ${tradeName} AI Assistant`;
+        }
+        if (commandCenterDesc) {
+          commandCenterDesc.textContent = `Your AI-powered assistant for ${tradeName.toLowerCase()} projects, supplier sourcing, and inspection coordination.`;
+        }
+      }
+
+      // For non-GC contractors, hide GC-specific features
+      if (uiTradeType !== 'gc') {
+        hideGCSpecificFeatures();
+      }
+    }
+
+    /**
+     * Hide GC-specific features for trade contractors
+     */
+    function hideGCSpecificFeatures() {
+      console.log('[UI Customization] Hiding GC-specific features');
+
+      // Hide "Your Active Projects" section - GC-only feature
+      const activeProjectsSection = document.querySelector('#command-center-content > div > div:nth-child(2)');
+      if (activeProjectsSection) {
+        activeProjectsSection.style.display = 'none';
+        console.log('[UI Customization] Hidden: Active Projects section');
+      }
+
+      // Hide contractor update section - GC-only feature
+      const updateSection = document.getElementById('contractor-update-section');
+      if (updateSection) {
+        updateSection.style.display = 'none';
+        console.log('[UI Customization] Hidden: Contractor Update section');
+      }
+
+      // Hide project activity section - GC-only feature
+      const activitySection = document.getElementById('project-activity-section');
+      if (activitySection) {
+        activitySection.style.display = 'none';
+        console.log('[UI Customization] Hidden: Project Activity section');
+      }
+
+      // Update The Summarizer description for trade contractors
+      const summarizerCard = document.querySelector('.bg-gradient-to-br.from-blue-50');
+      if (summarizerCard) {
+        const summarizerDesc = summarizerCard.querySelector('p.text-sm');
+        if (summarizerDesc) {
+          summarizerDesc.textContent = 'Generates professional updates and reports for your trade-specific projects and jobs.';
+        }
+      }
+
+      // Hide The Orchestrator - GC-only agent
+      const orchestratorCard = document.querySelector('.bg-gradient-to-br.from-purple-50');
+      if (orchestratorCard) {
+        orchestratorCard.style.display = 'none';
+        console.log('[UI Customization] Hidden: The Orchestrator agent');
+      }
+
+      // Hide The Whip - GC-only agent
+      const whipCard = document.querySelector('.bg-gradient-to-br.from-orange-50');
+      if (whipCard) {
+        whipCard.style.display = 'none';
+        console.log('[UI Customization] Hidden: The Whip agent');
+      }
+
+      console.log('[UI Customization] ✓ All GC-specific features hidden');
+    }
+
     async function checkAuth() {
       try {
         if (!window.authService || !window.authService.initialized) {
@@ -1051,6 +1169,10 @@
         }
 
         profile = userProfile;
+
+        // Customize UI based on contractor's trade type
+        customizeUIForTradeType(profile.trade_type);
+
         return true;
       } catch (error) {
         console.error('Auth check failed:', error);
