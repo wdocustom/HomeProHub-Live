@@ -229,6 +229,8 @@ function hideLoadingState() {
 
 /**
  * Handle initialization errors
+ */
+function handleInitializationError(error) {
   // Don't show error UI for AbortError (navigation in progress)
   if (error.name === 'AbortError' || error.message?.includes('aborted')) {
     console.warn('⚠️ [AppController] Navigation in progress - skipping error UI');
