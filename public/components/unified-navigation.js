@@ -1,13 +1,7 @@
 /**
-<<<<<<< HEAD
- * Sanctuary Glass 2.0 - Unified Navigation System
- * Zone-based navigation for HomeProHub
- * * UPDATED: Robust Logout Fix & Notification Bell Alignment
-=======
  * HomeProHub Unified Navigation System
  * Zone-based navigation for role-specific user experiences
  * REFACTORED: Removed legacy branding, improved error handling
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
  */
 
 (function() {
@@ -265,53 +259,6 @@
     `;
   }
 
-<<<<<<< HEAD
-  // --- Auth & Notification System Helpers ---
-
-  function waitForAuth() {
-    return new Promise((resolve) => {
-      if (window.authReady) return resolve();
-      window.addEventListener('auth-init-complete', () => resolve(), { once: true });
-      setTimeout(() => resolve(), 5000);
-    });
-  }
-
-  async function initNavigation(zone) {
-    if (!ZONE_CONFIG[zone]) return console.error(`Invalid zone: ${zone}`);
-    const config = ZONE_CONFIG[zone];
-    let userData = null;
-
-    if (config.requiresAuth) {
-      try {
-        await waitForAuth();
-        const user = await window.authService.getCurrentUser();
-        if (!user) {
-          window.location.href = '/signin.html';
-          return;
-        }
-        
-        const profile = await window.authService.getUserProfile();
-        // Skip redirect if already on a dashboard to prevent loops
-        if (config.userRole && profile.role !== config.userRole) {
-           const path = window.location.pathname;
-           if (!path.includes('dashboard') && !path.includes('home.html') && !path.includes('project')) {
-               if (profile.role === 'homeowner') window.location.href = '/home.html';
-               else if (profile.role === 'contractor') window.location.href = '/contractor-dashboard.html';
-               return;
-           }
-        }
-        
-        userData = { 
-            email: user.email, 
-            name: profile.full_name || profile.company_name || user.email.split('@')[0] 
-        };
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        window.location.href = '/signin.html';
-        return;
-      }
-    }
-=======
   // --- Passive Navigation Initializer (No Auth Logic) ---
   // This component ONLY renders UI. Auth is handled by app-controller.js
 
@@ -321,7 +268,6 @@
 
     // Navigation is now a "dumb" component - it trusts the data passed from app-controller
     // No auth fetching happens here to prevent race conditions
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
     // Header Injection
     let headerContainer = document.getElementById('main-header-container');
@@ -563,19 +509,6 @@
   };
 
   function startNavigationSystem() {
-<<<<<<< HEAD
-    const zoneMeta = document.querySelector('meta[name="sanctuary-zone"]');
-    let zone = zoneMeta ? zoneMeta.content : 'A';
-    const user = window.currentUser;
-    if (user && (zone === 'A' || zone === 'B')) {
-       const role = user.user_metadata?.role || 'homeowner';
-       zone = role === 'contractor' ? 'D' : 'C';
-    }
-    initNavigation(zone);
-  }
-
-  window.SanctuaryNavigation = {
-=======
     console.warn('⚠️ startNavigationSystem() is deprecated. Use initNavigation(zone, userData) from app-controller.js instead.');
     const zoneMeta = document.querySelector('meta[name="sanctuary-zone"]');
     let zone = zoneMeta ? zoneMeta.content : 'A';
@@ -597,19 +530,14 @@
 
   // Export navigation API
   const navigationAPI = {
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     init: initNavigation,
     zones: Object.keys(ZONE_CONFIG),
     refreshNotifications: fetchNotifications
   };
 
-<<<<<<< HEAD
-  console.log('✓ Sanctuary Glass 2.0 Navigation System loaded');
-=======
   // Export under both names for backward compatibility
   window.UnifiedNavigation = navigationAPI;
   window.SanctuaryNavigation = navigationAPI; // Legacy support
 
   console.log('✓ HomeProHub Navigation System loaded');
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 })();

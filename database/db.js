@@ -94,8 +94,6 @@ async function getContractorByVerificationId(verificationId) {
   return data;
 }
 
-<<<<<<< HEAD
-=======
 /**
  * Get contractor's trade type from licenses
  * Returns the first verified license trade type, or first pending license if no verified ones
@@ -120,8 +118,6 @@ async function getContractorTradeType(email) {
 
   return license.trade_type;
 }
-
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 // ========================================
 // Job Posting Operations
 // ========================================
@@ -1143,10 +1139,7 @@ module.exports = {
   updateUserProfile,
   updateContractorLicense,
   getContractorByVerificationId,
-<<<<<<< HEAD
-=======
   getContractorTradeType,
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
   // Job postings
   createJobPosting,

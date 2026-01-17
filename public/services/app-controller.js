@@ -1,11 +1,7 @@
 /**
  * HomeProHub Application Controller
  * Central orchestration point for app initialization
-<<<<<<< HEAD
- * Eliminates race conditions by enforcing strict boot sequence
-=======
  * REFACTORED: Robust error handling for race conditions and navigation conflicts
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
  */
 
 (async function initializeApp() {
@@ -14,22 +10,6 @@
 
   try {
     // ============================================
-<<<<<<< HEAD
-    // STEP 1: AUTHENTICATE USER (BLOCKING)
-    // ============================================
-
-    // Wait for AuthService to be available
-    await waitForAuthService();
-
-    // Initialize auth and wait for completion
-    await window.authService.init();
-
-    const user = window.currentUser;
-    const userState = determineUserState(user);
-
-    // ============================================
-    // STEP 2: DETERMINE GLOBAL STATE (BLOCKING)
-=======
     // STEP 1: AUTHENTICATE USER (NON-BLOCKING)
     // ============================================
 
@@ -67,7 +47,6 @@
 
     // ============================================
     // STEP 2: DETERMINE GLOBAL STATE
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     // ============================================
 
     const appState = {
@@ -82,17 +61,6 @@
     window.appState = appState;
 
     // ============================================
-<<<<<<< HEAD
-    // STEP 3: RENDER CORE UI (BLOCKING)
-    // ============================================
-
-    // Wait for navigation system to be available
-    await waitForNavigationSystem();
-
-    // Initialize navigation (this will render header/nav)
-    if (window.SanctuaryNavigation && window.SanctuaryNavigation.init) {
-      await window.SanctuaryNavigation.init(appState.zone);
-=======
     // STEP 3: RENDER CORE UI (NON-BLOCKING)
     // ============================================
 
@@ -131,7 +99,6 @@
       // Navigation errors should not crash the app
       console.warn('⚠️ [AppController] Navigation system initialization failed:', navError.message);
       // Continue - page will still be functional
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     }
 
     // ============================================
@@ -147,58 +114,12 @@
     hideLoadingState();
 
   } catch (error) {
-<<<<<<< HEAD
-=======
-    // Handle AbortError from navigation conflicts
-    if (error.name === 'AbortError' || error.message?.includes('aborted')) {
-      console.warn('⚠️ [AppController] Initialization aborted due to navigation');
-      hideLoadingState();
-      return; // Exit gracefully without showing error
-    }
-
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
-    console.error('❌ [AppController] Initialization failed:', error);
-    handleInitializationError(error);
+    console.error('❌ [AppController] Fatal error during initialization:', error);
+    hideLoadingState();
   }
 })();
 
 /**
- * Wait for AuthService to be loaded
- */
-function waitForAuthService() {
-  return new Promise((resolve) => {
-    if (window.authService) {
-      resolve();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.authService) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 50);
-
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        console.warn('⚠️ [AppController] AuthService load timeout');
-        resolve();
-      }, 5000);
-    }
-  });
-}
-
-/**
- * Wait for Navigation System to be loaded
-<<<<<<< HEAD
- */
-function waitForNavigationSystem() {
-  return new Promise((resolve) => {
-    if (window.SanctuaryNavigation) {
-      resolve();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.SanctuaryNavigation) {
-=======
  * REFACTORED: Support both UnifiedNavigation and legacy SanctuaryNavigation
  */
 function waitForNavigationSystem() {
@@ -209,27 +130,17 @@ function waitForNavigationSystem() {
     } else {
       const checkInterval = setInterval(() => {
         if (window.UnifiedNavigation || window.SanctuaryNavigation) {
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
           clearInterval(checkInterval);
           resolve();
         }
       }, 50);
 
-<<<<<<< HEAD
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        console.warn('⚠️ [AppController] Navigation System load timeout');
-        resolve();
-      }, 5000);
-=======
       // Timeout after 2 seconds (reduced from 5s for faster page load)
       setTimeout(() => {
         clearInterval(checkInterval);
         console.warn('⚠️ [AppController] Navigation System load timeout - continuing without navigation');
         resolve(); // Continue anyway - navigation is optional
       }, 2000);
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     }
   });
 }
@@ -318,18 +229,6 @@ function hideLoadingState() {
 
 /**
  * Handle initialization errors
-<<<<<<< HEAD
-=======
- * ENHANCED: Specific error messages for different failure modes
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
- */
-function handleInitializationError(error) {
-  hideLoadingState();
-
-<<<<<<< HEAD
-  // Show error message
-  const errorDiv = document.createElement('div');
-=======
   // Don't show error UI for AbortError (navigation in progress)
   if (error.name === 'AbortError' || error.message?.includes('aborted')) {
     console.warn('⚠️ [AppController] Navigation in progress - skipping error UI');
@@ -356,7 +255,6 @@ function handleInitializationError(error) {
   // Show error message
   const errorDiv = document.createElement('div');
   errorDiv.id = 'app-error-overlay';
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   errorDiv.style.cssText = `
     position: fixed;
     top: 50%;
@@ -366,24 +264,11 @@ function handleInitializationError(error) {
     padding: 32px;
     border-radius: 16px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-<<<<<<< HEAD
-    max-width: 400px;
-=======
     max-width: 500px;
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     text-align: center;
     z-index: 10000;
   `;
 
-<<<<<<< HEAD
-  errorDiv.innerHTML = `
-    <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-    <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Initialization Error</h2>
-    <p style="font-size: 14px; color: #64748b; margin-bottom: 24px;">We encountered an error loading the application.</p>
-    <button onclick="location.reload()" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">
-      Reload Page
-    </button>
-=======
   const reloadButtonHTML = showReloadButton
     ? `<button onclick="location.reload()" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 14px;">
          Reload Page
@@ -398,7 +283,6 @@ function handleInitializationError(error) {
     <div style="margin-top: 16px; font-size: 12px; color: #94a3b8;">
       Error: ${error.message}
     </div>
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   `;
 
   document.body.appendChild(errorDiv);

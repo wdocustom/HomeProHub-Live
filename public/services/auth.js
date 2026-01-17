@@ -91,23 +91,15 @@ class AuthService {
         const { data, error } = await this.supabase.auth.getSession();
 
         if (error) {
-<<<<<<< HEAD
-          console.warn('⚠️ getSession() returned error:', error.message);
-=======
           // Suppress error messages when credentials are placeholder/invalid
           if (!error.message?.includes('aborted') && !error.message?.includes('Invalid')) {
             console.warn('⚠️ getSession() returned error:', error.message);
           }
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
           session = null;
         } else {
           session = data.session;
         }
       } catch (err) {
-<<<<<<< HEAD
-        // Network/timeout errors - don't wipe localStorage
-        console.warn('⚠️ getSession() failed with exception:', err.message);
-=======
         // Suppress expected errors when Supabase is not configured
         if (err.name === 'AbortError' || err.message?.includes('aborted')) {
           // This is expected when Supabase project is paused or credentials are invalid
@@ -116,7 +108,6 @@ class AuthService {
           // Log unexpected errors
           console.warn('⚠️ getSession() failed with exception:', err.message);
         }
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
         session = null;
       }
 
@@ -246,12 +237,6 @@ class AuthService {
           this.cachedProfile = null;
 
           // 6. Redirect based on role
-<<<<<<< HEAD
-          if (role === 'contractor') {
-            window.location.href = '/contractor-dashboard.html';
-          } else {
-            window.location.href = '/home.html';
-=======
           // CRITICAL RACE CONDITION FIX: Check if we're already on the target page
           // to prevent infinite redirect loops and AbortError from navigation conflicts
           const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
@@ -261,7 +246,6 @@ class AuthService {
             window.location.href = targetUrl;
           } else {
             console.log('✓ [Auth] Already on target page, skipping redirect');
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
           }
         }
       });
@@ -299,12 +283,6 @@ class AuthService {
       }
     } catch (error) {
       // Handle AbortError gracefully (happens when page navigation interrupts initialization)
-<<<<<<< HEAD
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Auth initialization was aborted (page navigation or multiple init calls)');
-        console.log('Auth will retry on next page load');
-        this.initialized = false;
-=======
       if (error.name === 'AbortError' || error.message?.includes('aborted')) {
         // This is expected when Supabase project is paused or credentials are invalid
         // Silently handle - no need to log warnings
@@ -315,27 +293,11 @@ class AuthService {
         if (path.includes('signin') || path.includes('signup')) {
           this.showConfigurationWarning();
         }
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
         return; // Don't throw - allow graceful degradation
       }
 
       // Handle configuration errors with user-friendly messages
       if (error.message === 'AUTH_NOT_CONFIGURED' || error.message === 'PLACEHOLDER_CREDENTIALS') {
-<<<<<<< HEAD
-        console.warn('⚠️ Authentication service not properly configured');
-        console.warn('   To enable authentication features:');
-        console.warn('   1. Create a Supabase project at https://supabase.com');
-        console.warn('   2. Copy your project URL and anon key from Project Settings > API');
-        console.warn('   3. Update SUPABASE_URL and SUPABASE_ANON_KEY in your .env file');
-        console.warn('   4. Restart the server');
-        this.initialized = false;
-
-        // Show user-friendly message in UI
-        this.showConfigurationWarning();
-        return; // Don't throw - allow page to load in demo mode
-      }
-
-=======
         // Silently handle configuration errors - no console spam
         this.initialized = false;
 
@@ -348,7 +310,6 @@ class AuthService {
       }
 
       // For other unexpected errors, log them
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
       console.error('❌ Failed to initialize AuthService:', error);
       console.error('Error details:', {
         name: error.name,
@@ -481,13 +442,9 @@ class AuthService {
       let userMessage = error.message;
 
       if (error.message.includes('signal is aborted') || error.message.includes('AbortError')) {
-<<<<<<< HEAD
-        userMessage = 'Authentication service unavailable. Your Supabase project may be paused. Check your Supabase dashboard and resume the project if needed.';
-=======
         userMessage = 'Authentication service is not configured. Please contact the administrator to set up Supabase credentials.';
       } else if (error.message.includes('not available') || error.message.includes('not configured')) {
         userMessage = error.message; // Use the error message from the check at the start of signIn
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
       } else if (error.message.includes('Invalid login credentials')) {
         userMessage = 'Invalid email or password. Please check your credentials and try again.';
       } else if (error.message.includes('network') || error.message.includes('fetch')) {
@@ -776,14 +733,6 @@ class AuthService {
 
         console.log(`No draft project - redirecting ${role} to dashboard`);
 
-<<<<<<< HEAD
-        if (role === 'contractor') {
-          window.location.href = '/contractor-dashboard.html';
-        } else {
-          window.location.href = '/home.html';
-        }
-      } else {
-=======
         // CRITICAL RACE CONDITION FIX: Prevent redirect if already on target page
         const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
 
@@ -794,7 +743,6 @@ class AuthService {
         }
       } else {
         console.log('✓ [Auth] User already on protected page, no redirect needed');
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
       }
     }
   }

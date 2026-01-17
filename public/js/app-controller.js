@@ -62,15 +62,6 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
     // ============================================
     // STEP 4: RENDER UI (BLOCKING)
     // ============================================
-<<<<<<< HEAD
-    
-    // Verify Containers Exist (Fixes the White Screen Hang)
-    ensureLayoutContainers();
-
-    // Initialize Navigation
-    if (window.SanctuaryNavigation) {
-        await window.SanctuaryNavigation.init(appState.zone);
-=======
 
     // Verify Containers Exist (Fixes the White Screen Hang)
     ensureLayoutContainers();
@@ -97,7 +88,6 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
     // Initialize Navigation (passing userData to prevent duplicate auth fetches)
     if (window.SanctuaryNavigation) {
         await window.SanctuaryNavigation.init(appState.zone, userData);
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     } else {
         console.warn("⚠️ SanctuaryNavigation missing, skipping nav render");
     }
