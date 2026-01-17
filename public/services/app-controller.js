@@ -146,6 +146,32 @@ function waitForNavigationSystem() {
 }
 
 /**
+ * Wait for AuthService to be available
+ * REFACTORED: Added timeout to prevent infinite waiting
+ */
+function waitForAuthService() {
+  return new Promise((resolve) => {
+    if (window.authService) {
+      resolve();
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.authService) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 50);
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        console.warn('⚠️ [AppController] AuthService load timeout');
+        resolve();
+      }, 5000);
+    }
+  });
+}
+
+/**
  * Determine user state from user object
  */
 function determineUserState(user) {
