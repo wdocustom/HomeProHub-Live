@@ -7,6 +7,7 @@ const cors = require("cors");
 const path = require('path');
 const fs = require('fs');
 const db = require('./database/db');
+const { runAutoMigrations } = require('./database/auto-migrations');
 
 // OpenAI SDK for vision-enabled estimates
 const OpenAI = require('openai');
@@ -7648,8 +7649,9 @@ app.get('/api/templates', async (req, res) => {
   try {
     console.log('[API] GET /api/templates - Fetching project templates');
 
-    const result = await db.query(`
-      SELECT
+    const { data: templates, error } = await db.supabase
+      .from('project_templates')
+      .select(`
         id,
         template_name,
         template_type,
@@ -7662,25 +7664,42 @@ app.get('/api/templates', async (req, res) => {
         requires_engineering,
         phases,
         required_trades
-      FROM project_templates
-      WHERE is_active = true
-      ORDER BY
-        CASE template_type
-          WHEN 'new_construction' THEN 1
-          WHEN 'addition' THEN 2
-          WHEN 'remodel' THEN 3
-          WHEN 'repair' THEN 4
-          ELSE 5
-        END,
-        typical_duration_days DESC
-    `);
+      `)
+      .eq('is_active', true)
+      .order('typical_duration_days', { ascending: false });
 
-    console.log(`[API] Found ${result.rows.length} active templates`);
+    if (error) {
+      console.error('[API] Error fetching templates:', error);
+      return res.status(500).json({
+        error: 'Failed to fetch project templates',
+        message: error.message
+      });
+    }
+
+    // Sort templates by type priority (new_construction > addition > remodel > repair > other)
+    const typePriority = {
+      'new_construction': 1,
+      'addition': 2,
+      'remodel': 3,
+      'repair': 4
+    };
+
+    const sortedTemplates = (templates || []).sort((a, b) => {
+      const priorityA = typePriority[a.template_type] || 5;
+      const priorityB = typePriority[b.template_type] || 5;
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      return (b.typical_duration_days || 0) - (a.typical_duration_days || 0);
+    });
+
+    console.log(`[API] Found ${sortedTemplates.length} active templates`);
 
     res.json({
       success: true,
-      templates: result.rows,
-      count: result.rows.length
+      templates: sortedTemplates,
+      count: sortedTemplates.length
     });
 
   } catch (error) {
@@ -8634,11 +8653,14 @@ app.use((err, req, res, next) => {
 // ====== START SERVER ======
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log('========================================');
   console.log(`🚀 HomeProHub Server`);
   console.log(`📍 Running at: http://localhost:${PORT}`);
   console.log(`🔑 Anthropic API: ${ANTHROPIC_API_KEY ? '✓ Configured' : '❌ Missing'}`);
   console.log(`⏰ Started: ${new Date().toISOString()}`);
   console.log('========================================');
+
+  // Run database auto-migrations
+  await runAutoMigrations();
 });
