@@ -133,149 +133,7 @@
       z-index: 10;
       display: flex;
       align-items: center;
-<<<<<<< HEAD
-      justify-content: center;
-    }
-    
-    /* Gantt Chart Styles */
-    .gantt-timeline {
-      display: grid;
-      grid-template-columns: 250px 1fr;
-      gap: 1px;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    
-    .gantt-headers {
-      display: flex;
-      background-color: #f8fafc;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .gantt-header-cell {
-      flex: 1;
-      text-align: center;
-      padding: 8px 0;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #64748b;
-      border-right: 1px dashed #e5e7eb;
-    }
-    
-    .gantt-row {
-      display: grid;
-      grid-template-columns: 250px 1fr;
-      border-bottom: 1px solid #f1f5f9;
-      align-items: center;
-    }
-    
-    .gantt-row:last-child {
-      border-bottom: none;
-    }
-    
-    .gantt-milestone-label {
-      padding: 10px 16px;
-      font-weight: 500;
-      color: #1e293b;
-      background-color: #f8fafc;
-      border-right: 1px solid #e5e7eb;
-    }
-    
-    .gantt-milestone-label.critical-path {
-      border-left: 4px solid #3b82f6;
-    }
-    
-    .gantt-bar-container {
-      position: relative;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      background: repeating-linear-gradient(
-        90deg,
-        #f8fafc,
-        #f8fafc 49px,
-        #f1f5f9 49px,
-        #f1f5f9 50px
-      );
-    }
-    
-    .gantt-bar {
-      position: absolute;
-      height: 22px;
-      border-radius: 4px;
-      background-color: #94a3b8;
-      transition: width 0.5s ease;
-      z-index: 1;
-    }
-    
-    .gantt-bar.status-completed {
-      background-color: #22c55e;
-    }
-    
-    .gantt-bar.status-in_progress,
-    .gantt-bar.status-inspection_pending {
-      background-color: #f59e0b;
-    }
-    
-    .gantt-bar.status-blocked,
-    .gantt-bar.status-inspection_failed {
-      background-color: #ef4444;
-    }
-    
-    .gantt-bar.status-current {
-      background-color: #3b82f6;
-    }
-    
-    .gantt-bar.critical-path {
-      border: 2px solid #3b82f6;
-      z-index: 2;
-    }
-    
-    .gantt-milestone-info {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      padding: 8px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      z-index: 10;
-      width: 280px;
-      pointer-events: none;
-    }
-    
-    .gantt-bar:hover .gantt-milestone-info {
-      display: block;
-    }
-    
-    .today-marker {
-      position: absolute;
-      top: 0;
-      width: 2px;
-      height: 100%;
-      background-color: #dc2626;
-      z-index: 3;
-    }
-    
-    .today-marker::after {
-      content: 'Today';
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: #dc2626;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      white-space: nowrap;
-=======
       justify-center;
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     }
   </style>
 </head>
@@ -521,72 +379,8 @@
                   </div>
                 </div>
               </div>
-<<<<<<< HEAD
-              
-              <!-- Project Milestone Gantt Chart (Auto-GC) -->
-              <div id="project-milestone-section" class="hidden">
-                <h3 class="text-xl font-bold text-slate-900 mb-4">📋 Project Roadmap</h3>
-                
-                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
-                  <div class="flex justify-between items-center mb-4">
-                    <div>
-                      <h4 class="font-bold text-slate-900">Milestone Timeline</h4>
-                      <p class="text-sm text-slate-500">Progress tracking with critical path analytics</p>
-                    </div>
-                    <button
-                      onclick="refreshMilestones()"
-                      class="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-all"
-                    >
-                      <i class="fa-solid fa-rotate-right mr-2"></i>Refresh
-                    </button>
-                  </div>
-                  
-                  <!-- Legend -->
-                  <div class="flex flex-wrap gap-4 mb-3 text-xs">
-                    <div class="flex items-center gap-2">
-                      <div class="w-3 h-3 rounded bg-blue-500"></div>
-                      <span>Current Phase</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="w-3 h-3 rounded bg-green-500"></div>
-                      <span>Completed</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="w-3 h-3 rounded bg-amber-400"></div>
-                      <span>In Progress</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="w-3 h-3 rounded bg-slate-300"></div>
-                      <span>Pending</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="w-3 h-3 rounded bg-red-500"></div>
-                      <span>Blocked</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="border-2 border-blue-500 w-3 h-3 rounded"></div>
-                      <span>Critical Path</span>
-                    </div>
-                  </div>
-                  
-                  <!-- Gantt Chart Container -->
-                  <div id="gantt-chart-container" class="overflow-x-auto pb-4">
-                    <div id="milestone-gantt" class="min-w-[800px]">
-                      <!-- Gantt Chart will be rendered here -->
-                      <div class="text-center p-8 text-slate-400">
-                        <i class="fa-solid fa-chart-gantt text-2xl mb-2"></i>
-                        <p>Select a project to view milestone timeline</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-  
-            </div>
-=======
             </div>
 
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
           </div>
         </div>
 
@@ -1227,164 +1021,10 @@
     // ============================================
     // AUTH & INITIALIZATION
     // ============================================
-<<<<<<< HEAD
-=======
-
-    /**
-     * Customize UI based on contractor's trade type
-     * Maps database trade_type to UI representation
-     */
-    function customizeUIForTradeType(tradeType) {
-      console.log('[UI Customization] Trade type from profile:', tradeType);
-
-      // Map database trade_type values to UI trade values
-      const tradeMapping = {
-        'general_contractor': 'gc',
-        'plumbing': 'plumber',
-        'electrical': 'electrician',
-        'hvac': 'hvac',
-        // Fallback to GC for unknown types
-        null: 'gc',
-        undefined: 'gc'
-      };
-
-      const uiTradeType = tradeMapping[tradeType] || 'gc';
-      console.log('[UI Customization] Mapped to UI trade type:', uiTradeType);
-
-      // Update the Hawk agent for the specific trade
-      updateHawkAgentForTrade(uiTradeType);
-
-      // Update page title based on trade type
-      const titles = {
-        'gc': 'Contractor Command Center',
-        'plumber': 'Plumber Command Center',
-        'electrician': 'Electrician Command Center',
-        'hvac': 'HVAC Technician Command Center'
-      };
-
-      const pageTitle = document.querySelector('h1');
-      if (pageTitle) {
-        pageTitle.textContent = titles[uiTradeType] || titles['gc'];
-      }
-
-      // Update command center header based on trade type
-      const commandCenterHeader = document.querySelector('#command-center-content .bg-gradient-to-r h2');
-      const commandCenterDesc = document.querySelector('#command-center-content .bg-gradient-to-r p');
-
-      if (uiTradeType !== 'gc') {
-        const tradeNames = {
-          'plumber': 'Plumbing',
-          'electrician': 'Electrical',
-          'hvac': 'HVAC'
-        };
-
-        const tradeName = tradeNames[uiTradeType] || 'Trade';
-
-        if (commandCenterHeader) {
-          commandCenterHeader.innerHTML = `🔧 ${tradeName} AI Assistant`;
-        }
-        if (commandCenterDesc) {
-          commandCenterDesc.textContent = `Your AI-powered assistant for ${tradeName.toLowerCase()} projects, supplier sourcing, and inspection coordination.`;
-        }
-      }
-
-      // For non-GC contractors, hide GC-specific features
-      if (uiTradeType !== 'gc') {
-        hideGCSpecificFeatures();
-      }
-    }
-
-    /**
-     * Hide GC-specific features for trade contractors
-     */
-    function hideGCSpecificFeatures() {
-      console.log('[UI Customization] Hiding GC-specific features');
-
-      // Hide "Your Active Projects" section - GC-only feature
-      const activeProjectsSection = document.querySelector('#command-center-content > div > div:nth-child(2)');
-      if (activeProjectsSection) {
-        activeProjectsSection.style.display = 'none';
-        console.log('[UI Customization] Hidden: Active Projects section');
-      }
-
-      // Hide contractor update section - GC-only feature
-      const updateSection = document.getElementById('contractor-update-section');
-      if (updateSection) {
-        updateSection.style.display = 'none';
-        console.log('[UI Customization] Hidden: Contractor Update section');
-      }
-
-      // Hide project activity section - GC-only feature
-      const activitySection = document.getElementById('project-activity-section');
-      if (activitySection) {
-        activitySection.style.display = 'none';
-        console.log('[UI Customization] Hidden: Project Activity section');
-      }
-
-      // Update The Summarizer description for trade contractors
-      const summarizerCard = document.querySelector('.bg-gradient-to-br.from-blue-50');
-      if (summarizerCard) {
-        const summarizerDesc = summarizerCard.querySelector('p.text-sm');
-        if (summarizerDesc) {
-          summarizerDesc.textContent = 'Generates professional updates and reports for your trade-specific projects and jobs.';
-        }
-      }
-
-      // Hide The Orchestrator - GC-only agent
-      const orchestratorCard = document.querySelector('.bg-gradient-to-br.from-purple-50');
-      if (orchestratorCard) {
-        orchestratorCard.style.display = 'none';
-        console.log('[UI Customization] Hidden: The Orchestrator agent');
-      }
-
-      // Hide The Whip - GC-only agent
-      const whipCard = document.querySelector('.bg-gradient-to-br.from-orange-50');
-      if (whipCard) {
-        whipCard.style.display = 'none';
-        console.log('[UI Customization] Hidden: The Whip agent');
-      }
-
-      console.log('[UI Customization] ✓ All GC-specific features hidden');
-    }
-
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
-    async function checkAuth() {
-      try {
-        if (!window.authService || !window.authService.initialized) {
-          await new Promise(resolve => {
-            const checkInterval = setInterval(() => {
-              if (window.authService && window.authService.initialized) {
-                clearInterval(checkInterval);
-                resolve();
-              }
-            }, 100);
-            setTimeout(() => {
-              clearInterval(checkInterval);
-              resolve();
-            }, 5000);
-          });
-        }
-
-        const user = await window.authService.getCurrentUser();
-        if (!user) {
-          window.location.href = "index.html";
-          return false;
-        }
-
-        const userProfile = await window.authService.getUserProfile();
-        if (!userProfile || userProfile.role !== 'contractor') {
-          window.location.href = "index.html";
-          return false;
-        }
-
-        profile = userProfile;
-<<<<<<< HEAD
-=======
 
         // Customize UI based on contractor's trade type
         customizeUIForTradeType(profile.trade_type);
 
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
         return true;
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -2158,10 +1798,6 @@
         document.getElementById('project-status-card').classList.add('hidden');
         document.getElementById('contractor-update-section').classList.add('hidden');
         document.getElementById('project-activity-section').classList.add('hidden');
-<<<<<<< HEAD
-        document.getElementById('project-milestone-section').classList.add('hidden');
-=======
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
         selectedProjectId = null;
         return;
       }
@@ -2182,12 +1818,6 @@
 
           // Update UI with state data
           document.getElementById('project-phase').textContent = state.current_phase || 'planning';
-<<<<<<< HEAD
-          
-          // Store current phase globally for Gantt chart highlighting
-          window.currentPhase = state.current_phase;
-=======
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
           if (state.last_activity_date) {
             const lastActivity = new Date(state.last_activity_date);
@@ -2218,20 +1848,10 @@
 
           document.getElementById('project-phase').textContent = 'planning';
           document.getElementById('project-last-activity').textContent = 'Just now';
-<<<<<<< HEAD
-          window.currentPhase = 'planning';
-=======
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
         }
 
         // Load activity logs
         await refreshActivityLog();
-<<<<<<< HEAD
-        
-        // Fetch and render milestone Gantt chart
-        await fetchAndRenderMilestones(projectId);
-=======
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
       } catch (error) {
         console.error('Error loading project details:', error);
@@ -2978,209 +2598,6 @@
     }
 
     // ============================================
-<<<<<<< HEAD
-    // GANTT CHART - Milestone Timeline Rendering
-    // ============================================
-    
-    /**
-     * Fetch milestones for a project and render the Gantt chart
-     * @param {string} projectId - The project ID
-     */
-    async function fetchAndRenderMilestones(projectId) {
-      if (!projectId) return;
-      
-      try {
-        const response = await fetch(`/api/projects/${projectId}/milestones`);
-        
-        if (!response.ok) {
-          console.error('Failed to fetch milestones:', response.statusText);
-          return;
-        }
-        
-        const milestones = await response.json();
-        renderMilestoneGantt(milestones, projectId);
-        
-        // Show the milestone section
-        document.getElementById('project-milestone-section').classList.remove('hidden');
-      } catch (error) {
-        console.error('Error fetching milestones:', error);
-      }
-    }
-    
-    /**
-     * Refresh milestones chart
-     */
-    async function refreshMilestones() {
-      if (!selectedProjectId) return;
-      await fetchAndRenderMilestones(selectedProjectId);
-    }
-    
-    /**
-     * Render milestone Gantt chart
-     * @param {Array} milestones - Array of milestone objects
-     * @param {string} projectId - The project ID
-     */
-    function renderMilestoneGantt(milestones, projectId) {
-      const ganttContainer = document.getElementById('milestone-gantt');
-      
-      // If no milestones, show message
-      if (!milestones || milestones.length === 0) {
-        ganttContainer.innerHTML = `
-          <div class="text-center p-8 text-slate-400">
-            <i class="fa-solid fa-clipboard-list text-2xl mb-2"></i>
-            <p>No milestones found for this project</p>
-          </div>
-        `;
-        return;
-      }
-      
-      // Sort milestones by order
-      milestones.sort((a, b) => a.milestone_order - b.milestone_order);
-      
-      // Calculate date range for the project
-      const dates = milestones.flatMap(m => [
-        new Date(m.planned_start_date || Date.now()), 
-        new Date(m.planned_end_date || Date.now())
-      ]);
-      
-      const minDate = new Date(Math.min(...dates));
-      const maxDate = new Date(Math.max(...dates));
-      
-      // Add buffer days
-      minDate.setDate(minDate.getDate() - 3);
-      maxDate.setDate(maxDate.getDate() + 7);
-      
-      // Calculate total days in timeline
-      const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
-      const today = new Date();
-      
-      // Create timeline HTML
-      let html = `
-        <div class="gantt-timeline">
-          <div style="grid-column: 1;">
-            <!-- Empty cell in top-left -->
-          </div>
-          <div style="grid-column: 2;" class="gantt-headers">
-      `;
-      
-      // Create day headers
-      for (let i = 0; i < totalDays; i++) {
-        const date = new Date(minDate);
-        date.setDate(date.getDate() + i);
-        
-        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-        const isToday = date.toDateString() === today.toDateString();
-        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        
-        html += `
-          <div class="gantt-header-cell ${isWeekend ? 'bg-slate-100' : ''} ${isToday ? 'bg-blue-50 font-bold text-blue-700' : ''}">
-            ${dateStr}
-          </div>
-        `;
-      }
-      
-      html += `
-          </div>
-      `;
-      
-      // Get critical path information
-      let criticalPathIds = [];
-      try {
-        // Either from API or assume first milestones are critical
-        criticalPathIds = milestones
-          .filter(m => m.is_critical_path || m.critical_path)
-          .map(m => m.milestone_id);
-      } catch (error) {
-        console.warn('Critical path calculation error:', error);
-      }
-      
-      // Create rows for each milestone
-      milestones.forEach(milestone => {
-        const startDate = new Date(milestone.planned_start_date || Date.now());
-        const endDate = new Date(milestone.planned_end_date || Date.now());
-        
-        // Calculate position
-        const startDays = Math.floor((startDate - minDate) / (1000 * 60 * 60 * 24));
-        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) || 1;
-        
-        // Determine if this milestone is on critical path
-        const isOnCriticalPath = criticalPathIds.includes(milestone.milestone_id);
-        
-        // Determine bar status class
-        let statusClass = 'status-pending';
-        if (milestone.status === 'completed') {
-          statusClass = 'status-completed';
-        } else if (milestone.status === 'in_progress' || milestone.status === 'inspection_pending') {
-          statusClass = 'status-in_progress';
-        } else if (milestone.status === 'blocked' || milestone.status === 'inspection_failed') {
-          statusClass = 'status-blocked';
-        } else if (milestone.milestone_id === currentPhase) {
-          statusClass = 'status-current';
-        }
-        
-        // Create milestone row
-        html += `
-          <div class="gantt-row">
-            <div class="gantt-milestone-label ${isOnCriticalPath ? 'critical-path' : ''}">
-              ${milestone.milestone_name}
-            </div>
-            <div class="gantt-bar-container">
-              <div class="gantt-bar ${statusClass} ${isOnCriticalPath ? 'critical-path' : ''}"
-                   style="left: ${startDays * 50}px; width: ${duration * 50}px;"
-                   title="${milestone.milestone_name}">
-                <div class="gantt-milestone-info">
-                  <div class="font-bold text-sm mb-1">${milestone.milestone_name}</div>
-                  <div class="text-xs mb-2">
-                    <span class="font-semibold">Status:</span> 
-                    <span class="${statusClass === 'status-completed' ? 'text-green-600' : 
-                                  statusClass === 'status-in_progress' ? 'text-amber-600' :
-                                  statusClass === 'status-blocked' ? 'text-red-600' : 'text-slate-600'}">
-                      ${milestone.status.replace('_', ' ').toUpperCase()}
-                    </span>
-                  </div>
-                  <div class="text-xs">
-                    <span class="font-semibold">Start:</span> ${new Date(milestone.planned_start_date).toLocaleDateString()}
-                  </div>
-                  <div class="text-xs">
-                    <span class="font-semibold">End:</span> ${new Date(milestone.planned_end_date).toLocaleDateString()}
-                  </div>
-                  ${milestone.progress_percentage ? `
-                    <div class="text-xs mt-1">
-                      <span class="font-semibold">Progress:</span> ${milestone.progress_percentage}%
-                    </div>
-                  ` : ''}
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-      
-      // Calculate today marker position
-      const todayDays = Math.floor((today - minDate) / (1000 * 60 * 60 * 24));
-      const isTodayVisible = todayDays >= 0 && todayDays <= totalDays;
-      
-      // Close the timeline container
-      html += `</div>`;
-      
-      // Render HTML
-      ganttContainer.innerHTML = html;
-      
-      // Add "Today" marker if visible in the timeline
-      if (isTodayVisible) {
-        const barContainers = document.querySelectorAll('.gantt-bar-container');
-        barContainers.forEach(container => {
-          const todayMarker = document.createElement('div');
-          todayMarker.className = 'today-marker';
-          todayMarker.style.left = `${todayDays * 50}px`;
-          container.appendChild(todayMarker);
-        });
-      }
-    }
-
-    // ============================================
-=======
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
     // INITIALIZE APP
     // ============================================
     async function initPage() {
@@ -3253,18 +2670,15 @@
     }
   </script>
 
-<<<<<<< HEAD
   <!-- Sanctuary Glass 2.0 Navigation System -->
   <script src="/components/unified-navigation.js"></script>
 
   <!-- Application Controller (MUST BE LAST) -->
-=======
 
   <!-- Application Controller (MUST BE LAST) -->
   <!-- Navigation System (must load before app-controller) -->
   <script src="/components/unified-navigation.js"></script>
 
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
   <script src="/services/app-controller.js"></script>
 </body>
 </html>
