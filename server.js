@@ -7,10 +7,6 @@ const cors = require("cors");
 const path = require('path');
 const fs = require('fs');
 const db = require('./database/db');
-<<<<<<< HEAD
-=======
-const { runAutoMigrations } = require('./database/auto-migrations');
->>>>>>> 3528f074b06de08b86d1bcdfd29c829325237294
 
 // OpenAI SDK for vision-enabled estimates
 const OpenAI = require('openai');
