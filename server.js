@@ -547,11 +547,6 @@ app.get('/api/auth/user', requireAuth, async (req, res) => {
     // Get user profile from database
     const profile = await db.getUserProfile(req.user.email);
 
-
-    res.json({
-      user: req.user,
-      profile: profile,
-
     // If user is a contractor, also get their trade type
     let tradeType = null;
     if (profile && profile.role === 'contractor') {
@@ -7653,10 +7648,6 @@ app.get('/api/templates', async (req, res) => {
   try {
     console.log('[API] GET /api/templates - Fetching project templates');
 
-
-    const result = await db.query(`
-      SELECT
-
     const { data: templates, error } = await db.supabase
       .from('project_templates')
       .select(`
@@ -7672,27 +7663,6 @@ app.get('/api/templates', async (req, res) => {
         requires_engineering,
         phases,
         required_trades
-
-      FROM project_templates
-      WHERE is_active = true
-      ORDER BY
-        CASE template_type
-          WHEN 'new_construction' THEN 1
-          WHEN 'addition' THEN 2
-          WHEN 'remodel' THEN 3
-          WHEN 'repair' THEN 4
-          ELSE 5
-        END,
-        typical_duration_days DESC
-    `);
-
-    console.log(`[API] Found ${result.rows.length} active templates`);
-
-    res.json({
-      success: true,
-      templates: result.rows,
-      count: result.rows.length
-
       `)
       .eq('is_active', true)
       .order('typical_duration_days', { ascending: false });
@@ -8114,21 +8084,6 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
     } else {
       dbResponseMessage = `Message logged.`;
       smsResponseMessage = 'Message received and logged. Thank you!';
-
-        responseMessage = `Received: ${parsed.milestone_id} complete. To release payment, verify with a live photo: ${verificationLink.verification_url}`;
-
-        console.log(`[Webhook] Verification link generated: ${verificationLink.verification_url}`);
-      } else {
-        responseMessage = `Update received. Milestone "${parsed.milestone_id}" not found in project. Please check the milestone name.`;
-      }
-    } else if (parsed.intent === 'blocker') {
-      responseMessage = `Blocker received: "${parsed.summary}". Your project manager has been notified.`;
-    } else if (parsed.intent === 'update') {
-      responseMessage = `Update logged: "${parsed.summary}". Thank you!`;
-    } else if (parsed.intent === 'question') {
-      responseMessage = `Question received. Your project manager will respond shortly.`;
-    } else {
-      responseMessage = `Message received and logged. Thank you!`;
     }
 
     // Update routing log with response
@@ -8165,25 +8120,6 @@ app.post('/api/webhooks/incoming-sms', express.urlencoded({ extended: false }), 
 </Response>`;
     
     return res.send(twiml);
-
-    `, [parsed.intent, responseMessage, logResult.log_id, routingLogResult.rows[0].id]);
-
-    // Send Twilio response
-    res.set('Content-Type', 'text/xml');
-    return res.send(`<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>${responseMessage}</Message>
-</Response>`);
-
-  } catch (error) {
-    console.error('[Webhook] Error processing incoming SMS:', error);
-
-    // Send generic error response
-    res.set('Content-Type', 'text/xml');
-    return res.send(`<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>Error processing your message. Please try again later.</Message>
-</Response>`);
   }
 });
 
@@ -8753,9 +8689,6 @@ app.use((err, req, res, next) => {
 // ====== START SERVER ======
 const PORT = process.env.PORT || 3000;
 
-
-app.listen(PORT, () => {
-
 app.listen(PORT, async () => {
   console.log('=====');
   console.log(`🚀 HomeProHub Server`);
@@ -8763,8 +8696,6 @@ app.listen(PORT, async () => {
   console.log(`🔑 Anthropic API: ${ANTHROPIC_API_KEY ? '✓ Configured' : '❌ Missing'}`);
   console.log(`⏰ Started: ${new Date().toISOString()}`);
   console.log('=====');
-
-
 
   // Run database auto-migrations
   await runAutoMigrations();
