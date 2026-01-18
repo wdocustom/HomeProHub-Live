@@ -1085,6 +1085,28 @@
         const rawCategory = projectData.category || 'general';
         const mappedCategory = categoryMap[rawCategory] || rawCategory;
 
+        // Parse budget_range string to extract min/max values
+        let budgetMin = null;
+        let budgetMax = null;
+
+        // Try to parse from budget_range string (e.g., "$14,008 - $20,800")
+        if (projectData.budget_range && typeof projectData.budget_range === 'string') {
+          const match = projectData.budget_range.match(/\$?([\d,]+)\s*-\s*\$?([\d,]+)/);
+          if (match) {
+            budgetMin = cleanNumber(match[1]);
+            budgetMax = cleanNumber(match[2]);
+            console.log('✓ Parsed budget from budget_range:', { budgetMin, budgetMax });
+          }
+        }
+
+        // Fallback to explicit budgetMin/budgetMax if they exist
+        if (!budgetMin) budgetMin = cleanNumber(projectData.budgetMin);
+        if (!budgetMax) budgetMax = cleanNumber(projectData.budgetMax);
+
+        // Final fallback to defaults
+        if (!budgetMin) budgetMin = 5000;
+        if (!budgetMax) budgetMax = 15000;
+
         // Build submission data matching backend schema (/api/jobs)
         // CRITICAL: Backend expects budget_min and budget_max (NOT budget_low/budget_high)
         // NOW GUARANTEED TO HAVE A ZIP CODE (from nuclear fallback above)
@@ -1092,8 +1114,8 @@
           title: projectData.title || 'Home Renovation Project',
           description: projectData.description || '',
           category: mappedCategory,  // Use mapped Title Case value
-          budget_min: cleanNumber(projectData.budgetMin) || 5000,  // CRITICAL: Use budget_min
-          budget_max: cleanNumber(projectData.budgetMax) || 15000, // CRITICAL: Use budget_max
+          budget_min: budgetMin,  // CRITICAL: Use parsed budget_min
+          budget_max: budgetMax,  // CRITICAL: Use parsed budget_max
           zip_code: finalZip,  // REQUIRED - Guaranteed by nuclear fallback
           urgency: projectData.urgency || 'flexible',
           homeowner_email: user.email,  // REQUIRED by backend
