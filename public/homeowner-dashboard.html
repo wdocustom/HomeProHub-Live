@@ -2347,6 +2347,12 @@
     // Load Home Profile
     async function loadHomeProfile() {
       try {
+        // Check if authService is available and initialized
+        if (!window.authService || !window.authService.initialized) {
+          console.warn('⚠️ AuthService not available in loadHomeProfile()');
+          return;
+        }
+
         const user = await window.authService.getCurrentUser();
         if (!user) return;
 
@@ -2399,10 +2405,31 @@
     }
 
     // Initialize Home Profile on Page Load
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Wait for authService to be initialized before loading profile data
+      await waitForAuthService();
       loadHomeProfile();
       loadTrustScore();
     });
+
+    // Helper: Wait for authService to be initialized
+    async function waitForAuthService() {
+      // Wait for authService to exist
+      while (!window.authService) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // Wait for it to be initialized
+      const maxWait = 5000; // 5 seconds max
+      const startTime = Date.now();
+      while (!window.authService.initialized && (Date.now() - startTime) < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      if (!window.authService.initialized) {
+        console.warn('⚠️ AuthService initialization timeout - proceeding anyway');
+      }
+    }
 
     // ========================================
     // TRUST SCORE FUNCTIONS
@@ -2411,6 +2438,12 @@
     // Load Homeowner Trust Score
     async function loadTrustScore() {
       try {
+        // Check if authService is available and initialized
+        if (!window.authService || !window.authService.initialized) {
+          console.warn('⚠️ AuthService not available in loadTrustScore()');
+          return;
+        }
+
         const user = await window.authService.getCurrentUser();
         if (!user) return;
 
