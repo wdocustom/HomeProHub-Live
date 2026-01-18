@@ -672,11 +672,29 @@ class SharkAgent {
             opportunity_id: opportunityResult.rows[0].id,
             contractor_email: contractor.email,
             contractor_name: `${contractor.first_name} ${contractor.last_name}`,
+            contractor_phone: contractor.phone,
             trade: mappedTrade,
             milestone: relevantMilestone?.milestone_id
           });
 
           console.log(`[Shark] Created opportunity for ${contractor.email} (${trade})`);
+
+          // AUTOMATION: Immediately trigger Diplomat to send RFQ SMS
+          if (contractor.phone) {
+            try {
+              await DiplomatAgent.sendRFQInvite(
+                projectId,
+                contractor.phone,
+                mappedTrade,
+                projectDetails.zip_code,
+                projectDetails.budget_estimate
+              );
+              console.log(`[Shark→Diplomat] RFQ SMS sent to ${contractor.phone}`);
+            } catch (smsError) {
+              console.error(`[Shark→Diplomat] SMS failed for ${contractor.phone}:`, smsError.message);
+              // Continue even if SMS fails - opportunity is still created
+            }
+          }
         } catch (error) {
           console.error(`[Shark] Error creating opportunity for ${contractor.email}:`, error);
         }
@@ -1263,6 +1281,35 @@ Return ONLY valid JSON in this exact format:
         error: error.message
       };
     }
+  }
+
+  /**
+   * Send RFQ invitation SMS to contractor (Automated by Shark Agent)
+   * @param {string} projectId - Project ID
+   * @param {string} contractorPhone - Contractor's phone number
+   * @param {string} trade - Trade type (e.g., "plumbing", "electrical")
+   * @param {string} zipCode - Project location
+   * @param {number} budgetEstimate - Estimated budget (optional)
+   */
+  static async sendRFQInvite(projectId, contractorPhone, trade, zipCode, budgetEstimate = null) {
+    console.log(`[Diplomat] Sending RFQ invite to ${contractorPhone} for ${trade} work...`);
+
+    // Format trade name for human readability
+    const tradeDisplay = trade.charAt(0).toUpperCase() + trade.slice(1).replace('_', ' ');
+
+    // Construct SMS body
+    const budgetText = budgetEstimate
+      ? `Budget: ~$${budgetEstimate.toLocaleString()}. `
+      : '';
+
+    const smsBody = `🏗️ New Lead from HomeProHub!\n\n` +
+      `Trade: ${tradeDisplay}\n` +
+      `Location: ${zipCode}\n` +
+      `${budgetText}` +
+      `Reply YES to bid or view details: https://homeprohub.today/contractor-dashboard.html`;
+
+    // Send SMS via Twilio
+    return await this.sendSMS(contractorPhone, smsBody, projectId);
   }
 
   /**
