@@ -69,6 +69,14 @@
   <script type="module" src="/js/app-controller.js"></script>
 
   <script>
+    // Preserve URL parameters when linking to signup
+    (function() {
+      const signUpLink = document.querySelector('a[href="/signup.html"]');
+      if (signUpLink && window.location.search) {
+        signUpLink.href = '/signup.html' + window.location.search;
+      }
+    })();
+
     // Display messages
     function displayError(message) {
       const errorEl = document.getElementById('auth-error');
@@ -112,10 +120,28 @@
 
         if (result.success) {
           const userRole = result.profile?.role || 'homeowner';
-          // Redirect based on role
-          const dashboardUrl = userRole === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
-          console.log(`✓ Success! Redirecting to ${dashboardUrl}`);
-          window.location.href = dashboardUrl;
+
+          // Check for return URL or intent parameter
+          const urlParams = new URLSearchParams(window.location.search);
+          const returnUrl = urlParams.get('returnUrl');
+          const intent = urlParams.get('intent');
+
+          let redirectUrl;
+          if (returnUrl) {
+            // Use explicit return URL
+            redirectUrl = returnUrl;
+            console.log(`✓ Success! Returning to: ${redirectUrl}`);
+          } else if (intent === 'post_project') {
+            // User was trying to post a project
+            redirectUrl = '/post-project.html';
+            console.log(`✓ Success! Redirecting to post project page`);
+          } else {
+            // Default dashboard based on role
+            redirectUrl = userRole === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
+            console.log(`✓ Success! Redirecting to ${redirectUrl}`);
+          }
+
+          window.location.href = redirectUrl;
         } else {
           displayError(result.error || 'Sign in failed. Check your credentials.');
           setLoading(false);
