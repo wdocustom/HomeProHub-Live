@@ -2281,8 +2281,10 @@
     }
 
     // Save Home Profile
-    document.getElementById('home-profile-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    const homeProfileForm = document.getElementById('home-profile-form');
+    if (homeProfileForm) {
+      homeProfileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
       const formData = new FormData(e.target);
       const homeProfile = {
@@ -2319,7 +2321,8 @@
         console.error('Error saving home profile:', error);
         showToast('An error occurred. Please try again.', 'error');
       }
-    });
+      });
+    }
 
     // Load Home Profile
     async function loadHomeProfile() {
