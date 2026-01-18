@@ -531,13 +531,21 @@
 
       <!-- Body -->
       <div class="receipt-body">
-        <!-- Quick Stats -->
-        <div class="quick-stats">
-          <div class="quick-stat">
-            <span class="quick-stat-icon">💰</span>
-            <div class="quick-stat-label">Budget Range</div>
-            <div class="quick-stat-value" id="budgetDisplay">$X - $Y</div>
+        <!-- Estimated Market Value - Dark Box (matches estimator design) -->
+        <div class="bg-slate-900 rounded-3xl p-10 text-white shadow-2xl mb-8 relative overflow-hidden text-center">
+          <div class="absolute top-0 right-0 p-12 opacity-10"><i class="fa-solid fa-file-invoice-dollar text-9xl"></i></div>
+
+          <h2 class="text-xl font-bold text-blue-200 mb-2 uppercase tracking-widest">Estimated Market Value</h2>
+          <div id="budgetDisplay" class="flex justify-center items-baseline gap-4 mb-4">
+            <span class="text-5xl md:text-6xl font-black tracking-tight">$15,000</span>
+            <span class="text-3xl text-slate-500 font-light">-</span>
+            <span class="text-5xl md:text-6xl font-black tracking-tight">$22,000</span>
           </div>
+          <p class="text-sm text-slate-400">*Based on labor & material rates in <span id="zipDisplay" class="text-white font-bold">your area</span></p>
+        </div>
+
+        <!-- Quick Stats (Timeline & Category) -->
+        <div class="quick-stats" style="grid-template-columns: repeat(2, 1fr);">
           <div class="quick-stat">
             <span class="quick-stat-icon">⏱️</span>
             <div class="quick-stat-label">Timeline</div>
@@ -697,16 +705,35 @@
      * Populate the receipt with project data
      */
     function populateReceipt(data) {
-      // Quick stats - Handle budget_range string or budgetMin/budgetMax numbers
-      let budgetText = '$5,000 - $15,000'; // fallback
+      // Parse budget_range string to extract low/high values for dark box display
+      let budgetLow = '$15,000';
+      let budgetHigh = '$22,000';
+
       if (data.budget_range && typeof data.budget_range === 'string') {
-        // Use the budget_range string directly (e.g., "$14,008 - $20,800")
-        budgetText = data.budget_range;
+        // Parse "$14,008 - $20,800" format
+        const match = data.budget_range.match(/\$?([\d,]+)\s*-\s*\$?([\d,]+)/);
+        if (match) {
+          budgetLow = '$' + match[1];
+          budgetHigh = '$' + match[2];
+        }
       } else if (data.budgetMin && data.budgetMax) {
         // Legacy format with separate min/max numbers
-        budgetText = `$${data.budgetMin.toLocaleString()} - $${data.budgetMax.toLocaleString()}`;
+        budgetLow = '$' + data.budgetMin.toLocaleString();
+        budgetHigh = '$' + data.budgetMax.toLocaleString();
       }
-      document.getElementById('budgetDisplay').textContent = budgetText;
+
+      // Update dark box with parsed values
+      document.getElementById('budgetDisplay').innerHTML = `
+        <span class="text-5xl md:text-6xl font-black tracking-tight">${budgetLow}</span>
+        <span class="text-3xl text-slate-500 font-light">-</span>
+        <span class="text-5xl md:text-6xl font-black tracking-tight">${budgetHigh}</span>
+      `;
+
+      // Display ZIP code
+      if (data.zip) {
+        document.getElementById('zipDisplay').textContent = data.zip;
+      }
+
       document.getElementById('timelineDisplay').textContent = data.timeline || '2-4 weeks';
 
       // Category - abbreviate "General Contractor" to "GC"
