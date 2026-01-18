@@ -8350,6 +8350,73 @@ app.post('/api/agents/hawk/suppliers', async (req, res) => {
 });
 
 /**
+ * POST /api/agents/sentinel/verify-location
+ * Sentinel Agent: Verify contractor is physically on-site using GPS
+ */
+app.post('/api/agents/sentinel/verify-location', async (req, res) => {
+  try {
+    const { projectId, latitude, longitude } = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({
+        error: 'projectId is required'
+      });
+    }
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        error: 'latitude and longitude are required'
+      });
+    }
+
+    console.log(`[Sentinel API] Verifying location for project ${projectId}...`);
+    console.log(`[Sentinel API] User coords: ${latitude}, ${longitude}`);
+
+    const { SentinelAgent } = require('./services/universalAgentServices');
+
+    // Verify location using Haversine formula
+    const result = await SentinelAgent.verifyLocationForProject(
+      projectId,
+      {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude)
+      }
+    );
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    console.log(
+      `[Sentinel API] Location verification: ${result.verified ? '✅ VERIFIED' : '❌ REJECTED'} ` +
+      `(distance: ${result.distance_meters}m)`
+    );
+
+    res.json({
+      success: true,
+      verified: result.verified,
+      distance_km: result.distance_km,
+      distance_meters: result.distance_meters,
+      threshold_meters: result.threshold_meters,
+      reason: result.reason,
+      project_id: result.project_id,
+      project_address: result.project_address
+    });
+
+  } catch (error) {
+    console.error('[Sentinel API] Location verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify location',
+      message: error.message
+    });
+  }
+});
+
+/**
  * GET /api/verification/token/:token
  * Get verification token details (for loading verification page)
  */

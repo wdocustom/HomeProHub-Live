@@ -2498,22 +2498,43 @@
       `;
 
       contractors.forEach((contractor, index) => {
+        // Determine badge based on source
+        let badge = '';
+        let borderColor = 'border-green-200 hover:border-green-400';
+        let statusDot = '<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>';
+
+        if (contractor.is_unclaimed) {
+          // Ghost profile from web search
+          badge = '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">🌐 Found on Web</span>';
+          borderColor = 'border-blue-200 hover:border-blue-400';
+          statusDot = '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>';
+        } else if (contractor.license_verified) {
+          // Internal DB, license verified
+          badge = '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Verified</span>';
+        } else {
+          // Internal DB, license pending
+          badge = '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">⏳ Pending</span>';
+          borderColor = 'border-yellow-200 hover:border-yellow-400';
+          statusDot = '<span class="w-2 h-2 bg-yellow-500 rounded-full"></span>';
+        }
+
         resultsHTML += `
-          <div class="contractor-card bg-white rounded-lg p-3 border border-green-200 hover:border-green-400 transition-all">
+          <div class="contractor-card bg-white rounded-lg p-3 border ${borderColor} transition-all">
             <div class="flex items-start justify-between">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="font-bold text-sm text-slate-900">${contractor.name}</span>
-                  <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Verified</span>
+                  ${badge}
                 </div>
                 <div class="flex items-center gap-3 text-xs text-slate-600">
                   <span>⭐ ${contractor.rating}</span>
                   <span>📍 ${contractor.distance}</span>
-                  <span class="text-green-600 font-semibold">${contractor.specialty}</span>
+                  <span class="text-green-600 font-semibold">${contractor.specialty || contractor.trade || 'General'}</span>
                 </div>
+                ${contractor.is_unclaimed ? '<p class="text-xs text-blue-600 mt-1 italic">External contractor - invite to join platform</p>' : ''}
               </div>
               <div class="flex items-center">
-                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                ${statusDot}
               </div>
             </div>
           </div>

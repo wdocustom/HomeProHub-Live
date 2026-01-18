@@ -1745,6 +1745,165 @@ RETURN JSON in this EXACT format:
       processing_time_ms: processingTime
     };
   }
+
+  /**
+   * PHASE 4: GPS Location Verification
+   * Calculate distance between two GPS coordinates using Haversine formula
+   * @param {number} lat1 - Latitude of first point
+   * @param {number} lon1 - Longitude of first point
+   * @param {number} lat2 - Latitude of second point
+   * @param {number} lon2 - Longitude of second point
+   * @returns {number} Distance in kilometers
+   */
+  static calculateDistance(lat1, lon1, lat2, lon2) {
+    // Haversine formula
+    const R = 6371; // Earth's radius in kilometers
+
+    const dLat = this.toRadians(lat2 - lat1);
+    const dLon = this.toRadians(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(lat1)) *
+      Math.cos(this.toRadians(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const distance = R * c; // Distance in kilometers
+
+    return distance;
+  }
+
+  /**
+   * Convert degrees to radians
+   * @param {number} degrees - Degrees
+   * @returns {number} Radians
+   */
+  static toRadians(degrees) {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
+   * Verify contractor is physically on-site
+   * Compares user's GPS coordinates to project site coordinates
+   * @param {Object} projectCoords - { latitude, longitude } of project site
+   * @param {Object} userCoords - { latitude, longitude } of user's current location
+   * @param {number} maxDistanceKm - Maximum allowed distance in kilometers (default: 0.1km = 100m)
+   * @returns {Object} Verification result with distance and verification status
+   */
+  static async verifyLocation(projectCoords, userCoords, maxDistanceKm = 0.1) {
+    console.log('[Sentinel] Verifying GPS location...');
+
+    try {
+      // Validate inputs
+      if (!projectCoords?.latitude || !projectCoords?.longitude) {
+        throw new Error('Invalid project coordinates');
+      }
+
+      if (!userCoords?.latitude || !userCoords?.longitude) {
+        throw new Error('Invalid user coordinates');
+      }
+
+      // Calculate distance using Haversine formula
+      const distance = this.calculateDistance(
+        projectCoords.latitude,
+        projectCoords.longitude,
+        userCoords.latitude,
+        userCoords.longitude
+      );
+
+      // Convert to meters for reporting
+      const distanceMeters = Math.round(distance * 1000);
+
+      // Verify within threshold
+      const verified = distance <= maxDistanceKm;
+
+      console.log(
+        `[Sentinel] Distance: ${distanceMeters}m, ` +
+        `Threshold: ${maxDistanceKm * 1000}m, ` +
+        `Verified: ${verified}`
+      );
+
+      return {
+        success: true,
+        verified: verified,
+        distance_km: parseFloat(distance.toFixed(3)),
+        distance_meters: distanceMeters,
+        threshold_km: maxDistanceKm,
+        threshold_meters: maxDistanceKm * 1000,
+        project_coords: projectCoords,
+        user_coords: userCoords,
+        reason: verified
+          ? 'Contractor is on-site'
+          : `Contractor is ${distanceMeters}m away from job site (max: ${maxDistanceKm * 1000}m)`
+      };
+
+    } catch (error) {
+      console.error('[Sentinel] GPS verification error:', error);
+      return {
+        success: false,
+        verified: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Verify location for a specific project by ID
+   * Looks up project site coordinates from database
+   * @param {string|number} projectId - Project ID
+   * @param {Object} userCoords - { latitude, longitude } of user's current location
+   * @returns {Object} Verification result
+   */
+  static async verifyLocationForProject(projectId, userCoords) {
+    console.log(`[Sentinel] Verifying location for project ${projectId}...`);
+
+    try {
+      // Fetch project site coordinates
+      const projectResult = await db.query(
+        'SELECT site_latitude, site_longitude, address FROM job_postings WHERE id = $1',
+        [projectId]
+      );
+
+      if (projectResult.rows.length === 0) {
+        throw new Error(`Project ${projectId} not found`);
+      }
+
+      const project = projectResult.rows[0];
+
+      if (!project.site_latitude || !project.site_longitude) {
+        // Try to geocode the address if coordinates not set
+        console.warn('[Sentinel] Project coordinates not set, attempting geocoding...');
+
+        // TODO: Implement geocoding service (Google Maps, Mapbox, etc.)
+        // For now, return error
+        throw new Error('Project site coordinates not configured. Please set site_latitude and site_longitude.');
+      }
+
+      const projectCoords = {
+        latitude: parseFloat(project.site_latitude),
+        longitude: parseFloat(project.site_longitude)
+      };
+
+      // Verify location
+      const result = await this.verifyLocation(projectCoords, userCoords);
+
+      // Add project info to result
+      result.project_id = projectId;
+      result.project_address = project.address;
+
+      return result;
+
+    } catch (error) {
+      console.error('[Sentinel] Project location verification error:', error);
+      return {
+        success: false,
+        verified: false,
+        error: error.message
+      };
+    }
+  }
 }
 
 // ========================================
@@ -1787,13 +1946,8 @@ class HawkAgent {
 
       const result = await db.query(query, [trade]);
 
-      if (result.rows.length === 0) {
-        console.log(`[Hawk] No contractors found for ${trade}`);
-        return [];
-      }
-
       // Calculate distances and format results
-      const contractors = result.rows.map(contractor => {
+      let contractors = result.rows.map(contractor => {
         const distance = this.calculateZipDistance(zipCode, contractor.location_zip);
 
         return {
@@ -1807,7 +1961,9 @@ class HawkAgent {
           rating: parseFloat(contractor.avg_rating).toFixed(1),
           review_count: parseInt(contractor.review_count),
           distance_miles: distance,
-          estimated_response_time: distance < 10 ? '24 hours' : distance < 30 ? '48 hours' : '3-5 days'
+          estimated_response_time: distance < 10 ? '24 hours' : distance < 30 ? '48 hours' : '3-5 days',
+          is_unclaimed: false, // Internal DB contractors are claimed
+          source: 'internal_db'
         };
       });
 
@@ -1815,20 +1971,55 @@ class HawkAgent {
       contractors.sort((a, b) => a.distance_miles - b.distance_miles);
 
       // Take top 10 closest with good ratings
-      const topContractors = contractors
+      let topContractors = contractors
         .filter(c => c.rating >= 3.5 || c.review_count === 0) // Include new contractors
         .slice(0, 10);
 
-      console.log(`[Hawk] ✅ Found ${topContractors.length} qualified contractors`);
+      console.log(`[Hawk] Found ${topContractors.length} contractors from internal DB`);
+
+      // ========================================
+      // EXTERNAL FALLBACK: Search Web if < 3 Results
+      // ========================================
+      if (topContractors.length < 3) {
+        console.log(`[Hawk] ⚠️ Insufficient contractors (${topContractors.length}/3), searching web...`);
+
+        const ResearcherService = require('./ResearcherService');
+
+        try {
+          // Search web for contractors
+          const webContractors = await ResearcherService.searchWeb(trade, zipCode);
+
+          console.log(`[Hawk] Found ${webContractors.length} contractors from web search`);
+
+          // Mark web contractors as "ghost profiles"
+          const ghostProfiles = webContractors.map(contractor => ({
+            ...contractor,
+            source: 'web_search',
+            is_unclaimed: true,
+            estimated_response_time: 'Unknown - External'
+          }));
+
+          // Combine internal + web results
+          topContractors = [...topContractors, ...ghostProfiles];
+
+          console.log(`[Hawk] ✅ Combined results: ${topContractors.length} total contractors`);
+
+        } catch (webError) {
+          console.error('[Hawk] Web search fallback failed:', webError);
+          // Continue with internal results only
+        }
+      } else {
+        console.log(`[Hawk] ✅ Found ${topContractors.length} qualified contractors from internal DB`);
+      }
 
       // Log agent activity
       await logAgentActivity(
         null, // No project ID yet for initial scouting
         'hawk',
         'find_contractors',
-        `Scouted ${topContractors.length} ${trade} contractors near ${zipCode}`,
+        `Scouted ${topContractors.length} ${trade} contractors near ${zipCode} (${topContractors.filter(c => !c.is_unclaimed).length} internal, ${topContractors.filter(c => c.is_unclaimed).length} external)`,
         { trade, zipCode, projectType },
-        { contractors: topContractors.map(c => ({ company: c.company_name, rating: c.rating, distance: c.distance_miles })) },
+        { contractors: topContractors.map(c => ({ company: c.company_name, rating: c.rating, distance: c.distance_miles, source: c.source })) },
         'completed'
       );
 
