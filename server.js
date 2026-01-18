@@ -4561,34 +4561,48 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
     console.log(`[Jobs API] Fetching awarded jobs for contractor: ${email}`);
 
     // Query for jobs where this contractor has won the bid
-    const query = `
-      SELECT DISTINCT
-        j.id,
-        j.title,
-        j.address,
-        j.location_zip,
-        j.description,
-        j.status,
-        j.created_at,
-        b.bid_amount,
-        b.estimated_duration,
-        b.status as bid_status
-      FROM job_postings j
-      INNER JOIN bids b ON j.id = b.job_id
-      WHERE b.contractor_email = $1
-        AND b.status = 'accepted'
-      ORDER BY j.created_at DESC
-      LIMIT 50
-    `;
+    const { data: bidsData, error } = await db.supabase
+      .from('bids')
+      .select(`
+        bid_amount,
+        estimated_duration,
+        status,
+        job_postings!inner (
+          id,
+          title,
+          address,
+          location_zip,
+          description,
+          status,
+          created_at
+        )
+      `)
+      .eq('contractor_email', email)
+      .eq('status', 'accepted')
+      .limit(50);
 
-    const result = await db.query(query, [email]);
+    if (error) throw error;
 
-    console.log(`[Jobs API] Found ${result.rows.length} awarded jobs for ${email}`);
+    // Flatten the data structure to match expected format
+    const jobs = bidsData ? bidsData.map(bid => ({
+      id: bid.job_postings.id,
+      title: bid.job_postings.title,
+      address: bid.job_postings.address,
+      location_zip: bid.job_postings.location_zip,
+      description: bid.job_postings.description,
+      status: bid.job_postings.status,
+      created_at: bid.job_postings.created_at,
+      bid_amount: bid.bid_amount,
+      estimated_duration: bid.estimated_duration,
+      bid_status: bid.status
+    })) : [];
+
+    console.log(`[Jobs API] Found ${jobs.length} awarded jobs for ${email}`);
 
     res.json({
       success: true,
-      jobs: result.rows,
-      count: result.rows.length
+      jobs: jobs,
+      count: jobs.length
     });
 
   } catch (error) {
