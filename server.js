@@ -4551,6 +4551,57 @@ app.get("/api/contractor/bids", requireAuth, requireRole('contractor'), async (r
 });
 
 /**
+ * GET /api/jobs/contractor/:email
+ * Get all awarded jobs for a contractor (for contractor-tools.html)
+ */
+app.get('/api/jobs/contractor/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    console.log(`[Jobs API] Fetching awarded jobs for contractor: ${email}`);
+
+    // Query for jobs where this contractor has won the bid
+    const query = `
+      SELECT DISTINCT
+        j.id,
+        j.title,
+        j.address,
+        j.location_zip,
+        j.description,
+        j.status,
+        j.created_at,
+        b.bid_amount,
+        b.estimated_duration,
+        b.status as bid_status
+      FROM job_postings j
+      INNER JOIN bids b ON j.id = b.job_id
+      WHERE b.contractor_email = $1
+        AND b.status = 'accepted'
+      ORDER BY j.created_at DESC
+      LIMIT 50
+    `;
+
+    const result = await db.query(query, [email]);
+
+    console.log(`[Jobs API] Found ${result.rows.length} awarded jobs for ${email}`);
+
+    res.json({
+      success: true,
+      jobs: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('[Jobs API] Error fetching contractor jobs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch contractor jobs',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/bid/accept
  * Homeowner accepts a bid
  */
@@ -7390,6 +7441,15 @@ app.post('/api/agents/generate-daily-summary', async (req, res) => {
     if (!project_id) {
       return res.status(400).json({
         error: 'project_id is required'
+      });
+    }
+
+    // Check if OpenAI API key is configured
+    if (!OPENAI_API_KEY) {
+      console.warn('⚠️ OpenAI API key not configured');
+      return res.status(503).json({
+        error: 'AI summarization not configured',
+        message: 'OPENAI_API_KEY not set in environment variables'
       });
     }
 
