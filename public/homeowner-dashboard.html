@@ -1989,12 +1989,15 @@
     }
 
     // Star rating interaction
-    document.getElementById('starRating').addEventListener('click', (e) => {
-      if (e.target.classList.contains('star')) {
-        selectedStarRating = parseInt(e.target.dataset.rating);
-        updateStarRating();
-      }
-    });
+    const starRating = document.getElementById('starRating');
+    if (starRating) {
+      starRating.addEventListener('click', (e) => {
+        if (e.target.classList.contains('star')) {
+          selectedStarRating = parseInt(e.target.dataset.rating);
+          updateStarRating();
+        }
+      });
+    }
 
     function updateStarRating() {
       const stars = document.querySelectorAll('.star');
@@ -2013,21 +2016,26 @@
     }
 
     // Tap tags interaction
-    document.getElementById('positiveTags').addEventListener('click', (e) => {
-      const tag = e.target.closest('.tap-tag');
-      if (tag) {
-        tag.classList.toggle('selected');
-        const tagText = tag.dataset.tag;
+    const positiveTags = document.getElementById('positiveTags');
+    if (positiveTags) {
+      positiveTags.addEventListener('click', (e) => {
+        const tag = e.target.closest('.tap-tag');
+        if (tag) {
+          tag.classList.toggle('selected');
+          const tagText = tag.dataset.tag;
 
-        if (selectedPositiveTags.includes(tagText)) {
-          selectedPositiveTags = selectedPositiveTags.filter(t => t !== tagText);
-        } else {
-          selectedPositiveTags.push(tagText);
+          if (selectedPositiveTags.includes(tagText)) {
+            selectedPositiveTags = selectedPositiveTags.filter(t => t !== tagText);
+          } else {
+            selectedPositiveTags.push(tagText);
+          }
         }
-      }
-    });
+      });
+    }
 
-    document.getElementById('negativeTags').addEventListener('click', (e) => {
+    const negativeTags = document.getElementById('negativeTags');
+    if (negativeTags) {
+      negativeTags.addEventListener('click', (e) => {
       const tag = e.target.closest('.tap-tag');
       if (tag) {
         tag.classList.toggle('selected');
@@ -2039,14 +2047,19 @@
           selectedNegativeTags.push(tagText);
         }
       }
-    });
+      });
+    }
 
     // Photo upload
-    document.getElementById('photoDropzone').addEventListener('click', () => {
-      document.getElementById('photoInput').click();
-    });
+    const photoDropzone = document.getElementById('photoDropzone');
+    const photoInput = document.getElementById('photoInput');
 
-    document.getElementById('photoInput').addEventListener('change', (e) => {
+    if (photoDropzone && photoInput) {
+      photoDropzone.addEventListener('click', () => {
+        photoInput.click();
+      });
+
+      photoInput.addEventListener('change', (e) => {
       const files = Array.from(e.target.files);
       files.forEach(file => {
         const reader = new FileReader();
@@ -2056,7 +2069,8 @@
         };
         reader.readAsDataURL(file);
       });
-    });
+      });
+    }
 
     function renderPhotoPreview() {
       const preview = document.getElementById('photoPreview');
@@ -2074,7 +2088,9 @@
     }
 
     // Submit review
-    document.getElementById('submitReviewBtn').addEventListener('click', async () => {
+    const submitReviewBtn = document.getElementById('submitReviewBtn');
+    if (submitReviewBtn) {
+      submitReviewBtn.addEventListener('click', async () => {
       if (selectedStarRating === 0) {
         alert('Please select a star rating');
         return;
@@ -2130,7 +2146,8 @@
         btn.disabled = false;
         btn.textContent = 'Submit Review';
       }
-    });
+      });
+    }
 
     // Filter tabs
     document.querySelectorAll('.filter-tab').forEach(tab => {
@@ -2144,9 +2161,12 @@
 
     // New project button
     // FIXED: Redirect to post-project.html instead of home.html
-    document.getElementById('newProjectBtn').addEventListener('click', () => {
-      window.location.href = 'post-project.html';
-    });
+    const newProjectBtn = document.getElementById('newProjectBtn');
+    if (newProjectBtn) {
+      newProjectBtn.addEventListener('click', () => {
+        window.location.href = 'post-project.html';
+      });
+    }
 
     // Utility functions
     function formatCurrency(amount) {
