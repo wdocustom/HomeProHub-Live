@@ -45,10 +45,6 @@ BEGIN
     ALTER TABLE project_states
     ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
-    UPDATE project_states
-    SET updated_at = created_at
-    WHERE updated_at IS NULL;
-
     RAISE NOTICE 'Added updated_at column to project_states';
   ELSE
     RAISE NOTICE 'Column updated_at already exists in project_states';
