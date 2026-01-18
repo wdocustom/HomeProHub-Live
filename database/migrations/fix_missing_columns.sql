@@ -81,6 +81,32 @@ BEGIN
   ELSE
     RAISE NOTICE 'Column metadata already exists in notifications';
   END IF;
+
+  -- Add read column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'notifications' AND column_name = 'read'
+  ) THEN
+    ALTER TABLE notifications
+    ADD COLUMN read BOOLEAN DEFAULT false;
+
+    RAISE NOTICE 'Added read column to notifications';
+  ELSE
+    RAISE NOTICE 'Column read already exists in notifications';
+  END IF;
+
+  -- Add read_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'notifications' AND column_name = 'read_at'
+  ) THEN
+    ALTER TABLE notifications
+    ADD COLUMN read_at TIMESTAMP WITH TIME ZONE;
+
+    RAISE NOTICE 'Added read_at column to notifications';
+  ELSE
+    RAISE NOTICE 'Column read_at already exists in notifications';
+  END IF;
 END $$;
 
 -- ========================================
@@ -124,6 +150,7 @@ SELECT
   column_default
 FROM information_schema.columns
 WHERE table_name = 'notifications'
-  AND column_name = 'metadata';
+  AND column_name IN ('metadata', 'read', 'read_at')
+ORDER BY column_name;
 
 SELECT '✅ Missing columns migration completed successfully!' as status;

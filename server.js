@@ -4562,9 +4562,10 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
 
     // Query for jobs where this contractor has won the bid
     const { data: bidsData, error } = await db.supabase
-      .from('bids')
+      .from('contractor_bids')
       .select(`
-        bid_amount,
+        bid_amount_low,
+        bid_amount_high,
         estimated_duration,
         status,
         job_postings!inner (
@@ -4592,7 +4593,7 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
       description: bid.job_postings.description,
       status: bid.job_postings.status,
       created_at: bid.job_postings.created_at,
-      bid_amount: bid.bid_amount,
+      bid_amount: `$${bid.bid_amount_low.toLocaleString()} - $${bid.bid_amount_high.toLocaleString()}`,
       estimated_duration: bid.estimated_duration,
       bid_status: bid.status
     })) : [];
@@ -7628,7 +7629,7 @@ app.post('/api/agents/log-contractor-update', async (req, res) => {
       // Create initial state if it doesn't exist
       await db.upsertProjectState({
         project_id: project_id,
-        current_phase: 'in_progress'
+        current_phase: 'planning'  // Valid phases: planning, demo, rough_in, inspection, finish, punchlist, complete
       });
     }
 

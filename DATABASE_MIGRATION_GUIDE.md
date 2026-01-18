@@ -96,6 +96,28 @@ BEGIN
 
     RAISE NOTICE 'Added metadata column to notifications';
   END IF;
+
+  -- Add read column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'notifications' AND column_name = 'read'
+  ) THEN
+    ALTER TABLE notifications
+    ADD COLUMN read BOOLEAN DEFAULT false;
+
+    RAISE NOTICE 'Added read column to notifications';
+  END IF;
+
+  -- Add read_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'notifications' AND column_name = 'read_at'
+  ) THEN
+    ALTER TABLE notifications
+    ADD COLUMN read_at TIMESTAMP WITH TIME ZONE;
+
+    RAISE NOTICE 'Added read_at column to notifications';
+  END IF;
 END $$;
 
 -- Ensure trigger exists
@@ -134,8 +156,10 @@ You should see output like:
 - `actual_start_date` - When construction actually started
 - `last_activity_date` - Last contractor activity timestamp
 
-### 2. Adds Missing Column to `notifications`
+### 2. Adds Missing Columns to `notifications`
 - `metadata` - JSONB field for storing additional notification data
+- `read` - Boolean flag to track if notification has been read
+- `read_at` - Timestamp of when notification was read
 
 ### 3. Creates Auto-Update Trigger
 - Automatically updates `updated_at` whenever a row is modified
@@ -168,6 +192,9 @@ ORDER BY column_name;
 ### Before Migration:
 - ❌ `Could not find the 'updated_at' column of 'project_states'`
 - ❌ `Could not find the 'metadata' column of 'notifications'`
+- ❌ `Could not find the 'read' column of 'notifications'`
+- ❌ `Could not find the table 'public.bids'` (should be contractor_bids)
+- ❌ `new row violates check constraint "project_states_current_phase_check"`
 - ❌ Contractor update logging fails (500 error)
 - ❌ AI summary notifications fail to save
 
