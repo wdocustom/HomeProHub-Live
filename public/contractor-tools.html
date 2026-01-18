@@ -965,16 +965,25 @@
         // Call API to initialize project
         console.log('[Project] Initializing project with template:', templateId);
 
+        // Build request payload
+        const requestPayload = {
+          templateId: templateId,
+          scopeData: scopeData
+        };
+
+        // If this project was launched from Job Board, link it to the job posting
+        if (window.linkedJobId) {
+          requestPayload.jobPostingId = window.linkedJobId;
+          console.log('[Project] Linking to job posting:', window.linkedJobId);
+        }
+
         const response = await fetch('/api/projects/init', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            templateId: templateId,
-            scopeData: scopeData
-          })
+          body: JSON.stringify(requestPayload)
         });
 
         const data = await response.json();
@@ -2843,6 +2852,108 @@
     }
 
     // ============================================
+    // DEEP LINK HANDLER - Pre-fill from Job Board
+    // ============================================
+    async function handleDeepLinkLaunch(jobId, urlParams) {
+      try {
+        console.log('🚀 Launching AI Project from Job Board for job:', jobId);
+
+        // Get URL parameters
+        const templateHint = urlParams.get('templateHint');
+        const title = urlParams.get('title');
+        const zip = urlParams.get('zip');
+
+        // Show loading state
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+          statusEl.textContent = '🚀 Loading project from Job Board...';
+          statusEl.className = 'text-sm text-center text-blue-600 font-semibold';
+        }
+
+        // Fetch full job details from API
+        const response = await window.authService.authenticatedFetch(`/api/jobs/${jobId}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to load job details');
+        }
+
+        const job = await response.json();
+        console.log('✓ Job details loaded:', job);
+
+        // Pre-fill the estimator form
+        // Project Name
+        const projectNameInput = document.getElementById('projectName');
+        if (projectNameInput && title) {
+          projectNameInput.value = decodeURIComponent(title);
+        }
+
+        // Zip Code
+        const zipInput = document.getElementById('zipCode');
+        if (zipInput && zip) {
+          zipInput.value = zip;
+        }
+
+        // Square Footage (if available from job description)
+        const sqftMatch = job.description?.match(/(\d+)\s*(?:sf|sq\s*ft|square\s*feet)/i);
+        if (sqftMatch) {
+          const sqftInput = document.getElementById('squareFootage');
+          if (sqftInput) {
+            sqftInput.value = sqftMatch[1];
+          }
+        }
+
+        // Auto-select template based on templateHint
+        if (templateHint) {
+          const templateSelect = document.getElementById('projectTemplate');
+          if (templateSelect) {
+            // Wait a moment for templates to load
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Try to find matching template
+            const options = Array.from(templateSelect.options);
+            const matchingOption = options.find(opt =>
+              opt.value.toLowerCase().includes(templateHint.toLowerCase()) ||
+              opt.text.toLowerCase().includes(templateHint.toLowerCase())
+            );
+
+            if (matchingOption) {
+              templateSelect.value = matchingOption.value;
+              console.log('✓ Auto-selected template:', matchingOption.text);
+            }
+          }
+        }
+
+        // Store job ID for later linking
+        window.linkedJobId = jobId;
+
+        // Show success message
+        if (statusEl) {
+          statusEl.textContent = `✓ Project "${decodeURIComponent(title)}" loaded from Job Board`;
+          statusEl.className = 'text-sm text-center text-emerald-600 font-semibold';
+
+          // Clear after 3 seconds
+          setTimeout(() => {
+            statusEl.textContent = '';
+          }, 3000);
+        }
+
+        // Scroll to estimator form
+        const estimatorSection = document.getElementById('estimator');
+        if (estimatorSection) {
+          estimatorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+      } catch (error) {
+        console.error('❌ Deep link launch failed:', error);
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+          statusEl.textContent = '❌ Failed to load project from Job Board';
+          statusEl.className = 'text-sm text-center text-red-600';
+        }
+      }
+    }
+
+    // ============================================
     // INITIALIZE APP
     // ============================================
     async function initPage() {
@@ -2850,8 +2961,19 @@
         // 1. CRITICAL: Make page visible immediately (prevent white screen)
         document.body.style.opacity = '1';
 
+        // 1.5. Check for deep link from Job Board (Launch AI Project)
+        const urlParams = new URLSearchParams(window.location.search);
+        const deepLinkAction = urlParams.get('action');
+        const jobId = urlParams.get('jobId');
+
         // 2. Show default tab IMMEDIATELY so page isn't blank
-        switchTab('command-center');
+        // If deep link detected, switch to estimator tab instead
+        if (deepLinkAction === 'launch' && jobId) {
+          switchTab('estimator');
+          console.log('🚀 Deep link detected: Launching AI project from Job Board');
+        } else {
+          switchTab('command-center');
+        }
 
         // 3. Initialize trade fields immediately
         renderTradeFields();
@@ -2864,7 +2986,12 @@
         // 4. Then try to authenticate and load job data
         const isAuthenticated = await checkAuth();
         if (isAuthenticated) {
-          checkForEstimatorJob();
+          // 4.5. Handle deep link pre-fill if launched from Job Board
+          if (deepLinkAction === 'launch' && jobId) {
+            await handleDeepLinkLaunch(jobId, urlParams);
+          } else {
+            checkForEstimatorJob();
+          }
 
           // 5. Load active projects for Command Center
           await loadActiveProjects();

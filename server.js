@@ -7789,14 +7789,17 @@ app.get('/api/templates', async (req, res) => {
 /**
  * POST /api/projects/init
  * Initialize a new project from a template using OrchestratorAgent
- * Body: { ownerId, templateId, scopeData }
+ * Body: { templateId, scopeData, jobPostingId? }
+ * Note: jobPostingId is optional - if provided (e.g., from Job Board deep link),
+ *       we link to existing job instead of creating new one
  */
-app.post('/api/projects/init', requireAuth, requireRole('homeowner'), async (req, res) => {
+app.post('/api/projects/init', requireAuth, async (req, res) => {
   try {
-    const { templateId, scopeData } = req.body;
+    const { templateId, scopeData, jobPostingId } = req.body;
     const ownerId = req.user.id;
+    const userRole = req.user.role;
 
-    console.log(`[API] POST /api/projects/init - User ${ownerId} initializing project with template ${templateId}`);
+    console.log(`[API] POST /api/projects/init - User ${ownerId} (${userRole}) initializing project with template ${templateId}${jobPostingId ? ` from job ${jobPostingId}` : ''}`);
 
     // Validate required fields
     if (!templateId) {
@@ -7821,45 +7824,93 @@ app.post('/api/projects/init', requireAuth, requireRole('homeowner'), async (req
 
     const template = templateCheck.rows[0];
 
-    // Create job posting with template reference
-    const jobTitle = scopeData?.title || `${template.display_name} Project`;
-    const jobDescription = scopeData?.description || `Project based on ${template.template_name} template`;
-    const zipCode = scopeData?.zipCode || '00000';
-    const address = scopeData?.address || '';
-    const blueprintsUrl = scopeData?.blueprintsUrl || null;
+    let projectId;
+    let jobTitle;
 
-    const jobResult = await db.query(`
-      INSERT INTO job_postings (
-        homeowner_email,
-        title,
-        description,
-        category,
-        zip_code,
+    // SCENARIO 1: Deep link from Job Board (contractor won a bid)
+    if (jobPostingId) {
+      console.log(`[API] Linking to existing job posting ${jobPostingId}`);
+
+      // Verify the job exists and user has access to it
+      const existingJobCheck = await db.query(
+        'SELECT id, title, homeowner_email FROM job_postings WHERE id = $1',
+        [jobPostingId]
+      );
+
+      if (existingJobCheck.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Job posting not found',
+          code: 'JOB_NOT_FOUND'
+        });
+      }
+
+      const existingJob = existingJobCheck.rows[0];
+
+      // Contractors can link to any job they won
+      // Homeowners can only link to their own jobs
+      if (userRole === 'homeowner' && existingJob.homeowner_email !== req.user.email) {
+        return res.status(403).json({
+          error: 'You do not have permission to access this job',
+          code: 'FORBIDDEN'
+        });
+      }
+
+      // Update the existing job with template info and mark as in_progress
+      await db.query(`
+        UPDATE job_postings
+        SET template_id = $1,
+            status = 'in_progress',
+            project_metadata = $2,
+            updated_at = NOW()
+        WHERE id = $3
+      `, [templateId, JSON.stringify(scopeData || {}), jobPostingId]);
+
+      projectId = jobPostingId;
+      jobTitle = existingJob.title;
+
+      console.log(`[API] Updated existing job ${projectId} with template ${templateId}`);
+    }
+    // SCENARIO 2: New project (homeowner creating from scratch)
+    else {
+      const jobDescription = scopeData?.description || `Project based on ${template.template_name} template`;
+      const zipCode = scopeData?.zipCode || '00000';
+      const address = scopeData?.address || '';
+      const blueprintsUrl = scopeData?.blueprintsUrl || null;
+
+      jobTitle = scopeData?.title || `${template.display_name} Project`;
+
+      const jobResult = await db.query(`
+        INSERT INTO job_postings (
+          homeowner_email,
+          title,
+          description,
+          category,
+          zip_code,
+          address,
+          status,
+          template_id,
+          blueprints_url,
+          project_metadata,
+          created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        RETURNING id, title, template_id
+      `, [
+        req.user.email,
+        jobTitle,
+        jobDescription,
+        template.template_type || 'general',
+        zipCode,
         address,
-        status,
-        template_id,
-        blueprints_url,
-        project_metadata,
-        created_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-      RETURNING id, title, template_id
-    `, [
-      req.user.email,
-      jobTitle,
-      jobDescription,
-      template.template_type || 'general',
-      zipCode,
-      address,
-      'in_progress',
-      templateId,
-      blueprintsUrl,
-      JSON.stringify(scopeData || {})
-    ]);
+        'in_progress',
+        templateId,
+        blueprintsUrl,
+        JSON.stringify(scopeData || {})
+      ]);
 
-    const projectId = jobResult.rows[0].id;
-
-    console.log(`[API] Created job posting ${projectId} for user ${ownerId}`);
+      projectId = jobResult.rows[0].id;
+      console.log(`[API] Created new job posting ${projectId} for user ${ownerId}`);
+    }
 
     // Initialize project with OrchestratorAgent
     console.log(`[API] Calling OrchestratorAgent.initializeProject(${projectId})`);
@@ -7868,13 +7919,18 @@ app.post('/api/projects/init', requireAuth, requireRole('homeowner'), async (req
 
     console.log(`[API] OrchestratorAgent completed: ${initResult.milestones_created} milestones created`);
 
+    const responseMessage = jobPostingId
+      ? `AI Project launched! Linked to job posting "${jobTitle}" with ${initResult.milestones_created} milestones from ${initResult.template} template`
+      : `Project initialized with ${initResult.milestones_created} milestones from ${initResult.template} template`;
+
     res.json({
       success: true,
       project_id: projectId,
-      project_title: jobResult.rows[0].title,
+      project_title: jobTitle,
       template_name: template.template_name,
       orchestrator_result: initResult,
-      message: `Project initialized with ${initResult.milestones_created} milestones from ${initResult.template} template`
+      linked_from_job_board: !!jobPostingId,
+      message: responseMessage
     });
 
   } catch (error) {

@@ -1138,10 +1138,22 @@
 
             <!-- Actions -->
             ${bid.status === 'accepted' ? `
-              <div class="flex items-center gap-4 border-t border-slate-100 pt-4">
-                <button onclick="contactHomeowner('${bid.job_id}', '${bid.homeowner_email}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-message"></i> Contact Homeowner
-                </button>
+              <div class="border-t border-slate-100 pt-4">
+                <div class="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-4 mb-4">
+                  <div class="flex items-center gap-2 mb-2">
+                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                    <span class="text-sm font-bold text-slate-900">Congratulations! You won this bid</span>
+                  </div>
+                  <p class="text-xs text-slate-600">Ready to start the project? Launch AI agents to automate planning, contractor search, and progress tracking.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center gap-3">
+                  <button onclick="launchAIProject('${bid.job_id}', '${escapeHtml(job.title)}', '${job.category || 'general'}', '${job.zip_code}')" class="w-full sm:flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> Launch AI Project
+                  </button>
+                  <button onclick="contactHomeowner('${bid.job_id}', '${bid.homeowner_email}')" class="w-full sm:flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-message"></i> Contact Homeowner
+                  </button>
+                </div>
               </div>
             ` : ''}
           </div>
@@ -1919,6 +1931,39 @@
       window.location.href = `mailto:${homeownerEmail}?subject=Regarding Your Project`;
     }
     window.contactHomeowner = contactHomeowner;
+
+    // Launch AI Project - Deep link to Auto-GC Command Center with pre-filled data
+    function launchAIProject(jobId, jobTitle, category, zipCode) {
+      // Map category to template hint for auto-selection
+      const categoryToTemplate = {
+        'General Contractor': 'general',
+        'Plumber': 'plumbing',
+        'Electrician': 'electrical',
+        'HVAC': 'hvac',
+        'Landscaping': 'landscaping',
+        'Roofing': 'roofing',
+        'Painting': 'painting',
+        'Flooring': 'flooring',
+        'Remodeling': 'remodeling',
+        'bathroom': 'bathroom',
+        'kitchen': 'kitchen'
+      };
+
+      const templateHint = categoryToTemplate[category] || 'general';
+
+      // Build deep link URL with query parameters
+      const params = new URLSearchParams({
+        action: 'launch',
+        jobId: jobId,
+        templateHint: templateHint,
+        title: jobTitle,
+        zip: zipCode
+      });
+
+      // Redirect to contractor tools with pre-fill data
+      window.location.href = `/contractor-tools.html?${params.toString()}`;
+    }
+    window.launchAIProject = launchAIProject;
 
     // Tab switching with Sanctuary 2.0 button styling
     document.querySelectorAll('.tab-btn').forEach(btn => {
