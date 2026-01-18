@@ -501,6 +501,10 @@ class AuthService {
     if (this.currentUser) return this.currentUser;
 
     try {
+      // Check if supabase is initialized before accessing it
+      if (!this.supabase) {
+        return null;
+      }
       const { data: { user } } = await this.supabase.auth.getUser();
       this.currentUser = user;
       return user;
@@ -515,6 +519,10 @@ class AuthService {
    */
   async getSession() {
     try {
+      // Check if supabase is initialized before accessing it
+      if (!this.supabase) {
+        return null;
+      }
       const { data: { session } } = await this.supabase.auth.getSession();
       return session;
     } catch (error) {
@@ -536,6 +544,10 @@ class AuthService {
    */
   async getAccessToken() {
     try {
+      // Check if supabase is initialized before accessing it
+      if (!this.supabase) {
+        return null;
+      }
       const { data: { session } } = await this.supabase.auth.getSession();
       return session?.access_token || null;
     } catch (error) {
