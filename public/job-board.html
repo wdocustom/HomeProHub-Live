@@ -993,13 +993,19 @@
         return;
       }
 
-      container.innerHTML = availableJobs.map(job => `
-        <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300" id="job-card-${job.id}">
+      container.innerHTML = availableJobs.map(job => {
+        // Check if contractor has already bid on this job
+        const existingBid = myBids.find(bid => bid.job_id === job.id);
+        const hasBid = !!existingBid;
+
+        return `
+        <div class="group relative bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 hover:shadow-md transition-all duration-300 ${hasBid ? 'opacity-75' : ''}" id="job-card-${job.id}">
           <!-- Header -->
           <div class="flex justify-between items-start mb-4">
             <div>
               <div class="flex items-center gap-2 mb-1">
                 ${getMatchBadge(job)}
+                ${hasBid ? '<span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">✓ Bid Submitted</span>' : ''}
                 <span class="text-slate-400 text-xs font-medium">• ${timeAgo(job.posted_at)}</span>
               </div>
               <h3 class="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">${escapeHtml(job.title)}</h3>
@@ -1047,15 +1053,22 @@
 
           <!-- Actions -->
           <div class="flex items-center gap-4 border-t border-slate-100 pt-6">
-            <button onclick="openBidModal('${job.id}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
-              View Project & Bid <i class="fa-solid fa-arrow-right"></i>
-            </button>
+            ${hasBid ? `
+              <button onclick="openBidModal('${job.id}')" class="flex-1 py-3 bg-blue-50 border-2 border-blue-200 text-blue-700 font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check-circle"></i> View Your Bid
+              </button>
+            ` : `
+              <button onclick="openBidModal('${job.id}')" class="flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                View Project & Bid <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            `}
             <button onclick="useEstimator('${job.id}')" class="px-6 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition" title="Use AI Estimator">
               <i class="fa-solid fa-calculator"></i>
             </button>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     // Render my bids with Sanctuary 2.0 design
@@ -1238,6 +1251,19 @@
     async function openBidModal(jobId) {
       currentJob = availableJobs.find(j => j.id === jobId);
       if (!currentJob) return;
+
+      // Check if contractor has already submitted a bid for this job
+      const existingBid = myBids.find(bid => bid.job_id === jobId);
+      if (existingBid) {
+        // Show existing bid details instead of allowing duplicate
+        alert(
+          `You've already submitted a bid for this project!\n\n` +
+          `Your Bid: ${formatCurrency(existingBid.bid_amount_low)} - ${formatCurrency(existingBid.bid_amount_high)}\n` +
+          `Status: ${existingBid.status.charAt(0).toUpperCase() + existingBid.status.slice(1)}\n\n` +
+          `You can view your bid in the "My Bids" tab below.`
+        );
+        return; // Don't open the modal
+      }
 
       // Check contractor license status from Supabase before opening modal
       try {
