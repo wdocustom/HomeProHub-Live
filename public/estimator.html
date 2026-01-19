@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.supabase.in https:; worker-src 'self' blob:;">
+  <meta name="sanctuary-zone" content="D">
+  <title>Project Estimator – HomeProHub</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Sanctuary Glass CSS -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    body { background: #f8fafc; }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+
+    /* Hawk Agent Contractor Cards */
+    .contractor-card {
+      transition: all 0.2s ease;
+      animation: slideInFromLeft 0.3s ease-out;
+    }
+
+    .contractor-card:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .contractor-card:nth-child(1) { animation-delay: 0.1s; }
+    .contractor-card:nth-child(2) { animation-delay: 0.2s; }
+    .contractor-card:nth-child(3) { animation-delay: 0.3s; }
+
+    /* Scanning pulse animation */
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans antialiased opacity-0 transition-opacity duration-300 zone-d app-page">
+
+  <!-- Navigation Header Container (Auto-injected by AppController) -->
+  <div id="main-header-container" class="w-full z-50 relative"></div>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow relative z-10">
+
+    <!-- Hero Section -->
+    <div class="text-center py-12 px-4">
+      <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Project Estimator</h1>
+      <p class="text-lg text-slate-500 max-w-2xl mx-auto">
+        Generate professional estimates with AI-powered pricing intelligence and launch complete project plans.
+      </p>
+    </div>
+
+    <!-- Main Estimator Content -->
+    <div class="max-w-4xl mx-auto px-4 pb-12">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-lg">
+        <div class="p-8">
+          <div class="space-y-6">
+
+            <!-- NEW: Project Template Selector -->
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6">
+              <div class="flex items-center gap-3 mb-3">
+                <i class="fa-solid fa-building text-purple-600 text-2xl"></i>
+                <h3 class="text-lg font-bold text-slate-900">Project Type</h3>
+                <span class="ml-auto px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full uppercase">AI-Powered</span>
+              </div>
+              <p class="text-sm text-slate-600 mb-4">Select a project template to automatically generate a complete project plan with milestones, schedules, and contractor recommendations.</p>
+
+              <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Select Project Template</label>
+              <select id="template-selector" onchange="handleTemplateChange()" class="w-full rounded-xl border-purple-300 bg-white p-4 font-bold text-slate-900 focus:border-purple-500 focus:ring-purple-500 shadow-sm">
+                <option value="">Quick Estimate Only (No Template)</option>
+                <!-- Templates will be loaded dynamically -->
+              </select>
+
+              <!-- Template Details (shown when template selected) -->
+              <div id="template-details" class="hidden mt-4 p-4 bg-white rounded-xl border border-purple-200">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <span class="text-slate-500 font-semibold">Duration:</span>
+                    <span id="template-duration" class="ml-2 text-slate-900 font-bold">-</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 font-semibold">Complexity:</span>
+                    <span id="template-complexity" class="ml-2 text-slate-900 font-bold">-</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 font-semibold">Permits:</span>
+                    <span id="template-permits" class="ml-2 text-slate-900 font-bold">-</span>
+                  </div>
+                </div>
+                <p id="template-description" class="mt-3 text-slate-600 text-sm"></p>
+
+                <!-- Blueprint Upload (shown if template requires blueprints) -->
+                <div id="blueprint-upload-section" class="hidden mt-4">
+                  <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                    <i class="fa-solid fa-file-pdf text-purple-600 mr-2"></i>Blueprints/Plans (Required)
+                  </label>
+                  <input
+                    type="url"
+                    id="blueprints-url"
+                    class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-purple-500 focus:ring-purple-500"
+                    placeholder="https://example.com/blueprints.pdf"
+                  >
+                  <p class="text-xs text-slate-500 mt-1">Enter a URL to your blueprints/plans PDF</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trade Switcher -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">I am a...</label>
+              <select id="trade-selector" onchange="renderTradeFields()" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 font-bold text-slate-900 focus:border-blue-500 focus:ring-blue-500">
+                <option value="gc">General Contractor / Remodeler</option>
+                <option value="electrician">Electrician</option>
+                <option value="plumber">Plumber</option>
+                <option value="hvac">HVAC Tech</option>
+              </select>
+            </div>
+
+            <!-- Project Description -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Project Description</label>
+              <textarea
+                id="job-description"
+                rows="3"
+                class="w-full rounded-xl border-slate-200 bg-slate-50 p-4 text-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-all shadow-inner resize-none"
+                placeholder="e.g., Master bathroom remodel, 10x12, new tile shower, vanity..."
+              ></textarea>
+            </div>
+
+            <!-- Zip Code & Finish Quality Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Zip Code</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-location-dot"></i>
+                  </div>
+                  <input
+                    type="text"
+                    id="zip-code"
+                    pattern="[0-9]{5}"
+                    maxlength="5"
+                    class="pl-10 w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="12345"
+                    required
+                  >
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">Finish Quality</label>
+                <select id="material-level" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500">
+                  <option value="mid">Standard (Mid-Range)</option>
+                  <option value="budget">Economy (Budget)</option>
+                  <option value="high">Premium (High-End)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Dynamic Trade-Specific Fields -->
+            <div id="dynamic-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+              <!-- Fields will be dynamically inserted here based on trade selection -->
+            </div>
+
+            <!-- Auto-populate banner (hidden by default) -->
+            <div id="auto-populate-banner" class="hidden bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+              <p class="text-sm text-blue-800">
+                <strong>📋 Job Info Loaded:</strong> <span id="loaded-job-title"></span>
+              </p>
+            </div>
+
+            <!-- Status Message -->
+            <div id="status" class="text-sm text-center"></div>
+
+            <!-- Generate/Launch Button -->
+            <button
+              onclick="handleGenerateOrLaunch()"
+              id="generate-btn"
+              class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5"
+            >
+              <span id="btn-text">Generate Professional Estimate</span>
+            </button>
+
+            <!-- Template Launch Info -->
+            <div id="template-launch-info" class="hidden bg-purple-50 border-l-4 border-purple-500 p-4 rounded-lg">
+              <p class="text-sm text-purple-900">
+                <i class="fa-solid fa-rocket mr-2"></i><strong>Template Mode:</strong> This will create a new project with a complete AI-generated plan, milestones, and contractor recommendations.
+              </p>
+            </div>
+          </div>
+
+          <!-- Results Section (Digital Invoice Style) -->
+          <div id="estimate-result" class="mt-12 hidden animate-fade-in-up">
+            <!-- Dark Header with Total -->
+            <div class="bg-slate-900 rounded-t-3xl p-8 text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 p-8 opacity-10">
+                <i class="fa-solid fa-file-invoice-dollar text-9xl"></i>
+              </div>
+              <h2 class="text-xl font-medium text-blue-200 mb-1" id="result-title">Project Estimate</h2>
+              <div class="flex items-baseline gap-3 mt-4">
+                <span class="text-4xl md:text-5xl font-bold tracking-tight" id="result-low">$0</span>
+                <span class="text-slate-400 text-2xl">-</span>
+                <span class="text-4xl md:text-5xl font-bold tracking-tight" id="result-high">$0</span>
+              </div>
+              <p class="text-sm text-slate-400 mt-2">
+                Estimated Market Range based on Zip <span id="result-zip"></span>
+              </p>
+            </div>
+
+            <!-- White Body with Breakdown -->
+            <div class="bg-white border-x border-b border-slate-200 p-8 rounded-b-3xl shadow-xl">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 border-b pb-2">
+                Itemized Breakdown
+              </h3>
+
+              <!-- Line Items List -->
+              <div id="breakdown-list" class="space-y-1"></div>
+
+              <!-- Totals -->
+              <div class="mt-8 pt-6 border-t-2 border-slate-100">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-slate-500">Subtotal</span>
+                  <span class="font-mono font-semibold" id="res-subtotal">-</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-slate-500" id="overhead-label">Overhead & Profit (20%)</span>
+                  <span class="font-mono font-semibold text-slate-400">Included</span>
+                </div>
+                <div class="flex justify-between items-center mb-6">
+                  <span class="text-slate-500" id="contingency-label">Contingency (10%)</span>
+                  <span class="font-mono font-semibold text-slate-400">Included</span>
+                </div>
+
+                <!-- Disclaimers -->
+                <div id="disclaimers-section" class="hidden bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg mb-6">
+                  <p class="font-semibold text-sm text-amber-900 mb-2">Important Notes:</p>
+                  <ul id="disclaimers-list" class="text-xs text-amber-800 space-y-1 pl-4 list-disc"></ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-4 mt-8">
+                  <button
+                    onclick="downloadPDF()"
+                    class="flex-1 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition flex items-center justify-center gap-2"
+                  >
+                    <i class="fa-solid fa-file-pdf"></i> Download Official PDF
+                  </button>
+                  <button
+                    onclick="emailEstimate()"
+                    class="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition"
+                  >
+                    <i class="fa-regular fa-envelope"></i>
+                  </button>
+                </div>
+
+                <!-- Attach to Bid Button (shown only when coming from job board) -->
+                <button
+                  id="attach-to-bid-btn"
+                  onclick="attachToBid()"
+                  class="hidden w-full mt-4 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
+                >
+                  <i class="fa-solid fa-check-circle"></i> Attach to Bid & Return
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ============================================
+    // GLOBAL STATE
+    // ============================================
+    let profile = null;
+    let currentEstimate = null;
+    let estimatorJobData = null;
+
+    // ============================================
+    // TRADE CONFIGURATIONS
+    // ============================================
+    const tradeConfigs = {
+      gc: [
+        { id: 'sqft', label: 'Total Square Footage', placeholder: 'e.g. 150 sq ft', type: 'text' },
+        { id: 'room_type', label: 'Room Type', type: 'select', options: ['Bathroom', 'Kitchen', 'Basement', 'Addition', 'Living Room', 'Bedroom', 'Other'] }
+      ],
+      electrician: [
+        { id: 'points', label: 'Number of Points (Outlets/Switches)', placeholder: 'e.g. 15', type: 'text' },
+        { id: 'panel_upgrade', label: 'Panel Upgrade Needed?', type: 'select', options: ['No', 'Yes - 100 Amp', 'Yes - 200 Amp', 'Yes - 400 Amp'] },
+        { id: 'access', label: 'Access Difficulty', type: 'select', options: ['Easy (Open Wall)', 'Medium (Attic/Crawl)', 'Hard (Finished Wall)', 'Very Hard (Conduit Required)'] }
+      ],
+      plumber: [
+        { id: 'fixtures', label: 'Number of Fixtures (Sinks/Toilets)', placeholder: 'e.g. 3', type: 'text' },
+        { id: 'pipe_type', label: 'Existing Pipe Material', type: 'select', options: ['Copper', 'PEX', 'Galvanized (Old)', 'Unknown'] },
+        { id: 'slab', label: 'Concrete Slab Work?', type: 'select', options: ['No', 'Yes (Jackhammer required)'] }
+      ],
+      hvac: [
+        { id: 'tonnage', label: 'System Tonnage', type: 'select', options: ['1.5 Ton', '2 Ton', '2.5 Ton', '3 Ton', '3.5 Ton', '4 Ton', '5 Ton'] },
+        { id: 'system_type', label: 'System Type', type: 'select', options: ['Central AC', 'Heat Pump', 'Furnace', 'Mini-Split', 'Package Unit'] },
+        { id: 'ductwork', label: 'Ductwork Status', type: 'select', options: ['Existing (Good)', 'Repair Needed', 'New Installation Required'] }
+      ]
+    };
+
+    function renderTradeFields() {
+      const trade = document.getElementById('trade-selector').value;
+      const container = document.getElementById('dynamic-fields-container');
+      const fields = tradeConfigs[trade] || tradeConfigs.gc;
+
+      container.innerHTML = fields.map(field => `
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">${field.label}</label>
+          ${field.type === 'select' ? `
+            <select id="dynamic-${field.id}" class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500">
+              ${field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+            </select>
+          ` : `
+            <input
+              type="text"
+              id="dynamic-${field.id}"
+              class="w-full rounded-xl border-slate-200 bg-slate-50 p-3 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="${field.placeholder || ''}"
+            >
+          `}
+        </div>
+      `).join('');
+
+      // Update Hawk agent based on trade type
+      updateHawkAgentForTrade(trade);
+    }
+
+    // ============================================
+    // PROJECT TEMPLATE FUNCTIONS
+    // ============================================
+    let availableTemplates = [];
+    let selectedTemplate = null;
+
+    /**
+     * Fetch available project templates from API
+     */
+    async function fetchProjectTemplates() {
+      try {
+        console.log('[Templates] Fetching project templates...');
+
+        const response = await fetch('/api/templates');
+        const data = await response.json();
+
+        if (data.success && data.templates) {
+          availableTemplates = data.templates;
+          console.log(`[Templates] Loaded ${data.count} templates`);
+
+          // Populate dropdown
+          const selector = document.getElementById('template-selector');
+          const currentValue = selector.value;
+
+          // Keep the first "Quick Estimate Only" option, add templates after
+          availableTemplates.forEach(template => {
+            const option = document.createElement('option');
+            option.value = template.id;
+            option.textContent = template.display_name;
+            option.dataset.template = JSON.stringify(template);
+            selector.appendChild(option);
+          });
+
+          // Restore selection if it existed
+          if (currentValue) {
+            selector.value = currentValue;
+          }
+        }
+      } catch (error) {
+        console.error('[Templates] Error fetching templates:', error);
+      }
+    }
+
+    /**
+     * Handle template selection change
+     */
+    function handleTemplateChange() {
+      const selector = document.getElementById('template-selector');
+      const templateId = selector.value;
+
+      if (!templateId) {
+        // Quick estimate mode - hide template details
+        document.getElementById('template-details').classList.add('hidden');
+        document.getElementById('template-launch-info').classList.add('hidden');
+        document.getElementById('btn-text').textContent = 'Generate Professional Estimate';
+        selectedTemplate = null;
+        return;
+      }
+
+      // Find selected template
+      selectedTemplate = availableTemplates.find(t => t.id === templateId);
+
+      if (!selectedTemplate) return;
+
+      // Show template details
+      document.getElementById('template-details').classList.remove('hidden');
+      document.getElementById('template-launch-info').classList.remove('hidden');
+
+      // Update details
+      const durationDays = selectedTemplate.typical_duration_days;
+      const durationWeeks = Math.round(durationDays / 7);
+      const durationMonths = Math.round(durationDays / 30);
+
+      let durationText = `${durationDays} days`;
+      if (durationDays >= 60) {
+        durationText = `${durationMonths} months`;
+      } else if (durationDays >= 14) {
+        durationText = `${durationWeeks} weeks`;
+      }
+
+      document.getElementById('template-duration').textContent = durationText;
+      document.getElementById('template-complexity').textContent =
+        selectedTemplate.complexity_level.replace('_', ' ').toUpperCase();
+      document.getElementById('template-permits').textContent =
+        selectedTemplate.requires_permits ? 'Required' : 'Not Required';
+      document.getElementById('template-description').textContent = selectedTemplate.description;
+
+      // Show/hide blueprint upload
+      if (selectedTemplate.requires_blueprints) {
+        document.getElementById('blueprint-upload-section').classList.remove('hidden');
+      } else {
+        document.getElementById('blueprint-upload-section').classList.add('hidden');
+      }
+
+      // Update button text
+      document.getElementById('btn-text').innerHTML =
+        '<i class="fa-solid fa-rocket mr-2"></i>Launch Project with AI Planning';
+    }
+
+    /**
+     * Handle Generate Estimate OR Launch Project
+     */
+    async function handleGenerateOrLaunch() {
+      const templateId = document.getElementById('template-selector').value;
+
+      if (!templateId) {
+        // No template selected - run normal estimate generation
+        await generateEstimate();
+      } else {
+        // Template selected - launch project with OrchestratorAgent
+        await launchProjectWithTemplate();
+      }
+    }
+
+    /**
+     * Launch a new project using a template and OrchestratorAgent
+     */
+    async function launchProjectWithTemplate() {
+      const btn = document.getElementById('generate-btn');
+      const status = document.getElementById('status');
+
+      try {
+        // Validate required fields
+        const jobDescription = document.getElementById('job-description').value.trim();
+        const zipCode = document.getElementById('zip-code').value.trim();
+        const templateId = document.getElementById('template-selector').value;
+
+        if (!jobDescription) {
+          status.innerHTML = '<span class="text-red-600">Please enter a project description</span>';
+          return;
+        }
+
+        if (!zipCode || zipCode.length !== 5) {
+          status.innerHTML = '<span class="text-red-600">Please enter a valid 5-digit ZIP code</span>';
+          return;
+        }
+
+        if (!selectedTemplate) {
+          status.innerHTML = '<span class="text-red-600">Please select a project template</span>';
+          return;
+        }
+
+        // Check for blueprints if required
+        const blueprintsUrl = document.getElementById('blueprints-url')?.value.trim();
+        if (selectedTemplate.requires_blueprints && !blueprintsUrl) {
+          status.innerHTML = '<span class="text-red-600">This template requires blueprints. Please provide a URL.</span>';
+          return;
+        }
+
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Creating Project Plan...';
+        status.innerHTML = '<span class="text-blue-600">The Orchestrator Agent is generating your project milestones...</span>';
+
+        // Get auth token
+        const token = await window.authService.getAccessToken();
+
+        // Collect dynamic trade-specific fields
+        const trade = document.getElementById('trade-selector').value;
+        const tradeFields = tradeConfigs[trade] || tradeConfigs.gc;
+        const dynamicData = {};
+
+        tradeFields.forEach(field => {
+          const fieldElement = document.getElementById(`dynamic-${field.id}`);
+          if (fieldElement && fieldElement.value) {
+            dynamicData[field.id] = fieldElement.value;
+          }
+        });
+
+        // Prepare scope data with ALL form fields
+        const scopeData = {
+          title: `${selectedTemplate.display_name} - ${jobDescription}`,
+          description: jobDescription,
+          zipCode: zipCode,
+          address: '', // TODO: Add address field if needed
+          blueprintsUrl: blueprintsUrl || null,
+          materialLevel: document.getElementById('material-level')?.value || 'mid',
+          trade: trade,
+          ...dynamicData  // Spread all dynamic fields (sqft, room_type, etc.)
+        };
+
+        console.log('[Project] Scope data with dynamic fields:', scopeData);
+
+        // Call API to initialize project
+        console.log('[Project] Initializing project with template:', templateId);
+
+        // Build request payload
+        const requestPayload = {
+          templateId: templateId,
+          scopeData: scopeData
+        };
+
+        // If this project was launched from Job Board, link it to the job posting
+        if (window.linkedJobId) {
+          requestPayload.jobPostingId = window.linkedJobId;
+          console.log('[Project] Linking to job posting:', window.linkedJobId);
+        }
+
+        const response = await fetch('/api/projects/init', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(requestPayload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to initialize project');
+        }
+
+        console.log('[Project] Successfully initialized:', data);
+
+        // Show success message
+        status.innerHTML = `
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg">
+            <p class="text-green-900 font-bold mb-2">
+              <i class="fa-solid fa-check-circle mr-2"></i>Project Successfully Created!
+            </p>
+            <p class="text-green-800 text-sm mb-3">${data.message}</p>
+            <a
+              href="contractor-tools.html"
+              class="inline-block px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all"
+            >
+              <i class="fa-solid fa-arrow-right mr-2"></i>View in Command Center
+            </a>
+          </div>
+        `;
+
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = '<span id="btn-text"><i class="fa-solid fa-rocket mr-2"></i>Launch Project with AI Planning</span>';
+
+      } catch (error) {
+        console.error('[Project] Error launching project:', error);
+        status.innerHTML = `<span class="text-red-600">Error: ${error.message}</span>`;
+        btn.disabled = false;
+        btn.innerHTML = '<span id="btn-text"><i class="fa-solid fa-rocket mr-2"></i>Launch Project with AI Planning</span>';
+      }
+    }
+
+    // ============================================
+    // AUTH & INITIALIZATION
+    // ============================================
+
+    async function checkAuth() {
+      try {
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              resolve();
+            }, 5000);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          console.log('[Auth] No user logged in');
+          return false;
+        }
+
+        const userProfile = await window.authService.getUserProfile();
+        if (!userProfile || userProfile.role !== 'contractor') {
+          console.log('[Auth] User is not a contractor');
+          return false;
+        }
+
+        profile = userProfile;
+        console.log('[Auth] Contractor authenticated:', profile.email);
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        return false;
+      }
+    }
+
+    function checkForEstimatorJob() {
+      const jobDataStr = sessionStorage.getItem('estimatorJob');
+      if (jobDataStr) {
+        try {
+          estimatorJobData = JSON.parse(jobDataStr);
+          autoPopulateFromJob(estimatorJobData);
+        } catch (e) {
+          console.error('Error parsing estimator job data:', e);
+        }
+      }
+    }
+
+    function autoPopulateFromJob(jobData) {
+      if (jobData.jobDescription) {
+        document.getElementById('job-description').value = jobData.jobDescription;
+      }
+      if (jobData.zipCode) {
+        document.getElementById('zip-code').value = jobData.zipCode;
+      }
+
+      const banner = document.getElementById('auto-populate-banner');
+      const jobTitle = document.getElementById('loaded-job-title');
+      if (jobTitle) {
+        jobTitle.textContent = jobData.jobTitle || 'Job from dashboard';
+      }
+      if (banner) {
+        banner.classList.remove('hidden');
+      }
+    }
+
+    // ============================================
+    // ESTIMATOR - Generate Estimate
+    // ============================================
+    async function generateEstimate() {
+      const trade = document.getElementById('trade-selector').value;
+      const jobDesc = document.getElementById('job-description').value.trim();
+      const jobZip = document.getElementById('zip-code').value.trim();
+      const finishLevel = document.getElementById('material-level').value;
+
+      const statusEl = document.getElementById('status');
+      const generateBtn = document.getElementById('generate-btn');
+
+      if (!jobDesc || !jobZip) {
+        statusEl.textContent = 'Please fill in all required fields';
+        statusEl.className = 'text-sm text-center text-red-500';
+        return;
+      }
+
+      if (!/^\d{5}$/.test(jobZip)) {
+        statusEl.textContent = 'Please enter a valid 5-digit ZIP code';
+        statusEl.className = 'text-sm text-center text-red-500';
+        return;
+      }
+
+      const specs = {};
+      const fields = tradeConfigs[trade] || tradeConfigs.gc;
+      fields.forEach(field => {
+        const el = document.getElementById(`dynamic-${field.id}`);
+        if (el && el.value) {
+          specs[field.label] = el.value;
+        }
+      });
+
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Generating...';
+      statusEl.textContent = 'AI is analyzing your job...';
+      statusEl.className = 'text-sm text-center text-slate-500';
+      document.getElementById('estimate-result').classList.add('hidden');
+
+      try {
+        const response = await fetch('/contractor-ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: jobDesc,
+            focus: 'pricing',
+            zip: jobZip,
+            scopeLevel: finishLevel,
+            trade_persona: trade,
+            technical_specs: specs
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to generate estimate');
+
+        const data = await response.json();
+        currentEstimate = data.answer;
+
+        // ===== DATA BRIDGE: Save project to localStorage for Command Center =====
+        const projectData = {
+          projectName: currentEstimate.project_title || 'New Project',
+          zipCode: jobZip,
+          tradeType: trade,
+          finishLevel: finishLevel,
+          specs: specs,
+          estimateLow: currentEstimate.total_projected_low || 0,
+          estimateHigh: currentEstimate.total_projected_high || 0,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('currentActiveProject', JSON.stringify(projectData));
+
+        // Show toast notification
+        showToast('Estimate Generated Successfully');
+
+        displayEstimate(currentEstimate, jobZip);
+
+        statusEl.textContent = 'Estimate generated successfully!';
+        statusEl.className = 'text-sm text-center text-green-600';
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + (err.message || 'Failed to generate estimate');
+        statusEl.className = 'text-sm text-center text-red-500';
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Generate Professional Estimate';
+      }
+    }
+
+    function displayEstimate(est, zip) {
+      if (est.error) {
+        document.getElementById('breakdown-list').innerHTML = `<p class="text-red-500">${est.error}</p>`;
+        document.getElementById('estimate-result').classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('result-title').textContent = est.project_title || 'Project Estimate';
+      document.getElementById('result-low').textContent = '$' + (est.total_projected_low || 0).toLocaleString();
+      document.getElementById('result-high').textContent = '$' + (est.total_projected_high || 0).toLocaleString();
+      document.getElementById('result-zip').textContent = zip;
+
+      const breakdownList = document.getElementById('breakdown-list');
+      breakdownList.innerHTML = '';
+
+      const workPackages = est.work_packages || [];
+
+      if (workPackages.length > 0) {
+        workPackages.forEach(pkg => {
+          const header = document.createElement('div');
+          header.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2 font-bold text-slate-900 flex justify-between mt-4 first:mt-0";
+          header.innerHTML = `<span>${pkg.category}</span>`;
+          breakdownList.appendChild(header);
+
+          pkg.items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = "flex justify-between items-start mb-3 pl-4 pr-2 border-b border-slate-50 pb-2 last:border-0";
+
+            let badgeType = 'bg-gray-100 text-gray-700';
+            if (item.type === 'Labor') badgeType = 'bg-blue-100 text-blue-700';
+            if (item.type === 'Material') badgeType = 'bg-orange-100 text-orange-700';
+            if (item.type === 'Permit') badgeType = 'bg-amber-100 text-amber-700';
+
+            let itemHTML = `
+              <div class="flex gap-3 flex-1">
+                <span class="${badgeType} text-[10px] font-bold px-2 py-1 rounded uppercase w-20 text-center self-start">${item.type}</span>
+                <div class="flex flex-col flex-1">
+                  <span class="text-sm font-medium text-slate-700">${item.description}</span>`;
+
+            if (item.notes) {
+              itemHTML += `<div class="text-xs text-slate-500 mt-1">${item.notes}</div>`;
+            }
+
+            if (item.local_insight && item.local_insight.message) {
+              itemHTML += `
+                <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+                  <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+                </div>`;
+            }
+
+            itemHTML += `
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="block text-sm font-bold text-slate-900 font-mono whitespace-nowrap">${item.cost_range || item.cost || 'N/A'}</span>
+              </div>`;
+
+            row.innerHTML = itemHTML;
+            breakdownList.appendChild(row);
+          });
+        });
+      } else if (est.line_items && est.line_items.length > 0) {
+        est.line_items.forEach((item, idx) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'flex justify-between items-start py-3 border-b border-slate-100';
+
+          let itemHTML = `
+            <div class="flex-1">
+              <div class="font-medium text-slate-900">${item.item}</div>`;
+
+          if (item.notes) {
+            itemHTML += `<div class="text-xs text-slate-500 mt-1">${item.notes}</div>`;
+          }
+
+          if (item.local_insight && item.local_insight.message) {
+            itemHTML += `
+              <div class="bg-amber-50 border-l-2 border-amber-400 px-3 py-2 mt-2 rounded text-xs text-amber-900 italic">
+                <i class="fa-solid fa-lightbulb text-amber-500"></i> ${item.local_insight.message}
+              </div>`;
+          }
+
+          itemHTML += `</div>`;
+          itemHTML += `<div class="text-right font-mono text-sm text-slate-700 whitespace-nowrap ml-4">$${(item.low || 0).toLocaleString()} - $${(item.high || 0).toLocaleString()}</div>`;
+
+          itemDiv.innerHTML = itemHTML;
+          breakdownList.appendChild(itemDiv);
+        });
+      }
+
+      document.getElementById('res-subtotal').textContent = `$${(est.subtotal_low || 0).toLocaleString()} - $${(est.subtotal_high || 0).toLocaleString()}`;
+      document.getElementById('overhead-label').textContent = `Overhead & Profit (${est.overhead_profit_percent || 20}%)`;
+      document.getElementById('contingency-label').textContent = `Contingency (${est.contingency_percent || 10}%)`;
+
+      if (est.disclaimers && est.disclaimers.length > 0) {
+        const disclaimersList = document.getElementById('disclaimers-list');
+        disclaimersList.innerHTML = est.disclaimers.map(d => `<li>${d}</li>`).join('');
+        document.getElementById('disclaimers-section').classList.remove('hidden');
+      } else {
+        document.getElementById('disclaimers-section').classList.add('hidden');
+      }
+
+      if (estimatorJobData && estimatorJobData.returnToBid) {
+        document.getElementById('attach-to-bid-btn').classList.remove('hidden');
+      }
+
+      document.getElementById('estimate-result').classList.remove('hidden');
+    }
+
+    // ============================================
+    // ESTIMATOR - PDF & Email Functions
+    // ============================================
+    async function downloadPDF() {
+      if (!currentEstimate) return;
+
+      const isAuth = await isUserAuthenticated();
+      if (!isAuth) {
+        const shouldSignUp = confirm('Sign up for a free HomeProHub account to download this estimate as a professional PDF.\\n\\nWould you like to create an account now?');
+        if (shouldSignUp) {
+          sessionStorage.setItem('savedEstimate', JSON.stringify(currentEstimate));
+          window.location.href = '/signup.html';
+        }
+        return;
+      }
+
+      const win = window.open('', '', 'height=900,width=800');
+      if (!win) {
+        alert('Please allow pop-ups to download PDF');
+        return;
+      }
+
+      const companyName = profile && profile.companyName ? profile.companyName : 'HomeProHub Contractor';
+      const license = profile && profile.licenseNumber ? profile.licenseNumber : 'License Pending';
+      const address = profile && profile.city && profile.state ? `${profile.city}, ${profile.state} ${profile.zipCode || ''}` : '';
+
+      let lineItemsHTML = '';
+
+      if (currentEstimate.work_packages && currentEstimate.work_packages.length > 0) {
+        currentEstimate.work_packages.forEach((pkg, pkgIdx) => {
+          lineItemsHTML += `<tr style="background:#f3f4f6;">`;
+          lineItemsHTML += `<td colspan="3" style="padding:10px; font-weight:700; font-size:13px; text-transform:uppercase; border-top:2px solid #cbd5e1; border-bottom:1px solid #cbd5e1;">${pkg.category}</td>`;
+          lineItemsHTML += `</tr>`;
+
+          pkg.items.forEach((item, idx) => {
+            const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+            let typeColor = '#6b7280';
+            if (item.type === 'Material') typeColor = '#ea580c';
+            if (item.type === 'Labor') typeColor = '#2563eb';
+            if (item.type === 'Permit') typeColor = '#d97706';
+
+            lineItemsHTML += `<tr style="background:${bg};">`;
+            lineItemsHTML += `<td style="padding:12px; border-bottom:1px solid #e5e7eb; padding-left:20px;">`;
+            lineItemsHTML += `<span style="color:${typeColor}; font-weight:600; font-size:9px; text-transform:uppercase; background:#f1f5f9; padding:2px 6px; border-radius:4px; margin-right:8px;">${item.type}</span>`;
+            lineItemsHTML += `${item.description}`;
+            if (item.notes) lineItemsHTML += `<br><span style="font-size:11px;color:#6b7280;">${item.notes}</span>`;
+            if (item.local_insight && item.local_insight.message) {
+              lineItemsHTML += `<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">💡 ${item.local_insight.message}</div>`;
+            }
+            lineItemsHTML += `</td>`;
+            lineItemsHTML += `<td colspan="2" style="padding:12px; text-align:right; border-bottom:1px solid #e5e7eb; font-family:monospace;">${item.cost_range}</td>`;
+            lineItemsHTML += `</tr>`;
+          });
+        });
+      } else if (currentEstimate.line_items && currentEstimate.line_items.length > 0) {
+        currentEstimate.line_items.forEach((item, idx) => {
+          const bg = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+          lineItemsHTML += `<tr style="background:${bg};">`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;">${item.item}`;
+          if (item.notes) lineItemsHTML += `<br><span style="font-size:11px;color:#6b7280;">${item.notes}</span>`;
+          if (item.local_insight && item.local_insight.message) {
+            lineItemsHTML += `<br><div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:6px 8px;margin-top:6px;font-size:11px;color:#92400e;font-style:italic;">💡 ${item.local_insight.message}</div>`;
+          }
+          lineItemsHTML += `</td>`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.low || 0).toLocaleString()}</td>`;
+          lineItemsHTML += `<td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(item.high || 0).toLocaleString()}</td>`;
+          lineItemsHTML += `</tr>`;
+        });
+      }
+
+      let disclaimersHTML = '';
+      if (currentEstimate.disclaimers && currentEstimate.disclaimers.length > 0) {
+        disclaimersHTML = `<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin-top:20px;border-radius:8px;"><h4 style="margin:0 0 8px 0;color:#92400e;font-size:14px;">Important Notes</h4><ul style="margin:0;padding-left:20px;font-size:12px;color:#78350f;">`;
+        currentEstimate.disclaimers.forEach(d => {
+          disclaimersHTML += `<li style="margin:4px 0;">${d}</li>`;
+        });
+        disclaimersHTML += `</ul></div>`;
+      }
+
+      const html = `<!DOCTYPE html>
+<html><head>
+  <title>${currentEstimate.project_title || 'Project Estimate'}</title>
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; color: #1f2937; }
+    .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+    .header-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .company-name { font-size: 24px; font-weight: 700; color: #2563eb; }
+    .project-title { font-size: 28px; font-weight: 700; margin: 20px 0 10px 0; }
+    .total-box { background: #dbeafe; border: 2px solid #2563eb; border-radius: 12px; padding: 16px; margin: 20px 0; text-align: center; }
+    .total-label { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
+    .total-amount { font-size: 32px; font-weight: 700; color: #2563eb; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th { background: #f3f4f6; padding: 12px; text-align: left; font-size: 13px; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
+    .subtotal-row { background: #f3f4f6; font-weight: 600; border-top: 2px solid #e5e7eb; }
+    .total-row { background: #dbeafe; font-weight: 700; font-size: 16px; border-top: 2px solid #2563eb; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head><body>
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <div class="company-name">${companyName}</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px;">License: ${license}</div>
+        ${address ? `<div style="font-size:13px;color:#6b7280;">${address}</div>` : ''}
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;color:#6b7280;">Date: ${new Date().toLocaleDateString()}</div>
+        <div style="font-size:13px;color:#6b7280;">Estimate ID: HPH-${Math.floor(Math.random() * 90000) + 10000}</div>
+      </div>
+    </div>
+  </div>
+
+  <h1 class="project-title">${currentEstimate.project_title || 'Project Estimate'}</h1>
+
+  <div class="total-box">
+    <div class="total-label">Estimated Total Range</div>
+    <div class="total-amount">$${(currentEstimate.total_projected_low || 0).toLocaleString()} - $${(currentEstimate.total_projected_high || 0).toLocaleString()}</div>
+  </div>
+
+  <h3 style="margin:30px 0 10px 0;color:#374151;">Detailed Breakdown</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Item / Service</th>
+        <th style="text-align:right;width:120px;">Low Estimate</th>
+        <th style="text-align:right;width:120px;">High Estimate</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${lineItemsHTML}
+      <tr class="subtotal-row">
+        <td style="padding:12px;">Subtotal (Labor & Materials)</td>
+        <td style="padding:12px;text-align:right;">$${(currentEstimate.subtotal_low || 0).toLocaleString()}</td>
+        <td style="padding:12px;text-align:right;">$${(currentEstimate.subtotal_high || 0).toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;padding-left:24px;font-size:13px;color:#6b7280;">Overhead & Profit (${currentEstimate.overhead_profit_percent || 20}%)</td>
+        <td colspan="2"></td>
+      </tr>
+      <tr>
+        <td style="padding:8px;padding-left:24px;font-size:13px;color:#6b7280;">Contingency (${currentEstimate.contingency_percent || 10}%)</td>
+        <td colspan="2"></td>
+      </tr>
+      <tr class="total-row">
+        <td style="padding:14px;">TOTAL PROJECT ESTIMATE</td>
+        <td style="padding:14px;text-align:right;color:#2563eb;">$${(currentEstimate.total_projected_low || 0).toLocaleString()}</td>
+        <td style="padding:14px;text-align:right;color:#2563eb;">$${(currentEstimate.total_projected_high || 0).toLocaleString()}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  ${disclaimersHTML}
+
+  <div style="margin-top:40px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+    This estimate is preliminary and subject to change based on site conditions and final scope. Not a binding contract.
+  </div>
+</body></html>`;
+
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => win.print(), 250);
+    }
+
+    function emailEstimate() {
+      if (!currentEstimate) return;
+
+      const subject = 'Estimate: ' + (currentEstimate.project_title || 'Your Project');
+      const body = `Please see attached estimate.\\n\\nTotal Range: $${(currentEstimate.total_projected_low || 0).toLocaleString()} - $${(currentEstimate.total_projected_high || 0).toLocaleString()}\\n\\nThis is a preliminary estimate. A formal quote will require a site visit.`;
+
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function attachToBid() {
+      if (!currentEstimate || !estimatorJobData) return;
+
+      const estimateData = {
+        jobId: estimatorJobData.jobId,
+        total_low: currentEstimate.total_projected_low || 0,
+        total_high: currentEstimate.total_projected_high || 0,
+        project_title: currentEstimate.project_title || 'Estimate',
+        work_packages: currentEstimate.work_packages || [],
+        line_items: currentEstimate.line_items || [],
+        subtotal_low: currentEstimate.subtotal_low || 0,
+        subtotal_high: currentEstimate.subtotal_high || 0,
+        overhead_profit_percent: currentEstimate.overhead_profit_percent || 20,
+        contingency_percent: currentEstimate.contingency_percent || 10,
+        timestamp: new Date().toISOString()
+      };
+
+      sessionStorage.setItem('attachedEstimate_' + estimatorJobData.jobId, JSON.stringify(estimateData));
+      sessionStorage.removeItem('estimatorJob');
+
+      console.log('✅ Estimate attached to job:', estimatorJobData.jobId);
+      window.location.href = 'job-board.html';
+    }
+
+    async function isUserAuthenticated() {
+      try {
+        if (!window.authService || !window.authService.initialized) return false;
+        const user = await window.authService.getCurrentUser();
+        return !!user;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    /**
+     * Show toast notification
+     */
+    function showToast(message) {
+      // Create toast element
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-24 right-8 bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-fade-in-up';
+      toast.innerHTML = `
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-check-circle text-xl"></i>
+          <span class="font-semibold">${message}</span>
+        </div>
+      `;
+
+      document.body.appendChild(toast);
+
+      // Auto-remove after 3 seconds
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        toast.style.transition = 'all 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    /**
+     * Update The Hawk agent description and functionality based on trade type
+     */
+    function updateHawkAgentForTrade(trade) {
+      // This is a placeholder for trade-specific functionality
+      // In the standalone estimator, this function is simplified
+      console.log('[Trade] Trade type:', trade);
+    }
+
+    // ============================================
+    // PAGE INITIALIZATION
+    // ============================================
+    async function initPage() {
+      document.body.style.opacity = '1';
+      renderTradeFields();  // Initialize form
+
+      const isAuthenticated = await checkAuth();
+      if (isAuthenticated) {
+        await fetchProjectTemplates();
+      }
+
+      // Check for job data from session storage (if coming from job board)
+      checkForEstimatorJob();
+    }
+
+    window.addEventListener('DOMContentLoaded', initPage);
+  </script>
+
+  <!-- Sanctuary Glass 2.0 Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+
+  <!-- Application Controller (MUST BE LAST) -->
+  <script src="/services/app-controller.js"></script>
+</body>
+</html>
