@@ -7810,19 +7810,21 @@ app.post('/api/projects/init', requireAuth, async (req, res) => {
     }
 
     // Verify template exists
-    const templateCheck = await db.query(
-      'SELECT id, template_name, display_name FROM project_templates WHERE id = $1 AND is_active = true',
-      [templateId]
-    );
+    const { data: templates, error: templateError } = await db.supabase
+      .from('project_templates')
+      .select('id, template_name, display_name, template_type')
+      .eq('id', templateId)
+      .eq('is_active', true)
+      .limit(1);
 
-    if (templateCheck.rows.length === 0) {
+    if (templateError || !templates || templates.length === 0) {
       return res.status(404).json({
         error: 'Template not found or inactive',
         code: 'TEMPLATE_NOT_FOUND'
       });
     }
 
-    const template = templateCheck.rows[0];
+    const template = templates[0];
 
     let projectId;
     let jobTitle;
@@ -7832,19 +7834,20 @@ app.post('/api/projects/init', requireAuth, async (req, res) => {
       console.log(`[API] Linking to existing job posting ${jobPostingId}`);
 
       // Verify the job exists and user has access to it
-      const existingJobCheck = await db.query(
-        'SELECT id, title, homeowner_email FROM job_postings WHERE id = $1',
-        [jobPostingId]
-      );
+      const { data: existingJobs, error: jobError } = await db.supabase
+        .from('job_postings')
+        .select('id, title, homeowner_email')
+        .eq('id', jobPostingId)
+        .limit(1);
 
-      if (existingJobCheck.rows.length === 0) {
+      if (jobError || !existingJobs || existingJobs.length === 0) {
         return res.status(404).json({
           error: 'Job posting not found',
           code: 'JOB_NOT_FOUND'
         });
       }
 
-      const existingJob = existingJobCheck.rows[0];
+      const existingJob = existingJobs[0];
 
       // Contractors can link to any job they won
       // Homeowners can only link to their own jobs
@@ -7856,14 +7859,23 @@ app.post('/api/projects/init', requireAuth, async (req, res) => {
       }
 
       // Update the existing job with template info and mark as in_progress
-      await db.query(`
-        UPDATE job_postings
-        SET template_id = $1,
-            status = 'in_progress',
-            project_metadata = $2,
-            updated_at = NOW()
-        WHERE id = $3
-      `, [templateId, JSON.stringify(scopeData || {}), jobPostingId]);
+      const { error: updateError } = await db.supabase
+        .from('job_postings')
+        .update({
+          template_id: templateId,
+          status: 'in_progress',
+          project_metadata: scopeData || {},
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', jobPostingId);
+
+      if (updateError) {
+        console.error('[API] Error updating job posting:', updateError);
+        return res.status(500).json({
+          error: 'Failed to update job posting',
+          code: 'UPDATE_FAILED'
+        });
+      }
 
       projectId = jobPostingId;
       jobTitle = existingJob.title;
@@ -7879,36 +7891,33 @@ app.post('/api/projects/init', requireAuth, async (req, res) => {
 
       jobTitle = scopeData?.title || `${template.display_name} Project`;
 
-      const jobResult = await db.query(`
-        INSERT INTO job_postings (
-          homeowner_email,
-          title,
-          description,
-          category,
-          zip_code,
-          address,
-          status,
-          template_id,
-          blueprints_url,
-          project_metadata,
-          created_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-        RETURNING id, title, template_id
-      `, [
-        req.user.email,
-        jobTitle,
-        jobDescription,
-        template.template_type || 'general',
-        zipCode,
-        address,
-        'in_progress',
-        templateId,
-        blueprintsUrl,
-        JSON.stringify(scopeData || {})
-      ]);
+      const { data: insertedJobs, error: insertError } = await db.supabase
+        .from('job_postings')
+        .insert({
+          homeowner_email: req.user.email,
+          title: jobTitle,
+          description: jobDescription,
+          category: template.template_type || 'general',
+          zip_code: zipCode,
+          address: address,
+          status: 'in_progress',
+          template_id: templateId,
+          blueprints_url: blueprintsUrl,
+          project_metadata: scopeData || {},
+          created_at: new Date().toISOString()
+        })
+        .select('id, title, template_id')
+        .single();
 
-      projectId = jobResult.rows[0].id;
+      if (insertError || !insertedJobs) {
+        console.error('[API] Error creating job posting:', insertError);
+        return res.status(500).json({
+          error: 'Failed to create job posting',
+          code: 'INSERT_FAILED'
+        });
+      }
+
+      projectId = insertedJobs.id;
       console.log(`[API] Created new job posting ${projectId} for user ${ownerId}`);
     }
 
