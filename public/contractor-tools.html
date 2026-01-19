@@ -2896,6 +2896,9 @@
         const job = await response.json();
         console.log('✓ Job details loaded:', job);
 
+        // IMPORTANT: Mark this as PROJECT LAUNCH MODE (not estimate mode)
+        window.isProjectLaunchMode = true;
+
         // Pre-fill the estimator form with CORRECT field IDs
         // Project Description (from job description)
         const jobDescInput = document.getElementById('job-description');
@@ -2909,26 +2912,37 @@
           zipInput.value = zip || job.zip_code;
         }
 
-        // Auto-select template based on templateHint
-        if (templateHint) {
-          const templateSelect = document.getElementById('template-selector');
-          if (templateSelect) {
-            // Wait a moment for templates to load
-            await new Promise(resolve => setTimeout(resolve, 800));
+        // Wait for templates to load
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-            // Try to find matching template
+        // Auto-select template based on templateHint (with fallback)
+        const templateSelect = document.getElementById('template-selector');
+        if (templateSelect) {
+          let templateSelected = false;
+
+          // Try to find matching template
+          if (templateHint) {
             const options = Array.from(templateSelect.options);
             const matchingOption = options.find(opt =>
-              opt.value.toLowerCase().includes(templateHint.toLowerCase()) ||
-              opt.text.toLowerCase().includes(templateHint.toLowerCase())
+              opt.value && (
+                opt.value.toLowerCase().includes(templateHint.toLowerCase()) ||
+                opt.text.toLowerCase().includes(templateHint.toLowerCase())
+              )
             );
 
             if (matchingOption) {
               templateSelect.value = matchingOption.value;
-              // Trigger the change event to load template details
               handleTemplateChange();
+              templateSelected = true;
               console.log('✓ Auto-selected template:', matchingOption.text);
             }
+          }
+
+          // If no template matched, select first available template
+          if (!templateSelected && templateSelect.options.length > 1) {
+            templateSelect.value = templateSelect.options[1].value;
+            handleTemplateChange();
+            console.log('✓ Selected default template');
           }
         }
 
@@ -2938,13 +2952,8 @@
         // Show success message with job title
         const jobTitle = title ? decodeURIComponent(title) : job.title || 'Project';
 
-        // Show auto-populate banner
-        const banner = document.getElementById('auto-populate-banner');
-        const loadedJobTitle = document.getElementById('loaded-job-title');
-        if (banner && loadedJobTitle) {
-          loadedJobTitle.textContent = jobTitle;
-          banner.classList.remove('hidden');
-        }
+        // Update UI to show PROJECT LAUNCH MODE (different from estimator)
+        updateUIForProjectLaunchMode(jobTitle);
 
         if (statusEl) {
           statusEl.textContent = `✓ "${jobTitle}" loaded from Job Board`;
@@ -2972,6 +2981,110 @@
           statusEl.className = 'text-sm text-center text-red-600';
         }
       }
+    }
+
+    // ============================================
+    // UPDATE UI FOR PROJECT LAUNCH MODE
+    // ============================================
+    function updateUIForProjectLaunchMode(jobTitle) {
+      console.log('🎨 Updating UI for PROJECT LAUNCH MODE');
+
+      // 1. Transform the banner to purple gradient with PROJECT LAUNCH branding
+      const banner = document.getElementById('auto-populate-banner');
+      if (banner) {
+        banner.className = 'bg-gradient-to-r from-purple-100 to-pink-100 border-l-4 border-purple-600 p-4 rounded-lg shadow-md';
+        banner.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="text-3xl">🚀</div>
+            <div class="flex-1">
+              <p class="text-lg font-bold text-purple-900 mb-1">PROJECT LAUNCH MODE</p>
+              <p class="text-sm text-purple-800 mb-2">
+                <strong>Congratulations!</strong> You won the bid for: <span class="font-semibold">${jobTitle}</span>
+              </p>
+              <p class="text-xs text-purple-700">
+                This will activate AI-powered project management with 5 specialized agents to help you deliver this project successfully.
+              </p>
+            </div>
+          </div>
+        `;
+        banner.classList.remove('hidden');
+      }
+
+      // 2. Update button text and styling for PROJECT LAUNCH
+      const generateBtn = document.getElementById('generate-btn');
+      const btnText = document.getElementById('btn-text');
+
+      if (generateBtn) {
+        // Change to purple/pink gradient
+        generateBtn.className = 'w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl shadow-lg shadow-purple-500/30 transition-all transform hover:-translate-y-0.5';
+      }
+
+      if (btnText) {
+        btnText.innerHTML = '<i class="fa-solid fa-rocket mr-2"></i>Launch AI Project Management';
+      }
+
+      // 3. Update template-launch-info to explain AI agents
+      const templateInfo = document.getElementById('template-launch-info');
+      if (templateInfo) {
+        templateInfo.className = 'bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-600 p-5 rounded-lg shadow-md';
+        templateInfo.innerHTML = `
+          <div class="space-y-3">
+            <p class="text-sm font-bold text-purple-900 mb-2">
+              <i class="fa-solid fa-robot mr-2"></i>5 AI Agents Will Be Activated:
+            </p>
+
+            <div class="grid gap-2 text-xs">
+              <div class="flex items-start gap-2">
+                <span class="text-purple-600">🎯</span>
+                <div>
+                  <strong class="text-purple-900">Orchestrator Agent:</strong>
+                  <span class="text-purple-800">Creates project timeline, milestones, and coordinates all other agents</span>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="text-purple-600">🔍</span>
+                <div>
+                  <strong class="text-purple-900">Hawk (Research Agent):</strong>
+                  <span class="text-purple-800">Finds subcontractors, suppliers, and researches best practices</span>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="text-purple-600">⚡</span>
+                <div>
+                  <strong class="text-purple-900">Whip (Execution Agent):</strong>
+                  <span class="text-purple-800">Manages daily tasks, scheduling, and keeps project on track</span>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="text-purple-600">🛡️</span>
+                <div>
+                  <strong class="text-purple-900">Sentinel (Quality Agent):</strong>
+                  <span class="text-purple-800">Monitors quality, safety compliance, and risk management</span>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="text-purple-600">📊</span>
+                <div>
+                  <strong class="text-purple-900">Summarizer Agent:</strong>
+                  <span class="text-purple-800">Generates progress reports and client communications</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-purple-700 mt-3 pt-3 border-t border-purple-200">
+              <i class="fa-solid fa-lightbulb mr-1"></i>
+              <em>These agents will work together to help you manage materials, schedule tasks, track progress, and communicate with the homeowner.</em>
+            </p>
+          </div>
+        `;
+        templateInfo.classList.remove('hidden');
+      }
+
+      console.log('✓ UI updated for PROJECT LAUNCH MODE');
     }
 
     // ============================================
