@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://api.mapbox.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://*.supabase.co https://*.supabase.in https:; worker-src 'self' blob:;">
+  <meta name="sanctuary-zone" content="D">
+  <title>AI Command Center – HomeProHub</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Sanctuary Glass CSS -->
+  <link rel="stylesheet" href="/components/sanctuary-glass.css">
+
+  <!-- Supabase Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/services/auth.js"></script>
+
+  <style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    body { background: #f8fafc; }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans antialiased opacity-0 transition-opacity duration-300 zone-d app-page">
+
+  <!-- Navigation Header Container (Auto-injected by AppController) -->
+  <div id="main-header-container" class="w-full z-50 relative"></div>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow relative z-10">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+
+      <!-- Page Header -->
+      <div class="mb-8">
+        <h1 class="text-4xl font-bold text-slate-900 mb-2">
+          <i class="fa-solid fa-robot mr-3 text-purple-600"></i>AI Command Center
+        </h1>
+        <p class="text-slate-600">Monitor your AI agents as they manage projects and keep homeowners updated.</p>
+      </div>
+
+      <!-- Ready to Launch Card (Hidden by default, shown when deep link from Job Board) -->
+      <div id="ready-to-launch-card" class="hidden space-y-6 mb-8 animate-fade-in-up">
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-white shadow-2xl">
+          <div class="flex items-center gap-3 mb-6">
+            <i class="fa-solid fa-rocket text-5xl"></i>
+            <div>
+              <h2 class="text-3xl font-bold">Ready to Launch</h2>
+              <p class="text-purple-100 text-lg">You won the bid! Let's activate your AI project management.</p>
+            </div>
+          </div>
+
+          <div class="bg-white/10 rounded-xl p-6 backdrop-blur-sm mb-6">
+            <h3 class="font-semibold text-lg mb-3"><i class="fa-solid fa-briefcase mr-2"></i>Project Details</h3>
+            <p id="rtl-job-title" class="text-2xl font-bold mb-3"></p>
+            <p id="rtl-job-description" class="text-purple-100 mb-4"></p>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="bg-white/10 rounded-lg p-3">
+                <div class="text-purple-200 text-xs mb-1">Location</div>
+                <div class="font-semibold" id="rtl-zip"></div>
+              </div>
+              <div class="bg-white/10 rounded-lg p-3">
+                <div class="text-purple-200 text-xs mb-1">Client</div>
+                <div class="font-semibold" id="rtl-client"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white/10 rounded-xl p-6 backdrop-blur-sm mb-6">
+            <h3 class="font-semibold mb-3"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>AI-Recommended Template</h3>
+            <div id="rtl-template-info" class="mb-4"></div>
+
+            <label class="block text-sm mb-2">Or choose a different template:</label>
+            <select id="rtl-template-selector" class="w-full rounded-xl p-3 text-slate-900 font-semibold">
+              <option value="">Loading templates...</option>
+            </select>
+          </div>
+
+          <button
+            onclick="launchFromJobBoard()"
+            id="rtl-launch-btn"
+            class="w-full py-5 bg-white text-purple-600 font-bold text-xl rounded-xl shadow-2xl hover:bg-purple-50 hover:shadow-purple-500/50 transition-all transform hover:scale-105"
+          >
+            <i class="fa-solid fa-rocket mr-3"></i>Activate AI Agents
+          </button>
+
+          <div id="rtl-status" class="mt-4 text-center text-sm"></div>
+        </div>
+      </div>
+
+      <!-- Command Center Content -->
+      <div id="command-center-content" class="space-y-8">
+
+        <!-- Command Center Header -->
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
+          <h2 class="text-2xl font-bold mb-2">🤖 AI Agent Command Center</h2>
+          <p class="text-purple-100">Monitor your AI agents as they manage projects, coordinate trades, and keep homeowners updated.</p>
+        </div>
+
+        <!-- Active Projects Section -->
+        <div id="project-selector-section">
+          <h3 class="text-xl font-bold text-slate-900 mb-4">📋 Your Active Projects</h3>
+
+          <!-- Project Selection -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Select a Project</label>
+            <select id="active-project-selector" onchange="loadProjectDetails()" class="w-full rounded-xl border-slate-200 bg-white p-4 font-semibold text-slate-900 focus:border-purple-500 focus:ring-purple-500 shadow-sm">
+              <option value="">Select a project to manage...</option>
+            </select>
+          </div>
+
+          <!-- Project Status Card (shown when project selected) -->
+          <div id="project-status-card" class="hidden bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-white rounded-lg p-4 border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Current Phase</div>
+                <div id="project-phase" class="text-lg font-bold text-slate-900">Planning</div>
+              </div>
+              <div class="bg-white rounded-lg p-4 border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Last Activity</div>
+                <div id="project-last-activity" class="text-lg font-bold text-slate-900">--</div>
+              </div>
+              <div class="bg-white rounded-lg p-4 border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Total Logs</div>
+                <div id="project-log-count" class="text-lg font-bold text-slate-900">0</div>
+              </div>
+            </div>
+
+            <!-- Blockers Alert -->
+            <div id="project-blockers" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-4">
+              <p class="font-semibold text-sm text-red-900 mb-2">⚠️ Active Blockers:</p>
+              <ul id="blockers-list" class="text-xs text-red-800 space-y-1 pl-4 list-disc"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contractor Update Section -->
+        <div id="contractor-update-section" class="hidden">
+          <h3 class="text-xl font-bold text-slate-900 mb-4">✏️ Log Project Update</h3>
+
+          <div class="bg-blue-50 rounded-xl p-6 border border-blue-200 shadow-sm">
+            <div class="mb-4">
+              <label class="block text-sm font-semibold text-slate-700 mb-2">What's the latest on this project?</label>
+              <textarea
+                id="update-text"
+                rows="4"
+                class="w-full rounded-xl border-slate-200 bg-white p-4 text-slate-900 focus:border-purple-500 focus:ring-purple-500 transition-all shadow-sm resize-none"
+                placeholder="e.g., Finished drywall in all rooms. Starting paint prep tomorrow. Homeowner selected Benjamin Moore 'Swiss Coffee' for walls."
+              ></textarea>
+            </div>
+
+            <div class="flex gap-4">
+              <button
+                onclick="logContractorUpdate()"
+                id="log-update-btn"
+                class="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl shadow-lg transition-all"
+              >
+                <i class="fa-solid fa-paper-plane mr-2"></i>Log Update
+              </button>
+              <button
+                onclick="generateAndSendSummary()"
+                id="send-summary-btn"
+                class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all"
+              >
+                <i class="fa-solid fa-robot mr-2"></i>Generate AI Summary
+              </button>
+            </div>
+
+            <div id="update-status" class="mt-4 text-sm text-center"></div>
+          </div>
+        </div>
+
+        <!-- Project Activity Log -->
+        <div id="project-activity-section" class="hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-slate-900">📜 Project Activity Log</h3>
+            <button
+              onclick="refreshActivityLog()"
+              class="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-all"
+            >
+              <i class="fa-solid fa-rotate-right mr-2"></i>Refresh
+            </button>
+          </div>
+
+          <div id="activity-log-container" class="bg-slate-50 rounded-xl p-6 border border-slate-200 max-h-96 overflow-y-auto shadow-sm">
+            <div id="activity-log-list" class="space-y-3">
+              <p class="text-center text-slate-500 text-sm py-8">No activity logged yet. Start by logging an update above.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Agent Activity Monitor -->
+        <div>
+          <h3 class="text-xl font-bold text-slate-900 mb-4">🤖 AI Agent Activity</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- The Summarizer -->
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+                  <i class="fa-solid fa-file-lines text-white text-lg"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900">The Summarizer</h4>
+                  <p class="text-xs text-slate-600">Daily update generator</p>
+                </div>
+              </div>
+              <p class="text-sm text-slate-700">Automatically generates friendly progress updates for homeowners based on your logged activity.</p>
+              <div class="mt-4 pt-4 border-t border-blue-200">
+                <div class="text-xs text-slate-600">Status: <span class="font-semibold text-green-600">Active</span></div>
+              </div>
+            </div>
+
+            <!-- The Orchestrator -->
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 opacity-60 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mr-3">
+                  <i class="fa-solid fa-brain text-white text-lg"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900">The Orchestrator</h4>
+                  <p class="text-xs text-slate-600">Project state manager</p>
+                </div>
+              </div>
+              <p class="text-sm text-slate-700">Manages project phases, tracks dependencies, and coordinates the AI agent team.</p>
+              <div class="mt-4 pt-4 border-t border-purple-200">
+                <div class="text-xs text-slate-600">Status: <span class="font-semibold text-amber-600">Coming Soon</span></div>
+              </div>
+            </div>
+
+            <!-- The Hawk -->
+            <div id="hawk-agent-card" class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 opacity-60 transition-all duration-500 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mr-3">
+                  <i class="fa-solid fa-users text-white text-lg" id="hawk-icon"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900">The Hawk</h4>
+                  <p class="text-xs text-slate-600">Procurement specialist</p>
+                </div>
+              </div>
+              <p id="hawk-description" class="text-sm text-slate-700 mb-3">Finds and coordinates subcontractors using your Lead Scout database and local pro network.</p>
+
+              <!-- Dynamic Status Text -->
+              <div id="hawk-status-text" class="text-sm text-slate-600 mb-3 min-h-[20px]"></div>
+
+              <div class="mt-4 pt-4 border-t border-green-200">
+                <div class="text-xs text-slate-600">Status: <span id="hawk-status-badge" class="font-semibold text-amber-600">Standby</span></div>
+
+                <!-- Dynamic Action Button (hidden by default) -->
+                <div id="hawk-action-container" class="mt-3 hidden">
+                  <button
+                    id="run-hawk-agent"
+                    onclick="runAutoScout()"
+                    class="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-md"
+                  >
+                    <i class="fa-solid fa-search-location mr-2"></i><span id="hawk-button-text">Auto-Scout Subcontractors</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- The Whip (Coming Soon) -->
+            <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200 opacity-60 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mr-3">
+                  <i class="fa-solid fa-calendar-check text-white text-lg"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900">The Whip</h4>
+                  <p class="text-xs text-slate-600">Schedule coordinator</p>
+                </div>
+              </div>
+              <p class="text-sm text-slate-700">Manages the calendar, handles dependencies, and reschedules trades when delays occur.</p>
+              <div class="mt-4 pt-4 border-t border-orange-200">
+                <div class="text-xs text-slate-600">Status: <span class="font-semibold text-amber-600">Coming Soon</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Mobile Navigation Container (Auto-injected by AppController) -->
+  <div id="mobile-nav-container"></div>
+
+  <script>
+    // ============================================
+    // GLOBAL STATE
+    // ============================================
+    let profile = null;
+    let selectedProjectId = null;
+    let availableTemplates = [];
+
+    // ============================================
+    // AUTHENTICATION
+    // ============================================
+    async function checkAuth() {
+      try {
+        if (!window.authService || !window.authService.initialized) {
+          await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+              if (window.authService && window.authService.initialized) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              resolve();
+            }, 5000);
+          });
+        }
+
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        const userProfile = await window.authService.getUserProfile();
+        if (!userProfile || userProfile.role !== 'contractor') {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        profile = userProfile;
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = "index.html";
+        return false;
+      }
+    }
+
+    // ============================================
+    // DEEP LINK HANDLER - Job Board Integration
+    // ============================================
+    async function handleJobBoardDeepLink(jobId, urlParams) {
+      try {
+        console.log('🚀 Deep link from Job Board detected for job:', jobId);
+
+        // Fetch job details
+        const token = localStorage.getItem('sb-access-token');
+        const response = await fetch(`/api/jobs/${jobId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load job details');
+        }
+
+        const job = await response.json();
+        console.log('✓ Job details loaded:', job);
+
+        // Fetch templates
+        await fetchProjectTemplates();
+
+        // Auto-select template based on job title
+        const suggestedTemplate = autoSelectTemplate(job.title);
+        console.log('✓ Suggested template:', suggestedTemplate);
+
+        // Show "Ready to Launch" card
+        displayReadyToLaunchCard(job, suggestedTemplate);
+
+        // Store for later
+        window.linkedJobId = jobId;
+        window.linkedJob = job;
+      } catch (error) {
+        console.error('Deep link failed:', error);
+        showToast('Failed to load job details. Showing normal view.');
+        await loadActiveProjects();  // Fallback to normal view
+      }
+    }
+
+    function autoSelectTemplate(jobTitle) {
+      if (!jobTitle || availableTemplates.length === 0) {
+        return availableTemplates[0] || null;
+      }
+
+      const keywords = {
+        'kitchen': 'kitchen_remodel',
+        'bathroom': 'bathroom_remodel',
+        'bath': 'bathroom_remodel',
+        'deck': 'deck_build',
+        'roof': 'roofing_project',
+        'addition': 'home_addition',
+        'basement': 'basement_finish',
+        'hvac': 'hvac_replacement',
+        'electrical': 'electrical_upgrade',
+        'plumbing': 'plumbing_renovation',
+        'flooring': 'flooring_install',
+        'paint': 'interior_paint'
+      };
+
+      const normalized = jobTitle.toLowerCase();
+      for (const [keyword, templateId] of Object.entries(keywords)) {
+        if (normalized.includes(keyword)) {
+          const match = availableTemplates.find(t => t.template_name === templateId);
+          if (match) return match;
+        }
+      }
+
+      return availableTemplates[0] || null;  // Default to first template
+    }
+
+    function displayReadyToLaunchCard(job, suggestedTemplate) {
+      // Hide normal project selector
+      document.getElementById('command-center-content').classList.add('hidden');
+
+      // Show ready-to-launch card
+      const card = document.getElementById('ready-to-launch-card');
+      card.classList.remove('hidden');
+
+      // Populate job details
+      document.getElementById('rtl-job-title').textContent = job.title || 'Untitled Project';
+      document.getElementById('rtl-job-description').textContent = job.description || 'No description provided';
+      document.getElementById('rtl-zip').textContent = job.zip_code || 'N/A';
+      document.getElementById('rtl-client').textContent = job.homeowner_email || 'Homeowner';
+
+      // Populate template selector
+      const selector = document.getElementById('rtl-template-selector');
+      selector.innerHTML = availableTemplates.map(t =>
+        `<option value="${t.id}" ${t.id === suggestedTemplate?.id ? 'selected' : ''}>
+          ${t.display_name}
+        </option>`
+      ).join('');
+
+      // Show suggested template info
+      if (suggestedTemplate) {
+        document.getElementById('rtl-template-info').innerHTML = `
+          <div class="flex items-center gap-3 p-4 bg-white/20 rounded-lg">
+            <i class="fa-solid fa-check-circle text-4xl text-emerald-300"></i>
+            <div>
+              <p class="font-bold text-lg">${suggestedTemplate.display_name}</p>
+              <p class="text-sm text-purple-100">${suggestedTemplate.description || 'Perfect match for your project'}</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    async function launchFromJobBoard() {
+      const templateId = document.getElementById('rtl-template-selector').value;
+      const job = window.linkedJob;
+      const btn = document.getElementById('rtl-launch-btn');
+      const statusEl = document.getElementById('rtl-status');
+
+      if (!templateId || !job) {
+        statusEl.textContent = '❌ Missing required data';
+        statusEl.className = 'mt-4 text-center text-sm text-red-300';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-3"></i>Launching...';
+      statusEl.textContent = 'Activating AI agents...';
+      statusEl.className = 'mt-4 text-center text-sm text-purple-100';
+
+      try {
+        // Launch project with selected template
+        const token = localStorage.getItem('sb-access-token');
+        const response = await fetch('/api/projects/init', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            templateId: templateId,
+            jobPostingId: window.linkedJobId,
+            scopeData: {
+              title: job.title,
+              description: job.description,
+              zipCode: job.zip_code,
+              address: job.address || ''
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to launch project');
+        }
+
+        const result = await response.json();
+
+        statusEl.textContent = '✅ Success! AI Agents Activated.';
+        statusEl.className = 'mt-4 text-center text-sm text-emerald-300 font-semibold';
+
+        // Success! Switch to normal view and load the new project
+        setTimeout(async () => {
+          document.getElementById('ready-to-launch-card').classList.add('hidden');
+          document.getElementById('command-center-content').classList.remove('hidden');
+
+          showToast('✅ AI Agents Activated! Project initialized successfully.');
+
+          await loadActiveProjects();
+
+          // Auto-select the new project
+          setTimeout(() => {
+            const selector = document.getElementById('active-project-selector');
+            if (selector && result.projectId) {
+              selector.value = result.projectId;
+              loadProjectDetails();
+            }
+          }, 1000);
+        }, 2000);
+
+      } catch (error) {
+        console.error('Launch failed:', error);
+        statusEl.textContent = `❌ ${error.message}`;
+        statusEl.className = 'mt-4 text-center text-sm text-red-300';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rocket mr-3"></i>Activate AI Agents';
+      }
+    }
+
+    // ============================================
+    // PROJECT TEMPLATES
+    // ============================================
+    async function fetchProjectTemplates() {
+      try {
+        const token = localStorage.getItem('sb-access-token');
+        const response = await fetch('/api/project-templates', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          availableTemplates = data.templates || [];
+          console.log(`✓ Loaded ${availableTemplates.length} project templates`);
+        }
+      } catch (error) {
+        console.error('Failed to load templates:', error);
+        availableTemplates = [];
+      }
+    }
+
+    // ============================================
+    // ACTIVE PROJECTS
+    // ============================================
+    async function loadActiveProjects() {
+      try {
+        if (!profile || !profile.email) {
+          console.log('No profile loaded yet');
+          return;
+        }
+
+        // Fetch awarded jobs from accepted bids
+        const bidsResponse = await window.authService.authenticatedFetch(
+          `/api/contractor/bids?email=${encodeURIComponent(profile.email)}&status=accepted`
+        );
+
+        let awardedJobs = [];
+        if (bidsResponse.ok) {
+          const bidsData = await bidsResponse.json();
+          awardedJobs = (bidsData.bids || [])
+            .filter(bid => bid.status === 'accepted' && bid.job)
+            .map(bid => ({
+              ...bid.job,
+              contractor_bid_id: bid.id,
+              bid_amount_low: bid.bid_amount_low,
+              bid_amount_high: bid.bid_amount_high,
+              source: 'awarded_bid'
+            }));
+          console.log(`✅ Found ${awardedJobs.length} awarded jobs from bids`);
+        }
+
+        // Also fetch jobs where contractor is directly assigned (template-based projects)
+        const token = localStorage.getItem('sb-access-token');
+        const jobsResponse = await fetch(`/api/jobs/contractor/${encodeURIComponent(profile.email)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        let assignedJobs = [];
+        if (jobsResponse.ok) {
+          const jobsData = await jobsResponse.json();
+          assignedJobs = (jobsData.jobs || []).map(job => ({
+            ...job,
+            source: 'template_based'
+          }));
+          console.log(`✅ Found ${assignedJobs.length} template-based projects`);
+        }
+
+        // Combine all jobs
+        const allJobs = [...awardedJobs, ...assignedJobs];
+
+        // Populate dropdown
+        const selector = document.getElementById('active-project-selector');
+        if (allJobs.length === 0) {
+          selector.innerHTML = '<option value="">No active projects yet</option>';
+        } else {
+          selector.innerHTML = '<option value="">Select a project...</option>' +
+            allJobs.map(job => `
+              <option value="${job.id}">
+                ${job.title} - ${job.zip_code} ${job.source === 'awarded_bid' ? '(Bid)' : '(Template)'}
+              </option>
+            `).join('');
+        }
+
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      }
+    }
+
+    async function loadProjectDetails() {
+      const selector = document.getElementById('active-project-selector');
+      const projectId = selector.value;
+
+      if (!projectId) {
+        document.getElementById('project-status-card').classList.add('hidden');
+        document.getElementById('contractor-update-section').classList.add('hidden');
+        document.getElementById('project-activity-section').classList.add('hidden');
+        selectedProjectId = null;
+        return;
+      }
+
+      selectedProjectId = projectId;
+
+      // Show sections
+      document.getElementById('project-status-card').classList.remove('hidden');
+      document.getElementById('contractor-update-section').classList.remove('hidden');
+      document.getElementById('project-activity-section').classList.remove('hidden');
+
+      try {
+        // Fetch project state
+        const token = localStorage.getItem('sb-access-token');
+        const stateResponse = await fetch(`/api/agents/project-state/${projectId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (stateResponse.ok) {
+          const state = await stateResponse.json();
+
+          document.getElementById('project-phase').textContent = state.current_phase || 'planning';
+
+          if (state.last_activity_date) {
+            const date = new Date(state.last_activity_date);
+            document.getElementById('project-last-activity').textContent = date.toLocaleDateString();
+          }
+        }
+
+        // Load activity log
+        await refreshActivityLog();
+
+      } catch (error) {
+        console.error('Failed to load project details:', error);
+      }
+    }
+
+    // ============================================
+    // PROJECT UPDATES
+    // ============================================
+    async function logContractorUpdate() {
+      const updateText = document.getElementById('update-text').value.trim();
+      const statusEl = document.getElementById('update-status');
+      const btn = document.getElementById('log-update-btn');
+
+      if (!updateText) {
+        statusEl.textContent = 'Please enter an update first';
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+        return;
+      }
+
+      if (!selectedProjectId) {
+        statusEl.textContent = 'No project selected';
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Logging...';
+      statusEl.textContent = 'Saving update...';
+      statusEl.className = 'mt-4 text-sm text-center text-slate-500';
+
+      try {
+        const token = localStorage.getItem('sb-access-token');
+        const response = await fetch('/api/agents/log-contractor-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            project_id: selectedProjectId,
+            update_text: updateText,
+            contractor_email: profile.email,
+            contractor_name: profile.full_name || profile.business_name || 'Contractor'
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to log update');
+
+        statusEl.textContent = '✅ Update logged successfully!';
+        statusEl.className = 'mt-4 text-sm text-center text-green-600';
+        document.getElementById('update-text').value = '';
+
+        // Refresh activity log
+        await refreshActivityLog();
+
+      } catch (error) {
+        console.error('Failed to log update:', error);
+        statusEl.textContent = '❌ Failed to log update';
+        statusEl.className = 'mt-4 text-sm text-center text-red-500';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Log Update';
+      }
+    }
+
+    async function generateAndSendSummary() {
+      if (!selectedProjectId) {
+        alert('No project selected');
+        return;
+      }
+
+      const btn = document.getElementById('send-summary-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Generating...';
+
+      try {
+        const token = localStorage.getItem('sb-access-token');
+        const response = await fetch('/api/agents/generate-summary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ project_id: selectedProjectId })
+        });
+
+        if (!response.ok) throw new Error('Failed to generate summary');
+
+        const result = await response.json();
+        showToast('✅ AI summary generated and sent to homeowner!');
+
+      } catch (error) {
+        console.error('Failed to generate summary:', error);
+        showToast('❌ Failed to generate summary');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-robot mr-2"></i>Generate AI Summary';
+      }
+    }
+
+    async function refreshActivityLog() {
+      if (!selectedProjectId) return;
+
+      try {
+        const token = localStorage.getItem('sb-access-token');
+        const response = await fetch(`/api/agents/activity-log/${selectedProjectId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const logs = data.logs || [];
+
+        const container = document.getElementById('activity-log-list');
+        if (logs.length === 0) {
+          container.innerHTML = '<p class="text-center text-slate-500 text-sm py-8">No activity logged yet.</p>';
+        } else {
+          container.innerHTML = logs.map(log => `
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-semibold text-slate-900">${log.agent_name || 'Contractor'}</span>
+                <span class="text-xs text-slate-500">${new Date(log.created_at).toLocaleString()}</span>
+              </div>
+              <p class="text-sm text-slate-700">${log.message}</p>
+            </div>
+          `).join('');
+        }
+
+        // Update count
+        document.getElementById('project-log-count').textContent = logs.length;
+
+      } catch (error) {
+        console.error('Failed to refresh activity log:', error);
+      }
+    }
+
+    // ============================================
+    // HAWK AGENT (PLACEHOLDER)
+    // ============================================
+    function runAutoScout() {
+      showToast('🦅 The Hawk agent will be activated in a future release!');
+    }
+
+    // ============================================
+    // UTILITIES
+    // ============================================
+    function showToast(message) {
+      // Simple toast notification
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-50 animate-fade-in-up';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function checkForActiveProject() {
+      const savedProject = localStorage.getItem('activeProjectId');
+      if (savedProject) {
+        const selector = document.getElementById('active-project-selector');
+        selector.value = savedProject;
+        loadProjectDetails();
+      }
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    async function initPage() {
+      document.body.style.opacity = '1';
+
+      // Check for deep link FIRST
+      const urlParams = new URLSearchParams(window.location.search);
+      const source = urlParams.get('source');
+      const jobId = urlParams.get('jobId');
+
+      const isAuthenticated = await checkAuth();
+      if (!isAuthenticated) return;
+
+      // Handle deep link from Job Board
+      if (source === 'job_board' && jobId) {
+        await handleJobBoardDeepLink(jobId, urlParams);
+      } else {
+        // Normal flow: load active projects
+        await loadActiveProjects();
+      }
+
+      checkForActiveProject();
+    }
+
+    window.addEventListener('DOMContentLoaded', initPage);
+  </script>
+
+  <!-- Navigation System -->
+  <script src="/components/unified-navigation.js"></script>
+  <script src="/services/app-controller.js"></script>
+</body>
+</html>
