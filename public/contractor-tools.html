@@ -2880,34 +2880,25 @@
         const job = await response.json();
         console.log('✓ Job details loaded:', job);
 
-        // Pre-fill the estimator form
-        // Project Name
-        const projectNameInput = document.getElementById('projectName');
-        if (projectNameInput && title) {
-          projectNameInput.value = decodeURIComponent(title);
+        // Pre-fill the estimator form with CORRECT field IDs
+        // Project Description (from job description)
+        const jobDescInput = document.getElementById('job-description');
+        if (jobDescInput && job.description) {
+          jobDescInput.value = job.description;
         }
 
         // Zip Code
-        const zipInput = document.getElementById('zipCode');
-        if (zipInput && zip) {
-          zipInput.value = zip;
-        }
-
-        // Square Footage (if available from job description)
-        const sqftMatch = job.description?.match(/(\d+)\s*(?:sf|sq\s*ft|square\s*feet)/i);
-        if (sqftMatch) {
-          const sqftInput = document.getElementById('squareFootage');
-          if (sqftInput) {
-            sqftInput.value = sqftMatch[1];
-          }
+        const zipInput = document.getElementById('zip-code');
+        if (zipInput && (zip || job.zip_code)) {
+          zipInput.value = zip || job.zip_code;
         }
 
         // Auto-select template based on templateHint
         if (templateHint) {
-          const templateSelect = document.getElementById('projectTemplate');
+          const templateSelect = document.getElementById('template-selector');
           if (templateSelect) {
             // Wait a moment for templates to load
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 800));
 
             // Try to find matching template
             const options = Array.from(templateSelect.options);
@@ -2918,6 +2909,8 @@
 
             if (matchingOption) {
               templateSelect.value = matchingOption.value;
+              // Trigger the change event to load template details
+              handleTemplateChange();
               console.log('✓ Auto-selected template:', matchingOption.text);
             }
           }
@@ -2926,9 +2919,19 @@
         // Store job ID for later linking
         window.linkedJobId = jobId;
 
-        // Show success message
+        // Show success message with job title
+        const jobTitle = title ? decodeURIComponent(title) : job.title || 'Project';
+
+        // Show auto-populate banner
+        const banner = document.getElementById('auto-populate-banner');
+        const loadedJobTitle = document.getElementById('loaded-job-title');
+        if (banner && loadedJobTitle) {
+          loadedJobTitle.textContent = jobTitle;
+          banner.classList.remove('hidden');
+        }
+
         if (statusEl) {
-          statusEl.textContent = `✓ Project "${decodeURIComponent(title)}" loaded from Job Board`;
+          statusEl.textContent = `✓ "${jobTitle}" loaded from Job Board`;
           statusEl.className = 'text-sm text-center text-emerald-600 font-semibold';
 
           // Clear after 3 seconds
@@ -2938,9 +2941,11 @@
         }
 
         // Scroll to estimator form
-        const estimatorSection = document.getElementById('estimator');
+        const estimatorSection = document.getElementById('estimator-content');
         if (estimatorSection) {
-          estimatorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(() => {
+            estimatorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 200);
         }
 
       } catch (error) {
