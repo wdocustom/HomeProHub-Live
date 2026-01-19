@@ -33,3 +33,6 @@ build/
 tmp/
 temp/
 *.tmp
+
+# Mechanic AI Sandbox
+.mechanic_sandbox/
