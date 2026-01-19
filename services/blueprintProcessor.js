@@ -4,7 +4,17 @@
  */
 
 const pdfjsLib = require('pdfjs-dist/legacy/build/pdf');
-const { createCanvas } = require('canvas');
+
+// Try to load canvas - it's optional and may not be available
+let createCanvas;
+try {
+  const canvasModule = require('canvas');
+  createCanvas = canvasModule.createCanvas;
+} catch (error) {
+  console.warn('⚠️  Canvas module not available. Blueprint processing will be limited.');
+  console.warn('   To enable full blueprint processing, install system dependencies and rebuild canvas.');
+  createCanvas = null;
+}
 
 /**
  * Download PDF from URL
@@ -29,6 +39,11 @@ async function downloadPDF(url) {
  * @returns {Array<string>} - Array of base64 data URLs (data:image/png;base64,...)
  */
 async function convertPDFToImages(pdfUrl, options = {}) {
+  // Check if canvas is available
+  if (!createCanvas) {
+    throw new Error('Canvas module not available. Cannot process PDF blueprints. Install system dependencies and rebuild canvas package.');
+  }
+
   const { maxPages = 10, scale = 2.0 } = options;
 
   console.log(`[BlueprintProcessor] Downloading PDF from ${pdfUrl}...`);

@@ -248,6 +248,11 @@ async function optionalAuth(req, res, next) {
 
 // --- FINAL AUTH API ROUTES (Client-Side Auth) ---
 
+// ====== AGENT SYSTEM ROUTES ======
+// Load autonomous agent system API routes
+const agentRoutes = require('./routes/agents');
+app.use('/api/dev', agentRoutes);
+
 // ====== API ROUTES ======
 
 /**
