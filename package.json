@@ -12,7 +12,10 @@
     "pm2:restart": "pm2 restart homeprohub",
     "pm2:logs": "pm2 logs homeprohub",
     "worker": "node services/notification-worker.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "validate:env": "node scripts/validate-env.js",
+    "validate:pre-deploy": "bash scripts/pre-deploy.sh",
+    "postinstall": "node -e \"console.log('\\n✅ Dependencies installed. Run: npm run validate:env')\""
   },
   "keywords": [],
   "author": "",

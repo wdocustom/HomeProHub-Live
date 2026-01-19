@@ -1,0 +1,5 @@
+# This directory is required by PM2 (ecosystem.config.js)
+# PM2 writes logs to:
+# - ./logs/err.log (error output)
+# - ./logs/out.log (standard output)
+# - ./logs/combined.log (combined logs)
