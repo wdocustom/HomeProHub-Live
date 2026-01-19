@@ -1934,34 +1934,15 @@
 
     // Launch AI Project - Deep link to Auto-GC Command Center with pre-filled data
     function launchAIProject(jobId, jobTitle, category, zipCode) {
-      // Map category to template hint for auto-selection
-      const categoryToTemplate = {
-        'General Contractor': 'general',
-        'Plumber': 'plumbing',
-        'Electrician': 'electrical',
-        'HVAC': 'hvac',
-        'Landscaping': 'landscaping',
-        'Roofing': 'roofing',
-        'Painting': 'painting',
-        'Flooring': 'flooring',
-        'Remodeling': 'remodeling',
-        'bathroom': 'bathroom',
-        'kitchen': 'kitchen'
-      };
-
-      const templateHint = categoryToTemplate[category] || 'general';
-
-      // Build deep link URL with query parameters
+      // Build deep link URL for Command Center
+      // The command center will auto-fetch job details and auto-select template based on title
       const params = new URLSearchParams({
-        action: 'launch',
-        jobId: jobId,
-        templateHint: templateHint,
-        title: jobTitle,
-        zip: zipCode
+        source: 'job_board',
+        jobId: jobId
       });
 
-      // Redirect to contractor tools with pre-fill data
-      window.location.href = `/contractor-tools.html?${params.toString()}`;
+      // Redirect to Command Center with deep link
+      window.location.href = `/command-center.html?${params.toString()}`;
     }
     window.launchAIProject = launchAIProject;
 
