@@ -241,7 +241,7 @@
         <button onclick="toggleMobileNotifications()" class="flex flex-col items-center justify-center gap-1 flex-1 py-2 text-slate-400 relative">
           <i class="fa-solid fa-bell text-xl"></i>
           <span class="text-[10px] font-bold uppercase tracking-wide">Alerts</span>
-          <span id="mobileNotificationBadge" class="notification-badge hidden absolute top-1 right-[calc(50%-12px)] bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">0</span>
+          <span id="mobileNotificationBadge" class="hidden absolute top-1 right-[calc(50%-12px)] h-2.5 w-2.5 bg-red-500 border-2 border-white rounded-full"></span>
         </button>
         <a href="${lastItem.href}" class="flex flex-col items-center justify-center gap-1 flex-1 py-2 ${isLastActive ? 'text-blue-600' : 'text-slate-400'}">
           <i class="fa-solid ${lastItem.icon} text-xl"></i>
@@ -364,17 +364,17 @@
 
       const badge = document.getElementById('notificationBadge');
       const mobileBadge = document.getElementById('mobileNotificationBadge');
-      
+
+      // Show red dot indicator instead of count
       const updateBadge = (el) => {
           if(!el) return;
           if(count > 0) {
-              el.textContent = count > 99 ? '99+' : count;
               el.classList.remove('hidden');
           } else {
               el.classList.add('hidden');
           }
       };
-      
+
       updateBadge(badge);
       updateBadge(mobileBadge);
 

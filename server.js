@@ -4667,7 +4667,7 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
       message: `Your bid on "${job.title}" has been accepted!`,
       job_id: jobId,
       bid_id: bidId,
-      action_url: `/contractor-dashboard.html?job=${jobId}`
+      action_url: `/command-center.html?source=job_board&jobId=${jobId}`
     });
     console.log('✓ Contractor notification created');
 
