@@ -401,9 +401,9 @@
 
       listContainer.innerHTML = notifications.map(notif => `
         <div class="p-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}"
-             onclick="handleNotificationClick('${notif.id}', '${notif.link || '#'}')">
+             onclick="handleNotificationClick('${notif.id}', '${notif.action_url || '#'}')">
           <div class="flex items-start gap-3">
-             <div class="text-xl">${getNotificationIcon(notif.type)}</div>
+             <div class="text-xl">${getNotificationIcon(notif.notification_type || notif.type)}</div>
              <div class="flex-1 min-w-0">
                <p class="text-sm font-semibold text-slate-900 mb-0.5">${notif.title}</p>
                <p class="text-xs text-slate-500 line-clamp-2">${notif.message}</p>

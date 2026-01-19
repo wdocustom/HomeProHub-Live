@@ -505,10 +505,24 @@ class AuthService {
       if (!this.supabase) {
         return null;
       }
-      const { data: { user } } = await this.supabase.auth.getUser();
+
+      // Add timeout protection to prevent AbortError from hanging
+      const getUserWithTimeout = Promise.race([
+        this.supabase.auth.getUser(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Auth timeout')), 5000)
+        )
+      ]);
+
+      const { data: { user } } = await getUserWithTimeout;
       this.currentUser = user;
       return user;
     } catch (error) {
+      // Silently handle AbortError and timeout errors
+      if (error.name === 'AbortError' || error.message === 'Auth timeout') {
+        console.warn('⚠️ Auth request timed out or was aborted - using cached session');
+        return null;
+      }
       console.error('Get user error:', error);
       return null;
     }
@@ -523,9 +537,23 @@ class AuthService {
       if (!this.supabase) {
         return null;
       }
-      const { data: { session } } = await this.supabase.auth.getSession();
+
+      // Add timeout protection to prevent AbortError from hanging
+      const getSessionWithTimeout = Promise.race([
+        this.supabase.auth.getSession(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session timeout')), 5000)
+        )
+      ]);
+
+      const { data: { session } } = await getSessionWithTimeout;
       return session;
     } catch (error) {
+      // Silently handle AbortError and timeout errors
+      if (error.name === 'AbortError' || error.message === 'Session timeout') {
+        console.warn('⚠️ Session request timed out or was aborted');
+        return null;
+      }
       console.error('Get session error:', error);
       return null;
     }

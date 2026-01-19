@@ -4685,7 +4685,8 @@ app.post("/api/bid/accept", requireAuth, requireRole('homeowner'), async (req, r
           title: 'Bid Not Selected',
           message: `Your bid on "${job.title}" was not selected`,
           job_id: jobId,
-          bid_id: bid.id
+          bid_id: bid.id,
+          action_url: '/job-board.html'
         });
         rejectedCount++;
       }
@@ -4754,7 +4755,8 @@ app.post("/api/bid/decline", requireAuth, requireRole('homeowner'), async (req, 
       title: 'Bid Declined',
       message: `Your bid on "${job.title}" has been declined`,
       job_id: jobId,
-      bid_id: bidId
+      bid_id: bidId,
+      action_url: '/job-board.html'
     });
 
     console.log(`✓ Bid declined: ${bidId} for job ${jobId}`);
