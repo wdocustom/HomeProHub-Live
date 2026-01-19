@@ -464,7 +464,7 @@
         console.log('🚀 Deep link from Job Board detected for job:', jobId);
 
         // Fetch job details
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const response = await fetch(`/api/jobs/${jobId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -610,7 +610,7 @@
 
       try {
         // Launch project with selected template
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const response = await fetch('/api/projects/init', {
           method: 'POST',
           headers: {
@@ -677,7 +677,7 @@
     // ============================================
     async function fetchProjectTemplates() {
       try {
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const response = await fetch('/api/templates', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -724,7 +724,7 @@
         }
 
         // Also fetch jobs where contractor is directly assigned (template-based projects)
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const jobsResponse = await fetch(`/api/jobs/contractor/${encodeURIComponent(profile.email)}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -781,7 +781,7 @@
 
       try {
         // Fetch project state
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const stateResponse = await fetch(`/api/agents/project-state/${projectId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -844,7 +844,7 @@
       statusEl.className = 'mt-4 text-sm text-center text-slate-600';
 
       try {
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const response = await fetch('/api/agents/log-contractor-update', {
           method: 'POST',
           headers: {
@@ -889,7 +889,7 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Generating...';
 
       try {
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const response = await fetch('/api/agents/generate-summary', {
           method: 'POST',
           headers: {
@@ -951,7 +951,7 @@
       if (!selectedProjectId) return;
 
       try {
-        const token = localStorage.getItem('sb-access-token');
+        const token = await window.authService.getAccessToken();
         const response = await fetch(`/api/agents/activity-log/${selectedProjectId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
