@@ -1127,6 +1127,283 @@ async function getActiveProjects() {
 }
 
 // ========================================
+// Autonomous Agent System Operations
+// ========================================
+
+/**
+ * Store code embedding in knowledge base
+ */
+async function storeCodeEmbedding(embeddingData) {
+  const { data, error } = await supabase
+    .from('codebase_embeddings')
+    .upsert({
+      file_path: embeddingData.file_path,
+      file_type: embeddingData.file_type,
+      chunk_text: embeddingData.chunk_text,
+      chunk_index: embeddingData.chunk_index,
+      file_hash: embeddingData.file_hash,
+      embedding: embeddingData.embedding,
+      line_start: embeddingData.line_start,
+      line_end: embeddingData.line_end,
+      function_name: embeddingData.function_name || null,
+      imports: embeddingData.imports || [],
+      last_updated: new Date().toISOString()
+    }, { onConflict: 'file_path,chunk_index' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Query code embeddings by semantic similarity
+ */
+async function queryCodeEmbeddings(queryEmbedding, limit = 10) {
+  const { data, error } = await supabase.rpc('match_code_embeddings', {
+    query_embedding: queryEmbedding,
+    match_count: limit
+  });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Get embeddings for a specific file
+ */
+async function getFileEmbeddings(filePath) {
+  const { data, error } = await supabase
+    .from('codebase_embeddings')
+    .select('*')
+    .eq('file_path', filePath)
+    .order('chunk_index');
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Delete embeddings for a file (when file is deleted/moved)
+ */
+async function deleteFileEmbeddings(filePath) {
+  const { error } = await supabase
+    .from('codebase_embeddings')
+    .delete()
+    .eq('file_path', filePath);
+
+  if (error) throw error;
+}
+
+/**
+ * Create a feature request (ticket for The Builder)
+ */
+async function createFeatureRequest(requestData) {
+  const { data, error } = await supabase
+    .from('feature_requests')
+    .insert({
+      title: requestData.title,
+      description: requestData.description,
+      priority: requestData.priority || 'medium',
+      request_type: requestData.request_type || 'feature',
+      affected_files: requestData.affected_files || [],
+      target_directory: requestData.target_directory || null,
+      created_by: requestData.created_by || 'user',
+      source_file: requestData.source_file || null,
+      requires_approval: requestData.requires_approval || false
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get pending feature requests for The Builder
+ */
+async function getPendingFeatureRequests(limit = 10) {
+  const { data, error } = await supabase
+    .from('feature_requests')
+    .select('*')
+    .eq('status', 'pending')
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Update feature request status
+ */
+async function updateFeatureRequest(requestId, updates) {
+  const updateData = {
+    ...updates,
+    updated_at: new Date().toISOString()
+  };
+
+  if (updates.status === 'in_progress' && !updates.started_at) {
+    updateData.started_at = new Date().toISOString();
+  }
+
+  if (updates.status === 'completed' && !updates.completed_at) {
+    updateData.completed_at = new Date().toISOString();
+  }
+
+  const { data, error } = await supabase
+    .from('feature_requests')
+    .update(updateData)
+    .eq('id', requestId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Log a system error for The Mechanic to fix
+ */
+async function logSystemError(errorData) {
+  const { data, error } = await supabase.rpc('increment_error_occurrence', {
+    p_error_type: errorData.error_type,
+    p_error_message: errorData.error_message,
+    p_source_file: errorData.source_file || null,
+    p_stack_trace: errorData.stack_trace || null,
+    p_error_data: errorData.error_data || {}
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get open system errors for The Mechanic
+ */
+async function getOpenSystemErrors(limit = 20) {
+  const { data, error } = await supabase
+    .from('system_errors')
+    .select('*')
+    .eq('status', 'open')
+    .order('severity', { ascending: false })
+    .order('occurrence_count', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Update system error status
+ */
+async function updateSystemError(errorId, updates) {
+  const { data, error } = await supabase
+    .from('system_errors')
+    .update(updates)
+    .eq('id', errorId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Log agent activity
+ */
+async function logAgentActivity(activityData) {
+  const startTime = activityData.started_at || new Date().toISOString();
+  const completedTime = activityData.completed_at || new Date().toISOString();
+  const duration = activityData.duration_ms ||
+    (new Date(completedTime) - new Date(startTime));
+
+  const { data, error } = await supabase
+    .from('agent_activity_log')
+    .insert({
+      agent_name: activityData.agent_name,
+      action_type: activityData.action_type,
+      description: activityData.description,
+      related_error_id: activityData.related_error_id || null,
+      related_request_id: activityData.related_request_id || null,
+      status: activityData.status || 'success',
+      result_data: activityData.result_data || {},
+      files_modified: activityData.files_modified || [],
+      sandbox_session_id: activityData.sandbox_session_id || null,
+      started_at: startTime,
+      completed_at: completedTime,
+      duration_ms: duration,
+      tokens_used: activityData.tokens_used || null,
+      cost_estimate: activityData.cost_estimate || null
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get agent configuration
+ */
+async function getAgentConfig(agentName) {
+  const { data, error } = await supabase
+    .from('agent_config')
+    .select('*')
+    .eq('agent_name', agentName)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+/**
+ * Update agent configuration
+ */
+async function updateAgentConfig(agentName, updates) {
+  const { data, error } = await supabase
+    .from('agent_config')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('agent_name', agentName)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Check if agent can deploy (rate limiting)
+ */
+async function checkAgentRateLimit(agentName) {
+  const { data, error } = await supabase.rpc('check_agent_rate_limit', {
+    p_agent_name: agentName
+  });
+
+  if (error) throw error;
+  return data === true;
+}
+
+/**
+ * Get agent activity history
+ */
+async function getAgentActivity(agentName, limit = 50) {
+  const { data, error } = await supabase
+    .from('agent_activity_log')
+    .select('*')
+    .eq('agent_name', agentName)
+    .order('started_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+// ========================================
 // Export all functions
 // ========================================
 
@@ -1207,5 +1484,22 @@ module.exports = {
   getProjectState,
   updateProjectPhase,
   logAIAgentActivity,
-  getActiveProjects
+  getActiveProjects,
+
+  // Autonomous Agent System
+  storeCodeEmbedding,
+  queryCodeEmbeddings,
+  getFileEmbeddings,
+  deleteFileEmbeddings,
+  createFeatureRequest,
+  getPendingFeatureRequests,
+  updateFeatureRequest,
+  logSystemError,
+  getOpenSystemErrors,
+  updateSystemError,
+  logAgentActivity,
+  getAgentConfig,
+  updateAgentConfig,
+  checkAgentRateLimit,
+  getAgentActivity
 };
