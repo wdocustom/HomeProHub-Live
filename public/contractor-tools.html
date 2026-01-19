@@ -952,15 +952,31 @@
         // Get auth token
         const token = await window.authService.getAccessToken();
 
-        // Prepare scope data
+        // Collect dynamic trade-specific fields
+        const trade = document.getElementById('trade-selector').value;
+        const tradeFields = tradeConfigs[trade] || tradeConfigs.gc;
+        const dynamicData = {};
+
+        tradeFields.forEach(field => {
+          const fieldElement = document.getElementById(`dynamic-${field.id}`);
+          if (fieldElement && fieldElement.value) {
+            dynamicData[field.id] = fieldElement.value;
+          }
+        });
+
+        // Prepare scope data with ALL form fields
         const scopeData = {
           title: `${selectedTemplate.display_name} - ${jobDescription}`,
           description: jobDescription,
           zipCode: zipCode,
           address: '', // TODO: Add address field if needed
           blueprintsUrl: blueprintsUrl || null,
-          materialLevel: document.getElementById('material-level')?.value || 'mid'
+          materialLevel: document.getElementById('material-level')?.value || 'mid',
+          trade: trade,
+          ...dynamicData  // Spread all dynamic fields (sqft, room_type, etc.)
         };
+
+        console.log('[Project] Scope data with dynamic fields:', scopeData);
 
         // Call API to initialize project
         console.log('[Project] Initializing project with template:', templateId);
