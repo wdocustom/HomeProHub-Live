@@ -504,12 +504,68 @@
       document.getElementById('estimate-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    // Generate intelligent project title from description
+    function generateProjectTitle(description) {
+      if (!description || typeof description !== 'string') {
+        return 'Home Renovation Project';
+      }
+
+      const desc = description.toLowerCase();
+
+      // Project type keywords (ordered by priority)
+      const projectTypes = [
+        { keywords: ['kitchen remodel', 'kitchen renovation'], title: 'Kitchen Remodel' },
+        { keywords: ['bathroom remodel', 'bathroom renovation', 'bath remodel'], title: 'Bathroom Remodel' },
+        { keywords: ['master bath', 'master bathroom'], title: 'Master Bathroom Remodel' },
+        { keywords: ['deck build', 'new deck', 'deck construction'], title: 'Deck Build' },
+        { keywords: ['deck repair', 'deck refinish'], title: 'Deck Repair' },
+        { keywords: ['roof replacement', 'new roof', 'reroof'], title: 'Roof Replacement' },
+        { keywords: ['roof repair', 'roof leak'], title: 'Roof Repair' },
+        { keywords: ['basement finish', 'basement remodel', 'finish basement'], title: 'Basement Finish' },
+        { keywords: ['home addition', 'room addition', 'house addition'], title: 'Home Addition' },
+        { keywords: ['kitchen', 'cabinetry', 'countertop'], title: 'Kitchen Renovation' },
+        { keywords: ['bathroom', 'bath', 'shower', 'tub'], title: 'Bathroom Renovation' },
+        { keywords: ['flooring', 'hardwood', 'tile floor', 'laminate'], title: 'Flooring Project' },
+        { keywords: ['paint', 'painting', 'repaint'], title: 'Interior Painting' },
+        { keywords: ['hvac', 'heating', 'cooling', 'air condition'], title: 'HVAC Project' },
+        { keywords: ['electrical', 'wiring', 'panel upgrade'], title: 'Electrical Upgrade' },
+        { keywords: ['plumbing', 'pipe', 'water heater'], title: 'Plumbing Project' },
+        { keywords: ['window', 'windows replacement'], title: 'Window Replacement' },
+        { keywords: ['siding', 'exterior'], title: 'Exterior Siding' },
+        { keywords: ['fence', 'fencing'], title: 'Fence Installation' },
+        { keywords: ['drywall', 'sheetrock'], title: 'Drywall Project' },
+        { keywords: ['landscaping', 'landscape'], title: 'Landscaping Project' },
+        { keywords: ['patio', 'paver'], title: 'Patio Installation' },
+        { keywords: ['garage', 'carport'], title: 'Garage Project' }
+      ];
+
+      // Find matching project type
+      for (const type of projectTypes) {
+        for (const keyword of type.keywords) {
+          if (desc.includes(keyword)) {
+            return type.title;
+          }
+        }
+      }
+
+      // Fallback: Try to extract first major word
+      const words = description.split(' ').filter(w => w.length > 3);
+      if (words.length > 0) {
+        const firstWord = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+        return `${firstWord} Project`;
+      }
+
+      return 'Home Renovation Project';
+    }
+
     // Auth check for download/post actions
     window.checkAuthAndAction = function(action) {
       // 1. Scrape current estimate data
+      const description = document.getElementById('project-vision').value;
+
       const draft = {
-        title: "My Renovation Project",
-        description: document.getElementById('project-vision').value,
+        title: generateProjectTitle(description),
+        description: description,
         budget_range: `${document.getElementById('total-low').innerText} - ${document.getElementById('total-high').innerText}`,
         zip: document.getElementById('zip-code').value,
         status: 'draft'
