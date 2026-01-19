@@ -4,6 +4,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 // Initialize Supabase client
@@ -15,6 +16,33 @@ if (!supabaseUrl || !supabaseServiceKey) {
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
+
+// Initialize PostgreSQL connection pool for raw SQL queries
+let pgPool = null;
+if (process.env.SUPABASE_DB_URL) {
+  pgPool = new Pool({
+    connectionString: process.env.SUPABASE_DB_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
+  console.log('✓ PostgreSQL connection pool initialized for raw SQL queries');
+} else {
+  console.warn('⚠️  SUPABASE_DB_URL not configured. Raw SQL queries (db.query) will not work.');
+}
+
+/**
+ * Execute raw SQL query (for compatibility with code expecting PostgreSQL client)
+ * @param {string} text - SQL query text
+ * @param {Array} params - Query parameters
+ * @returns {Promise<{rows: Array, rowCount: number}>} Query result
+ */
+async function query(text, params) {
+  if (!pgPool) {
+    throw new Error('PostgreSQL connection pool not initialized. Set SUPABASE_DB_URL in environment variables.');
+  }
+  return await pgPool.query(text, params);
+}
 
 // ========================================
 // User Profile Operations
@@ -1409,6 +1437,7 @@ async function getAgentActivity(agentName, limit = 50) {
 
 module.exports = {
   supabase,
+  query,  // Raw SQL query method for PostgreSQL compatibility
 
   // User profiles
   upsertUserProfile,
