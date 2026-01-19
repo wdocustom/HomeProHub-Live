@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard - HomeProHub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { margin-bottom: 30px; color: #333; }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #555;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-enabled { background: #22c55e; }
+        .status-disabled { background: #ef4444; }
+        .stat {
+            margin: 10px 0;
+            color: #666;
+        }
+        .stat strong { color: #333; }
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+            margin-right: 10px;
+        }
+        .button:hover { background: #2563eb; }
+        .button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .button-danger { background: #ef4444; }
+        .button-danger:hover { background: #dc2626; }
+        .activity-log {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .activity-item {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        .activity-desc { color: #333; margin-top: 5px; }
+        .status-success { color: #22c55e; font-weight: 600; }
+        .status-failed { color: #ef4444; font-weight: 600; }
+        .status-started { color: #3b82f6; font-weight: 600; }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-mechanic { background: #fef3c7; color: #92400e; }
+        .badge-builder { background: #dbeafe; color: #1e3a8a; }
+        .badge-improver { background: #dcfce7; color: #14532d; }
+        .form-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group textarea { min-height: 100px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Autonomous Agent Dashboard</h1>
+
+        <!-- Agent Status -->
+        <div class="status-grid">
+            <!-- The Mechanic -->
+            <div class="card">
+                <h2>
+                    <span class="status-indicator" id="mechanic-status"></span>
+                    The Mechanic
+                </h2>
+                <div class="stat"><strong>Role:</strong> Incident Response</div>
+                <div class="stat"><strong>Active Jobs:</strong> <span id="mechanic-jobs">0</span></div>
+                <div class="stat"><strong>Recent Activity:</strong> <span id="mechanic-activity">0</span></div>
+                <button class="button" onclick="viewAgentActivity('mechanic')">View Activity</button>
+                <button class="button" onclick="viewCapabilities('mechanic')">Capabilities</button>
+            </div>
+
+            <!-- The Builder -->
+            <div class="card">
+                <h2>
+                    <span class="status-indicator" id="builder-status"></span>
+                    The Builder
+                </h2>
+                <div class="stat"><strong>Role:</strong> Feature Development</div>
+                <div class="stat"><strong>Active Jobs:</strong> <span id="builder-jobs">0</span></div>
+                <div class="stat"><strong>Recent Activity:</strong> <span id="builder-activity">0</span></div>
+                <button class="button" onclick="viewAgentActivity('builder')">View Activity</button>
+                <button class="button" onclick="viewCapabilities('builder')">Capabilities</button>
+            </div>
+
+            <!-- The Improver -->
+            <div class="card">
+                <h2>
+                    <span class="status-indicator" id="improver-status"></span>
+                    The Improver
+                </h2>
+                <div class="stat"><strong>Role:</strong> Code Quality Analysis</div>
+                <div class="stat"><strong>Active Jobs:</strong> <span id="improver-jobs">0</span></div>
+                <div class="stat"><strong>Recent Activity:</strong> <span id="improver-activity">0</span></div>
+                <button class="button" onclick="viewAgentActivity('improver')">View Activity</button>
+                <button class="button" onclick="viewCapabilities('improver')">Capabilities</button>
+            </div>
+
+            <!-- Scheduler -->
+            <div class="card">
+                <h2>
+                    <span class="status-indicator" id="scheduler-status"></span>
+                    Scheduler
+                </h2>
+                <div class="stat"><strong>Status:</strong> <span id="scheduler-running">Stopped</span></div>
+                <div class="stat"><strong>Error Checks:</strong> Every 6 hours</div>
+                <div class="stat"><strong>Performance:</strong> Every 12 hours</div>
+                <button class="button" id="scheduler-start-btn" onclick="startScheduler()">Start</button>
+                <button class="button button-danger" id="scheduler-stop-btn" onclick="stopScheduler()" style="display:none;">Stop</button>
+            </div>
+        </div>
+
+        <!-- Create Ticket Form -->
+        <div class="form-section">
+            <h2>Create Feature Request Ticket</h2>
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="ticket-title" placeholder="Brief description of feature">
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea id="ticket-description" placeholder="Detailed description (min 20 characters)"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Priority</label>
+                <select id="ticket-priority">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Acceptance Criteria (Optional)</label>
+                <textarea id="ticket-criteria" placeholder="What defines success for this feature?"></textarea>
+            </div>
+            <button class="button" onclick="createTicket()">Create Ticket</button>
+        </div>
+
+        <!-- Activity Log -->
+        <div style="margin-top: 30px;">
+            <h2 style="margin-bottom: 15px; color: #333;">Recent Activity</h2>
+            <div class="activity-log" id="activity-log">
+                <p style="color: #666;">Loading activity...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load initial data
+        loadStatus();
+        setInterval(loadStatus, 30000); // Refresh every 30 seconds
+
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/dev/agents');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update agent status
+                    updateAgentStatus('mechanic', data.agents.mechanic);
+                    updateAgentStatus('builder', data.agents.builder);
+                    updateAgentStatus('improver', data.agents.improver);
+
+                    // Update scheduler status
+                    updateSchedulerStatus(data.scheduler);
+                }
+            } catch (error) {
+                console.error('Error loading status:', error);
+            }
+        }
+
+        function updateAgentStatus(agent, status) {
+            const indicator = document.getElementById(`${agent}-status`);
+            indicator.className = status.enabled ? 'status-indicator status-enabled' : 'status-indicator status-disabled';
+
+            document.getElementById(`${agent}-jobs`).textContent = status.active_jobs;
+            document.getElementById(`${agent}-activity`).textContent = status.recent_activity;
+        }
+
+        function updateSchedulerStatus(status) {
+            const indicator = document.getElementById('scheduler-status');
+            indicator.className = status.running ? 'status-indicator status-enabled' : 'status-indicator status-disabled';
+
+            document.getElementById('scheduler-running').textContent = status.running ? 'Running' : 'Stopped';
+
+            if (status.running) {
+                document.getElementById('scheduler-start-btn').style.display = 'none';
+                document.getElementById('scheduler-stop-btn').style.display = 'inline-block';
+            } else {
+                document.getElementById('scheduler-start-btn').style.display = 'inline-block';
+                document.getElementById('scheduler-stop-btn').style.display = 'none';
+            }
+        }
+
+        async function viewAgentActivity(agent) {
+            try {
+                const response = await fetch(`/api/dev/agents/${agent}/activity?limit=20`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayActivity(data.activity, agent);
+                }
+            } catch (error) {
+                console.error('Error loading activity:', error);
+            }
+        }
+
+        function displayActivity(activity, agentFilter = null) {
+            const log = document.getElementById('activity-log');
+
+            if (activity.length === 0) {
+                log.innerHTML = '<p style="color: #666;">No activity found</p>';
+                return;
+            }
+
+            log.innerHTML = activity.map(item => `
+                <div class="activity-item">
+                    <div class="activity-meta">
+                        <span class="badge badge-${item.agent_name}">${item.agent_name.toUpperCase()}</span>
+                        <span class="status-${item.status}">${item.status.toUpperCase()}</span>
+                        <span>${new Date(item.started_at).toLocaleString()}</span>
+                    </div>
+                    <div class="activity-desc">${item.description}</div>
+                </div>
+            `).join('');
+        }
+
+        async function viewCapabilities(agent) {
+            try {
+                const response = await fetch(`/api/dev/agents/${agent}/capabilities`);
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Capabilities for ${agent}:\n\n${JSON.stringify(data.capabilities, null, 2)}`);
+                }
+            } catch (error) {
+                console.error('Error loading capabilities:', error);
+            }
+        }
+
+        async function createTicket() {
+            const title = document.getElementById('ticket-title').value;
+            const description = document.getElementById('ticket-description').value;
+            const priority = document.getElementById('ticket-priority').value;
+            const criteria = document.getElementById('ticket-criteria').value;
+
+            if (!title || title.length < 5) {
+                alert('Title is required (min 5 characters)');
+                return;
+            }
+
+            if (!description || description.length < 20) {
+                alert('Description is required (min 20 characters)');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/dev/ticket', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        priority,
+                        acceptance_criteria: criteria
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Ticket created successfully!');
+                    // Clear form
+                    document.getElementById('ticket-title').value = '';
+                    document.getElementById('ticket-description').value = '';
+                    document.getElementById('ticket-criteria').value = '';
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error creating ticket:', error);
+                alert('Failed to create ticket');
+            }
+        }
+
+        async function startScheduler() {
+            try {
+                const response = await fetch('/api/dev/scheduler/start', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Scheduler started');
+                    loadStatus();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error starting scheduler:', error);
+            }
+        }
+
+        async function stopScheduler() {
+            try {
+                const response = await fetch('/api/dev/scheduler/stop', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Scheduler stopped');
+                    loadStatus();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error stopping scheduler:', error);
+            }
+        }
+
+        // Load all agent activity on page load
+        async function loadAllActivity() {
+            try {
+                const responses = await Promise.all([
+                    fetch('/api/dev/agents/mechanic/activity?limit=10'),
+                    fetch('/api/dev/agents/builder/activity?limit=10'),
+                    fetch('/api/dev/agents/improver/activity?limit=10')
+                ]);
+
+                const data = await Promise.all(responses.map(r => r.json()));
+
+                const allActivity = [
+                    ...data[0].activity,
+                    ...data[1].activity,
+                    ...data[2].activity
+                ].sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
+
+                displayActivity(allActivity);
+            } catch (error) {
+                console.error('Error loading activity:', error);
+            }
+        }
+
+        loadAllActivity();
+    </script>
+</body>
+</html>
