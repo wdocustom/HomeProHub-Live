@@ -292,7 +292,8 @@ INSERT INTO project_templates (
   }'::jsonb,
   '["architectural_plans", "engineering_plans", "building_permit", "plumbing_permit", "electrical_permit", "mechanical_permit", "energy_compliance", "site_plan", "material_schedule", "gantt_schedule", "final_inspection_report", "certificate_of_occupancy", "warranty_documents"]'::jsonb,
   '["IRC", "IBC", "NEC", "IPC", "IMC", "IECC", "IEBC"]'::jsonb
-);
+)
+ON CONFLICT (template_name) DO NOTHING;
 
 -- ========================================
 -- 2. ADDITION - 1000 sqft Room Addition
@@ -478,7 +479,8 @@ INSERT INTO project_templates (
   }'::jsonb,
   '["architectural_plans", "building_permit", "plumbing_permit", "electrical_permit", "mechanical_permit", "site_plan", "material_list", "schedule", "final_inspection_report"]'::jsonb,
   '["IRC", "IBC", "NEC", "IPC", "IMC", "IECC"]'::jsonb
-);
+)
+ON CONFLICT (template_name) DO NOTHING;
 
 -- ========================================
 -- 3. REMODEL - Kitchen Remodel (High-End)
@@ -662,7 +664,8 @@ INSERT INTO project_templates (
   }'::jsonb,
   '["design_plans", "material_selections", "plumbing_permit", "electrical_permit", "final_inspection_report", "warranty_documents"]'::jsonb,
   '["NEC", "IPC", "IRC"]'::jsonb
-);
+)
+ON CONFLICT (template_name) DO NOTHING;
 
 -- ========================================
 -- 4. REMODEL - Bathroom Remodel (Full)
@@ -827,7 +830,8 @@ INSERT INTO project_templates (
   }'::jsonb,
   '["design_plans", "material_selections", "plumbing_permit", "electrical_permit", "final_inspection_report"]'::jsonb,
   '["NEC", "IPC", "IRC"]'::jsonb
-);
+)
+ON CONFLICT (template_name) DO NOTHING;
 
 -- ========================================
 -- Verification

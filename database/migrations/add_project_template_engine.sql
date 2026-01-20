@@ -160,6 +160,10 @@ CREATE INDEX IF NOT EXISTS idx_job_postings_template ON job_postings(template_id
 -- 4. Update project_states table
 -- Remove hardcoded phase enum, use TEXT instead
 -- ========================================
+-- Drop views that depend on current_phase column
+DROP VIEW IF EXISTS active_projects_with_state CASCADE;
+DROP VIEW IF EXISTS projects_with_templates CASCADE;
+
 -- Drop the existing constraint
 ALTER TABLE project_states DROP CONSTRAINT IF EXISTS project_states_current_phase_check;
 
@@ -402,6 +406,24 @@ LEFT JOIN template_milestones tm ON pm.template_milestone_id = tm.id
 WHERE pm.requires_inspection = true
   AND pm.inspection_status IN ('pending', 'scheduled', 'failed', 'reinspection_required')
 ORDER BY pm.inspection_scheduled_date ASC NULLS LAST;
+
+-- ========================================
+-- 10. Recreate active_projects_with_state view
+-- This view was dropped earlier to allow current_phase column type change
+-- ========================================
+CREATE OR REPLACE VIEW active_projects_with_state AS
+SELECT
+  j.id as project_id,
+  j.title as project_title,
+  j.homeowner_email,
+  ps.current_phase,
+  ps.blockers,
+  ps.last_activity_date,
+  ps.estimated_completion_date,
+  (SELECT COUNT(*) FROM project_logs pl WHERE pl.project_id = j.id AND pl.created_at > NOW() - INTERVAL '24 hours') as recent_activity_count
+FROM job_postings j
+LEFT JOIN project_states ps ON j.id = ps.project_id
+WHERE j.status IN ('in_progress', 'active');
 
 -- ========================================
 -- Verification
