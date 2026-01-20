@@ -56,34 +56,7 @@ async function query(text, params) {
     throw new Error('PostgreSQL connection pool not initialized. Set SUPABASE_DB_URL in environment variables.');
   }
 
-  // Retry logic for transient network errors
-  const maxRetries = 3;
-  const retryDelays = [100, 500, 1000]; // Delays in ms
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await pgPool.query(text, params);
-    } catch (error) {
-      const isNetworkError =
-        error.code === 'ENETUNREACH' ||
-        error.code === 'ETIMEDOUT' ||
-        error.code === 'ECONNREFUSED' ||
-        error.code === 'ENOTFOUND' ||
-        error.errno === -101; // ENETUNREACH errno
-
-      const isLastAttempt = attempt === maxRetries - 1;
-
-      if (isNetworkError && !isLastAttempt) {
-        const delay = retryDelays[attempt];
-        console.warn(`⚠️  Database query failed (${error.code}), retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-
-      // If not a network error or last attempt, throw the error
-      throw error;
-    }
-  }
+  return await pgPool.query(text, params);
 }
 
 // ========================================

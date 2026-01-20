@@ -1,3 +1,8 @@
+const dns = require('dns');
+// Force Node.js to use IPv4 (192.x.x.x) instead of IPv6 (2600:...)
+// This resolves the ENETUNREACH error on Render/Heroku environments.
+dns.setDefaultResultOrder('ipv4first');
+
 // Load environment variables from .env file
 require('dotenv').config();
 
