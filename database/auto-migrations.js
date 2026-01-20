@@ -168,22 +168,29 @@ async function ensureAgentConfigsTable() {
       -- Create Agent Configs Table
       CREATE TABLE IF NOT EXISTS agent_configs (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          agent_name TEXT NOT NULL UNIQUE,
+          project_id UUID UNIQUE REFERENCES job_postings(id) ON DELETE CASCADE,
+          agent_name TEXT NOT NULL,
           role TEXT NOT NULL,
           status TEXT DEFAULT 'active',
           model TEXT DEFAULT 'gpt-4-turbo',
           temperature NUMERIC DEFAULT 0.7,
           system_prompt TEXT,
+          config_data JSONB DEFAULT '{}'::jsonb,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
-      -- Seed Default Agents
+      -- Create index on project_id
+      CREATE INDEX IF NOT EXISTS idx_agent_configs_project ON agent_configs(project_id);
+
+      -- Seed Default Agents (optional - only if you want global agents)
       INSERT INTO agent_configs (agent_name, role, status, system_prompt)
       VALUES
           ('Orchestrator', 'Project Manager', 'active', 'You are the Orchestrator. You manage the project timeline and coordinate other agents.'),
           ('Hawk', 'Lead Scout', 'active', 'You are the Hawk. You find contractors and suppliers.'),
           ('Diplomat', 'Communicator', 'active', 'You are the Diplomat. You handle client and contractor communication.')
-      ON CONFLICT (agent_name) DO NOTHING;
+      ON CONFLICT (project_id) DO NOTHING;
     `;
 
     // Attempt to execute via RPC

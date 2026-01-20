@@ -190,15 +190,27 @@ function determineUserState(user) {
 
 /**
  * Detect current zone from page metadata
+ * FIXED: Check user role first for shared pages (like messages.html)
  */
 function detectZone() {
+  const path = window.location.pathname;
+
+  // CRITICAL FIX: For shared pages, determine zone by user role first
+  const sharedPages = ['messages.html', 'notifications.html'];
+  const isSharedPage = sharedPages.some(page => path.includes(page));
+
+  if (isSharedPage && window.currentUser) {
+    const role = window.currentUser.user_metadata?.role || window.currentUser.app_metadata?.role;
+    if (role === 'contractor') return 'D'; // Contractor zone
+    if (role === 'homeowner') return 'C'; // Homeowner zone
+  }
+
+  // Check meta tag for pages with explicit zone
   const zoneMeta = document.querySelector('meta[name="sanctuary-zone"]');
   if (zoneMeta) return zoneMeta.content;
 
   // Fallback: detect from path
-  const path = window.location.pathname;
-
-  if (path.includes('contractor-dashboard') || path.includes('job-board')) return 'D';
+  if (path.includes('contractor-dashboard') || path.includes('job-board') || path.includes('contractor-profile')) return 'D';
   if (path.includes('home.html') || path.includes('homeowner')) return 'C';
   if (path.includes('signin') || path.includes('signup')) return 'B';
 
