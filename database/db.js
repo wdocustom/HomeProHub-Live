@@ -5,6 +5,8 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
+const dns = require('dns').promises;
+const { parse } = require('url');
 require('dotenv').config();
 
 // Initialize Supabase client
@@ -17,32 +19,66 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
 
-// Initialize PostgreSQL connection pool for raw SQL queries
+// PostgreSQL connection pool with manual IPv4 DNS resolution
 let pgPool = null;
-if (process.env.SUPABASE_DB_URL) {
-  pgPool = new Pool({
-    connectionString: process.env.SUPABASE_DB_URL,
-    ssl: {
-      rejectUnauthorized: false
-    },
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-    max: 20, // Maximum pool size
-    statement_timeout: 30000, // 30 second query timeout
-    query_timeout: 30000,
-    // Keepalive settings to prevent connection drops
-    keepAlive: true,
-    keepAliveInitialDelayMillis: 10000
-  });
+let poolInitPromise = null;
 
-  // Handle pool errors
-  pgPool.on('error', (err, client) => {
-    console.error('⚠️  Unexpected error on idle PostgreSQL client:', err);
-  });
+/**
+ * Initialize PostgreSQL pool with forced IPv4 resolution
+ * This resolves the hostname to an IPv4 address before creating the pool
+ * to avoid ENETUNREACH errors with IPv6 addresses
+ */
+async function initializePool() {
+  if (pgPool) return pgPool;
 
-  console.log('✓ PostgreSQL connection pool initialized for raw SQL queries');
-} else {
-  console.warn('⚠️  SUPABASE_DB_URL not configured. Raw SQL queries (db.query) will not work.');
+  if (!process.env.SUPABASE_DB_URL) {
+    console.warn('⚠️  SUPABASE_DB_URL not configured. Raw SQL queries (db.query) will not work.');
+    return null;
+  }
+
+  try {
+    const dbConfig = parse(process.env.SUPABASE_DB_URL);
+
+    // FORCE IPv4: Manually resolve the hostname to an IPv4 address
+    const [ip] = await dns.resolve4(dbConfig.hostname);
+
+    console.log(`[DB] Resolved ${dbConfig.hostname} to IPv4: ${ip}`);
+
+    // Create pool using the resolved IPv4 address instead of hostname
+    pgPool = new Pool({
+      user: dbConfig.auth.split(':')[0],
+      password: dbConfig.auth.split(':')[1],
+      host: ip, // Use the IPv4 address, not the hostname
+      port: dbConfig.port,
+      database: dbConfig.pathname.split('/')[1],
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000
+    });
+
+    // Handle pool errors
+    pgPool.on('error', (err, client) => {
+      console.error('⚠️  Unexpected error on idle PostgreSQL client:', err);
+    });
+
+    console.log('✓ PostgreSQL connection pool initialized with IPv4 address');
+    return pgPool;
+  } catch (error) {
+    console.error('❌ Failed to initialize PostgreSQL pool:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the initialized pool (lazy initialization)
+ */
+async function getPool() {
+  if (pgPool) return pgPool;
+
+  if (!poolInitPromise) {
+    poolInitPromise = initializePool();
+  }
+
+  return await poolInitPromise;
 }
 
 /**
@@ -52,11 +88,13 @@ if (process.env.SUPABASE_DB_URL) {
  * @returns {Promise<{rows: Array, rowCount: number}>} Query result
  */
 async function query(text, params) {
-  if (!pgPool) {
+  const pool = await getPool();
+
+  if (!pool) {
     throw new Error('PostgreSQL connection pool not initialized. Set SUPABASE_DB_URL in environment variables.');
   }
 
-  return await pgPool.query(text, params);
+  return await pool.query(text, params);
 }
 
 // ========================================
