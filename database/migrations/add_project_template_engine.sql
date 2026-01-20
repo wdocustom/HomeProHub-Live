@@ -258,6 +258,28 @@ CREATE INDEX IF NOT EXISTS idx_project_milestones_blocked ON project_milestones(
 CREATE UNIQUE INDEX IF NOT EXISTS idx_project_milestones_unique
 ON project_milestones(project_id, milestone_id);
 
+-- Ensure all columns exist (in case table was created from earlier version)
+ALTER TABLE project_milestones
+ADD COLUMN IF NOT EXISTS inspection_scheduled_date DATE,
+ADD COLUMN IF NOT EXISTS inspection_status TEXT,
+ADD COLUMN IF NOT EXISTS inspection_notes TEXT,
+ADD COLUMN IF NOT EXISTS inspection_document_url TEXT;
+
+-- Add check constraint for inspection_status if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'project_milestones_inspection_status_check'
+  ) THEN
+    ALTER TABLE project_milestones
+    ADD CONSTRAINT project_milestones_inspection_status_check
+    CHECK (inspection_status IN (
+      'not_required', 'pending', 'scheduled', 'passed', 'failed', 'reinspection_required'
+    ));
+  END IF;
+END $$;
+
 -- ========================================
 -- 6. Update ai_agent_activity table
 -- Add new agent types
