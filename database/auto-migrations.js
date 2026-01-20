@@ -144,7 +144,7 @@ async function ensureProjectTemplateColumns() {
 }
 
 /**
- * Ensure agent_configs table exists and is seeded
+ * Ensure agent_configs table exists and has required columns
  */
 async function ensureAgentConfigsTable() {
   try {
@@ -158,6 +158,55 @@ async function ensureAgentConfigsTable() {
 
     if (!error) {
       console.log('✅ agent_configs table exists');
+
+      // Table exists, now check if project_id column exists
+      console.log('🔍 Checking for agent_configs.project_id column...');
+      const projectIdExists = await columnExists('agent_configs', 'project_id');
+
+      if (projectIdExists) {
+        console.log('✅ agent_configs.project_id column exists');
+        return true;
+      }
+
+      // Column is missing, add it via ALTER TABLE
+      console.log('⚠️  agent_configs.project_id column missing - attempting to add...');
+
+      const alterMigration = `
+        -- Add missing project_id column
+        ALTER TABLE agent_configs ADD COLUMN IF NOT EXISTS project_id UUID;
+
+        -- Add foreign key constraint
+        ALTER TABLE agent_configs
+        DROP CONSTRAINT IF EXISTS agent_configs_project_id_fkey;
+
+        ALTER TABLE agent_configs
+        ADD CONSTRAINT agent_configs_project_id_fkey
+        FOREIGN KEY (project_id)
+        REFERENCES job_postings(id)
+        ON DELETE CASCADE;
+
+        -- Create index on project_id
+        CREATE INDEX IF NOT EXISTS idx_agent_configs_project_id ON agent_configs(project_id);
+
+        -- Add other missing columns
+        ALTER TABLE agent_configs ADD COLUMN IF NOT EXISTS config_data JSONB DEFAULT '{}'::jsonb;
+        ALTER TABLE agent_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+        ALTER TABLE agent_configs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+      `;
+
+      const { error: alterError } = await db.supabase.rpc('exec_sql', { sql_query: alterMigration });
+
+      if (alterError) {
+        console.log('📝 MANUAL MIGRATION REQUIRED:');
+        console.log('─'.repeat(60));
+        console.log('Please run this SQL in your Supabase SQL Editor:');
+        console.log(alterMigration);
+        console.log('─'.repeat(60));
+        console.log('\n💡 Or run: database/migrations/02_fix_agents.sql');
+        return false;
+      }
+
+      console.log('✅ agent_configs.project_id column added successfully');
       return true;
     }
 

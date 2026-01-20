@@ -5,9 +5,13 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
-const dns = require('dns').promises;
+const dns = require('dns');
+const util = require('util');
 const { parse } = require('url');
 require('dotenv').config();
+
+// Promisify dns.lookup for async/await usage
+const lookup = util.promisify(dns.lookup);
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -24,20 +28,21 @@ let pool;
 
 /**
  * Resilient DNS Resolver with Retry Logic
- * Resolves hostname to IPv4 address to prevent ENETUNREACH (IPv6 blocked)
- * Wraps resolution in retry loop to handle transient ENOTFOUND errors
+ * Uses OS native resolver (getaddrinfo) to respect container routing rules
+ * Forces IPv4 resolution to prevent ENETUNREACH (IPv6 blocked)
+ * Wraps resolution in retry loop to handle transient ENOTFOUND/ENODATA errors
  */
 async function resolveDbHost(hostname, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      console.log(`[DB] Attempting to resolve IPv4 for ${hostname} (Try ${i+1}/${retries})...`);
-      const addresses = await dns.resolve4(hostname); // Force IPv4
-      if (addresses && addresses.length > 0) {
-        console.log(`[DB] Resolved to: ${addresses[0]}`);
-        return addresses[0];
-      }
+      console.log(`[DB] Looking up IPv4 for ${hostname} (Try ${i+1}/${retries})...`);
+      // family: 4 forces OS to return IPv4 address
+      // This uses the OS's native resolver (getaddrinfo) which respects local overrides
+      const { address } = await lookup(hostname, { family: 4 });
+      console.log(`[DB] Resolved to: ${address}`);
+      return address;
     } catch (err) {
-      console.warn(`[DB] DNS Resolution failed: ${err.message}. Retrying...`);
+      console.warn(`[DB] Lookup failed: ${err.message}. Retrying...`);
       if (i < retries - 1) {
         await new Promise(res => setTimeout(res, 1000)); // Wait 1s before retry
       }
