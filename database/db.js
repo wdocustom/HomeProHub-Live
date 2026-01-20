@@ -24,8 +24,22 @@ if (process.env.SUPABASE_DB_URL) {
     connectionString: process.env.SUPABASE_DB_URL,
     ssl: {
       rejectUnauthorized: false
-    }
+    },
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    max: 20, // Maximum pool size
+    statement_timeout: 30000, // 30 second query timeout
+    query_timeout: 30000,
+    // Keepalive settings to prevent connection drops
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000
   });
+
+  // Handle pool errors
+  pgPool.on('error', (err, client) => {
+    console.error('⚠️  Unexpected error on idle PostgreSQL client:', err);
+  });
+
   console.log('✓ PostgreSQL connection pool initialized for raw SQL queries');
 } else {
   console.warn('⚠️  SUPABASE_DB_URL not configured. Raw SQL queries (db.query) will not work.');
@@ -41,7 +55,35 @@ async function query(text, params) {
   if (!pgPool) {
     throw new Error('PostgreSQL connection pool not initialized. Set SUPABASE_DB_URL in environment variables.');
   }
-  return await pgPool.query(text, params);
+
+  // Retry logic for transient network errors
+  const maxRetries = 3;
+  const retryDelays = [100, 500, 1000]; // Delays in ms
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await pgPool.query(text, params);
+    } catch (error) {
+      const isNetworkError =
+        error.code === 'ENETUNREACH' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ENOTFOUND' ||
+        error.errno === -101; // ENETUNREACH errno
+
+      const isLastAttempt = attempt === maxRetries - 1;
+
+      if (isNetworkError && !isLastAttempt) {
+        const delay = retryDelays[attempt];
+        console.warn(`⚠️  Database query failed (${error.code}), retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // If not a network error or last attempt, throw the error
+      throw error;
+    }
+  }
 }
 
 // ========================================
