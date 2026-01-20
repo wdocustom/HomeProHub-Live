@@ -5,13 +5,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
-const dns = require('dns');
-const { parse } = require('url');
-const util = require('util');
 require('dotenv').config();
-
-// Promisify dns.lookup to use async/await
-const lookup = util.promisify(dns.lookup);
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -23,40 +17,32 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
 
-// PostgreSQL connection pool with manual IPv4 DNS resolution
+// PostgreSQL connection pool
 let pool;
 
 /**
- * Get or initialize PostgreSQL pool with forced IPv4 resolution
+ * Get or initialize PostgreSQL pool
  */
 async function getPool() {
   if (pool) return pool;
 
   try {
     // 1. Parse the connection string
-    const dbConfig = parse(process.env.DATABASE_URL || process.env.SUPABASE_DB_URL);
+    const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
 
-    if (!dbConfig || !dbConfig.hostname) {
+    if (!connectionString) {
       console.warn('⚠️  DATABASE_URL not configured. Raw SQL queries (db.query) will not work.');
       return null;
     }
 
-    // 2. FORCE IPv4: Ask the OS specifically for an IPv4 address (Family 4)
-    // This bypasses the ENETUNREACH (IPv6) and ENODATA (Bad DNS) issues.
-    console.log(`[DB] Resolving IP for ${dbConfig.hostname}...`);
-    const { address } = await lookup(dbConfig.hostname, { family: 4 });
-    console.log(`[DB] Resolved to: ${address}`);
+    console.log('[DB] Initializing PostgreSQL connection pool...');
 
-    // 3. Create Pool with the raw IP address
-    const auth = dbConfig.auth ? dbConfig.auth.split(':') : [];
+    // 2. Create Pool - let pg driver handle DNS resolution internally
+    // The driver has built-in IPv4/IPv6 handling and retry logic
     pool = new Pool({
-      user: auth[0],
-      password: auth[1],
-      host: address, // <--- Using the IP prevents internal DNS lookups
-      port: dbConfig.port || 5432,
-      database: dbConfig.pathname.split('/')[1],
+      connectionString: connectionString,
       ssl: { rejectUnauthorized: false }, // Required for Supabase
-      connectionTimeoutMillis: 5000,     // Fail fast
+      connectionTimeoutMillis: 10000,     // 10 second timeout
       idleTimeoutMillis: 30000,
       max: 20
     });
@@ -67,10 +53,10 @@ async function getPool() {
       // Don't exit, just log it. The pool will reconnect.
     });
 
-    console.log('✓ PostgreSQL connection pool initialized with IPv4 address');
+    console.log('✓ PostgreSQL connection pool initialized');
 
   } catch (err) {
-    console.error('[DB Config Error] Failed to resolve DB Hostname:', err);
+    console.error('[DB Config Error] Failed to initialize DB pool:', err);
     throw err;
   }
 
@@ -174,6 +160,7 @@ async function getContractorByVerificationId(verificationId) {
 /**
  * Get contractor's trade type from licenses
  * Returns the first verified license trade type, or first pending license if no verified ones
+ * Falls back to user_profiles.trade if no licenses found
  */
 async function getContractorTradeType(email) {
   const { data, error } = await supabase
@@ -186,7 +173,9 @@ async function getContractorTradeType(email) {
   if (error && error.code !== 'PGRST116') throw error;
 
   if (!data || data.length === 0) {
-    return null; // No licenses found - default to GC
+    // No licenses found - fallback to user_profiles.trade
+    const profile = await getUserProfile(email);
+    return profile?.trade || 'general_contractor'; // Default to general_contractor if no trade specified
   }
 
   // Prefer verified licenses, fall back to first license
