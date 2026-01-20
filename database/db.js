@@ -5,6 +5,8 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
+const dns = require('dns').promises;
+const { parse } = require('url');
 require('dotenv').config();
 
 // Initialize Supabase client
@@ -19,6 +21,30 @@ const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
 
 // PostgreSQL connection pool
 let pool;
+
+/**
+ * Resilient DNS Resolver with Retry Logic
+ * Resolves hostname to IPv4 address to prevent ENETUNREACH (IPv6 blocked)
+ * Wraps resolution in retry loop to handle transient ENOTFOUND errors
+ */
+async function resolveDbHost(hostname, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`[DB] Attempting to resolve IPv4 for ${hostname} (Try ${i+1}/${retries})...`);
+      const addresses = await dns.resolve4(hostname); // Force IPv4
+      if (addresses && addresses.length > 0) {
+        console.log(`[DB] Resolved to: ${addresses[0]}`);
+        return addresses[0];
+      }
+    } catch (err) {
+      console.warn(`[DB] DNS Resolution failed: ${err.message}. Retrying...`);
+      if (i < retries - 1) {
+        await new Promise(res => setTimeout(res, 1000)); // Wait 1s before retry
+      }
+    }
+  }
+  throw new Error(`Failed to resolve IPv4 for ${hostname} after ${retries} attempts`);
+}
 
 /**
  * Get or initialize PostgreSQL pool
@@ -37,10 +63,21 @@ async function getPool() {
 
     console.log('[DB] Initializing PostgreSQL connection pool...');
 
-    // 2. Create Pool - let pg driver handle DNS resolution internally
-    // The driver has built-in IPv4/IPv6 handling and retry logic
+    // 2. Parse the DATABASE_URL to extract components
+    const config = parse(connectionString);
+
+    // 3. Resolve IP manually to prevent ENETUNREACH (IPv6 blocked)
+    const ip = await resolveDbHost(config.hostname);
+
+    const auth = config.auth ? config.auth.split(':') : [];
+
+    // 4. Create Pool with explicit IPv4 connection
     pool = new Pool({
-      connectionString: connectionString,
+      user: auth[0],
+      password: auth[1],
+      host: ip, // <--- DIRECT IP CONNECTION (IPv4)
+      port: config.port || 5432,
+      database: config.pathname.split('/')[1],
       ssl: { rejectUnauthorized: false }, // Required for Supabase
       connectionTimeoutMillis: 10000,     // 10 second timeout
       idleTimeoutMillis: 30000,
