@@ -144,6 +144,117 @@ async function ensureProjectTemplateColumns() {
 }
 
 /**
+ * Ensure agent_configs table exists and is seeded
+ */
+async function ensureAgentConfigsTable() {
+  try {
+    console.log('🔍 Checking for agent_configs table...');
+
+    // Try to query the table
+    const { data, error } = await db.supabase
+      .from('agent_configs')
+      .select('id')
+      .limit(1);
+
+    if (!error) {
+      console.log('✅ agent_configs table exists');
+      return true;
+    }
+
+    console.log('⚠️  agent_configs table missing - attempting to create...');
+
+    // Migration SQL to create agent_configs table
+    const migration = `
+      -- Create Agent Configs Table
+      CREATE TABLE IF NOT EXISTS agent_configs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          agent_name TEXT NOT NULL UNIQUE,
+          role TEXT NOT NULL,
+          status TEXT DEFAULT 'active',
+          model TEXT DEFAULT 'gpt-4-turbo',
+          temperature NUMERIC DEFAULT 0.7,
+          system_prompt TEXT,
+          last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      -- Seed Default Agents
+      INSERT INTO agent_configs (agent_name, role, status, system_prompt)
+      VALUES
+          ('Orchestrator', 'Project Manager', 'active', 'You are the Orchestrator. You manage the project timeline and coordinate other agents.'),
+          ('Hawk', 'Lead Scout', 'active', 'You are the Hawk. You find contractors and suppliers.'),
+          ('Diplomat', 'Communicator', 'active', 'You are the Diplomat. You handle client and contractor communication.')
+      ON CONFLICT (agent_name) DO NOTHING;
+    `;
+
+    // Attempt to execute via RPC
+    const { error: rpcError } = await db.supabase.rpc('exec_sql', { sql_query: migration });
+
+    if (rpcError) {
+      console.log('📝 MANUAL MIGRATION REQUIRED:');
+      console.log('─'.repeat(60));
+      console.log('Please run this SQL in your Supabase SQL Editor:');
+      console.log(migration);
+      console.log('─'.repeat(60));
+      console.log('\n💡 Or run: database/migrations/01_sync_schema.sql');
+      return false;
+    }
+
+    console.log('✅ agent_configs table created successfully');
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error checking/creating agent_configs table:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Ensure contractor_profiles has required columns
+ */
+async function ensureContractorProfilesColumns() {
+  try {
+    console.log('🔍 Checking for contractor_profiles columns...');
+
+    const tradeTypeExists = await columnExists('contractor_profiles', 'trade_type');
+    const yearsExperienceExists = await columnExists('contractor_profiles', 'years_experience');
+    const licenseNumberExists = await columnExists('contractor_profiles', 'license_number');
+
+    if (tradeTypeExists && yearsExperienceExists && licenseNumberExists) {
+      console.log('✅ contractor_profiles columns exist');
+      return true;
+    }
+
+    console.log('⚠️  contractor_profiles columns missing - attempting to add...');
+
+    const migration = `
+      ALTER TABLE contractor_profiles ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'General Contractor';
+      ALTER TABLE contractor_profiles ADD COLUMN IF NOT EXISTS years_experience INTEGER DEFAULT 1;
+      ALTER TABLE contractor_profiles ADD COLUMN IF NOT EXISTS license_number TEXT;
+    `;
+
+    // Attempt to execute via RPC
+    const { error } = await db.supabase.rpc('exec_sql', { sql_query: migration });
+
+    if (error) {
+      console.log('📝 MANUAL MIGRATION REQUIRED:');
+      console.log('─'.repeat(60));
+      console.log('Please run this SQL in your Supabase SQL Editor:');
+      console.log(migration);
+      console.log('─'.repeat(60));
+      console.log('\n💡 Or run: database/migrations/01_sync_schema.sql');
+      return false;
+    }
+
+    console.log('✅ contractor_profiles columns added successfully');
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error checking/adding contractor_profiles columns:', error.message);
+    return false;
+  }
+}
+
+/**
  * Run all auto-migrations
  */
 async function runAutoMigrations() {
@@ -151,7 +262,9 @@ async function runAutoMigrations() {
 
   const results = {
     profilePhotoUrl: await ensureProfilePhotoUrlColumn(),
-    projectTemplateColumns: await ensureProjectTemplateColumns()
+    projectTemplateColumns: await ensureProjectTemplateColumns(),
+    agentConfigsTable: await ensureAgentConfigsTable(),
+    contractorProfilesColumns: await ensureContractorProfilesColumns()
   };
 
   const allPassed = Object.values(results).every(r => r === true);
@@ -169,5 +282,7 @@ module.exports = {
   runAutoMigrations,
   ensureProfilePhotoUrlColumn,
   ensureProjectTemplateColumns,
+  ensureAgentConfigsTable,
+  ensureContractorProfilesColumns,
   columnExists
 };
