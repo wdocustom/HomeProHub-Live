@@ -1,124 +1,59 @@
 /**
  * HomeProHub Database Module
- * Handles all database operations using Supabase
+ * Handles all database operations using Supabase HTTPS Client
+ *
+ * ARCHITECTURAL CHANGE: This module now uses ONLY @supabase/supabase-js (HTTPS/Port 443)
+ * to bypass TCP/UDP blocking in the container environment.
+ *
+ * The pg driver has been removed. Raw SQL via db.query() is no longer supported.
+ * Use Supabase Query Builder or RPC functions instead.
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const { Pool } = require('pg');
-const { Resolver } = require('dns').promises;
-const { parse } = require('url');
 require('dotenv').config();
 
-// Create custom DNS resolver pointing to Google DNS (bypass container DNS)
-const resolver = new Resolver();
-resolver.setServers(['8.8.8.8', '8.8.4.4']);
-
-// Initialize Supabase client
+// Initialize Supabase client with service role key (bypasses RLS for backend operations)
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('Warning: Supabase credentials not configured. Database operations will fail.');
+  console.warn('⚠️  Warning: Supabase credentials not configured. Database operations will fail.');
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
 
-// PostgreSQL connection pool
-let pool;
+console.log('✅ [DB] Supabase client initialized (HTTPS-only mode)');
 
 /**
- * Resilient DNS Resolver with Retry Logic
- * CRITICAL FIX: Bypasses container's broken DNS by querying Google DNS (8.8.8.8) directly
- * Uses dns.Resolver class to avoid ENOTFOUND/ENETUNREACH errors from local resolver
- * Forces IPv4 resolution and retries 3 times for reliability
- */
-async function resolveDbHost(hostname, retries = 3) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      console.log(`[DB] Querying Google DNS for ${hostname} (Try ${i+1}/${retries})...`);
-      // Query Google DNS directly - bypass container's broken DNS resolver
-      const addresses = await resolver.resolve4(hostname);
-      const address = addresses[0]; // Get first IPv4 address
-      console.log(`[DB] ✓ Resolved to: ${address}`);
-      return address;
-    } catch (err) {
-      console.warn(`[DB] DNS query failed: ${err.message}. Retrying...`);
-      if (i < retries - 1) {
-        await new Promise(res => setTimeout(res, 1000)); // Wait 1s before retry
-      }
-    }
-  }
-  throw new Error(`Failed to resolve IPv4 for ${hostname} after ${retries} attempts (Google DNS: 8.8.8.8)`);
-}
-
-/**
- * Get or initialize PostgreSQL pool
- */
-async function getPool() {
-  if (pool) return pool;
-
-  try {
-    // 1. Parse the connection string
-    const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
-
-    if (!connectionString) {
-      console.warn('⚠️  DATABASE_URL not configured. Raw SQL queries (db.query) will not work.');
-      return null;
-    }
-
-    console.log('[DB] Initializing PostgreSQL connection pool...');
-
-    // 2. Parse the DATABASE_URL to extract components
-    const config = parse(connectionString);
-
-    // 3. Resolve IP manually to prevent ENETUNREACH (IPv6 blocked)
-    const ip = await resolveDbHost(config.hostname);
-
-    const auth = config.auth ? config.auth.split(':') : [];
-
-    // 4. Create Pool with explicit IPv4 connection
-    pool = new Pool({
-      user: auth[0],
-      password: auth[1],
-      host: ip, // <--- DIRECT IP CONNECTION (IPv4)
-      port: config.port || 5432,
-      database: config.pathname.split('/')[1],
-      ssl: { rejectUnauthorized: false }, // Required for Supabase
-      connectionTimeoutMillis: 10000,     // 10 second timeout
-      idleTimeoutMillis: 30000,
-      max: 20
-    });
-
-    // Error handler to prevent crashing on idle connection loss
-    pool.on('error', (err) => {
-      console.error('[DB Pool Error]', err);
-      // Don't exit, just log it. The pool will reconnect.
-    });
-
-    console.log('✓ PostgreSQL connection pool initialized');
-
-  } catch (err) {
-    console.error('[DB Config Error] Failed to initialize DB pool:', err);
-    throw err;
-  }
-
-  return pool;
-}
-
-/**
- * Execute raw SQL query (for compatibility with code expecting PostgreSQL client)
- * @param {string} text - SQL query text
- * @param {Array} params - Query parameters
- * @returns {Promise<{rows: Array, rowCount: number}>} Query result
+ * Raw SQL query compatibility function
+ *
+ * DEPRECATED: Raw SQL is no longer supported in HTTPS-only mode.
+ * This function throws an error to catch legacy code that hasn't been refactored.
+ *
+ * @throws {Error} Always throws - raw SQL is disabled
  */
 async function query(text, params) {
-  const p = await getPool();
+  throw new Error(
+    'Raw SQL disabled: TCP/PostgreSQL driver removed due to network restrictions. ' +
+    'Please refactor to use Supabase Query Builder (.from(), .select(), etc.) or ' +
+    'create a Supabase RPC function for complex queries. ' +
+    'See database/db.js for available helper functions.'
+  );
+}
 
-  if (!p) {
-    throw new Error('PostgreSQL connection pool not initialized. Set DATABASE_URL in environment variables.');
-  }
-
-  return p.query(text, params);
+/**
+ * PostgreSQL pool compatibility function
+ *
+ * DEPRECATED: PostgreSQL connection pool is no longer available.
+ * Use the Supabase client directly via the exported 'supabase' object.
+ *
+ * @throws {Error} Always throws - pg driver removed
+ */
+async function getPool() {
+  throw new Error(
+    'PostgreSQL pool disabled: TCP driver removed. Use supabase client instead. ' +
+    'Import { supabase } from database/db.js and use Supabase Query Builder.'
+  );
 }
 
 // ========================================
