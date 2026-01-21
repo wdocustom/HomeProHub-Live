@@ -5,13 +5,13 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
-const dns = require('dns');
-const util = require('util');
+const { Resolver } = require('dns').promises;
 const { parse } = require('url');
 require('dotenv').config();
 
-// Promisify dns.lookup for async/await usage
-const lookup = util.promisify(dns.lookup);
+// Create custom DNS resolver pointing to Google DNS (bypass container DNS)
+const resolver = new Resolver();
+resolver.setServers(['8.8.8.8', '8.8.4.4']);
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -28,27 +28,27 @@ let pool;
 
 /**
  * Resilient DNS Resolver with Retry Logic
- * Uses OS native resolver (getaddrinfo) to respect container routing rules
- * Forces IPv4 resolution to prevent ENETUNREACH (IPv6 blocked)
- * Wraps resolution in retry loop to handle transient ENOTFOUND/ENODATA errors
+ * CRITICAL FIX: Bypasses container's broken DNS by querying Google DNS (8.8.8.8) directly
+ * Uses dns.Resolver class to avoid ENOTFOUND/ENETUNREACH errors from local resolver
+ * Forces IPv4 resolution and retries 3 times for reliability
  */
 async function resolveDbHost(hostname, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      console.log(`[DB] Looking up IPv4 for ${hostname} (Try ${i+1}/${retries})...`);
-      // family: 4 forces OS to return IPv4 address
-      // This uses the OS's native resolver (getaddrinfo) which respects local overrides
-      const { address } = await lookup(hostname, { family: 4 });
-      console.log(`[DB] Resolved to: ${address}`);
+      console.log(`[DB] Querying Google DNS for ${hostname} (Try ${i+1}/${retries})...`);
+      // Query Google DNS directly - bypass container's broken DNS resolver
+      const addresses = await resolver.resolve4(hostname);
+      const address = addresses[0]; // Get first IPv4 address
+      console.log(`[DB] ✓ Resolved to: ${address}`);
       return address;
     } catch (err) {
-      console.warn(`[DB] Lookup failed: ${err.message}. Retrying...`);
+      console.warn(`[DB] DNS query failed: ${err.message}. Retrying...`);
       if (i < retries - 1) {
         await new Promise(res => setTimeout(res, 1000)); // Wait 1s before retry
       }
     }
   }
-  throw new Error(`Failed to resolve IPv4 for ${hostname} after ${retries} attempts`);
+  throw new Error(`Failed to resolve IPv4 for ${hostname} after ${retries} attempts (Google DNS: 8.8.8.8)`);
 }
 
 /**

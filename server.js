@@ -8996,4 +8996,17 @@ app.listen(PORT, async () => {
 
   // Run database auto-migrations
   await runAutoMigrations();
+
+  // CRITICAL FIX: Force execute project_id column migration
+  // This MUST run every time to fix schema drift (column was missing in production)
+  try {
+    console.log('🔧 Applying forced migration: 03_force_project_id.sql');
+    const migrationPath = path.join(__dirname, 'database/migrations/03_force_project_id.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+    await db.query(migrationSQL);
+    console.log('✅ Forced migration completed: agent_configs.project_id column ensured');
+  } catch (migrationError) {
+    console.error('⚠️  Forced migration failed (this may be OK if column already exists):', migrationError.message);
+    // Don't crash the server - the migration is idempotent (safe to run multiple times)
+  }
 });
