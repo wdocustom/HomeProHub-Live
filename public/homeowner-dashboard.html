@@ -1149,9 +1149,17 @@
       <!-- Project Journey Dashboard (Smart Tracker for Homeowners) -->
       <div id="projectJourneySection" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-12" style="display: none;">
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-          <div class="mb-6">
-            <h2 class="text-2xl font-bold text-slate-900 mb-2">Your Project Journey</h2>
-            <p class="text-slate-600 text-sm">Track your home improvement progress with a visual journey map</p>
+          <div class="mb-6 flex justify-between items-start gap-4 flex-wrap">
+            <div class="flex-1">
+              <h2 class="text-2xl font-bold text-slate-900 mb-2">Your Project Journey</h2>
+              <p class="text-slate-600 text-sm">Track your home improvement progress with a visual journey map</p>
+            </div>
+            <div class="flex-shrink-0">
+              <label for="projectSelector" class="block text-xs font-medium text-slate-700 mb-1">Select Project</label>
+              <select id="projectSelector" class="block w-full min-w-[200px] px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+                <option value="">Loading projects...</option>
+              </select>
+            </div>
           </div>
           <div id="homeowner-project-dashboard"></div>
         </div>
@@ -1478,6 +1486,7 @@
         checkStaleProjects();
         renderProjects();
         updateProjectDashboard(); // Update dashboard with active project
+        handleProjectSelectionChange(); // Setup dropdown change handler
 
       } catch (error) {
         console.error('Error loading projects:', error);
@@ -1487,48 +1496,118 @@
 
     /**
      * Initialize Project Dashboard (Dual-Lens)
+     * FIXED: Add retry mechanism to handle async script loading
      */
+    let dashboardInitRetries = 0;
+    const MAX_DASHBOARD_INIT_RETRIES = 30; // 3 seconds max (30 * 100ms)
+
     function initializeProjectDashboard() {
       // Wait for both AuthService and CommandCenter to be available
       if (typeof CommandCenter === 'undefined') {
-        console.warn('CommandCenter not loaded yet');
+        dashboardInitRetries++;
+
+        if (dashboardInitRetries >= MAX_DASHBOARD_INIT_RETRIES) {
+          console.error('❌ CommandCenter failed to load after 30 retries (3 seconds)');
+          console.error('Check that /components/command-center.js is loading correctly');
+          return;
+        }
+
+        console.warn(`CommandCenter not loaded yet (attempt ${dashboardInitRetries}/${MAX_DASHBOARD_INIT_RETRIES}), retrying...`);
+        // Retry after a short delay to allow scripts to load
+        setTimeout(initializeProjectDashboard, 100);
         return;
       }
 
+      console.log('✓ CommandCenter loaded successfully');
       // Initialize will be called by updateProjectDashboard after projects load
     }
 
     /**
      * Update Project Dashboard with active project
      */
-    function updateProjectDashboard() {
+    let currentCommandCenter = null;
+
+    function updateProjectDashboard(forceProjectId = null) {
       const section = document.getElementById('projectJourneySection');
       const container = document.getElementById('homeowner-project-dashboard');
+      const selector = document.getElementById('projectSelector');
 
-      if (!section || !container) return;
+      if (!section || !container || !selector) return;
 
-      // Find first in-progress project
-      const activeProject = allProjects.find(p => p.status === 'in_progress');
+      // Filter projects that can be tracked (in_progress or open with accepted bids)
+      const trackableProjects = allProjects.filter(p =>
+        p.status === 'in_progress' || p.status === 'open'
+      );
 
-      if (!activeProject) {
-        // No active project, hide section
+      if (trackableProjects.length === 0) {
+        // No trackable projects, hide section
         section.style.display = 'none';
+        currentCommandCenter = null;
         return;
       }
 
       // Show section
       section.style.display = 'block';
 
-      // Initialize CommandCenter if not already done
-      if (typeof CommandCenter !== 'undefined') {
-        new CommandCenter('homeowner-project-dashboard', {
-          projectId: activeProject.id,
-          authService: window.authService,
-          onReady: (role, view) => {
-            console.log('✓ Project dashboard ready for homeowner');
-          }
-        });
+      // Populate dropdown
+      const currentValue = selector.value;
+      selector.innerHTML = trackableProjects.map(project => {
+        const statusBadge = project.status === 'in_progress' ? '🟢' : '⚪';
+        return `<option value="${project.id}">${statusBadge} ${project.title}</option>`;
+      }).join('');
+
+      // Restore or set selection
+      if (forceProjectId) {
+        selector.value = forceProjectId;
+      } else if (currentValue && trackableProjects.find(p => p.id === currentValue)) {
+        selector.value = currentValue;
       }
+
+      // Get selected project (from dropdown or first trackable project)
+      const selectedProjectId = selector.value || trackableProjects[0].id;
+      const selectedProject = trackableProjects.find(p => p.id === selectedProjectId);
+
+      if (!selectedProject) return;
+
+      // Initialize or switch CommandCenter project
+      if (typeof CommandCenter !== 'undefined') {
+        if (!currentCommandCenter) {
+          // Initialize CommandCenter for first time
+          console.log('Initializing CommandCenter for project:', selectedProject.id);
+          currentCommandCenter = new CommandCenter('homeowner-project-dashboard', {
+            projectId: selectedProject.id,
+            authService: window.authService,
+            onReady: (role, view) => {
+              console.log('✓ Project dashboard ready for homeowner, project:', selectedProject.title);
+            }
+          });
+        } else {
+          // Switch to different project
+          currentCommandCenter.switchProject(selectedProject.id);
+        }
+      } else {
+        // FIXED: Log error if CommandCenter still not available
+        console.error('❌ CommandCenter class not available - dashboard initialization failed');
+        console.error('This indicates a script loading order issue. Check that command-center.js loaded correctly.');
+      }
+    }
+
+    /**
+     * Handle project selection change
+     */
+    function handleProjectSelectionChange() {
+      const selector = document.getElementById('projectSelector');
+      if (!selector) return;
+
+      // Remove existing listeners to avoid duplicates
+      selector.removeEventListener('change', handleProjectChange);
+      selector.addEventListener('change', handleProjectChange);
+    }
+
+    function handleProjectChange(event) {
+      const selectedProjectId = event.target.value;
+      console.log('Project selection changed to:', selectedProjectId);
+      updateProjectDashboard(selectedProjectId);
     }
 
     // Update stats

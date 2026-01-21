@@ -627,8 +627,23 @@ class AuthService {
    * Get user role from profile
    */
   async getUserRole() {
-    const profile = await this.getUserProfile();
-    return profile?.role || null;
+    try {
+      console.log('AuthService: Getting user role...');
+      const profile = await this.getUserProfile();
+
+      if (!profile) {
+        console.warn('AuthService: No profile found');
+        return null;
+      }
+
+      const role = profile.role;
+      console.log('AuthService: Profile role:', role);
+
+      return role || null;
+    } catch (error) {
+      console.error('AuthService: Error getting user role:', error);
+      return null;
+    }
   }
 
   /**

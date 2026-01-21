@@ -76,20 +76,30 @@ class CommandCenter {
     try {
       // Check if AuthService is available
       if (!this.authService || !this.authService.getUserRole) {
-        console.error('AuthService.getUserRole() not available');
+        console.error('CommandCenter: AuthService.getUserRole() not available');
         return null;
       }
 
+      console.log('CommandCenter: Fetching user role...');
       const role = await this.authService.getUserRole();
 
+      console.log('CommandCenter: Role fetched:', role);
+
       if (!role) {
-        console.warn('User role not found, defaulting to homeowner');
+        console.warn('CommandCenter: User role not found in profile, defaulting to homeowner');
         return 'homeowner';
       }
 
+      // Validate role
+      if (role !== 'homeowner' && role !== 'contractor') {
+        console.warn(`CommandCenter: Invalid role "${role}", defaulting to homeowner`);
+        return 'homeowner';
+      }
+
+      console.log(`CommandCenter: Using role "${role}"`);
       return role;
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      console.error('CommandCenter: Error fetching user role:', error);
       return 'homeowner'; // Default to homeowner on error
     }
   }
@@ -461,6 +471,33 @@ class CommandCenter {
           dependencies: this.projectData.dependencies
         });
       }
+    }
+  }
+
+  /**
+   * Switch to a different project
+   */
+  async switchProject(projectId) {
+    console.log(`CommandCenter: Switching to project ${projectId}`);
+    this.projectId = projectId;
+
+    // Show loading state
+    this.showLoading();
+
+    // Fetch new project data
+    this.projectData = await this.fetchProjectData();
+
+    if (!this.projectData) {
+      this.showError('Unable to load project data.');
+      return;
+    }
+
+    // Re-render the view
+    this.renderRoleBasedView();
+
+    // Call onReady callback if set
+    if (this.onReady) {
+      this.onReady(this.userRole, this.currentView);
     }
   }
 }
