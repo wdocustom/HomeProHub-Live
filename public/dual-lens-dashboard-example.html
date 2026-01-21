@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dual-Lens Dashboard - HomeProHub</title>
+
+  <!-- Tailwind CSS (CDN - for development) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Supabase Client (for authentication) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Component Styles -->
+  <link rel="stylesheet" href="/components/SmartTracker.css">
+  <link rel="stylesheet" href="/components/ProjectTimeline.css">
+  <link rel="stylesheet" href="/components/command-center.css">
+
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+    }
+
+    .page-subtitle {
+      font-size: 16px;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .demo-controls {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .demo-controls h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: #f8fafc;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .role-badge.homeowner {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+
+    .role-badge.contractor {
+      background: #fff7ed;
+      color: #f97316;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">Dual-Lens Project Dashboard</h1>
+      <p class="page-subtitle">Industrial SaaS quality dashboard that adapts to user role</p>
+    </div>
+
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+      <h3>Demo Controls</h3>
+      <div class="button-group">
+        <button class="btn btn-primary" onclick="switchToHomeowner()">
+          <i class="fas fa-user"></i> View as Homeowner
+        </button>
+        <button class="btn btn-primary" onclick="switchToContractor()">
+          <i class="fas fa-hard-hat"></i> View as Contractor
+        </button>
+        <button class="btn btn-secondary" onclick="refreshDashboard()">
+          <i class="fas fa-sync"></i> Refresh
+        </button>
+      </div>
+      <div style="margin-top: 12px;">
+        Current Role: <span class="role-badge homeowner" id="current-role">Homeowner</span>
+      </div>
+    </div>
+
+    <!-- Command Center Container -->
+    <div id="command-center-root"></div>
+  </div>
+
+  <!-- Auth Service -->
+  <script src="/services/auth.js"></script>
+
+  <!-- Component Scripts -->
+  <script src="/components/SmartTracker.js"></script>
+  <script src="/components/ProjectTimeline.js"></script>
+  <script src="/components/command-center.js"></script>
+
+  <script>
+    // Global variables
+    let commandCenter = null;
+    let mockUserRole = 'homeowner'; // For demo purposes
+
+    // Mock AuthService for demo
+    const MockAuthService = {
+      async getUserRole() {
+        return mockUserRole;
+      }
+    };
+
+    /**
+     * Initialize the dashboard
+     */
+    async function initDashboard() {
+      // In production, you would use the real AuthService:
+      // await window.AuthService.init();
+
+      // For demo, we'll use the mock
+      commandCenter = new CommandCenter('command-center-root', {
+        projectId: null, // Will use sample data
+        authService: MockAuthService,
+        onReady: (role, view) => {
+          console.log(`Dashboard ready! Role: ${role}`);
+          updateRoleBadge(role);
+        }
+      });
+    }
+
+    /**
+     * Switch to homeowner view
+     */
+    async function switchToHomeowner() {
+      mockUserRole = 'homeowner';
+      await refreshDashboard();
+    }
+
+    /**
+     * Switch to contractor view
+     */
+    async function switchToContractor() {
+      mockUserRole = 'contractor';
+      await refreshDashboard();
+    }
+
+    /**
+     * Refresh the dashboard
+     */
+    async function refreshDashboard() {
+      // Re-initialize
+      await initDashboard();
+    }
+
+    /**
+     * Update role badge
+     */
+    function updateRoleBadge(role) {
+      const badge = document.getElementById('current-role');
+      badge.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+      badge.className = `role-badge ${role}`;
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      initDashboard();
+    });
+
+    // Listen for task clicks (contractor view)
+    document.addEventListener('command-center-task-clicked', (e) => {
+      console.log('Task clicked:', e.detail.task);
+      alert(`Task clicked: ${e.detail.task.title}\nYou can implement a slide-over panel here.`);
+    });
+
+    // Listen for milestone clicks (homeowner view)
+    document.addEventListener('milestone-clicked', (e) => {
+      console.log('Milestone clicked:', e.detail.milestoneId);
+    });
+  </script>
+</body>
+</html>

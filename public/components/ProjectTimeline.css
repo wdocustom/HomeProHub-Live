@@ -1,0 +1,368 @@
+/**
+ * ProjectTimeline.css - Contractor Tactical Gantt Chart Styles
+ * High-density logistics view (No fluff)
+ */
+
+.project-timeline-container {
+  width: 100%;
+  background: #f8fafc; /* Slate 50 */
+  border: 1px solid #e2e8f0; /* Slate 200 */
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Header */
+.timeline-header {
+  display: grid;
+  grid-template-columns: 20% 80%;
+  background: white;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.timeline-header-left {
+  padding: 16px;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+}
+
+.timeline-header-left h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a; /* Slate 900 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.timeline-header-right {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Calendar Header */
+.timeline-calendar-header {
+  display: flex;
+  min-width: 100%;
+}
+
+.timeline-date-cell {
+  flex: 1;
+  min-width: 60px;
+  padding: 12px 8px;
+  text-align: center;
+  border-right: 1px solid #e2e8f0;
+  background: white;
+}
+
+.timeline-date-cell.weekend {
+  background: #f1f5f9; /* Slate 100 */
+}
+
+.timeline-date-cell.today {
+  background: #fef2f2; /* Red 50 */
+}
+
+.date-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a; /* Slate 900 */
+  margin-bottom: 4px;
+}
+
+.day-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b; /* Slate 500 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Timeline Grid */
+.timeline-grid {
+  display: grid;
+  grid-template-columns: 20% 80%;
+  position: relative;
+}
+
+/* Left Pane: Task Names (20%) */
+.timeline-grid-left {
+  border-right: 1px solid #e2e8f0;
+  background: white;
+}
+
+.timeline-task-name {
+  height: 56px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+}
+
+.task-name-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a; /* Slate 900 */
+  font-family: 'Inter', sans-serif;
+}
+
+.critical-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #fff7ed; /* Orange 50 */
+  color: #f97316; /* Orange 500 */
+  border: 1px solid #f97316;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Right Pane: Calendar Grid (80%) */
+.timeline-grid-right {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: 400px;
+}
+
+/* Calendar Grid Background */
+.timeline-calendar-grid {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.timeline-grid-column {
+  flex: 1;
+  min-width: 60px;
+  border-right: 1px solid #e2e8f0;
+  background: white;
+}
+
+.timeline-grid-column.weekend {
+  background: #f1f5f9; /* Slate 100 */
+}
+
+/* Today Indicator (Red Vertical Line) */
+.timeline-today-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.today-line {
+  width: 2px;
+  height: 100%;
+  background: #dc2626; /* Red 600 */
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
+}
+
+.today-label {
+  position: absolute;
+  top: 8px;
+  left: 6px;
+  background: #dc2626;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+/* Task Bars Container */
+.timeline-bars-container {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+}
+
+/* Task Bar (28px tall, 4px rounded) */
+.timeline-task-bar {
+  position: absolute;
+  height: 28px;
+  background: #334155; /* Slate Blue */
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.timeline-task-bar:hover,
+.timeline-task-bar.hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(51, 65, 85, 0.3);
+  z-index: 4;
+}
+
+/* Critical Path Task (Orange border) */
+.timeline-task-bar.critical {
+  border: 2px solid #f97316; /* Orange 500 */
+  background: #334155;
+  box-shadow: 0 1px 3px rgba(249, 115, 22, 0.2);
+}
+
+.timeline-task-bar.critical:hover {
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+
+/* Task Bar Label (White text) */
+.task-bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* If bar is too narrow, label appears outside on the right */
+@media (max-width: 120px) {
+  .timeline-task-bar {
+    padding: 0 4px;
+  }
+
+  .task-bar-label {
+    font-size: 10px;
+  }
+}
+
+/* Dependencies SVG */
+.timeline-dependencies-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.dependency-arrow {
+  stroke: #cbd5e1; /* Slate 300 - Thin Gray */
+  stroke-width: 2;
+  fill: none;
+  opacity: 0.7;
+}
+
+/* Arrowhead marker */
+#arrowhead polygon {
+  fill: #cbd5e1;
+}
+
+/* Scrollbar styling */
+.timeline-grid-right::-webkit-scrollbar {
+  height: 12px;
+}
+
+.timeline-grid-right::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.timeline-grid-right::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+}
+
+.timeline-grid-right::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .timeline-grid {
+    grid-template-columns: 30% 70%;
+  }
+
+  .timeline-header {
+    grid-template-columns: 30% 70%;
+  }
+}
+
+@media (max-width: 768px) {
+  .timeline-grid {
+    grid-template-columns: 35% 65%;
+  }
+
+  .timeline-header {
+    grid-template-columns: 35% 65%;
+  }
+
+  .task-name-text {
+    font-size: 12px;
+  }
+
+  .timeline-task-bar {
+    height: 24px;
+    padding: 0 8px;
+  }
+
+  .task-bar-label {
+    font-size: 11px;
+  }
+
+  .timeline-date-cell {
+    min-width: 50px;
+    padding: 10px 6px;
+  }
+}
+
+/* Animation for initial render */
+@keyframes timeline-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.timeline-task-bar {
+  animation: timeline-slide-in 0.3s ease-out backwards;
+}
+
+.timeline-task-bar:nth-child(1) { animation-delay: 0.05s; }
+.timeline-task-bar:nth-child(2) { animation-delay: 0.1s; }
+.timeline-task-bar:nth-child(3) { animation-delay: 0.15s; }
+.timeline-task-bar:nth-child(4) { animation-delay: 0.2s; }
+.timeline-task-bar:nth-child(5) { animation-delay: 0.25s; }
+.timeline-task-bar:nth-child(6) { animation-delay: 0.3s; }
+.timeline-task-bar:nth-child(7) { animation-delay: 0.35s; }
+.timeline-task-bar:nth-child(8) { animation-delay: 0.4s; }
+
+/* Print styles */
+@media print {
+  .timeline-grid-right {
+    overflow: visible;
+  }
+
+  .timeline-task-bar {
+    box-shadow: none;
+  }
+
+  .today-line {
+    box-shadow: none;
+  }
+}

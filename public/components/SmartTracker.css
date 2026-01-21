@@ -1,0 +1,346 @@
+/**
+ * SmartTracker.css - Homeowner Visual Journey Map Styles
+ * Clean, linear, reassuring design (Instacart/Domino's tracker style)
+ */
+
+.smart-tracker-container {
+  width: 100%;
+  padding: 48px 0 80px 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+}
+
+.smart-tracker-line {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  min-width: 600px;
+}
+
+/* SVG Track and Progress Line */
+.smart-tracker-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.smart-track-base {
+  stroke: #e2e8f0; /* Slate 200 - Gray for future */
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.smart-track-progress {
+  stroke: #059669; /* Emerald 600 - Green for past */
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* Milestone Wrapper */
+.smart-milestone-wrapper {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* Milestone Container */
+.smart-milestone {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.smart-milestone:hover {
+  transform: scale(1.1);
+}
+
+/* Node (32px Circle) */
+.smart-node {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+/* Completed Node - Solid Emerald fill, White Icon */
+.smart-milestone.completed .smart-node {
+  background: #059669; /* Emerald 600 */
+  border: none;
+  color: white;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+.smart-milestone.completed .smart-node i {
+  font-size: 14px;
+  color: white;
+}
+
+/* Current Node - White fill, 2px pulsing border, Blue Icon */
+.smart-milestone.current .smart-node {
+  background: white;
+  border: 2px solid #2563eb; /* Royal Blue */
+  color: #2563eb;
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.2);
+  animation: smart-pulse-node 2s ease-in-out infinite;
+}
+
+.smart-milestone.current .smart-node i {
+  font-size: 8px;
+  color: #2563eb;
+}
+
+/* Pulsing Ring Animation for Current Node */
+.smart-pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #2563eb;
+  animation: smart-pulse-ring 2s ease-out infinite;
+}
+
+@keyframes smart-pulse-node {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes smart-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Future Node - Gray fill */
+.smart-milestone.future .smart-node {
+  background: #e2e8f0; /* Slate 200 */
+  border: none;
+  color: #94a3b8; /* Slate 400 */
+}
+
+/* Milestone Label */
+.smart-label {
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b; /* Slate 500 - Text Secondary */
+  text-align: center;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-milestone.completed ~ .smart-label,
+.smart-milestone.completed + .smart-label {
+  color: #059669;
+}
+
+.smart-milestone.current ~ .smart-label,
+.smart-milestone.current + .smart-label {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.smart-milestone.future ~ .smart-label,
+.smart-milestone.future + .smart-label {
+  color: #94a3b8;
+}
+
+/* Change Order Branch */
+.smart-branch-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.smart-branch-curve {
+  fill: none;
+  stroke: #f97316; /* Amber/Orange for change orders */
+  stroke-width: 3;
+  stroke-linecap: round;
+  animation: smart-draw-curve 0.6s ease-out forwards;
+}
+
+@keyframes smart-draw-curve {
+  from {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Change Order Nodes (Amber) */
+.smart-change-orders {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.smart-change-order-node {
+  background: white;
+  border: 2px solid #f97316; /* Amber/Orange */
+  color: #f97316;
+  padding: 6px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
+  white-space: nowrap;
+}
+
+.smart-change-order-node:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+  background: #fff7ed; /* Orange 50 */
+}
+
+.smart-change-order-node i {
+  font-size: 12px;
+}
+
+.smart-co-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Tooltip */
+.smart-tooltip {
+  position: fixed;
+  background: #0f172a; /* Slate 900 */
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  max-width: 280px;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  line-height: 1.5;
+}
+
+.smart-tooltip.visible {
+  opacity: 1;
+}
+
+.smart-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #0f172a;
+}
+
+/* Fade in animation for milestones */
+@keyframes smart-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.smart-milestone-wrapper {
+  animation: smart-fade-in 0.5s ease-out backwards;
+}
+
+.smart-milestone-wrapper:nth-child(2) { animation-delay: 0.1s; }
+.smart-milestone-wrapper:nth-child(3) { animation-delay: 0.2s; }
+.smart-milestone-wrapper:nth-child(4) { animation-delay: 0.3s; }
+.smart-milestone-wrapper:nth-child(5) { animation-delay: 0.4s; }
+.smart-milestone-wrapper:nth-child(6) { animation-delay: 0.5s; }
+.smart-milestone-wrapper:nth-child(7) { animation-delay: 0.6s; }
+.smart-milestone-wrapper:nth-child(8) { animation-delay: 0.7s; }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .smart-tracker-container {
+    padding: 32px 0 60px 0;
+  }
+
+  .smart-tracker-line {
+    min-width: 100%;
+    overflow-x: auto;
+  }
+
+  .smart-label {
+    font-size: 11px;
+    max-width: 80px;
+  }
+
+  .smart-node {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .smart-milestone.current .smart-node i {
+    font-size: 6px;
+  }
+
+  .smart-change-order-node {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+/* Print styles - hide animations */
+@media print {
+  .smart-pulse-ring {
+    display: none;
+  }
+
+  .smart-milestone.current .smart-node {
+    animation: none;
+  }
+}

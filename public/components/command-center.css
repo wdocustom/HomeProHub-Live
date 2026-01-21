@@ -1,0 +1,159 @@
+/**
+ * command-center.css - Dual-Lens Project Dashboard Styles
+ * Shared styles for both homeowner and contractor views
+ */
+
+/* Container */
+.command-center-view {
+  background: #f8fafc; /* Slate 50 */
+  border-radius: 8px;
+  padding: 24px;
+  min-height: 500px;
+}
+
+/* View Header */
+.view-header {
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0; /* Slate 200 */
+}
+
+.view-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a; /* Slate 900 - Text Primary */
+  margin: 0 0 8px 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.view-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  color: #64748b; /* Slate 500 - Text Secondary */
+  margin: 0;
+}
+
+/* Loading State */
+.command-center-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 48px;
+  background: #ffffff; /* White */
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #2563eb; /* Brand Blue */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.command-center-loading p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Error State */
+.command-center-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 48px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.error-icon {
+  width: 64px;
+  height: 64px;
+  background: #fef2f2; /* Red 50 */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.error-icon i {
+  font-size: 32px;
+  color: #dc2626; /* Red 600 */
+}
+
+.command-center-error p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+  text-align: center;
+  max-width: 400px;
+}
+
+/* Container adjustments */
+#smart-tracker-container,
+#project-timeline-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .command-center-view {
+    padding: 16px;
+  }
+
+  .view-header {
+    margin-bottom: 24px;
+  }
+
+  .view-title {
+    font-size: 20px;
+  }
+
+  .view-subtitle {
+    font-size: 13px;
+  }
+
+  #smart-tracker-container,
+  #project-timeline-container {
+    padding: 16px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .command-center-view {
+    background: white;
+    padding: 0;
+  }
+
+  .view-header {
+    page-break-after: avoid;
+  }
+
+  #smart-tracker-container,
+  #project-timeline-container {
+    border: none;
+    padding: 0;
+  }
+}
