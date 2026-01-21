@@ -258,6 +258,11 @@ async function optionalAuth(req, res, next) {
 const agentRoutes = require('./routes/agents');
 app.use('/api/dev', agentRoutes);
 
+// ====== WEBHOOK ROUTES (Zero-App Protocol) ======
+// Load Twilio webhook routes for field updates
+const webhookRoutes = require('./routes/webhooks');
+app.use('/api/webhooks', webhookRoutes);
+
 // ====== API ROUTES ======
 
 /**

@@ -356,6 +356,204 @@ class OrchestratorAgent {
 
     return data.length === dependencies.length;
   }
+
+  /**
+   * Process field update from Twilio webhook
+   * Analyzes text, determines intent, and triggers appropriate actions
+   * Part of Zero-App Protocol
+   */
+  static async processFieldUpdate(projectId, updateText) {
+    console.log(`[Orchestrator] Processing field update for project ${projectId}...`);
+
+    try {
+      // Get current project milestones
+      const { data: milestones, error: milestoneError } = await supabase
+        .from('project_milestones')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('milestone_order', { ascending: true });
+
+      if (milestoneError) {
+        console.error('[Orchestrator] Failed to fetch milestones:', milestoneError);
+      }
+
+      const currentMilestone = milestones?.find(m => m.status === 'in_progress') || milestones?.[0];
+
+      // Classify the intent using GPT
+      const intent = await this.classifyIntent(updateText, currentMilestone);
+
+      console.log(`[Orchestrator] Classified intent: ${intent.type}`);
+
+      // Handle based on intent
+      let updateResult = {
+        success: true,
+        notifyHomeowner: false,
+        summary: intent.summary
+      };
+
+      switch (intent.type) {
+        case 'progress':
+          updateResult = await this.handleProgress(projectId, currentMilestone, intent);
+          break;
+
+        case 'blocker':
+          updateResult = await this.handleBlocker(projectId, intent);
+          break;
+
+        case 'milestone_complete':
+          updateResult = await this.handleMilestoneComplete(projectId, currentMilestone, intent);
+          break;
+
+        default:
+          updateResult.summary = intent.summary;
+          updateResult.notifyHomeowner = false;
+      }
+
+      return updateResult;
+    } catch (error) {
+      console.error('[Orchestrator] Processing failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        notifyHomeowner: false,
+        summary: 'Failed to process update'
+      };
+    }
+  }
+
+  /**
+   * Classify the intent of a field update
+   */
+  static async classifyIntent(text, currentMilestone) {
+    const systemPrompt = `You are a Construction Project Coordinator. Classify field updates into intent categories.
+
+Current milestone: ${currentMilestone?.milestone_name || 'Unknown'}
+
+Classify the intent as:
+- "progress": Work is advancing (e.g., "50% done", "Started framing", "Making good progress")
+- "blocker": Issue preventing work (e.g., "Need materials", "Waiting for inspection", "Problem with...")
+- "milestone_complete": Phase is finished (e.g., "Framing done", "Ready for inspection", "Completed rough-in")
+- "question": Asking for info
+- "other": Doesn't fit above
+
+Return JSON:
+{
+  "type": "progress|blocker|milestone_complete|question|other",
+  "summary": "Brief professional summary in 1 sentence",
+  "confidence": 0.0-1.0
+}`;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Classify this update: "${text}"` }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3
+      });
+
+      return JSON.parse(response.choices[0].message.content);
+    } catch (error) {
+      console.error('[Orchestrator] Intent classification failed:', error);
+      return {
+        type: 'other',
+        summary: text.substring(0, 200),
+        confidence: 0.5
+      };
+    }
+  }
+
+  /**
+   * Handle progress updates
+   */
+  static async handleProgress(projectId, currentMilestone, intent) {
+    if (!currentMilestone) {
+      return {
+        success: true,
+        notifyHomeowner: false,
+        summary: intent.summary
+      };
+    }
+
+    // Update milestone status to 'review' if it was 'in_progress'
+    if (currentMilestone.status === 'in_progress') {
+      const { error } = await supabase
+        .from('project_milestones')
+        .update({ status: 'review', updated_at: new Date().toISOString() })
+        .eq('id', currentMilestone.id);
+
+      if (error) {
+        console.error('[Orchestrator] Failed to update milestone:', error);
+      } else {
+        console.log(`[Orchestrator] Milestone ${currentMilestone.milestone_name} moved to review`);
+      }
+    }
+
+    return {
+      success: true,
+      notifyHomeowner: true,
+      summary: `${currentMilestone.milestone_name}: ${intent.summary}`
+    };
+  }
+
+  /**
+   * Handle blocker reports
+   */
+  static async handleBlocker(projectId, intent) {
+    console.log(`[Orchestrator] Blocker detected: ${intent.summary}`);
+
+    // Create a risk flag on the project
+    const { error } = await supabase
+      .from('project_logs')
+      .insert({
+        project_id: projectId,
+        log_type: 'risk',
+        message: `BLOCKER: ${intent.summary}`,
+        metadata: { intent_type: 'blocker', urgency: 'high' },
+        created_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('[Orchestrator] Failed to log blocker:', error);
+    }
+
+    return {
+      success: true,
+      notifyHomeowner: true,
+      summary: `⚠️ Blocker reported: ${intent.summary}`
+    };
+  }
+
+  /**
+   * Handle milestone completion claims
+   */
+  static async handleMilestoneComplete(projectId, currentMilestone, intent) {
+    if (!currentMilestone) {
+      return {
+        success: true,
+        notifyHomeowner: true,
+        summary: `Milestone completion reported: ${intent.summary}`
+      };
+    }
+
+    // Move to 'review' status for verification
+    const { error } = await supabase
+      .from('project_milestones')
+      .update({ status: 'review', updated_at: new Date().toISOString() })
+      .eq('id', currentMilestone.id);
+
+    if (error) {
+      console.error('[Orchestrator] Failed to update milestone:', error);
+    }
+
+    return {
+      success: true,
+      notifyHomeowner: true,
+      summary: `${currentMilestone.milestone_name} completed and ready for review`
+    };
+  }
 }
 
 // ========================================
@@ -2081,6 +2279,67 @@ RETURN JSON in this EXACT format:
         verified: false,
         error: error.message
       };
+    }
+  }
+
+  /**
+   * Analyze job site photos for trade identification, safety hazards, and quality issues
+   * Part of Zero-App Protocol for field updates
+   * @param {Array<string>} imageUrls - Array of image URLs to analyze
+   * @returns {Promise<string>} - Concise text summary of analysis
+   */
+  static async analyzeJobSitePhotos(imageUrls) {
+    if (!imageUrls || imageUrls.length === 0) {
+      return '';
+    }
+
+    console.log(`[Sentinel] Analyzing ${imageUrls.length} job site photo(s) for field update...`);
+
+    const systemPrompt = `You are a Construction Forensic Auditor with expertise across all trades. Analyze construction site photos and provide:
+
+1. **Trade Identification**: What work is being shown? (Framing, Plumbing, Electrical, HVAC, Drywall, etc.)
+2. **Safety Hazards**: Flag any OSHA violations, unsafe conditions, or hazards
+3. **Quality Assessment**: Note visible defects, poor workmanship, or deviations from standard practice
+4. **Site Conditions**: Comment on cleanliness, organization, and professionalism
+
+Be concise and specific. Focus on actionable observations.`;
+
+    try {
+      // Prepare messages with all images
+      const imageMessages = imageUrls.map(url => ({
+        type: 'image_url',
+        image_url: { url }
+      }));
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Analyze these construction site photos:'
+              },
+              ...imageMessages
+            ]
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.2
+      });
+
+      const analysis = response.choices[0].message.content;
+      console.log(`[Sentinel] Analysis complete: ${analysis.substring(0, 100)}...`);
+
+      return analysis;
+    } catch (error) {
+      console.error('[Sentinel] Photo analysis failed:', error);
+      return `[Vision Analysis Failed: ${error.message}]`;
     }
   }
 }
