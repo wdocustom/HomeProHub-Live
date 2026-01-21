@@ -17,13 +17,19 @@
   <!-- Sanctuary Glass CSS -->
   <link rel="stylesheet" href="/components/sanctuary-glass.css">
 
+  <!-- Metro Tracker CSS -->
+  <link rel="stylesheet" href="/components/MetroTracker.css">
+
+  <!-- Activity Timeline CSS -->
+  <link rel="stylesheet" href="/components/ActivityTimeline.css">
+
   <!-- Supabase Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
   <style>
-    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
-    body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+    * { font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    body { background: #f8fafc; min-height: 100vh; } /* Industrial SaaS - Slate 50 */
 
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(20px); }
@@ -44,30 +50,47 @@
     .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     .animate-glow { animation: glow 2s ease-in-out infinite; }
 
+    /* Industrial SaaS Overrides */
     .glass-card {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.5);
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      box-shadow: none;
     }
 
-    .gradient-text {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .industrial-header {
+      background: #0f172a;
+      color: white;
+    }
+
+    .industrial-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 24px;
+      box-shadow: none;
     }
 
     .agent-card {
       transition: all 0.3s ease;
+      border-radius: 4px;
     }
 
     .agent-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .status-indicator {
       animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
     }
   </style>
 </head>
@@ -81,21 +104,21 @@
   <main class="flex-grow relative z-10 py-8">
     <div class="max-w-7xl mx-auto px-4">
 
-      <!-- Hero Header -->
-      <div class="glass-card rounded-3xl p-8 mb-8 shadow-2xl">
+      <!-- Hero Header - Industrial SaaS -->
+      <div class="industrial-card mb-8">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-4">
-            <div class="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div class="w-16 h-16 bg-blue-600 flex items-center justify-center" style="border-radius: 4px;">
               <i class="fa-solid fa-robot text-3xl text-white"></i>
             </div>
             <div>
-              <h1 class="text-4xl font-black gradient-text">AI Command Center</h1>
-              <p class="text-slate-600 font-medium">Your AI-powered project management hub</p>
+              <h1 class="text-4xl font-black" style="color: #0f172a; letter-spacing: -0.02em;">AI Command Center</h1>
+              <p class="text-slate-600 font-medium" style="font-size: 15px;">Your AI-powered project management hub</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <div class="status-indicator w-3 h-3 bg-emerald-500 rounded-full"></div>
-            <span class="text-sm font-semibold text-emerald-600">All Systems Operational</span>
+            <div class="status-indicator w-3 h-3 rounded-full" style="background: #16a34a;"></div>
+            <span class="text-sm font-semibold" style="color: #16a34a;">All Systems Operational</span>
           </div>
         </div>
       </div>
@@ -166,33 +189,39 @@
       <div id="command-center-content" class="space-y-8">
 
         <!-- Project Selection -->
-        <div id="project-selector-section" class="glass-card rounded-3xl p-8 shadow-2xl">
-          <h3 class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-              <i class="fa-solid fa-folder text-xl text-white"></i>
+        <div id="project-selector-section" class="industrial-card">
+          <h3 class="section-title flex items-center gap-3">
+            <div class="w-10 h-10 flex items-center justify-center" style="background: #2563eb; color: white; border-radius: 4px;">
+              <i class="fa-solid fa-folder text-lg"></i>
             </div>
             Your Active Projects
           </h3>
 
-          <select id="active-project-selector" onchange="loadProjectDetails()" class="w-full rounded-2xl border-2 border-slate-200 bg-white p-5 font-bold text-lg text-slate-900 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all shadow-sm hover:shadow-md">
+          <select id="active-project-selector" onchange="loadProjectDetails()" class="w-full bg-white p-4 font-semibold text-slate-900 transition-all" style="border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;">
             <option value="">Select a project to manage...</option>
           </select>
 
           <!-- Project Status Cards (shown when project selected) -->
           <div id="project-status-card" class="hidden mt-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div class="agent-card glass-card rounded-2xl p-6 border-2 border-blue-100">
-                <div class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2">Current Phase</div>
-                <div id="project-phase" class="text-3xl font-black text-slate-900">Planning</div>
+              <div class="agent-card industrial-card">
+                <div class="text-xs font-bold uppercase tracking-wide mb-2" style="color: #64748b;">Current Phase</div>
+                <div id="project-phase" class="text-3xl font-black" style="color: #0f172a;">Planning</div>
               </div>
-              <div class="agent-card glass-card rounded-2xl p-6 border-2 border-emerald-100">
-                <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-2">Last Activity</div>
-                <div id="project-last-activity" class="text-3xl font-black text-slate-900">--</div>
+              <div class="agent-card industrial-card">
+                <div class="text-xs font-bold uppercase tracking-wide mb-2" style="color: #64748b;">Last Activity</div>
+                <div id="project-last-activity" class="text-3xl font-black" style="color: #0f172a;">--</div>
               </div>
-              <div class="agent-card glass-card rounded-2xl p-6 border-2 border-purple-100">
-                <div class="text-xs font-bold text-purple-600 uppercase tracking-wide mb-2">Total Updates</div>
-                <div id="project-log-count" class="text-3xl font-black text-slate-900">0</div>
+              <div class="agent-card industrial-card">
+                <div class="text-xs font-bold uppercase tracking-wide mb-2" style="color: #64748b;">Total Updates</div>
+                <div id="project-log-count" class="text-3xl font-black" style="color: #0f172a;">0</div>
               </div>
+            </div>
+
+            <!-- Metro Tracker - Project Milestone Progress -->
+            <div class="industrial-card mb-6">
+              <h3 class="section-title">Project Progress</h3>
+              <div id="metro-tracker-container"></div>
             </div>
 
             <!-- Blockers Alert -->
@@ -241,21 +270,22 @@
         </div>
 
         <!-- Contractor Update Section -->
-        <div id="contractor-update-section" class="hidden glass-card rounded-3xl p-8 shadow-2xl">
-          <h3 class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center">
-              <i class="fa-solid fa-pen text-xl text-white"></i>
+        <div id="contractor-update-section" class="hidden industrial-card">
+          <h3 class="section-title flex items-center gap-3">
+            <div class="w-10 h-10 flex items-center justify-center" style="background: #16a34a; color: white; border-radius: 4px;">
+              <i class="fa-solid fa-pen text-lg"></i>
             </div>
             Log Project Update
           </h3>
 
-          <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
+          <div class="p-6" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
             <div class="mb-6">
-              <label class="block text-sm font-bold text-slate-700 mb-3">What's the latest on this project?</label>
+              <label class="block text-sm font-semibold mb-2" style="color: #0f172a;">What's the latest on this project?</label>
               <textarea
                 id="update-text"
                 rows="4"
-                class="w-full rounded-2xl border-2 border-blue-200 bg-white p-5 text-slate-900 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all shadow-sm resize-none font-medium"
+                class="w-full bg-white p-4 text-slate-900 resize-none font-medium"
+                style="border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;"
                 placeholder="e.g., Finished drywall in all rooms. Starting paint prep tomorrow. Homeowner selected Benjamin Moore 'Swiss Coffee' for walls."
               ></textarea>
             </div>
@@ -264,14 +294,16 @@
               <button
                 onclick="logContractorUpdate()"
                 id="log-update-btn"
-                class="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black rounded-2xl shadow-lg transition-all hover:scale-105 text-lg"
+                class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all"
+                style="border-radius: 4px; font-size: 14px;"
               >
                 <i class="fa-solid fa-paper-plane mr-2"></i>Log Update
               </button>
               <button
                 onclick="generateAndSendSummary()"
                 id="send-summary-btn"
-                class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-2xl shadow-lg transition-all hover:scale-105 text-lg"
+                class="px-6 py-3 text-white font-semibold transition-all"
+                style="background: #2563eb; border-radius: 4px; font-size: 14px;"
               >
                 <i class="fa-solid fa-robot mr-2"></i>AI Summary
               </button>
@@ -281,98 +313,103 @@
           </div>
         </div>
 
-        <!-- Project Activity Log -->
-        <div id="project-activity-section" class="hidden glass-card rounded-3xl p-8 shadow-2xl">
+        <!-- Project Activity Log - Timeline Layout -->
+        <div id="project-activity-section" class="hidden industrial-card">
           <div class="flex justify-between items-center mb-6">
-            <h3 class="text-2xl font-black text-slate-900 flex items-center gap-3">
-              <div class="w-12 h-12 bg-gradient-to-br from-orange-600 to-red-600 rounded-xl flex items-center justify-center">
-                <i class="fa-solid fa-clock-rotate-left text-xl text-white"></i>
+            <h3 class="section-title flex items-center gap-3">
+              <div class="w-10 h-10 flex items-center justify-center" style="background: #2563eb; color: white; border-radius: 4px;">
+                <i class="fa-solid fa-clock-rotate-left text-lg"></i>
               </div>
               Activity Log
             </h3>
             <button
               onclick="refreshActivityLog()"
-              class="px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl shadow-md transition-all border-2 border-slate-200 hover:border-purple-300"
+              class="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all border border-slate-300 hover:border-slate-400"
+              style="border-radius: 4px; font-size: 13px;"
             >
               <i class="fa-solid fa-rotate-right mr-2"></i>Refresh
             </button>
           </div>
 
-          <div id="activity-log-container" class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border-2 border-slate-200 max-h-96 overflow-y-auto">
-            <div id="activity-log-list" class="space-y-3">
-              <p class="text-center text-slate-400 text-sm py-8 font-medium">No activity logged yet. Start by logging an update above.</p>
+          <div id="activity-log-container" class="activity-timeline-container">
+            <div id="activity-log-list" class="activity-timeline">
+              <div class="timeline-empty">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <p>No activity logged yet. Start by logging an update above.</p>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- AI Agent Activity Monitor -->
-        <div class="glass-card rounded-3xl p-8 shadow-2xl">
-          <h3 class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-              <i class="fa-solid fa-robot text-xl text-white"></i>
+        <div class="industrial-card">
+          <h3 class="section-title flex items-center gap-3">
+            <div class="w-10 h-10 flex items-center justify-center" style="background: #2563eb; color: white; border-radius: 4px;">
+              <i class="fa-solid fa-robot text-lg"></i>
             </div>
             AI Agent Team
           </h3>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- The Summarizer -->
-            <div class="agent-card bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
+            <div class="agent-card p-6" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;">
               <div class="flex items-center mb-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                  <i class="fa-solid fa-file-lines text-white text-2xl"></i>
+                <div class="w-14 h-14 flex items-center justify-center mr-4" style="background: #2563eb; border-radius: 4px;">
+                  <i class="fa-solid fa-file-lines text-white text-xl"></i>
                 </div>
                 <div>
-                  <h4 class="font-black text-xl text-slate-900">The Summarizer</h4>
-                  <p class="text-sm text-slate-600 font-medium">Daily update generator</p>
+                  <h4 class="font-bold text-lg" style="color: #0f172a;">The Summarizer</h4>
+                  <p class="text-sm" style="color: #64748b;">Daily update generator</p>
                 </div>
               </div>
-              <p class="text-sm text-slate-700 leading-relaxed mb-4">Automatically generates friendly progress updates for homeowners based on your logged activity.</p>
-              <div class="flex items-center gap-2 pt-4 border-t-2 border-blue-200">
-                <div class="status-indicator w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                <span class="text-xs font-bold text-emerald-600 uppercase tracking-wide">Active</span>
+              <p class="text-sm leading-relaxed mb-4" style="color: #334155;">Automatically generates friendly progress updates for homeowners based on your logged activity.</p>
+              <div class="flex items-center gap-2 pt-4" style="border-top: 1px solid #bfdbfe;">
+                <div class="status-indicator w-2.5 h-2.5 rounded-full" style="background: #16a34a;"></div>
+                <span class="text-xs font-bold uppercase tracking-wide" style="color: #16a34a;">Active</span>
               </div>
             </div>
 
             <!-- The Orchestrator -->
-            <div class="agent-card bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200 opacity-60">
+            <div class="agent-card p-6 opacity-60" style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 4px;">
               <div class="flex items-center mb-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                  <i class="fa-solid fa-brain text-white text-2xl"></i>
+                <div class="w-14 h-14 flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #8b5cf6, #ec4899); border-radius: 4px;">
+                  <i class="fa-solid fa-brain text-white text-xl"></i>
                 </div>
                 <div>
-                  <h4 class="font-black text-xl text-slate-900">The Orchestrator</h4>
-                  <p class="text-sm text-slate-600 font-medium">Project state manager</p>
+                  <h4 class="font-bold text-lg" style="color: #0f172a;">The Orchestrator</h4>
+                  <p class="text-sm" style="color: #64748b;">Project state manager</p>
                 </div>
               </div>
-              <p class="text-sm text-slate-700 leading-relaxed mb-4">Manages project phases, tracks dependencies, and coordinates the AI agent team.</p>
-              <div class="flex items-center gap-2 pt-4 border-t-2 border-purple-200">
+              <p class="text-sm leading-relaxed mb-4" style="color: #334155;">Manages project phases, tracks dependencies, and coordinates the AI agent team.</p>
+              <div class="flex items-center gap-2 pt-4" style="border-top: 1px solid #e9d5ff;">
                 <div class="w-2.5 h-2.5 bg-amber-500 rounded-full"></div>
-                <span class="text-xs font-bold text-amber-600 uppercase tracking-wide">Coming Soon</span>
+                <span class="text-xs font-bold uppercase tracking-wide" style="color: #f59e0b;">Coming Soon</span>
               </div>
             </div>
 
             <!-- The Hawk -->
-            <div id="hawk-agent-card" class="agent-card bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border-2 border-emerald-200 opacity-60 transition-all duration-500">
+            <div id="hawk-agent-card" class="agent-card p-6 opacity-60 transition-all duration-500" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px;">
               <div class="flex items-center mb-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                  <i class="fa-solid fa-users text-white text-2xl" id="hawk-icon"></i>
+                <div class="w-14 h-14 flex items-center justify-center mr-4" style="background: #16a34a; border-radius: 4px;">
+                  <i class="fa-solid fa-users text-white text-xl" id="hawk-icon"></i>
                 </div>
                 <div>
-                  <h4 class="font-black text-xl text-slate-900">The Hawk</h4>
-                  <p class="text-sm text-slate-600 font-medium">Procurement specialist</p>
+                  <h4 class="font-bold text-lg" style="color: #0f172a;">The Hawk</h4>
+                  <p class="text-sm" style="color: #64748b;">Procurement specialist</p>
                 </div>
               </div>
-              <p id="hawk-description" class="text-sm text-slate-700 leading-relaxed mb-3">Finds and coordinates subcontractors using your Lead Scout database and local pro network.</p>
-              <div id="hawk-status-text" class="text-sm text-slate-600 mb-3 min-h-[20px]"></div>
-              <div class="flex items-center gap-2 pt-4 border-t-2 border-emerald-200">
+              <p id="hawk-description" class="text-sm leading-relaxed mb-3" style="color: #334155;">Finds and coordinates subcontractors using your Lead Scout database and local pro network.</p>
+              <div id="hawk-status-text" class="text-sm mb-3 min-h-[20px]" style="color: #64748b;"></div>
+              <div class="flex items-center gap-2 pt-4" style="border-top: 1px solid #a7f3d0;">
                 <div class="w-2.5 h-2.5 bg-amber-500 rounded-full"></div>
-                <span id="hawk-status-badge" class="text-xs font-bold text-amber-600 uppercase tracking-wide">Standby</span>
+                <span id="hawk-status-badge" class="text-xs font-bold uppercase tracking-wide" style="color: #f59e0b;">Standby</span>
               </div>
               <div id="hawk-action-container" class="mt-3 hidden">
                 <button
                   id="run-hawk-agent"
                   onclick="runAutoScout()"
-                  class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-md transition-all"
+                  class="w-full py-3 text-white font-semibold transition-all"
+                  style="background: #16a34a; border-radius: 4px; font-size: 14px;"
                 >
                   <i class="fa-solid fa-search-location mr-2"></i><span id="hawk-button-text">Auto-Scout Subcontractors</span>
                 </button>
@@ -380,20 +417,20 @@
             </div>
 
             <!-- The Whip -->
-            <div class="agent-card bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-6 border-2 border-orange-200 opacity-60">
+            <div class="agent-card p-6 opacity-60" style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px;">
               <div class="flex items-center mb-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-orange-600 to-red-600 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                  <i class="fa-solid fa-calendar-check text-white text-2xl"></i>
+                <div class="w-14 h-14 flex items-center justify-center mr-4" style="background: #ea580c; border-radius: 4px;">
+                  <i class="fa-solid fa-calendar-check text-white text-xl"></i>
                 </div>
                 <div>
-                  <h4 class="font-black text-xl text-slate-900">The Whip</h4>
-                  <p class="text-sm text-slate-600 font-medium">Schedule coordinator</p>
+                  <h4 class="font-bold text-lg" style="color: #0f172a;">The Whip</h4>
+                  <p class="text-sm" style="color: #64748b;">Schedule coordinator</p>
                 </div>
               </div>
-              <p class="text-sm text-slate-700 leading-relaxed mb-4">Manages the calendar, handles dependencies, and reschedules trades when delays occur.</p>
-              <div class="flex items-center gap-2 pt-4 border-t-2 border-orange-200">
+              <p class="text-sm leading-relaxed mb-4" style="color: #334155;">Manages the calendar, handles dependencies, and reschedules trades when delays occur.</p>
+              <div class="flex items-center gap-2 pt-4" style="border-top: 1px solid #fed7aa;">
                 <div class="w-2.5 h-2.5 bg-amber-500 rounded-full"></div>
-                <span class="text-xs font-bold text-amber-600 uppercase tracking-wide">Coming Soon</span>
+                <span class="text-xs font-bold uppercase tracking-wide" style="color: #f59e0b;">Coming Soon</span>
               </div>
             </div>
           </div>
@@ -414,6 +451,20 @@
     let profile = null;
     let selectedProjectId = null;
     let availableTemplates = [];
+    let metroTracker = null;
+
+    // Agent icons and styles
+    const AGENT_CONFIG = {
+      'Orchestrator': { icon: 'fa-brain', class: 'orchestrator', emoji: '🧠' },
+      'Sentinel': { icon: 'fa-shield-halved', class: 'sentinel', emoji: '🛡️' },
+      'Diplomat': { icon: 'fa-handshake', class: 'diplomat', emoji: '🤝' },
+      'Summarizer': { icon: 'fa-file-lines', class: 'summarizer', emoji: '📊' },
+      'Hawk': { icon: 'fa-users', class: 'hawk', emoji: '🦅' },
+      'Whip': { icon: 'fa-calendar-check', class: 'whip', emoji: '📋' }
+    };
+
+    // Allowed agents for clean activity log (filter out DEBUG, DB, API, System)
+    const ALLOWED_AGENTS = ['Orchestrator', 'Sentinel', 'Diplomat', 'Summarizer', 'Hawk', 'Whip'];
 
     // ============================================
     // AUTHENTICATION
@@ -760,6 +811,29 @@
       }
     }
 
+    /**
+     * Initialize Metro Tracker with project milestones
+     */
+    function initMetroTracker(currentPhase, changeOrders = [], delays = []) {
+      // Default milestones for a typical project
+      const milestones = [
+        { id: 1, phase: 'planning', title: 'Planning', agentSummary: 'Orchestrator: Project scope defined and timeline created' },
+        { id: 2, phase: 'demo', title: 'Demo', agentSummary: 'Orchestrator: Demolition phase - removing existing structures' },
+        { id: 3, phase: 'rough_in', title: 'Rough-In', agentSummary: 'Orchestrator: Rough-in work - framing, electrical, plumbing' },
+        { id: 4, phase: 'inspection', title: 'Inspection', agentSummary: 'Sentinel: Quality checkpoints and city inspections' },
+        { id: 5, phase: 'finish', title: 'Finish', agentSummary: 'Orchestrator: Finishing work - drywall, paint, fixtures' },
+        { id: 6, phase: 'punchlist', title: 'Punchlist', agentSummary: 'Sentinel: Final walkthroughs and touch-ups' },
+        { id: 7, phase: 'complete', title: 'Complete', agentSummary: 'Project completed and handed over to homeowner' }
+      ];
+
+      metroTracker = new MetroTracker('metro-tracker-container', {
+        milestones: milestones,
+        currentPhase: currentPhase || 'planning',
+        changeOrders: changeOrders,
+        delays: delays
+      });
+    }
+
     async function loadProjectDetails() {
       const selector = document.getElementById('active-project-selector');
       const projectId = selector.value;
@@ -786,10 +860,13 @@
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        let currentPhase = 'planning';
+
         if (stateResponse.ok) {
           const state = await stateResponse.json();
 
-          document.getElementById('project-phase').textContent = state.current_phase || 'planning';
+          currentPhase = state.current_phase || 'planning';
+          document.getElementById('project-phase').textContent = currentPhase;
 
           if (state.last_activity_date) {
             const date = new Date(state.last_activity_date);
@@ -809,6 +886,10 @@
           // If project state doesn't exist yet, show guide anyway
           document.getElementById('getting-started-guide').classList.remove('hidden');
         }
+
+        // Initialize Metro Tracker
+        // TODO: Fetch change orders and delays from API
+        initMetroTracker(currentPhase, [], []);
 
         // Load activity log
         await refreshActivityLog();
@@ -947,6 +1028,60 @@
       ];
     }
 
+    /**
+     * Render activity log in timeline format
+     */
+    function renderTimelineLog(logs) {
+      // Filter to only show allowed agents
+      const filteredLogs = logs.filter(log =>
+        ALLOWED_AGENTS.includes(log.agent_name)
+      );
+
+      if (filteredLogs.length === 0) {
+        return `
+          <div class="timeline-empty">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <p>No agent activity yet. AI agents will log updates here.</p>
+          </div>
+        `;
+      }
+
+      return filteredLogs.map(log => {
+        const agentConfig = AGENT_CONFIG[log.agent_name] || {
+          icon: 'fa-robot',
+          class: 'default',
+          emoji: '🤖'
+        };
+
+        const timestamp = new Date(log.created_at);
+        const timeStr = timestamp.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        return `
+          <div class="timeline-item">
+            <div class="timeline-icon ${agentConfig.class}">
+              <i class="fas ${agentConfig.icon}"></i>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <div class="timeline-agent-name">
+                  <span>${agentConfig.emoji} ${log.agent_name}</span>
+                  <span class="timeline-agent-badge ${agentConfig.class}">${log.agent_name}</span>
+                </div>
+                <div class="timeline-timestamp">${timeStr}</div>
+              </div>
+              <div class="timeline-message">${log.message}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     async function refreshActivityLog() {
       if (!selectedProjectId) return;
 
@@ -969,36 +1104,19 @@
         }
 
         const container = document.getElementById('activity-log-list');
-        if (logs.length === 0) {
-          container.innerHTML = '<p class="text-center text-slate-400 text-sm py-8 font-medium">No activity logged yet.</p>';
-        } else {
-          container.innerHTML = logs.map(log => `
-            <div class="bg-white rounded-xl p-5 border-2 border-slate-200 hover:border-purple-300 transition-all">
-              <div class="flex justify-between items-start mb-2">
-                <span class="font-bold text-slate-900 text-lg">${log.agent_name || 'Contractor'}</span>
-                <span class="text-xs text-slate-500 font-medium">${new Date(log.created_at).toLocaleString()}</span>
-              </div>
-              <p class="text-sm text-slate-700 leading-relaxed">${log.message}</p>
-            </div>
-          `).join('');
-        }
+        container.className = 'activity-timeline';
+        container.innerHTML = renderTimelineLog(logs);
 
-        // Update count
+        // Update count (show all logs, not just filtered)
         document.getElementById('project-log-count').textContent = logs.length;
 
       } catch (error) {
         console.error('Failed to refresh activity log:', error);
         // On error, still show mock data
         const mockLogs = generateMockAgentActivity();
-        document.getElementById('activity-log-list').innerHTML = mockLogs.map(log => `
-          <div class="bg-white rounded-xl p-5 border-2 border-slate-200 hover:border-purple-300 transition-all">
-            <div class="flex justify-between items-start mb-2">
-              <span class="font-bold text-slate-900 text-lg">${log.agent_name}</span>
-              <span class="text-xs text-slate-500 font-medium">${new Date(log.created_at).toLocaleString()}</span>
-            </div>
-            <p class="text-sm text-slate-700 leading-relaxed">${log.message}</p>
-          </div>
-        `).join('');
+        const container = document.getElementById('activity-log-list');
+        container.className = 'activity-timeline';
+        container.innerHTML = renderTimelineLog(mockLogs);
         document.getElementById('project-log-count').textContent = mockLogs.length;
       }
     }
@@ -1063,6 +1181,9 @@
 
     window.addEventListener('DOMContentLoaded', initPage);
   </script>
+
+  <!-- Metro Tracker Component -->
+  <script src="/components/MetroTracker.js"></script>
 
   <!-- Navigation System -->
   <script src="/components/unified-navigation.js"></script>

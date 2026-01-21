@@ -1,0 +1,271 @@
+/**
+ * ActivityTimeline.css - Clean Timeline Activity Log
+ * Industrial SaaS aesthetic (Procore/Linear style)
+ * Shows only relevant agent logs with a vertical timeline
+ */
+
+.activity-timeline-container {
+  position: relative;
+  padding: 20px 0;
+}
+
+/* Vertical Timeline Line */
+.activity-timeline {
+  position: relative;
+  padding-left: 48px;
+}
+
+.activity-timeline::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0; /* Slate 200 */
+}
+
+/* Timeline Item */
+.timeline-item {
+  position: relative;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+}
+
+.timeline-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* Timeline Icon/Avatar */
+.timeline-icon {
+  position: absolute;
+  left: -28px;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.timeline-item:hover .timeline-icon {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Agent-specific Icons */
+.timeline-icon.orchestrator {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  border-color: #8b5cf6;
+  color: white;
+}
+
+.timeline-icon.sentinel {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  border-color: #3b82f6;
+  color: white;
+}
+
+.timeline-icon.diplomat {
+  background: linear-gradient(135deg, #10b981, #14b8a6);
+  border-color: #10b981;
+  color: white;
+}
+
+.timeline-icon.summarizer {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #2563eb;
+  color: white;
+}
+
+.timeline-icon.hawk {
+  background: linear-gradient(135deg, #16a34a, #059669);
+  border-color: #16a34a;
+  color: white;
+}
+
+.timeline-icon.whip {
+  background: linear-gradient(135deg, #ea580c, #dc2626);
+  border-color: #ea580c;
+  color: white;
+}
+
+/* Timeline Content */
+.timeline-content {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 16px;
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+.timeline-item:hover .timeline-content {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+/* Timeline Header */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.timeline-agent-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-agent-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.timeline-agent-badge.orchestrator {
+  background: #faf5ff;
+  color: #8b5cf6;
+}
+
+.timeline-agent-badge.sentinel {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.timeline-agent-badge.diplomat {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.timeline-timestamp {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Timeline Message */
+.timeline-message {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* Empty State */
+.timeline-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.timeline-empty i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+  opacity: 0.5;
+}
+
+/* Filter Toggle */
+.activity-filter-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-button:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.filter-button.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+/* Animations */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.timeline-item {
+  animation: slideInLeft 0.4s ease-out backwards;
+}
+
+.timeline-item:nth-child(1) { animation-delay: 0.05s; }
+.timeline-item:nth-child(2) { animation-delay: 0.1s; }
+.timeline-item:nth-child(3) { animation-delay: 0.15s; }
+.timeline-item:nth-child(4) { animation-delay: 0.2s; }
+.timeline-item:nth-child(5) { animation-delay: 0.25s; }
+.timeline-item:nth-child(6) { animation-delay: 0.3s; }
+.timeline-item:nth-child(7) { animation-delay: 0.35s; }
+.timeline-item:nth-child(8) { animation-delay: 0.4s; }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .activity-timeline {
+    padding-left: 40px;
+  }
+
+  .activity-timeline::before {
+    left: 16px;
+  }
+
+  .timeline-icon {
+    left: -24px;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .timeline-header {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .timeline-agent-name {
+    font-size: 13px;
+  }
+
+  .timeline-message {
+    font-size: 13px;
+  }
+}
