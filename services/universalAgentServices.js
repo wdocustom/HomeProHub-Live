@@ -18,7 +18,7 @@
  */
 
 const OpenAI = require('openai');
-const db = require('../database/db');
+const { supabase, logAIAgentActivity: dbLogAIAgentActivity } = require('../database/db');
 const { convertPDFToImages, isPDFUrl } = require('./blueprintProcessor');
 
 // Initialize OpenAI client
@@ -30,66 +30,102 @@ const openai = new OpenAI({
 // Helper: Get Project Template
 // ========================================
 async function getProjectTemplate(projectId) {
-  const query = `
-    SELECT
-      j.id as project_id,
-      j.title,
-      j.template_id,
-      j.blueprints_url,
-      j.project_metadata,
-      pt.*
-    FROM job_postings j
-    LEFT JOIN project_templates pt ON j.template_id = pt.id
-    WHERE j.id = $1
-  `;
+  // Fetch job posting with template details
+  const { data: job, error: jobError } = await supabase
+    .from('job_postings')
+    .select(`
+      id,
+      title,
+      template_id,
+      blueprints_url,
+      project_metadata,
+      address,
+      description,
+      homeowner_email,
+      status,
+      project_templates (*)
+    `)
+    .eq('id', projectId)
+    .single();
 
-  const result = await db.query(query, [projectId]);
-  if (result.rows.length === 0) {
-    throw new Error(`Project ${projectId} not found`);
+  if (jobError) {
+    throw new Error(`Project ${projectId} not found: ${jobError.message}`);
   }
 
-  return result.rows[0];
+  // Flatten the structure to match the old format
+  const template = job.project_templates || {};
+  delete job.project_templates;
+
+  return {
+    ...template,
+    project_id: job.id,
+    title: job.title,
+    template_id: job.template_id,
+    blueprints_url: job.blueprints_url,
+    project_metadata: job.project_metadata,
+    address: job.address,
+    description: job.description,
+    homeowner_email: job.homeowner_email,
+    status: job.status
+  };
 }
 
 // ========================================
 // Helper: Get Project Milestones
 // ========================================
 async function getProjectMilestones(projectId) {
-  const query = `
-    SELECT *
-    FROM project_milestones
-    WHERE project_id = $1
-    ORDER BY milestone_order ASC
-  `;
+  const { data, error } = await supabase
+    .from('project_milestones')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('milestone_order', { ascending: true });
 
-  const result = await db.query(query, [projectId]);
-  return result.rows;
+  if (error) {
+    throw new Error(`Failed to fetch milestones: ${error.message}`);
+  }
+
+  return data || [];
 }
 
 // ========================================
 // Helper: Log AI Agent Activity
 // ========================================
 async function logAgentActivity(projectId, agentType, actionType, actionDescription, inputData, outputData, status = 'completed') {
-  const query = `
-    INSERT INTO ai_agent_activity (
-      project_id, agent_type, action_type, action_description,
-      input_data, output_data, status, completed_at
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-    RETURNING *
-  `;
+  // Use the database helper function if available
+  if (dbLogAIAgentActivity) {
+    return await dbLogAIAgentActivity({
+      project_id: projectId,
+      agent_type: agentType,
+      action_type: actionType,
+      action_description: actionDescription,
+      input_data: inputData,
+      output_data: outputData,
+      status: status
+    });
+  }
 
-  const result = await db.query(query, [
-    projectId,
-    agentType,
-    actionType,
-    actionDescription,
-    JSON.stringify(inputData),
-    JSON.stringify(outputData),
-    status
-  ]);
+  // Fallback to direct Supabase call
+  const { data, error } = await supabase
+    .from('ai_agent_activity')
+    .insert({
+      project_id: projectId,
+      agent_type: agentType,
+      action_type: actionType,
+      action_description: actionDescription,
+      input_data: inputData,
+      output_data: outputData,
+      status: status,
+      completed_at: status === 'completed' ? new Date().toISOString() : null
+    })
+    .select()
+    .single();
 
-  return result.rows[0];
+  if (error) {
+    console.error('[logAgentActivity] Error:', error);
+    throw new Error(`Failed to log agent activity: ${error.message}`);
+  }
+
+  return data;
 }
 
 // ========================================
@@ -110,11 +146,16 @@ class OrchestratorAgent {
       throw new Error('Project does not have a template assigned');
     }
 
-    // Get template milestones
-    const templateMilestones = await db.query(
-      'SELECT * FROM template_milestones WHERE template_id = $1 ORDER BY milestone_order',
-      [template.template_id]
-    );
+    // Get template milestones using Supabase
+    const { data: templateMilestones, error: tmError } = await supabase
+      .from('template_milestones')
+      .select('*')
+      .eq('template_id', template.template_id)
+      .order('milestone_order', { ascending: true });
+
+    if (tmError) {
+      throw new Error(`Failed to fetch template milestones: ${tmError.message}`);
+    }
 
     // Create project milestones from template
     const projectMilestones = [];
@@ -137,51 +178,48 @@ class OrchestratorAgent {
         .filter(p => p.order < phase.order)
         .reduce((sum, p) => sum + p.estimated_days, 0);
 
-      milestone.planned_start_date = new Date(Date.now() + startOffset * 24 * 60 * 60 * 1000);
-      milestone.planned_end_date = new Date(milestone.planned_start_date.getTime() + phase.estimated_days * 24 * 60 * 60 * 1000);
+      milestone.planned_start_date = new Date(Date.now() + startOffset * 24 * 60 * 60 * 1000).toISOString();
+      milestone.planned_end_date = new Date(new Date(milestone.planned_start_date).getTime() + phase.estimated_days * 24 * 60 * 60 * 1000).toISOString();
 
       projectMilestones.push(milestone);
     }
 
-    // Insert all milestones
-    for (const milestone of projectMilestones) {
-      await db.query(`
-        INSERT INTO project_milestones (
-          project_id, milestone_id, milestone_name, milestone_order,
-          status, requires_inspection, depends_on, planned_start_date, planned_end_date
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (project_id, milestone_id) DO NOTHING
-      `, [
-        milestone.project_id,
-        milestone.milestone_id,
-        milestone.milestone_name,
-        milestone.milestone_order,
-        milestone.status,
-        milestone.requires_inspection,
-        JSON.stringify(milestone.depends_on),
-        milestone.planned_start_date,
-        milestone.planned_end_date
-      ]);
+    // Insert all milestones using Supabase upsert
+    if (projectMilestones.length > 0) {
+      const { error: insertError } = await supabase
+        .from('project_milestones')
+        .upsert(projectMilestones, {
+          onConflict: 'project_id,milestone_id',
+          ignoreDuplicates: true
+        });
+
+      if (insertError) {
+        console.error('[Orchestrator] Error inserting milestones:', insertError);
+        throw new Error(`Failed to insert milestones: ${insertError.message}`);
+      }
     }
 
-    // Initialize project state
-    await db.query(`
-      INSERT INTO project_states (
-        project_id, current_phase, current_milestone_id
-      )
-      VALUES ($1, $2, $3)
-      ON CONFLICT (project_id) DO UPDATE
-      SET current_phase = EXCLUDED.current_phase,
-          current_milestone_id = EXCLUDED.current_milestone_id
-    `, [projectId, phases[0].phase_id, phases[0].phase_id]);
+    // Initialize project state using Supabase upsert
+    if (phases.length > 0) {
+      const { error: stateError } = await supabase
+        .from('project_states')
+        .upsert({
+          project_id: projectId,
+          current_phase: phases[0].phase_id,
+          current_milestone_id: phases[0].phase_id
+        }, { onConflict: 'project_id' });
+
+      if (stateError) {
+        console.error('[Orchestrator] Error initializing project state:', stateError);
+      }
+    }
 
     await logAgentActivity(
       projectId,
       'orchestrator',
       'initialize_project',
-      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name}`,
-      { template_id: template.template_id, template_name: template.template_name },
+      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name || template.name || 'unknown'}`,
+      { template_id: template.template_id, template_name: template.template_name || template.name },
       { milestones_created: projectMilestones.length },
       'completed'
     );
@@ -191,7 +229,7 @@ class OrchestratorAgent {
     return {
       success: true,
       milestones_created: projectMilestones.length,
-      template: template.template_name
+      template: template.template_name || template.name || 'unknown'
     };
   }
 
@@ -202,27 +240,39 @@ class OrchestratorAgent {
   static async advanceToNextMilestone(projectId, currentMilestoneId) {
     console.log(`[Orchestrator] Attempting to advance from milestone ${currentMilestoneId}...`);
 
-    // Mark current milestone as completed
-    await db.query(`
-      UPDATE project_milestones
-      SET status = 'completed', actual_end_date = CURRENT_DATE
-      WHERE project_id = $1 AND milestone_id = $2
-    `, [projectId, currentMilestoneId]);
+    // Mark current milestone as completed using Supabase
+    const { error: updateError } = await supabase
+      .from('project_milestones')
+      .update({
+        status: 'completed',
+        actual_end_date: new Date().toISOString().split('T')[0]
+      })
+      .eq('project_id', projectId)
+      .eq('milestone_id', currentMilestoneId);
 
-    // Get next milestone
-    const result = await db.query(`
-      SELECT * FROM project_milestones
-      WHERE project_id = $1 AND status = 'pending'
-      ORDER BY milestone_order ASC
-      LIMIT 1
-    `, [projectId]);
+    if (updateError) {
+      console.error('[Orchestrator] Error marking milestone as completed:', updateError);
+    }
 
-    if (result.rows.length === 0) {
+    // Get next milestone using Supabase
+    const { data: nextMilestones, error: fetchError } = await supabase
+      .from('project_milestones')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('status', 'pending')
+      .order('milestone_order', { ascending: true })
+      .limit(1);
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch next milestone: ${fetchError.message}`);
+    }
+
+    if (!nextMilestones || nextMilestones.length === 0) {
       console.log('[Orchestrator] No more milestones - project complete!');
       return { success: true, completed: true };
     }
 
-    const nextMilestone = result.rows[0];
+    const nextMilestone = nextMilestones[0];
 
     // Check if all dependencies are met
     const dependencies = nextMilestone.depends_on || [];
@@ -238,19 +288,33 @@ class OrchestratorAgent {
       };
     }
 
-    // Update project state
-    await db.query(`
-      UPDATE project_states
-      SET current_phase = $1, current_milestone_id = $2, last_activity_date = NOW()
-      WHERE project_id = $3
-    `, [nextMilestone.milestone_id, nextMilestone.milestone_id, projectId]);
+    // Update project state using Supabase
+    const { error: stateError } = await supabase
+      .from('project_states')
+      .update({
+        current_phase: nextMilestone.milestone_id,
+        current_milestone_id: nextMilestone.milestone_id,
+        last_activity_date: new Date().toISOString()
+      })
+      .eq('project_id', projectId);
 
-    // Update milestone status
-    await db.query(`
-      UPDATE project_milestones
-      SET status = 'in_progress', actual_start_date = CURRENT_DATE
-      WHERE project_id = $1 AND milestone_id = $2
-    `, [projectId, nextMilestone.milestone_id]);
+    if (stateError) {
+      console.error('[Orchestrator] Error updating project state:', stateError);
+    }
+
+    // Update milestone status using Supabase
+    const { error: milestoneError } = await supabase
+      .from('project_milestones')
+      .update({
+        status: 'in_progress',
+        actual_start_date: new Date().toISOString().split('T')[0]
+      })
+      .eq('project_id', projectId)
+      .eq('milestone_id', nextMilestone.milestone_id);
+
+    if (milestoneError) {
+      console.error('[Orchestrator] Error updating milestone status:', milestoneError);
+    }
 
     await logAgentActivity(
       projectId,
@@ -277,15 +341,20 @@ class OrchestratorAgent {
       return true;
     }
 
-    const result = await db.query(`
-      SELECT COUNT(*) as count
-      FROM project_milestones
-      WHERE project_id = $1
-        AND milestone_id = ANY($2)
-        AND status = 'completed'
-    `, [projectId, dependencies]);
+    // Fetch completed milestones that match dependencies using Supabase
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .select('milestone_id')
+      .eq('project_id', projectId)
+      .in('milestone_id', dependencies)
+      .eq('status', 'completed');
 
-    return result.rows[0].count === dependencies.length;
+    if (error) {
+      console.error('[Orchestrator] Error checking dependencies:', error);
+      return false;
+    }
+
+    return data.length === dependencies.length;
   }
 }
 
@@ -482,17 +551,18 @@ class VisionaryAgent {
 
       console.log(`[Visionary] ✅ Vision analysis complete: ${analysis.summary.square_footage} sqft, ${analysis.summary.rooms.length} rooms`);
 
-      // Store analysis in project metadata
-      await db.query(`
-        UPDATE job_postings
-        SET project_metadata = project_metadata || $1::jsonb,
-            ai_analysis = $2
-        WHERE id = $3
-      `, [
-        JSON.stringify(analysis),
-        `Blueprint analysis completed: ${JSON.stringify(analysis, null, 2)}`,
-        projectId
-      ]);
+      // Store analysis in project metadata using Supabase
+      const { error: updateError } = await supabase
+        .from('job_postings')
+        .update({
+          project_metadata: analysis,
+          ai_analysis: `Blueprint analysis completed: ${JSON.stringify(analysis, null, 2)}`
+        })
+        .eq('id', projectId);
+
+      if (updateError) {
+        console.error('[Visionary] Error updating job posting:', updateError);
+      }
 
       await logAgentActivity(
         projectId,
@@ -576,22 +646,21 @@ class SharkAgent {
 
       const mappedTrade = tradeMapping[trade] || trade.toLowerCase().replace(/\s+/g, '_');
 
-      // Simplified implementation
-      const result = await db.query(`
-        SELECT
-          up.*,
-          COALESCE(AVG(hr.payment_rating), 0) as avg_rating,
-          COUNT(hr.id) as review_count
-        FROM user_profiles up
-        LEFT JOIN homeowner_ratings hr ON up.email = hr.contractor_email
-        WHERE up.role = 'contractor'
-          AND up.trade = $1
-          AND up.profile_complete = true
-        GROUP BY up.id
-        ORDER BY avg_rating DESC, review_count DESC
-        LIMIT 5
-      `, [trade]);
+      // Fetch contractors using Supabase
+      const { data: contractors, error: contractorError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('role', 'contractor')
+        .eq('trade', mappedTrade)
+        .eq('profile_complete', true)
+        .limit(5);
 
+      if (contractorError) {
+        console.error(`[Shark] Error fetching contractors for ${trade}:`, contractorError);
+        continue;
+      }
+
+      const result = { rows: contractors || [] };
       console.log(`[Shark] Found ${result.rows.length} contractors for ${trade}`);
 
       // STEP 4: Create trade opportunities for each contractor found
@@ -627,49 +696,39 @@ class SharkAgent {
           const expiresAt = new Date();
           expiresAt.setDate(expiresAt.getDate() + 7);
 
-          // Insert trade opportunity
-          const opportunityResult = await db.query(`
-            INSERT INTO autogc_trade_opportunities (
-              project_id,
-              milestone_id,
-              contractor_id,
-              contractor_email,
-              trade_type,
-              scope_of_work,
-              project_details,
-              expires_at,
-              priority_level,
-              created_by_agent,
-              agent_metadata
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            ON CONFLICT (project_id, contractor_id, milestone_id) DO UPDATE
-            SET
-              scope_of_work = EXCLUDED.scope_of_work,
-              project_details = EXCLUDED.project_details,
-              expires_at = EXCLUDED.expires_at,
-              updated_at = NOW()
-            RETURNING id
-          `, [
-            projectId,
-            relevantMilestone?.milestone_id || null,
-            contractor.id,
-            contractor.email,
-            mappedTrade,
-            scopeOfWork,
-            JSON.stringify(projectDetails),
-            expiresAt,
-            5, // default priority
-            'shark',
-            JSON.stringify({
-              shark_run_timestamp: new Date().toISOString(),
-              contractor_rating: contractor.avg_rating,
-              contractor_review_count: contractor.review_count
+          // Insert trade opportunity using Supabase upsert
+          const { data: opportunityData, error: oppError } = await supabase
+            .from('autogc_trade_opportunities')
+            .upsert({
+              project_id: projectId,
+              milestone_id: relevantMilestone?.milestone_id || null,
+              contractor_id: contractor.id,
+              contractor_email: contractor.email,
+              trade_type: mappedTrade,
+              scope_of_work: scopeOfWork,
+              project_details: projectDetails,
+              expires_at: expiresAt.toISOString(),
+              priority_level: 5,
+              created_by_agent: 'shark',
+              agent_metadata: {
+                shark_run_timestamp: new Date().toISOString(),
+                contractor_rating: contractor.avg_rating || 0,
+                contractor_review_count: contractor.review_count || 0
+              },
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'project_id,contractor_id,milestone_id'
             })
-          ]);
+            .select('id')
+            .single();
+
+          if (oppError) {
+            console.error(`[Shark] Error creating opportunity for ${contractor.email}:`, oppError);
+            continue;
+          }
 
           opportunitiesCreated.push({
-            opportunity_id: opportunityResult.rows[0].id,
+            opportunity_id: opportunityData.id,
             contractor_email: contractor.email,
             contractor_name: `${contractor.first_name} ${contractor.last_name}`,
             contractor_phone: contractor.phone,
@@ -866,11 +925,17 @@ class WhipAgent {
       return false;
     });
 
-    await db.query(`
-      UPDATE project_states
-      SET critical_path_status = $1
-      WHERE project_id = $2
-    `, [behindSchedule ? 'delayed' : 'on_track', projectId]);
+    // Update project_states with critical path status using Supabase
+    const { error: statusError } = await supabase
+      .from('project_states')
+      .update({
+        critical_path_status: behindSchedule ? 'delayed' : 'on_track'
+      })
+      .eq('project_id', projectId);
+
+    if (statusError) {
+      console.error('[Whip] Error updating critical path status:', statusError);
+    }
 
     await logAgentActivity(
       projectId,
@@ -934,11 +999,19 @@ class WhipAgent {
           const newEnd = new Date(dependent.planned_end_date);
           newEnd.setDate(newEnd.getDate() + delay.days_late);
 
-          await db.query(`
-            UPDATE project_milestones
-            SET planned_start_date = $1, planned_end_date = $2
-            WHERE project_id = $3 AND milestone_id = $4
-          `, [newStart, newEnd, projectId, dependent.milestone_id]);
+          // Reschedule milestone using Supabase
+          const { error: rescheduleError } = await supabase
+            .from('project_milestones')
+            .update({
+              planned_start_date: newStart.toISOString(),
+              planned_end_date: newEnd.toISOString()
+            })
+            .eq('project_id', projectId)
+            .eq('milestone_id', dependent.milestone_id);
+
+          if (rescheduleError) {
+            console.error(`[Whip] Error rescheduling ${dependent.milestone_name}:`, rescheduleError);
+          }
 
           console.log(`[Whip] Rescheduled ${dependent.milestone_name}: +${delay.days_late} days`);
         }
@@ -1048,13 +1121,14 @@ Return ONLY valid JSON in this exact format:
   static async routeSMS(fromPhone) {
     console.log(`[Diplomat] Routing SMS from ${fromPhone}...`);
 
-    // Look up contractor by phone
-    const contractor = await db.query(
-      'SELECT * FROM user_profiles WHERE phone = $1 AND role = $2',
-      [fromPhone, 'contractor']
-    );
+    // Look up contractor by phone using Supabase
+    const { data: contractors, error: contractorError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('phone', fromPhone)
+      .eq('role', 'contractor');
 
-    if (contractor.rows.length === 0) {
+    if (contractorError || !contractors || contractors.length === 0) {
       return {
         success: false,
         error: 'unrecognized_sender',
@@ -1062,21 +1136,26 @@ Return ONLY valid JSON in this exact format:
       };
     }
 
-    const contractorData = contractor.rows[0];
+    const contractorData = contractors[0];
 
-    // Find active project assignment
-    const assignment = await db.query(`
-      SELECT cpa.*, j.title as project_title, j.address as project_address
-      FROM contractor_project_assignments cpa
-      JOIN job_postings j ON cpa.project_id = j.id
-      WHERE cpa.contractor_id = $1
-        AND cpa.status = 'active'
-        AND j.status IN ('in_progress', 'active')
-      ORDER BY cpa.assigned_at DESC
-      LIMIT 1
-    `, [contractorData.id]);
+    // Find active project assignment using Supabase
+    const { data: assignments, error: assignmentError } = await supabase
+      .from('contractor_project_assignments')
+      .select(`
+        *,
+        job_postings!inner (
+          title,
+          address,
+          status
+        )
+      `)
+      .eq('contractor_id', contractorData.id)
+      .eq('status', 'active')
+      .in('job_postings.status', ['in_progress', 'active'])
+      .order('assigned_at', { ascending: false })
+      .limit(1);
 
-    if (assignment.rows.length === 0) {
+    if (assignmentError || !assignments || assignments.length === 0) {
       return {
         success: false,
         error: 'no_active_project',
@@ -1086,7 +1165,7 @@ Return ONLY valid JSON in this exact format:
       };
     }
 
-    const projectAssignment = assignment.rows[0];
+    const projectAssignment = assignments[0];
 
     return {
       success: true,
@@ -1094,8 +1173,8 @@ Return ONLY valid JSON in this exact format:
       contractor_email: contractorData.email,
       contractor_name: `${contractorData.first_name} ${contractorData.last_name}`,
       project_id: projectAssignment.project_id,
-      project_title: projectAssignment.project_title,
-      project_address: projectAssignment.project_address,
+      project_title: projectAssignment.job_postings?.title || 'Unknown',
+      project_address: projectAssignment.job_postings?.address || 'Unknown',
       trade_type: projectAssignment.trade_type
     };
   }
@@ -1111,28 +1190,37 @@ Return ONLY valid JSON in this exact format:
     // Determine if verification is required
     const requiresVerification = intent === 'milestone_claim';
 
-    // Insert into project_logs
-    const logResult = await db.query(`
-      INSERT INTO project_logs (
-        project_id, entry_text, source, created_by_email,
-        sms_from_phone, sms_parsed_intent, sms_raw_body,
-        requires_verification, metadata
-      )
-      VALUES ($1, $2, $3, (SELECT email FROM user_profiles WHERE id = $4), $5, $6, $7, $8, $9)
-      RETURNING *
-    `, [
-      projectId,
-      summary,
-      'sms',
-      contractorId,
-      contractorPhone,
-      intent,
-      smsBody,
-      requiresVerification,
-      JSON.stringify({ milestone_id, urgency })
-    ]);
+    // Get contractor email
+    const { data: contractor, error: contractorError } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('id', contractorId)
+      .single();
 
-    const logEntry = logResult.rows[0];
+    if (contractorError) {
+      console.error('[Diplomat] Error fetching contractor email:', contractorError);
+    }
+
+    // Insert into project_logs using Supabase
+    const { data: logEntry, error: logError } = await supabase
+      .from('project_logs')
+      .insert({
+        project_id: projectId,
+        entry_text: summary,
+        source: 'sms',
+        created_by_email: contractor?.email || null,
+        sms_from_phone: contractorPhone,
+        sms_parsed_intent: intent,
+        sms_raw_body: smsBody,
+        requires_verification: requiresVerification,
+        metadata: { milestone_id, urgency }
+      })
+      .select()
+      .single();
+
+    if (logError) {
+      throw new Error(`Failed to log SMS: ${logError.message}`);
+    }
 
     // Log AI agent activity
     await logAgentActivity(
@@ -1163,20 +1251,35 @@ Return ONLY valid JSON in this exact format:
     const crypto = require('crypto');
     const token = crypto.randomBytes(4).toString('hex'); // 8 character hex string
 
-    // Insert verification token
-    await db.query(`
-      INSERT INTO verification_tokens (
-        token, project_id, milestone_id, contractor_id, project_log_id, token_type, status
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [token, projectId, milestoneId, contractorId, projectLogId, 'milestone_verification', 'pending']);
+    // Insert verification token using Supabase
+    const { error: tokenError } = await supabase
+      .from('verification_tokens')
+      .insert({
+        token,
+        project_id: projectId,
+        milestone_id: milestoneId,
+        contractor_id: contractorId,
+        project_log_id: projectLogId,
+        token_type: 'milestone_verification',
+        status: 'pending'
+      });
 
-    // Update project_log with token
-    await db.query(`
-      UPDATE project_logs
-      SET verification_link_token = $1, verification_sent_at = NOW()
-      WHERE id = $2
-    `, [token, projectLogId]);
+    if (tokenError) {
+      console.error('[Diplomat] Error inserting verification token:', tokenError);
+    }
+
+    // Update project_log with token using Supabase
+    const { error: updateError } = await supabase
+      .from('project_logs')
+      .update({
+        verification_link_token: token,
+        verification_sent_at: new Date().toISOString()
+      })
+      .eq('id', projectLogId);
+
+    if (updateError) {
+      console.error('[Diplomat] Error updating project log:', updateError);
+    }
 
     // Construct verification URL (update with your actual domain)
     const baseUrl = process.env.BASE_URL || 'https://homeprohub.today';
@@ -1223,25 +1326,31 @@ Return ONLY valid JSON in this exact format:
 
       // Log the outbound SMS if project ID is provided
       if (projectId) {
-        await db.query(`
-          INSERT INTO sms_routing_log (
-            message_sid, from_phone, to_phone, message_body, direction, processed,
-            routing_status, contractor_id, project_id
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7,
-            (SELECT id FROM user_profiles WHERE phone = $3 LIMIT 1),
-            $8
-          )
-        `, [
-          message.sid,
-          process.env.TWILIO_PHONE_NUMBER,
-          toPhone,
-          body,
-          'outbound',
-          true,
-          'sent',
-          projectId
-        ]);
+        // Get contractor ID from phone
+        const { data: contractor } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('phone', toPhone)
+          .limit(1)
+          .single();
+
+        const { error: logError } = await supabase
+          .from('sms_routing_log')
+          .insert({
+            message_sid: message.sid,
+            from_phone: process.env.TWILIO_PHONE_NUMBER,
+            to_phone: toPhone,
+            message_body: body,
+            direction: 'outbound',
+            processed: true,
+            routing_status: 'sent',
+            contractor_id: contractor?.id || null,
+            project_id: projectId
+          });
+
+        if (logError) {
+          console.error('[Diplomat] Error logging outbound SMS:', logError);
+        }
       }
 
       return {
@@ -1255,25 +1364,31 @@ Return ONLY valid JSON in this exact format:
 
       // Log the error if project ID is provided
       if (projectId) {
-        await db.query(`
-          INSERT INTO sms_routing_log (
-            from_phone, to_phone, message_body, direction, processed,
-            routing_status, contractor_id, project_id, error_message
-          )
-          VALUES ($1, $2, $3, $4, $5, $6,
-            (SELECT id FROM user_profiles WHERE phone = $2 LIMIT 1),
-            $7, $8
-          )
-        `, [
-          process.env.TWILIO_PHONE_NUMBER || 'unknown',
-          toPhone,
-          body,
-          'outbound',
-          false,
-          'error',
-          projectId,
-          error.message
-        ]);
+        // Get contractor ID from phone
+        const { data: contractor } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('phone', toPhone)
+          .limit(1)
+          .single();
+
+        const { error: logError } = await supabase
+          .from('sms_routing_log')
+          .insert({
+            from_phone: process.env.TWILIO_PHONE_NUMBER || 'unknown',
+            to_phone: toPhone,
+            message_body: body,
+            direction: 'outbound',
+            processed: false,
+            routing_status: 'error',
+            contractor_id: contractor?.id || null,
+            project_id: projectId,
+            error_message: error.message
+          });
+
+        if (logError) {
+          console.error('[Diplomat] Error logging SMS error:', logError);
+        }
       }
 
       return {
@@ -1325,19 +1440,23 @@ Return ONLY valid JSON in this exact format:
     console.log(`[Diplomat] Sending verification link to contractor ${contractorId} for milestone ${milestoneId}...`);
 
     try {
-      // Get milestone details
-      const milestoneResult = await db.query(`
-        SELECT m.title, m.points, p.title as project_title
-        FROM project_milestones m
-        JOIN projects p ON m.project_id = p.id
-        WHERE m.id = $1 AND m.project_id = $2
-      `, [milestoneId, projectId]);
+      // Get milestone details using Supabase
+      const { data: milestone, error: milestoneError } = await supabase
+        .from('project_milestones')
+        .select(`
+          milestone_name,
+          points,
+          job_postings!inner (
+            title
+          )
+        `)
+        .eq('id', milestoneId)
+        .eq('project_id', projectId)
+        .single();
 
-      if (milestoneResult.rows.length === 0) {
+      if (milestoneError || !milestone) {
         throw new Error('Milestone not found');
       }
-
-      const milestone = milestoneResult.rows[0];
 
       // Generate verification link
       const verificationResult = await this.generateVerificationLink(
@@ -1352,7 +1471,7 @@ Return ONLY valid JSON in this exact format:
       }
 
       // Format the SMS message
-      const message = `HomeProHub: Milestone "${milestone.title}" noted for ${milestone.project_title}. Tap here to verify and unlock payment: ${verificationResult.verification_url}`;
+      const message = `HomeProHub: Milestone "${milestone.milestone_name}" noted for ${milestone.job_postings?.title || 'project'}. Tap here to verify and unlock payment: ${verificationResult.verification_url}`;
 
       // Send the SMS
       const smsResult = await this.sendSMS(contractorPhone, message, projectId);
@@ -1361,14 +1480,19 @@ Return ONLY valid JSON in this exact format:
         throw new Error(`Failed to send SMS: ${smsResult.error}`);
       }
 
-      // Update project_log with SMS sent status
-      await db.query(`
-        UPDATE project_logs
-        SET verification_sms_sent = TRUE,
-            verification_sms_sent_at = NOW(),
-            verification_sms_sid = $1
-        WHERE id = $2
-      `, [smsResult.message_sid, projectLogId]);
+      // Update project_log with SMS sent status using Supabase
+      const { error: updateError } = await supabase
+        .from('project_logs')
+        .update({
+          verification_sms_sent: true,
+          verification_sms_sent_at: new Date().toISOString(),
+          verification_sms_sid: smsResult.message_sid
+        })
+        .eq('id', projectLogId);
+
+      if (updateError) {
+        console.error('[Diplomat] Error updating project log:', updateError);
+      }
 
       return {
         success: true,
@@ -1403,17 +1527,17 @@ class SentinelAgent {
     const template = await getProjectTemplate(projectId);
     const applicableCodes = template.applicable_codes || [];
 
-    // Get milestone details
-    const milestone = await db.query(
-      'SELECT * FROM project_milestones WHERE project_id = $1 AND milestone_id = $2',
-      [projectId, milestoneId]
-    );
+    // Get milestone details using Supabase
+    const { data: currentMilestone, error: milestoneError } = await supabase
+      .from('project_milestones')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('milestone_id', milestoneId)
+      .single();
 
-    if (milestone.rows.length === 0) {
+    if (milestoneError || !currentMilestone) {
       throw new Error(`Milestone ${milestoneId} not found`);
     }
-
-    const currentMilestone = milestone.rows[0];
 
     // Context-aware code checking
     let codeCheckPrompt = '';
@@ -1495,18 +1619,19 @@ class SentinelAgent {
 
       const inspectionReport = response.choices[0].message.content;
 
-      // Store inspection results
-      await db.query(`
-        UPDATE project_milestones
-        SET inspection_notes = $1,
-            inspection_status = $2
-        WHERE project_id = $3 AND milestone_id = $4
-      `, [
-        inspectionReport,
-        inspectionReport.toLowerCase().includes('violation') ? 'failed' : 'passed',
-        projectId,
-        milestoneId
-      ]);
+      // Store inspection results using Supabase
+      const { error: updateError } = await supabase
+        .from('project_milestones')
+        .update({
+          inspection_notes: inspectionReport,
+          inspection_status: inspectionReport.toLowerCase().includes('violation') ? 'failed' : 'passed'
+        })
+        .eq('project_id', projectId)
+        .eq('milestone_id', milestoneId);
+
+      if (updateError) {
+        console.error('[Sentinel] Error updating milestone:', updateError);
+      }
 
       await logAgentActivity(
         projectId,
@@ -1652,27 +1777,27 @@ RETURN JSON in this EXACT format:
 
     const startTime = Date.now();
 
-    // Get evidence record
-    const evidenceResult = await db.query(
-      'SELECT * FROM project_evidence WHERE id = $1',
-      [evidenceId]
-    );
+    // Get evidence record using Supabase
+    const { data: evidence, error: evidenceError } = await supabase
+      .from('project_evidence')
+      .select('*')
+      .eq('id', evidenceId)
+      .single();
 
-    if (evidenceResult.rows.length === 0) {
+    if (evidenceError || !evidence) {
       throw new Error(`Evidence ${evidenceId} not found`);
     }
 
-    const evidence = evidenceResult.rows[0];
-
-    // Get milestone details for context
+    // Get milestone details for context using Supabase
     let milestoneRequirements = null;
     if (evidence.milestone_id) {
-      const milestoneResult = await db.query(
-        'SELECT * FROM project_milestones WHERE id = $1',
-        [evidence.milestone_id]
-      );
-      if (milestoneResult.rows.length > 0) {
-        const milestone = milestoneResult.rows[0];
+      const { data: milestone } = await supabase
+        .from('project_milestones')
+        .select('milestone_name')
+        .eq('id', evidence.milestone_id)
+        .single();
+
+      if (milestone) {
         milestoneRequirements = `Milestone: ${milestone.milestone_name}`;
       }
     }
@@ -1725,50 +1850,58 @@ RETURN JSON in this EXACT format:
 
     const processingTime = Date.now() - startTime;
 
-    // STEP 3: Update evidence record
-    await db.query(`
-      UPDATE project_evidence
-      SET
-        forensic_analysis_status = $1,
-        forensic_checks = $2,
-        quality_check_status = $3,
-        quality_check_result = $4,
-        verification_result = $5,
-        rejection_reason = $6,
-        processed_by_agent = 'sentinel',
-        agent_processing_time_ms = $7,
-        processed_at = NOW(),
-        approved_at = CASE WHEN $5 = 'approved' THEN NOW() ELSE NULL END
-      WHERE id = $8
-    `, [
-      'passed',
-      JSON.stringify({
-        is_authentic: forensicData.is_authentic,
-        confidence: forensicData.confidence,
-        ai_generated_probability: forensicData.ai_generated_probability,
-        screen_capture_detected: forensicData.screen_capture_detected,
-        manipulation_detected: forensicData.manipulation_detected,
-        fraud_indicators: forensicData.fraud_indicators,
-        authenticity_indicators: forensicData.authenticity_indicators
-      }),
-      forensicData.recommendation === 'approved' ? 'approved' : 'rejected',
-      JSON.stringify(forensicData.quality_assessment),
-      verificationResult,
-      rejectionReason,
-      processingTime,
-      evidenceId
-    ]);
+    // STEP 3: Update evidence record using Supabase
+    const { error: evidenceUpdateError } = await supabase
+      .from('project_evidence')
+      .update({
+        forensic_analysis_status: 'passed',
+        forensic_checks: {
+          is_authentic: forensicData.is_authentic,
+          confidence: forensicData.confidence,
+          ai_generated_probability: forensicData.ai_generated_probability,
+          screen_capture_detected: forensicData.screen_capture_detected,
+          manipulation_detected: forensicData.manipulation_detected,
+          fraud_indicators: forensicData.fraud_indicators,
+          authenticity_indicators: forensicData.authenticity_indicators
+        },
+        quality_check_status: forensicData.recommendation === 'approved' ? 'approved' : 'rejected',
+        quality_check_result: forensicData.quality_assessment,
+        verification_result: verificationResult,
+        rejection_reason: rejectionReason,
+        processed_by_agent: 'sentinel',
+        agent_processing_time_ms: processingTime,
+        processed_at: new Date().toISOString(),
+        approved_at: verificationResult === 'approved' ? new Date().toISOString() : null
+      })
+      .eq('id', evidenceId);
 
-    // STEP 4: Update milestone if approved
+    if (evidenceUpdateError) {
+      console.error('[Sentinel] Error updating evidence:', evidenceUpdateError);
+    }
+
+    // STEP 4: Update milestone if approved using Supabase
     if (verificationResult === 'approved' && evidence.milestone_id) {
-      await db.query(`
-        UPDATE project_milestones
-        SET
-          verification_status = 'approved',
-          verification_approved_at = NOW(),
-          status = CASE WHEN status = 'inspection_pending' THEN 'inspection_passed' ELSE status END
-        WHERE id = $1
-      `, [evidence.milestone_id]);
+      // First get the current status
+      const { data: currentMilestone } = await supabase
+        .from('project_milestones')
+        .select('status')
+        .eq('id', evidence.milestone_id)
+        .single();
+
+      const newStatus = currentMilestone?.status === 'inspection_pending' ? 'inspection_passed' : currentMilestone?.status;
+
+      const { error: milestoneUpdateError } = await supabase
+        .from('project_milestones')
+        .update({
+          verification_status: 'approved',
+          verification_approved_at: new Date().toISOString(),
+          status: newStatus
+        })
+        .eq('id', evidence.milestone_id);
+
+      if (milestoneUpdateError) {
+        console.error('[Sentinel] Error updating milestone:', milestoneUpdateError);
+      }
 
       // Log agent activity
       await logAgentActivity(
@@ -1907,17 +2040,16 @@ RETURN JSON in this EXACT format:
     console.log(`[Sentinel] Verifying location for project ${projectId}...`);
 
     try {
-      // Fetch project site coordinates
-      const projectResult = await db.query(
-        'SELECT site_latitude, site_longitude, address FROM job_postings WHERE id = $1',
-        [projectId]
-      );
+      // Fetch project site coordinates using Supabase
+      const { data: project, error: projectError } = await supabase
+        .from('job_postings')
+        .select('site_latitude, site_longitude, address')
+        .eq('id', projectId)
+        .single();
 
-      if (projectResult.rows.length === 0) {
+      if (projectError || !project) {
         throw new Error(`Project ${projectId} not found`);
       }
-
-      const project = projectResult.rows[0];
 
       if (!project.site_latitude || !project.site_longitude) {
         // Try to geocode the address if coordinates not set
@@ -1969,29 +2101,20 @@ class HawkAgent {
     console.log(`[Hawk] Scouting contractors for ${trade} near ${zipCode}...`);
 
     try {
-      // Query user_profiles for contractors matching trade
-      const query = `
-        SELECT
-          up.id,
-          up.email,
-          up.company_name,
-          up.trade,
-          up.phone,
-          up.location_zip,
-          up.license_verified,
-          COALESCE(AVG(hr.overall_rating), 0) as avg_rating,
-          COUNT(hr.id) as review_count
-        FROM user_profiles up
-        LEFT JOIN homeowner_ratings hr ON up.email = hr.contractor_email
-        WHERE up.role = 'contractor'
-          AND up.trade = $1
-          AND up.license_verified = true
-        GROUP BY up.id, up.email, up.company_name, up.trade, up.phone, up.location_zip, up.license_verified
-        ORDER BY avg_rating DESC, review_count DESC
-        LIMIT 20
-      `;
+      // Query user_profiles for contractors matching trade using Supabase
+      const { data: contractorsList, error: contractorsError } = await supabase
+        .from('user_profiles')
+        .select('id, email, company_name, trade, phone, location_zip, license_verified')
+        .eq('role', 'contractor')
+        .eq('trade', trade)
+        .eq('license_verified', true)
+        .limit(20);
 
-      const result = await db.query(query, [trade]);
+      if (contractorsError) {
+        throw new Error(`Failed to fetch contractors: ${contractorsError.message}`);
+      }
+
+      const result = { rows: contractorsList || [] };
 
       // Calculate distances and format results
       let contractors = result.rows.map(contractor => {
@@ -2088,23 +2211,21 @@ class HawkAgent {
     console.log(`[Hawk] Finding suppliers for ${trade} near ${zipCode}...`);
 
     try {
-      // Query suppliers table (if exists) or user_profiles with role='supplier'
-      const query = `
-        SELECT
-          up.id,
-          up.email,
-          up.company_name,
-          up.phone,
-          up.location_zip,
-          up.trade as specialty
-        FROM user_profiles up
-        WHERE up.role = 'supplier'
-          AND (up.trade = $1 OR up.trade = 'general')
-        ORDER BY up.company_name
-        LIMIT 10
-      `;
+      // Query suppliers table (if exists) or user_profiles with role='supplier' using Supabase
+      const { data: suppliersList, error: suppliersError } = await supabase
+        .from('user_profiles')
+        .select('id, email, company_name, phone, location_zip, trade')
+        .eq('role', 'supplier')
+        .or(`trade.eq.${trade},trade.eq.general`)
+        .order('company_name', { ascending: true })
+        .limit(10);
 
-      const result = await db.query(query, [trade]);
+      if (suppliersError) {
+        console.error('[Hawk] Error fetching suppliers:', suppliersError);
+        return [];
+      }
+
+      const result = { rows: suppliersList || [] };
 
       const suppliers = result.rows.map(supplier => {
         const distance = this.calculateZipDistance(zipCode, supplier.location_zip);
@@ -2176,27 +2297,30 @@ class HawkAgent {
     console.log(`[Hawk] Auto-matching contractors for project ${projectId}...`);
 
     try {
-      // Get project details
-      const projectResult = await db.query(
-        'SELECT * FROM projects WHERE id = $1',
-        [projectId]
-      );
+      // Get project details using Supabase
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
 
-      if (projectResult.rows.length === 0) {
+      if (projectError || !project) {
         throw new Error(`Project ${projectId} not found`);
       }
 
-      const project = projectResult.rows[0];
+      // Get milestones to determine required trades using Supabase
+      const { data: milestones, error: milestonesError } = await supabase
+        .from('project_milestones')
+        .select('assigned_contractor_role')
+        .eq('project_id', projectId);
 
-      // Get milestones to determine required trades
-      const milestonesResult = await db.query(
-        'SELECT DISTINCT assigned_contractor_role FROM project_milestones WHERE project_id = $1',
-        [projectId]
-      );
+      if (milestonesError) {
+        throw new Error(`Failed to fetch milestones: ${milestonesError.message}`);
+      }
 
-      const requiredTrades = milestonesResult.rows
+      const requiredTrades = [...new Set(milestones
         .map(m => m.assigned_contractor_role)
-        .filter(Boolean);
+        .filter(Boolean))];
 
       // Find contractors for each trade
       const contractorMatches = {};
