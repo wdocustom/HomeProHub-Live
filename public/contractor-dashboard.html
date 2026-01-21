@@ -17,6 +17,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
+  <!-- Dual-Lens Dashboard Components -->
+  <link rel="stylesheet" href="/components/SmartTracker.css">
+  <link rel="stylesheet" href="/components/ProjectTimeline.css">
+  <link rel="stylesheet" href="/components/command-center.css">
+
   <style>
     * {
       margin: 0;
@@ -382,6 +387,17 @@
     </div>
   </div>
 
+  <!-- Project Timeline Dashboard (Tactical Gantt for Contractors) -->
+  <div id="projectTimelineSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12" style="display: none;">
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Active Project Timeline</h2>
+        <p class="text-slate-600 text-sm">Tactical Gantt chart for managing your active jobs</p>
+      </div>
+      <div id="contractor-project-dashboard"></div>
+    </div>
+  </div>
+
   <!-- Auto-GC / Trade Opportunities Section (Dynamic) -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
     <div id="autogcSection" style="display: none;">
@@ -571,6 +587,72 @@
       }
     }
 
+    /**
+     * Initialize Project Dashboard (Dual-Lens)
+     * For contractors, this shows the ProjectTimeline (Gantt chart)
+     */
+    async function initializeProjectDashboard() {
+      try {
+        const section = document.getElementById('projectTimelineSection');
+        const container = document.getElementById('contractor-project-dashboard');
+
+        if (!section || !container) {
+          console.warn('Dashboard containers not found');
+          return;
+        }
+
+        // Fetch contractor's active jobs
+        const profile = await window.authService.getUserProfile();
+        if (!profile || !profile.email) {
+          console.warn('No user profile available');
+          return;
+        }
+
+        const response = await window.authService.authenticatedFetch(
+          `/api/jobs/contractor/${encodeURIComponent(profile.email)}`
+        );
+
+        if (!response.ok) {
+          console.warn('Failed to load contractor jobs');
+          return;
+        }
+
+        const data = await response.json();
+        const jobs = data.jobs || [];
+
+        // Find first in-progress job
+        const activeJob = jobs.find(j => j.status === 'in_progress' || j.status === 'active');
+
+        if (!activeJob) {
+          // No active job, hide section
+          section.style.display = 'none';
+          return;
+        }
+
+        // Show section
+        section.style.display = 'block';
+
+        // Initialize CommandCenter
+        if (typeof CommandCenter !== 'undefined') {
+          new CommandCenter('contractor-project-dashboard', {
+            projectId: activeJob.id || activeJob.project_id,
+            authService: window.authService,
+            onReady: (role, view) => {
+              console.log('✓ Project dashboard ready for contractor');
+              // Auto-scroll to today after a short delay
+              if (view && view.scrollToToday) {
+                setTimeout(() => view.scrollToToday(), 500);
+              }
+            }
+          });
+        } else {
+          console.warn('CommandCenter not loaded');
+        }
+      } catch (error) {
+        console.error('Error initializing project dashboard:', error);
+      }
+    }
+
     // Load pending reviews (with auth check)
     async function loadPendingReviews() {
       try {
@@ -724,6 +806,7 @@
       loadStats();
       loadPendingReviews();
       checkAutoGCAccess(); // Check Auto-GC access and display appropriate card
+      initializeProjectDashboard(); // Initialize dual-lens dashboard
 
       // Rating star click handlers
       document.querySelectorAll('.rating-star').forEach((star, index) => {
@@ -827,6 +910,11 @@
 
   <!-- Global Footer -->
   <script src="components/footer.js"></script>
+
+  <!-- Dual-Lens Dashboard Components -->
+  <script src="/components/SmartTracker.js"></script>
+  <script src="/components/ProjectTimeline.js"></script>
+  <script src="/components/command-center.js"></script>
 
   <!-- Application Controller (MUST BE LAST) -->
   <script src="/services/app-controller.js"></script>

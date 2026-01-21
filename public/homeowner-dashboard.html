@@ -16,6 +16,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
+  <!-- Dual-Lens Dashboard Components -->
+  <link rel="stylesheet" href="/components/SmartTracker.css">
+  <link rel="stylesheet" href="/components/ProjectTimeline.css">
+  <link rel="stylesheet" href="/components/command-center.css">
+
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -1141,6 +1146,17 @@
       <!-- Error Message -->
       <div id="errorMessage" class="error-message"></div>
 
+      <!-- Project Journey Dashboard (Smart Tracker for Homeowners) -->
+      <div id="projectJourneySection" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-12" style="display: none;">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Your Project Journey</h2>
+            <p class="text-slate-600 text-sm">Track your home improvement progress with a visual journey map</p>
+          </div>
+          <div id="homeowner-project-dashboard"></div>
+        </div>
+      </div>
+
       <!-- Projects & Home Header Layout -->
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 flex flex-col sm:flex-row justify-between items-end gap-4">
         <div>
@@ -1365,6 +1381,7 @@
       // Check for success message from post-project page
       checkForSuccessMessage();
       loadProjects();
+      initializeProjectDashboard();
     });
 
     /**
@@ -1460,10 +1477,57 @@
         updateStats();
         checkStaleProjects();
         renderProjects();
+        updateProjectDashboard(); // Update dashboard with active project
 
       } catch (error) {
         console.error('Error loading projects:', error);
         showError('Failed to load your projects. Please try again.');
+      }
+    }
+
+    /**
+     * Initialize Project Dashboard (Dual-Lens)
+     */
+    function initializeProjectDashboard() {
+      // Wait for both AuthService and CommandCenter to be available
+      if (typeof CommandCenter === 'undefined') {
+        console.warn('CommandCenter not loaded yet');
+        return;
+      }
+
+      // Initialize will be called by updateProjectDashboard after projects load
+    }
+
+    /**
+     * Update Project Dashboard with active project
+     */
+    function updateProjectDashboard() {
+      const section = document.getElementById('projectJourneySection');
+      const container = document.getElementById('homeowner-project-dashboard');
+
+      if (!section || !container) return;
+
+      // Find first in-progress project
+      const activeProject = allProjects.find(p => p.status === 'in_progress');
+
+      if (!activeProject) {
+        // No active project, hide section
+        section.style.display = 'none';
+        return;
+      }
+
+      // Show section
+      section.style.display = 'block';
+
+      // Initialize CommandCenter if not already done
+      if (typeof CommandCenter !== 'undefined') {
+        new CommandCenter('homeowner-project-dashboard', {
+          projectId: activeProject.id,
+          authService: window.authService,
+          onReady: (role, view) => {
+            console.log('✓ Project dashboard ready for homeowner');
+          }
+        });
       }
     }
 
@@ -2499,6 +2563,11 @@
       document.getElementById('trustReviewCount').textContent = reviewCount;
     }
   </script>
+
+  <!-- Dual-Lens Dashboard Components -->
+  <script src="/components/SmartTracker.js"></script>
+  <script src="/components/ProjectTimeline.js"></script>
+  <script src="/components/command-center.js"></script>
 
   <!-- Application Controller (MUST BE LAST) -->
   <script src="/services/app-controller.js"></script>
