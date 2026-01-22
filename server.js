@@ -104,9 +104,9 @@ app.use(cors({
 // Serve static files from /public directory
 app.use(express.static("public"));
 
-// Serve default favicon to prevent 404 errors
+// Serve favicon
 app.get('/favicon.ico', (req, res) => {
-  res.status(204).end(); // No content response
+  res.sendFile(path.join(__dirname, 'public', 'favicon.svg'));
 });
 
 // ====== UTILITY FUNCTIONS ======
