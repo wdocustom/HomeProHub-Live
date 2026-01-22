@@ -30,12 +30,26 @@ class IngestionService {
 
       // 1. IDENTIFICATION - Find contractor and project
       const contractor = await this.getContractor(From);
-      const project = await this.getProject(To);
 
       if (!contractor) {
         console.warn('[IngestionService] Unknown contractor phone:', From);
         return { error: 'Unknown contractor', phone: From };
       }
+
+      // 2. SMS BRIDGE INTEGRATION - Route to messages table if this is a direct message
+      // Check if this SMS is intended for the messaging system (not project-specific)
+      const directMessage = await this.handleDirectMessage(contractor, Body);
+      if (directMessage) {
+        console.log('[IngestionService] SMS routed to messages table');
+        return {
+          success: true,
+          type: 'direct_message',
+          contractor: contractor.name
+        };
+      }
+
+      // 3. PROJECT WORKFLOW - Continue with project-specific processing
+      const project = await this.getProject(To);
 
       if (!project) {
         console.warn('[IngestionService] Unknown project phone:', To);
@@ -44,7 +58,7 @@ class IngestionService {
 
       console.log(`[IngestionService] Matched: ${contractor.name} → Project #${project.id}`);
 
-      // 2. MEDIA PROCESSING
+      // 4. MEDIA PROCESSING
       let content = Body || '';
       let mediaUrls = [];
 
@@ -69,7 +83,7 @@ class IngestionService {
         }
       }
 
-      // 3. LOG TO FIELD_LOGS
+      // 5. LOG TO FIELD_LOGS
       await this.logToFieldLogs({
         project_id: project.id,
         contractor_id: contractor.id,
@@ -78,10 +92,10 @@ class IngestionService {
         raw_payload: payload
       });
 
-      // 4. ORCHESTRATE ACTIONS
+      // 6. ORCHESTRATE ACTIONS
       const updateResult = await OrchestratorAgent.processFieldUpdate(project.id, content);
 
-      // 5. NOTIFY HOMEOWNER (if needed)
+      // 7. NOTIFY HOMEOWNER (if needed)
       if (updateResult.notifyHomeowner) {
         await this.notifyHomeowner(project, updateResult.summary);
       }
@@ -101,6 +115,72 @@ class IngestionService {
         success: false,
         error: error.message
       };
+    }
+  }
+
+  /**
+   * SMS BRIDGE - Handle direct messages to homeowners
+   * If SMS is from a contractor to a homeowner, insert into messages table
+   * @param {Object} contractor - Contractor info
+   * @param {string} messageText - SMS text content
+   * @returns {Promise<boolean>} - True if handled as direct message
+   */
+  async handleDirectMessage(contractor, messageText) {
+    try {
+      // Get active conversations for this contractor
+      const { data: recentMessages, error } = await supabase
+        .from('messages')
+        .select('sender_id, receiver_id')
+        .or(`sender_id.eq.${contractor.id},receiver_id.eq.${contractor.id}`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error || !recentMessages || recentMessages.length === 0) {
+        // No recent conversation found - not a direct message
+        return false;
+      }
+
+      // Determine the homeowner (the other party in the conversation)
+      const lastMessage = recentMessages[0];
+      const homeownerId = lastMessage.sender_id === contractor.id
+        ? lastMessage.receiver_id
+        : lastMessage.sender_id;
+
+      // Verify the receiver is a homeowner
+      const { data: homeowner, error: homeownerError } = await supabase
+        .from('user_profiles')
+        .select('id, role')
+        .eq('id', homeownerId)
+        .eq('role', 'homeowner')
+        .single();
+
+      if (homeownerError || !homeowner) {
+        return false;
+      }
+
+      // Insert SMS into messages table
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: contractor.id,
+          receiver_id: homeownerId,
+          content: messageText,
+          read: false,
+          created_at: new Date().toISOString(),
+          source: 'sms' // Mark as SMS-originated
+        });
+
+      if (insertError) {
+        console.error('[IngestionService] Failed to insert SMS message:', insertError);
+        return false;
+      }
+
+      console.log(`[IngestionService] SMS from ${contractor.name} inserted into messages for homeowner ${homeownerId}`);
+      return true;
+
+    } catch (error) {
+      console.error('[IngestionService] Error handling direct message:', error);
+      return false;
     }
   }
 

@@ -104,6 +104,11 @@ app.use(cors({
 // Serve static files from /public directory
 app.use(express.static("public"));
 
+// Serve default favicon to prevent 404 errors
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // No content response
+});
+
 // ====== UTILITY FUNCTIONS ======
 
 /**
@@ -1153,74 +1158,54 @@ app.get('/api/homeowner-scores/me', requireAuth, requireRole('homeowner'), async
  * GET /api/contractor/review-link
  * Get or generate review link for authenticated contractor
  * AUTHENTICATION: Contractor only
+ * RETURNS: URL with UUID token (e.g., /rate-pro.html?token=a1b2-c3d4...)
  */
 app.get('/api/contractor/review-link', requireAuth, requireRole('contractor'), async (req, res) => {
   try {
     const contractorId = req.user.id;
 
-    // Check if contractor already has a review_link_slug
-    const { data: profile, error: fetchError } = await db.supabase
-      .from('contractor_profiles')
-      .select('review_link_slug, company_name, display_name')
-      .eq('user_id', contractorId)
+    // Check if contractor already has a review_token in users table
+    const { data: user, error: fetchError } = await db.supabase
+      .from('users')
+      .select('review_token, business_name, display_name')
+      .eq('id', contractorId)
       .single();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error fetching contractor profile:', fetchError);
-      return res.status(500).json({ error: 'Failed to fetch profile' });
+      console.error('Error fetching user:', fetchError);
+      return res.status(500).json({ error: 'Failed to fetch user' });
     }
 
-    // If slug already exists, return it
-    if (profile?.review_link_slug) {
-      const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?contractor=${profile.review_link_slug}`;
+    // If token already exists, return it
+    if (user?.review_token) {
+      const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?token=${user.review_token}`;
       return res.json({
         success: true,
-        review_link_slug: profile.review_link_slug,
+        review_token: user.review_token,
         review_link: reviewLink
       });
     }
 
-    // Generate new slug
-    const baseName = profile?.company_name || profile?.display_name || req.user.email.split('@')[0];
-    const baseSlug = baseName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    // Generate new UUID token
+    const crypto = require('crypto');
+    const reviewToken = crypto.randomUUID();
 
-    const randomSuffix = Math.random().toString(36).substring(2, 8);
-    let reviewLinkSlug = `${baseSlug}-${randomSuffix}`;
-
-    // Verify uniqueness
-    const { data: collision } = await db.supabase
-      .from('contractor_profiles')
-      .select('user_id')
-      .eq('review_link_slug', reviewLinkSlug)
-      .single();
-
-    if (collision) {
-      reviewLinkSlug = `${baseSlug}-${Date.now().toString(36)}`;
-    }
-
-    // Update or insert contractor profile with slug
+    // Update users table with token
     const { error: updateError } = await db.supabase
-      .from('contractor_profiles')
-      .upsert({
-        user_id: contractorId,
-        review_link_slug: reviewLinkSlug,
-        company_name: profile?.company_name,
-        display_name: profile?.display_name
-      }, { onConflict: 'user_id' });
+      .from('users')
+      .update({ review_token: reviewToken })
+      .eq('id', contractorId);
 
     if (updateError) {
-      console.error('Error updating contractor profile:', updateError);
+      console.error('Error updating user with review token:', updateError);
       return res.status(500).json({ error: 'Failed to generate review link' });
     }
 
-    const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?contractor=${reviewLinkSlug}`;
+    const reviewLink = `${req.protocol}://${req.get('host')}/rate-pro.html?token=${reviewToken}`;
 
     return res.json({
       success: true,
-      review_link_slug: reviewLinkSlug,
+      review_token: reviewToken,
       review_link: reviewLink
     });
 
@@ -4137,7 +4122,7 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       title: 'Job Posted Successfully',
       message: `Your job "${title}" has been posted and is now visible to contractors.`,
       job_id: job.id,
-      action_url: `/homeowner-dashboard.html`
+      action_url: `/homeowner-projects.html`
     });
 
     // Send job posting confirmation email
@@ -4572,7 +4557,7 @@ app.post("/api/submit-bid", requireAuth, requireRole('contractor'), async (req, 
         message: `${contractorProfile.business_name || contractorProfile.email} submitted a bid on your job "${job.title}"`,
         job_id: jobId,
         bid_id: bid.id,
-        action_url: `/homeowner-dashboard.html?job=${jobId}`
+        action_url: `/homeowner-projects.html?job=${jobId}`
       });
       console.log('✓ Notification created');
     } catch (notifErr) {

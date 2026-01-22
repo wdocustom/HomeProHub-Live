@@ -54,18 +54,18 @@
       requiresAuth: true,
       userRole: 'homeowner',
       desktop: {
-        logo: { text: 'HomeProHub', href: '/home.html' },
+        logo: { text: 'HomeProHub', href: '/homeowner-dashboard.html' },
         centerLinks: [
-          { text: 'Dashboard', href: '/home.html' },
-          { text: 'Projects', href: '/homeowner-dashboard.html' },
+          { text: 'Dashboard', href: '/homeowner-dashboard.html' },
+          { text: 'Projects', href: '/homeowner-projects.html' },
           { text: 'Messages', href: '/messages.html' }
         ],
         rightProfile: true
       },
       mobile: {
         items: [
-          { label: 'Dashboard', icon: 'fa-home', href: '/home.html' },
-          { label: 'Projects', icon: 'fa-list', href: '/homeowner-dashboard.html' },
+          { label: 'Dashboard', icon: 'fa-home', href: '/homeowner-dashboard.html' },
+          { label: 'Projects', icon: 'fa-list', href: '/homeowner-projects.html' },
           { label: 'Messages', icon: 'fa-message', href: '/messages.html' },
           { label: 'Profile', icon: 'fa-user', href: '/homeowner-profile.html' }
         ]

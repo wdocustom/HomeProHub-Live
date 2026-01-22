@@ -250,7 +250,7 @@ class AuthService {
           // 6. Redirect based on role
           // CRITICAL RACE CONDITION FIX: Check if we're already on the target page
           // to prevent infinite redirect loops and AbortError from navigation conflicts
-          const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
+          const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/homeowner-dashboard.html';
           const currentPath = window.location.pathname;
 
           if (!currentPath.includes(targetUrl.replace('/', ''))) {
@@ -484,39 +484,11 @@ class AuthService {
    * Sign out current user
    */
   async signOut() {
-    try {
-      // Call backend signout endpoint if we have a token
-      const token = await this.getAccessToken();
-      if (token) {
-        await fetch('/api/auth/signout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-
-      // Also sign out from Supabase client
-      if (this.supabase) {
-        await this.supabase.auth.signOut();
-      }
-
-      this.currentUser = null;
-      this.handleSignOut();
-
-      // Redirect to sign-in page after sign out
-      window.location.href = 'signin.html';
-
-      return { success: true };
-    } catch (error) {
-      console.error('Sign out error:', error);
-      // Even if there's an error, clear local state and redirect
-      this.currentUser = null;
-      this.handleSignOut();
-      window.location.href = 'signin.html';
-      return { success: false, error: error.message };
+    if (this.supabase) {
+      await this.supabase.auth.signOut();
     }
+    localStorage.clear();
+    window.location.href = '/signin.html'; // FORCE redirect, do not rely on state change
   }
 
   /**
@@ -800,7 +772,7 @@ class AuthService {
       // Scenario B: Standard Login (No draft)
       // CRITICAL FIX: STOP LOOPING.
       // Only redirect if the user is currently on a "Public" page (Login, Signup, Landing).
-      // If they are already on '/homeowner-dashboard.html' or '/home.html', DO NOT REDIRECT.
+      // If they are already on '/homeowner-dashboard.html' or '/homeowner-dashboard.html', DO NOT REDIRECT.
       const publicPages = ['/index.html', '/signin.html', '/signup.html', '/'];
       const isPublicPage = publicPages.some(page =>
         currentPath === page || currentPath === '' || currentPath === '/'
@@ -814,7 +786,7 @@ class AuthService {
         console.log(`No draft project - redirecting ${role} to dashboard`);
 
         // CRITICAL RACE CONDITION FIX: Prevent redirect if already on target page
-        const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/home.html';
+        const targetUrl = role === 'contractor' ? '/contractor-dashboard.html' : '/homeowner-dashboard.html';
 
         if (!currentPath.includes(targetUrl.replace('/', ''))) {
           window.location.href = targetUrl;
