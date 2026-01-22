@@ -1178,13 +1178,13 @@ async function getActiveProjects() {
 }
 
 /**
- * Get agent configuration for a project
+ * Get agent configuration by agent name
  */
-async function getAgentConfig(projectId) {
+async function getAgentConfig(agentName) {
   const { data, error } = await supabase
     .from('agent_configs')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('agent_name', agentName)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
@@ -1194,14 +1194,14 @@ async function getAgentConfig(projectId) {
 /**
  * Update agent configuration
  */
-async function updateAgentConfig(projectId, configData) {
+async function updateAgentConfig(agentName, configData) {
   const { data, error } = await supabase
     .from('agent_configs')
     .upsert({
-      project_id: projectId,
+      agent_name: agentName,
       ...configData,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'project_id' })
+    }, { onConflict: 'agent_name' })
     .select()
     .single();
 
