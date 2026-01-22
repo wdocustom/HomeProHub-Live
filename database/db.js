@@ -20,7 +20,14 @@ if (!supabaseUrl || !supabaseServiceKey) {
   console.warn('⚠️  Warning: Supabase credentials not configured. Database operations will fail.');
 }
 
-const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
+// Initialize Supabase client with v2 syntax for proper session handling
+const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '', {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 console.log('✅ [DB] Supabase client initialized (HTTPS-only mode)');
 

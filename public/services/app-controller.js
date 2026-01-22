@@ -208,6 +208,76 @@ window.app = window.app || {};
 window.app.waitForAuth = waitForAuth;
 
 /**
+ * Patient Dashboard Guard - Fail-safe session check with retry
+ * Use this on protected pages to verify authentication before redirecting
+ * Returns user object if authenticated, null if not
+ *
+ * CRITICAL FIX: This implements the "patient" check described in the requirements
+ * It actively asks Supabase for the session, waits 500ms, then tries once more
+ * before redirecting. This handles network jitter and initialization delays.
+ */
+async function checkAuth() {
+  // Wait for authService to be available
+  await waitForAuthService();
+
+  // Check if supabase client is available
+  if (!window.authService || !window.authService.supabase) {
+    console.warn('⚠️ [checkAuth] AuthService or Supabase client not available');
+    return null;
+  }
+
+  // 1. Actively ask Supabase "Do we have a session?"
+  try {
+    const { data: { session } } = await window.authService.supabase.auth.getSession();
+
+    // 2. If yes, proceed.
+    if (session && session.user) {
+      console.log('✅ [checkAuth] Session found on first attempt');
+      return session.user;
+    }
+
+    // 3. If no, wait 500ms and try ONE more time (handle network jitter)
+    console.log('⏳ [checkAuth] No session found, waiting 500ms before retry...');
+    await new Promise(r => setTimeout(r, 500));
+
+    const retry = await window.authService.supabase.auth.getSession();
+
+    if (retry.data.session && retry.data.session.user) {
+      console.log('✅ [checkAuth] Session found on retry');
+      return retry.data.session.user;
+    }
+
+    // 4. ONLY redirect if absolutely sure there is no session
+    console.warn('⚠️ [checkAuth] No session found after retry. User is not authenticated.');
+    return null;
+  } catch (error) {
+    console.error('❌ [checkAuth] Error checking session:', error);
+    return null;
+  }
+}
+
+/**
+ * Require authentication on a protected page
+ * Redirects to signin page if not authenticated
+ * Usage: await app.requireAuth();
+ */
+async function requireAuth(redirectTo = '/signin.html') {
+  const user = await checkAuth();
+
+  if (!user) {
+    console.warn('⚠️ [requireAuth] User not authenticated, redirecting to:', redirectTo);
+    window.location.href = redirectTo;
+    return null;
+  }
+
+  return user;
+}
+
+// Export globally
+window.app.checkAuth = checkAuth;
+window.app.requireAuth = requireAuth;
+
+/**
  * Determine user state from user object
  */
 function determineUserState(user) {

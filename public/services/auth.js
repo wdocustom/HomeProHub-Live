@@ -13,6 +13,7 @@ class AuthService {
     this.currentUser = null;
     this.cachedProfile = null;  // Cache profile from signin to avoid redundant API calls
     this.initialized = false;
+    this.isAuthenticated = false;  // Track authentication status
     this.initPromise = null;  // Track ongoing initialization
   }
 
@@ -72,9 +73,15 @@ class AuthService {
         throw new Error('PLACEHOLDER_CREDENTIALS');
       }
 
-      // Initialize Supabase client (wrap in try-catch to handle AbortError)
+      // Initialize Supabase client with v2 syntax (wrap in try-catch to handle AbortError)
       try {
-        this.supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+        this.supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
+        });
       } catch (clientError) {
         // Handle client creation errors (including AbortError)
         if (clientError.name === 'AbortError') {
@@ -85,7 +92,8 @@ class AuthService {
         throw new Error('Supabase client creation failed: ' + clientError.message);
       }
 
-      // Get current session - trust Supabase's internal validation
+      // FAIL-SAFE SESSION CHECK: Actively fetch session immediately
+      // This ensures we have a valid session before proceeding
       let session = null;
       try {
         const { data, error } = await this.supabase.auth.getSession();
@@ -111,12 +119,15 @@ class AuthService {
         session = null;
       }
 
-      // Set global user object
+      // Set global user object and mark as authenticated if session exists
       if (session && session.user) {
         this.currentUser = session.user;
+        this.isAuthenticated = true;
         window.currentUser = session.user;
+        console.log('✅ [Auth] Session restored for user:', session.user.email);
       } else {
         this.currentUser = null;
+        this.isAuthenticated = false;
         window.currentUser = null;
       }
 
@@ -324,9 +335,23 @@ class AuthService {
       // Auth features will be disabled but page will still load
       console.log('⚠️ Auth features disabled due to initialization error');
     } finally {
-      // THE GREEN LIGHT: Always dispatch completion event
+      // THE GREEN LIGHT: Always dispatch completion events
       window.authReady = true;
-      window.dispatchEvent(new CustomEvent('auth-init-complete'));
+      window.dispatchEvent(new CustomEvent('auth-init-complete', {
+        detail: {
+          initialized: this.initialized,
+          authenticated: this.isAuthenticated,
+          user: this.currentUser
+        }
+      }));
+      // Also dispatch legacy auth:ready event for compatibility
+      window.dispatchEvent(new CustomEvent('auth:ready', {
+        detail: {
+          initialized: this.initialized,
+          authenticated: this.isAuthenticated,
+          user: this.currentUser
+        }
+      }));
     }
   }
 
