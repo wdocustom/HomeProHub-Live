@@ -172,6 +172,42 @@ function waitForAuthService() {
 }
 
 /**
+ * Global waitForAuth() helper
+ * Waits for auth to be ready and returns the current user
+ * Usage: await app.waitForAuth();
+ */
+async function waitForAuth() {
+  // Wait for AuthService to be available
+  await waitForAuthService();
+
+  // Wait for AuthService to be initialized
+  if (window.authService && !window.authService.initialized) {
+    await new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (window.authService.initialized) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 50);
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        console.warn('⚠️ [waitForAuth] AuthService initialization timeout');
+        resolve();
+      }, 5000);
+    });
+  }
+
+  // Return the current user
+  return window.currentUser || null;
+}
+
+// Export globally as app.waitForAuth
+window.app = window.app || {};
+window.app.waitForAuth = waitForAuth;
+
+/**
  * Determine user state from user object
  */
 function determineUserState(user) {

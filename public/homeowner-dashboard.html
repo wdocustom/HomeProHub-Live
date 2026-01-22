@@ -1569,27 +1569,48 @@
 
       if (!selectedProject) return;
 
-      // Initialize or switch CommandCenter project
-      if (typeof CommandCenter !== 'undefined') {
-        if (!currentCommandCenter) {
-          // Initialize CommandCenter for first time
-          console.log('Initializing CommandCenter for project:', selectedProject.id);
-          currentCommandCenter = new CommandCenter('homeowner-project-dashboard', {
-            projectId: selectedProject.id,
-            authService: window.authService,
-            onReady: (role, view) => {
-              console.log('✓ Project dashboard ready for homeowner, project:', selectedProject.title);
-            }
-          });
-        } else {
-          // Switch to different project
-          currentCommandCenter.switchProject(selectedProject.id);
-        }
-      } else {
-        // FIXED: Log error if CommandCenter still not available
-        console.error('❌ CommandCenter class not available - dashboard initialization failed');
-        console.error('This indicates a script loading order issue. Check that command-center.js loaded correctly.');
+      // CRITICAL FIX: Hardcode SmartTracker for Homeowner Dashboard (Metro Tracker)
+      // Do NOT use CommandCenter's auto-detection - this is the homeowner dashboard!
+      if (typeof SmartTracker === 'undefined') {
+        console.error('SmartTracker class not found. Make sure SmartTracker.js is loaded.');
+        return;
       }
+
+      // Fetch project data for the tracker
+      const projectData = {
+        id: selectedProject.id,
+        title: selectedProject.title,
+        description: selectedProject.description,
+        status: selectedProject.status,
+        phases: selectedProject.phases || [],
+        currentPhase: selectedProject.currentPhase || 'planning'
+      };
+
+      // Clear container and render SmartTracker directly
+      const container = document.getElementById('homeowner-project-dashboard');
+      if (!container) {
+        console.error('Project dashboard container not found');
+        return;
+      }
+
+      container.innerHTML = '';
+
+      const viewContainer = document.createElement('div');
+      viewContainer.id = 'smart-tracker-view';
+      viewContainer.className = 'command-center-view';
+      viewContainer.innerHTML = `
+        <div id="smart-tracker-container"></div>
+      `;
+      container.appendChild(viewContainer);
+
+      // Initialize SmartTracker (Metro Tracker for Homeowners)
+      currentCommandCenter = new SmartTracker('smart-tracker-container', {
+        projectId: selectedProject.id,
+        projectData: projectData,
+        authService: window.authService
+      });
+
+      console.log('✓ Project dashboard ready for homeowner (SmartTracker / Metro Tracker view)');
     }
 
     /**

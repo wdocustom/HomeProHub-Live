@@ -58,7 +58,6 @@
         centerLinks: [
           { text: 'Dashboard', href: '/home.html' },
           { text: 'Projects', href: '/homeowner-dashboard.html' },
-          { text: 'Progress', href: '/project-check-in.html' },
           { text: 'Messages', href: '/messages.html' }
         ],
         rightProfile: true
@@ -67,7 +66,6 @@
         items: [
           { label: 'Dashboard', icon: 'fa-home', href: '/home.html' },
           { label: 'Projects', icon: 'fa-list', href: '/homeowner-dashboard.html' },
-          { label: 'Progress', icon: 'fa-chart-line', href: '/project-check-in.html' },
           { label: 'Messages', icon: 'fa-message', href: '/messages.html' },
           { label: 'Profile', icon: 'fa-user', href: '/homeowner-profile.html' }
         ]

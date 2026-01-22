@@ -1154,7 +1154,7 @@ app.get('/api/contractor/review-link', requireAuth, requireRole('contractor'), a
     const contractorId = req.user.id;
 
     // Check if contractor already has a review_link_slug
-    const { data: profile, error: fetchError } = await req.supabase
+    const { data: profile, error: fetchError } = await db.supabase
       .from('contractor_profiles')
       .select('review_link_slug, company_name, display_name')
       .eq('user_id', contractorId)
@@ -1186,7 +1186,7 @@ app.get('/api/contractor/review-link', requireAuth, requireRole('contractor'), a
     let reviewLinkSlug = `${baseSlug}-${randomSuffix}`;
 
     // Verify uniqueness
-    const { data: collision } = await req.supabase
+    const { data: collision } = await db.supabase
       .from('contractor_profiles')
       .select('user_id')
       .eq('review_link_slug', reviewLinkSlug)
@@ -1197,7 +1197,7 @@ app.get('/api/contractor/review-link', requireAuth, requireRole('contractor'), a
     }
 
     // Update or insert contractor profile with slug
-    const { error: updateError } = await req.supabase
+    const { error: updateError } = await db.supabase
       .from('contractor_profiles')
       .upsert({
         user_id: contractorId,
