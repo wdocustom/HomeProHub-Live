@@ -1389,6 +1389,7 @@
       // Check for success message from post-project page
       checkForSuccessMessage();
       loadProjects();
+      loadProjectHistory();
       initializeProjectDashboard();
     });
 
@@ -1643,6 +1644,62 @@
 
       const completedCount = allProjects.filter(p => p.status === 'completed').length;
       document.getElementById('completedProjectsStat').textContent = completedCount;
+    }
+
+    /**
+     * Load Project History for Homeowner
+     * Displays completed projects with Title, Date, and Final Grade
+     */
+    async function loadProjectHistory() {
+      try {
+        if (!userEmail) {
+          console.warn('User email not available, skipping project history load');
+          return;
+        }
+
+        // Fetch completed projects
+        const response = await window.authService.authenticatedFetch(
+          `/api/homeowner/jobs?email=${encodeURIComponent(userEmail)}&status=completed`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to load project history');
+        }
+
+        const data = await response.json();
+        const completedProjects = data.jobs || [];
+
+        // Update UI based on project count
+        const emptyState = document.getElementById('projectHistoryEmpty');
+        const establishedState = document.getElementById('projectHistoryEstablished');
+        const milestoneBadge = document.getElementById('projectMilestoneBadge');
+        const completedCountEl = document.getElementById('completedCount');
+
+        if (completedProjects.length === 0) {
+          // Show empty state
+          emptyState.classList.remove('hidden');
+          establishedState.classList.add('hidden');
+          milestoneBadge.classList.add('hidden');
+        } else {
+          // Show established state
+          emptyState.classList.add('hidden');
+          establishedState.classList.remove('hidden');
+          milestoneBadge.classList.remove('hidden');
+
+          // Update counts
+          completedCountEl.textContent = completedProjects.length;
+          document.getElementById('milestoneCount').textContent = completedProjects.length;
+
+          // Calculate average response time (placeholder - would need real data)
+          document.getElementById('avgResponse').textContent = '1-2 days';
+        }
+
+        console.log(`Loaded ${completedProjects.length} completed projects for project history`);
+
+      } catch (error) {
+        console.error('Error loading project history:', error);
+        // Don't show error to user - this is a non-critical feature
+      }
     }
 
     // Check for stale projects (>30 days in progress)

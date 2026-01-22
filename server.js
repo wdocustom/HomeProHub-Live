@@ -263,6 +263,11 @@ app.use('/api/dev', agentRoutes);
 const webhookRoutes = require('./routes/webhooks');
 app.use('/api/webhooks', webhookRoutes);
 
+// ====== AUTO-GC ROUTES ======
+// Load Auto-GC access control routes
+const autogcRoutes = require('./routes/autogc');
+app.use('/api/autogc', autogcRoutes);
+
 // ====== API ROUTES ======
 
 /**
@@ -1353,6 +1358,95 @@ app.post('/api/public/reviews/submit', async (req, res) => {
 
   } catch (error) {
     console.error('Error in /api/public/reviews/submit:', error);
+    return res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+/**
+ * GET /api/public/contractor-by-token/:token
+ * Get contractor information by review token
+ * PUBLIC: No authentication required
+ */
+app.get('/api/public/contractor-by-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Review token is required' });
+    }
+
+    // Load ReviewService
+    const reviewService = require('./services/ReviewService');
+
+    // Get contractor by token
+    const contractor = await reviewService.getContractorByToken(token);
+
+    if (!contractor) {
+      return res.status(404).json({ error: 'Contractor not found or invalid review link' });
+    }
+
+    return res.json(contractor);
+
+  } catch (error) {
+    console.error('Error in /api/public/contractor-by-token/:token:', error);
+    return res.status(500).json({ error: 'Failed to fetch contractor profile' });
+  }
+});
+
+/**
+ * POST /api/reviews/public
+ * Submit a public review for a contractor using review token
+ * PUBLIC: No authentication required
+ */
+app.post('/api/reviews/public', async (req, res) => {
+  try {
+    const {
+      contractor_token,
+      reviewer_name,
+      reviewer_email,
+      quality_rating,
+      timeliness_rating,
+      budget_rating,
+      communication_rating,
+      review_text
+    } = req.body;
+
+    // Validate required fields
+    if (!contractor_token || !reviewer_name || !reviewer_email) {
+      return res.status(400).json({ error: 'Contractor token, reviewer name, and email are required' });
+    }
+
+    if (!quality_rating || !timeliness_rating || !budget_rating || !communication_rating) {
+      return res.status(400).json({ error: 'All ratings (Quality, Timeliness, Budget, Communication) are required' });
+    }
+
+    // Validate ratings (1-5)
+    const ratings = [quality_rating, timeliness_rating, budget_rating, communication_rating];
+    for (const rating of ratings) {
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ error: 'All ratings must be between 1 and 5' });
+      }
+    }
+
+    // Load ReviewService
+    const reviewService = require('./services/ReviewService');
+
+    // Submit review
+    const result = await reviewService.submitPublicReview(req.body);
+
+    return res.json({
+      success: true,
+      message: `Thank you for reviewing ${result.contractor_name}!`,
+      review: result.review
+    });
+
+  } catch (error) {
+    console.error('Error in /api/reviews/public:', error);
+
+    if (error.message === 'Invalid review link or contractor not found') {
+      return res.status(404).json({ error: error.message });
+    }
+
     return res.status(500).json({ error: 'Failed to submit review' });
   }
 });
