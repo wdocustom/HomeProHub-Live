@@ -561,9 +561,15 @@
         window.linkedJobId = jobId;
         window.linkedJob = job;
       } catch (error) {
-        console.error('Deep link failed:', error);
+        console.error('❌ Deep link failed:', error);
         showToast('Failed to load job details. Showing normal view.');
-        await loadActiveProjects();  // Fallback to normal view
+
+        // Show normal project selector
+        document.getElementById('ready-to-launch-card').classList.add('hidden');
+        document.getElementById('command-center-content').classList.remove('hidden');
+
+        // Fallback to normal view
+        await loadActiveProjects();
       }
     }
 
@@ -767,10 +773,13 @@
     // ============================================
     async function loadActiveProjects() {
       try {
+        console.log('📋 loadActiveProjects() called, profile:', profile);
         if (!profile || !profile.email) {
-          console.log('No profile loaded yet');
+          console.error('❌ No profile loaded yet, cannot fetch projects');
           return;
         }
+
+        console.log('✅ Profile loaded, fetching projects for:', profile.email);
 
         // Fetch awarded jobs from accepted bids
         const bidsResponse = await window.authService.authenticatedFetch(
@@ -780,6 +789,7 @@
         let awardedJobs = [];
         if (bidsResponse.ok) {
           const bidsData = await bidsResponse.json();
+          console.log('📊 Bids response:', bidsData);
           awardedJobs = (bidsData.bids || [])
             .filter(bid => bid.status === 'accepted' && bid.job)
             .map(bid => ({
@@ -790,6 +800,8 @@
               source: 'awarded_bid'
             }));
           console.log(`✅ Found ${awardedJobs.length} awarded jobs from bids`);
+        } else {
+          console.error('❌ Failed to fetch bids:', bidsResponse.status, bidsResponse.statusText);
         }
 
         // Also fetch jobs where contractor is directly assigned (template-based projects)
@@ -801,21 +813,27 @@
         let assignedJobs = [];
         if (jobsResponse.ok) {
           const jobsData = await jobsResponse.json();
+          console.log('📊 Jobs response:', jobsData);
           assignedJobs = (jobsData.jobs || []).map(job => ({
             ...job,
             source: 'template_based'
           }));
           console.log(`✅ Found ${assignedJobs.length} template-based projects`);
+        } else {
+          console.error('❌ Failed to fetch jobs:', jobsResponse.status, jobsResponse.statusText);
         }
 
         // Combine all jobs
         const allJobs = [...awardedJobs, ...assignedJobs];
+        console.log(`📊 Total jobs to display: ${allJobs.length}`, allJobs);
 
         // Populate dropdown
         const selector = document.getElementById('active-project-selector');
         if (allJobs.length === 0) {
+          console.warn('⚠️ No active projects found, showing empty state');
           selector.innerHTML = '<option value="">No active projects yet</option>';
         } else {
+          console.log('✅ Populating dropdown with', allJobs.length, 'projects');
           selector.innerHTML = '<option value="">Select a project...</option>' +
             allJobs.map(job => `
               <option value="${job.id}">
@@ -1400,14 +1418,23 @@
       const source = urlParams.get('source');
       const jobId = urlParams.get('jobId');
 
+      console.log('🚀 initPage() called, source:', source, 'jobId:', jobId);
+
       const isAuthenticated = await checkAuth();
-      if (!isAuthenticated) return;
+      if (!isAuthenticated) {
+        console.error('❌ Authentication failed');
+        return;
+      }
+
+      console.log('✅ Authentication successful, profile set:', profile);
 
       // Handle deep link from Job Board
       if (source === 'job_board' && jobId) {
+        console.log('🔗 Handling deep link from Job Board');
         await handleJobBoardDeepLink(jobId, urlParams);
       } else {
         // Normal flow: load active projects
+        console.log('📂 Loading active projects (no deep link)');
         await loadActiveProjects();
       }
 
