@@ -854,6 +854,18 @@
         .replace(/'/g, "&#039;");
     }
 
+    // Escape string for use in JavaScript (for onclick attributes)
+    function escapeJs(str) {
+      if (!str) return '';
+      return str.toString()
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
+    }
+
     // Load available jobs
     async function loadAvailableJobs() {
       try {
@@ -1147,7 +1159,7 @@
                   <p class="text-xs text-slate-600">Ready to start the project? Launch AI agents to automate planning, contractor search, and progress tracking.</p>
                 </div>
                 <div class="flex flex-col sm:flex-row items-center gap-3">
-                  <button onclick="launchAIProject('${bid.job_id}', '${escapeHtml(job.title)}', '${job.category || 'general'}', '${job.zip_code}')" class="w-full sm:flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                  <button onclick="launchAIProject('${bid.job_id}', '${escapeJs(job.title)}', '${job.category || 'general'}', '${job.zip_code}')" class="w-full sm:flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-rocket"></i> Launch AI Project
                   </button>
                   <button onclick="contactHomeowner('${bid.job_id}', '${bid.homeowner_email}')" class="w-full sm:flex-1 py-3 bg-slate-900 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
