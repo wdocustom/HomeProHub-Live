@@ -211,7 +211,7 @@
         </a>
       `).join('');
 
-      const brandHref = userRole === 'contractor' ? 'contractor-dashboard.html' : 'home.html';
+      const brandHref = userRole === 'contractor' ? 'contractor-dashboard.html' : 'homeowner-dashboard.html';
 
       return `
         <nav class="unified-nav">

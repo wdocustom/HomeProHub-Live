@@ -147,7 +147,7 @@ function detectZone() {
   
   const path = window.location.pathname;
   if (path.includes('contractor')) return 'D';
-  if (path.includes('home.html') || path.includes('homeowner')) return 'C';
+  if (path.includes('homeowner')) return 'C';
   if (path.includes('signin') || path.includes('signup')) return 'B';
   return 'A'; 
 }

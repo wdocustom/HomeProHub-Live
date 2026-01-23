@@ -317,7 +317,7 @@ function detectZone() {
 
   // Fallback: detect from path
   if (path.includes('contractor-dashboard') || path.includes('job-board') || path.includes('contractor-profile')) return 'D';
-  if (path.includes('home.html') || path.includes('homeowner')) return 'C';
+  if (path.includes('homeowner')) return 'C';
   if (path.includes('signin') || path.includes('signup')) return 'B';
 
   return 'A'; // Public zone
