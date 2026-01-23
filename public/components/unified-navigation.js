@@ -476,13 +476,16 @@
   // --- ROBUST LOGOUT HANDLER ---
   // Tries both logout() and signOut() to match Supabase/Auth wrapper standards
   window.handleLogout = async function() {
+    // DEBUG: Add stack trace to see what's calling logout
     console.log("🚪 Logging out...");
+    console.trace("Logout triggered from:");
+
     try {
       if (window.authService) {
         // 1. Try 'logout' (Custom Wrapper)
         if (typeof window.authService.logout === 'function') {
            await window.authService.logout();
-        } 
+        }
         // 2. Try 'signOut' (Supabase Standard)
         else if (typeof window.authService.signOut === 'function') {
            await window.authService.signOut();
