@@ -21,6 +21,7 @@ DECLARE
   completed_jobs INTEGER := 0;
 BEGIN
   -- Get profile completeness (0-100 points)
+  -- Note: years_in_business is the correct column name in user_profiles
   SELECT
     CASE
       WHEN business_name IS NOT NULL THEN 20 ELSE 0 END +

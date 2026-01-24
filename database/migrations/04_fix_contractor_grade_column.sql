@@ -1,90 +1,10 @@
--- Complete Database Setup Script
--- Run this FIRST to create all necessary tables and policies
-
 -- ========================================
--- 1. CREATE REVIEWS TABLE
--- ========================================
-
-CREATE TABLE IF NOT EXISTS public.reviews (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  project_id UUID NOT NULL,
-  reviewer_email TEXT NOT NULL,
-  reviewee_email TEXT NOT NULL,
-  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-  positive_tags TEXT[] DEFAULT '{}',
-  negative_tags TEXT[] DEFAULT '{}',
-  review_text TEXT,
-  photos TEXT[] DEFAULT '{}',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Enable RLS on reviews table
-ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.reviews;
-DROP POLICY IF EXISTS "Enable read for authenticated users" ON public.reviews;
-DROP POLICY IF EXISTS "Enable update for review owners" ON public.reviews;
-
--- Create RLS policies for reviews
-CREATE POLICY "Enable insert for authenticated users"
-ON "public"."reviews"
-FOR INSERT
-WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Enable read for authenticated users"
-ON "public"."reviews"
-FOR SELECT
-USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Enable update for review owners"
-ON "public"."reviews"
-FOR UPDATE
-USING (auth.uid()::text = reviewer_email OR auth.uid()::text = reviewee_email);
-
--- ========================================
--- 2. JOB POSTINGS RLS POLICIES
+-- Migration: Fix contractor grade calculation function
+-- Issue: Function references non-existent 'years_experience' column
+-- Fix: Update to use correct 'years_in_business' column
 -- ========================================
 
--- Enable RLS on job_postings table (if not already enabled)
-ALTER TABLE IF EXISTS public.job_postings ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Allow contractors to view open jobs" ON public.job_postings;
-DROP POLICY IF EXISTS "Allow homeowners to view their own jobs" ON public.job_postings;
-DROP POLICY IF EXISTS "Allow homeowners to insert jobs" ON public.job_postings;
-DROP POLICY IF EXISTS "Allow homeowners to update their own jobs" ON public.job_postings;
-
--- Allow contractors to view open and active jobs
-CREATE POLICY "Allow contractors to view open jobs"
-ON "public"."job_postings"
-FOR SELECT
-USING (status IN ('open', 'active'));
-
--- Allow homeowners to view their own jobs (all statuses)
-CREATE POLICY "Allow homeowners to view their own jobs"
-ON "public"."job_postings"
-FOR SELECT
-USING (auth.uid()::text = homeowner_email);
-
--- Allow homeowners to insert their own jobs
-CREATE POLICY "Allow homeowners to insert jobs"
-ON "public"."job_postings"
-FOR INSERT
-WITH CHECK (auth.uid()::text = homeowner_email);
-
--- Allow homeowners to update their own jobs
-CREATE POLICY "Allow homeowners to update their own jobs"
-ON "public"."job_postings"
-FOR UPDATE
-USING (auth.uid()::text = homeowner_email);
-
--- ========================================
--- 3. CONTRACTOR GRADE CALCULATION FUNCTION
--- ========================================
-
--- Drop existing function if it exists (CASCADE removes dependent views)
+-- Drop and recreate the function with correct column reference
 DROP FUNCTION IF EXISTS calculate_contractor_grade(TEXT) CASCADE;
 
 CREATE OR REPLACE FUNCTION calculate_contractor_grade(p_contractor_email TEXT)
@@ -150,6 +70,7 @@ BEGIN
   ELSE
     -- Base score from rating (0-70 points)
     reputation_score := LEAST(FLOOR((avg_rating / 5.0) * 70), 70);
+
     -- Bonus for number of reviews (0-30 points)
     reputation_score := reputation_score + LEAST(review_count * 3, 30);
   END IF;
@@ -167,6 +88,7 @@ BEGIN
   IF completed_jobs = 0 THEN
     velocity_score := 0;
   ELSE
+    -- Base points for completing jobs
     velocity_score := LEAST(completed_jobs * 10, 100);
   END IF;
 
@@ -191,7 +113,7 @@ BEGIN
     grade_color := '#ef4444';
   END IF;
 
-  -- Calculate percentile (simplified)
+  -- Calculate percentile (simplified - would need to compare against all contractors in production)
   percentile := GREATEST(total_score - 10, 0);
 
   -- Return JSON with all data
@@ -217,28 +139,9 @@ $$ LANGUAGE plpgsql;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION calculate_contractor_grade(TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION calculate_contractor_grade(TEXT) TO anon;
 
 -- ========================================
--- SETUP COMPLETE
+-- Verification Query
 -- ========================================
-
--- Verify tables exist
-DO $$
-BEGIN
-  RAISE NOTICE 'Setup complete! Verifying tables...';
-
-  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'reviews') THEN
-    RAISE NOTICE '✓ reviews table created';
-  ELSE
-    RAISE WARNING '✗ reviews table NOT created';
-  END IF;
-
-  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'job_postings') THEN
-    RAISE NOTICE '✓ job_postings table exists';
-  ELSE
-    RAISE WARNING '✗ job_postings table does not exist';
-  END IF;
-
-  RAISE NOTICE 'Database setup complete!';
-END $$;
+-- Run this to verify the function was created successfully:
+-- SELECT calculate_contractor_grade('test@example.com');

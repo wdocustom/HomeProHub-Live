@@ -31,6 +31,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
+  <!-- Load navigation and app controller BEFORE page scripts -->
+  <script src="/components/unified-navigation.js"></script>
+  <script src="/services/app-controller.js"></script>
+
   <style>
     * { font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
     body { background: #f8fafc; min-height: 100vh; } /* Industrial SaaS - Slate 50 */
@@ -489,6 +493,26 @@
     // ============================================
     async function checkAuth() {
       try {
+        // Wait for app-controller.js to load and provide global checkAuth
+        if (typeof window.app?.checkAuth === 'function') {
+          const user = await window.app.checkAuth();
+          if (!user) {
+            window.location.href = "signin.html";
+            return false;
+          }
+
+          // Get user profile
+          const userProfile = await window.authService.getUserProfile();
+          if (!userProfile || userProfile.role !== 'contractor') {
+            window.location.href = "index.html";
+            return false;
+          }
+
+          profile = userProfile;
+          return true;
+        }
+
+        // Fallback: Use authService directly if app-controller hasn't loaded yet
         if (!window.authService || !window.authService.initialized) {
           await new Promise(resolve => {
             const checkInterval = setInterval(() => {
@@ -506,7 +530,7 @@
 
         const user = await window.authService.getCurrentUser();
         if (!user) {
-          window.location.href = "index.html";
+          window.location.href = "signin.html";
           return false;
         }
 
@@ -520,7 +544,7 @@
         return true;
       } catch (error) {
         console.error('Auth check failed:', error);
-        window.location.href = "index.html";
+        window.location.href = "signin.html";
         return false;
       }
     }
@@ -1450,9 +1474,5 @@
   <!-- Dual-Lens Dashboard Components -->
   <script src="/components/SmartTracker.js"></script>
   <script src="/components/ProjectTimeline.js"></script>
-
-  <!-- Navigation System -->
-  <script src="/components/unified-navigation.js"></script>
-  <script src="/services/app-controller.js"></script>
 </body>
 </html>
