@@ -1630,7 +1630,7 @@
     }
     window.contactHomeowner = contactHomeowner;
 
-    // Use Estimator - pass job data to pricing estimator
+    // Use Estimator - Direct routing to contractor estimator with job context
     function useEstimator(jobId) {
       const job = availableJobs.find(j => j.id === jobId);
       if (!job) {
@@ -1638,27 +1638,11 @@
         return;
       }
 
-      // Store job data for estimator to use
-      // CRITICAL FIX: Include ai_scope_data if available for intelligent hydration
-      sessionStorage.setItem('estimatorJob', JSON.stringify({
-        jobId: job.id,
-        jobTitle: job.title,
-        jobDescription: job.description,
-        jobCategory: job.category,
-        budgetLow: job.budget_low,
-        budgetHigh: job.budget_high,
-        zipCode: job.zip_code,
-        aiScopeData: job.ai_scope_data || null,  // CRITICAL FIX: Pass AI data for pre-fill
-        returnToBid: true
-      }));
+      // Save minimal data context for quick access
+      sessionStorage.setItem('estimating_job_data', JSON.stringify(job));
 
-      console.log('✓ Passing job to estimator:', {
-        jobId: job.id,
-        hasAiData: !!job.ai_scope_data
-      });
-
-      // Redirect to estimator (Note: The route /contractor-estimator redirects to estimator.html)
-      window.location.href = '/contractor-estimator';
+      // Direct routing with source job ID
+      window.location.href = `/contractor-estimator?source_job_id=${job.id}`;
     }
     window.useEstimator = useEstimator;
 

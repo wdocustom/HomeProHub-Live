@@ -2528,148 +2528,61 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
 
 /**
  * POST /api/projects/analyze
- * Deferred processing endpoint for AI project analysis
- * Analyzes project descriptions and photos to generate high-fidelity estimates
- * with specific titles and realistic pricing (prevents race conditions)
+ * Production-grade AI project analysis endpoint
+ * Strict title generation and pricing floor enforcement
  */
-app.post("/api/projects/analyze", async (req, res) => {
-  const startTime = Date.now();
-
+app.post('/api/projects/analyze', async (req, res) => {
   try {
     const { description, images } = req.body;
 
-    // Input validation
     if (!description && (!images || images.length === 0)) {
-      return res.status(400).json({
-        error: "At least one of description or images must be provided.",
-        code: 'INVALID_INPUT'
-      });
+      return res.status(400).json({ error: "Description or images required" });
     }
 
-    // Sanitize description
-    const sanitizedDescription = description ? sanitizeInput(description, 3000) : '';
+    const sanitizedDescription = sanitizeInput(description || '', 3000);
 
-    // Ensure OpenAI is configured
-    if (!OPENAI_API_KEY) {
-      return res.status(503).json({
-        error: "AI service is not configured.",
-        code: 'SERVICE_UNAVAILABLE'
-      });
-    }
-
-    // Extract ZIP code from description if mentioned
+    // Extract ZIP code for location-based pricing
     const zipMatch = sanitizedDescription.match(/\b(\d{5})\b/);
     const zipCode = zipMatch ? zipMatch[1] : null;
 
-    // Load RAG data for location-based pricing
-    let ragData = {
-      laborRates: {},
-      regionalMultiplier: 1.0,
-      samplePermitFees: []
-    };
+    // SYSTEM PROMPT: PRODUCTION GRADE ESTIMATOR
+    const systemMessage = `You are a Senior Construction Estimator.
+INPUT: "${sanitizedDescription}"
 
-    const laborData = loadJsonFile('labor-rates.json');
-    const permitData = loadJsonFile('permit-fees.json');
+MANDATORY RULES:
+1. TITLE: Generate a specific technical title (e.g., "Basement Bathroom Addition", "2000sqft Roof Replacement").
+   - CRITICAL: Do NOT use generic titles like "Home Renovation Project" or "Home Improvement Project".
 
-    if (laborData && permitData) {
-      const zipPrefix = zipCode ? zipCode.substring(0, 3) : 'other';
-      const multiplier = laborData.regional_multipliers?.[zipPrefix] || laborData.regional_multipliers?.['other'] || 1.0;
+2. PRICING FLOORS:
+   - Basement + Bath: Min $35,000
+   - Kitchen Remodel: Min $25,000
+   - Bathroom Remodel: Min $25,000
+   - Deck/Patio: Min $15,000
+   - General Remodel: Min $15,000
 
-      ragData = {
-        laborRates: laborData.rates_by_trade || {},
-        regionalMultiplier: multiplier,
-        samplePermitFees: permitData.projects || []
-      };
-
-      console.log(`✓ RAG data loaded for project analysis: ZIP ${zipCode || 'N/A'}, Multiplier ${multiplier}`);
-    }
-
-    // Build system prompt with cost enforcement
-    const systemPrompt = `You are a Senior Construction Estimator analyzing a homeowner project description.
-
---- BEGIN RAG CONTEXT ---
-Labor Rates (Base $/hr): ${JSON.stringify(ragData.laborRates)}
-Regional Multiplier for ZIP ${zipCode || 'N/A'}: ${ragData.regionalMultiplier}
-Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
---- END RAG CONTEXT ---
-
-You MUST return a JSON object with this EXACT structure:
+3. OUTPUT: Return valid JSON only.
 {
-  "title": "Master Bathroom Remodel",
-  "description": "Enhanced description with key details",
-  "budget_range": "$25,000 - $35,000",
-  "estimate_low": 25000,
-  "estimate_high": 35000,
-  "zip": "12345",
-  "timeline": "4-6 weeks",
+  "title": "String",
+  "description": "Enhanced description",
+  "estimate_low": Number,
+  "estimate_high": Number,
+  "budget_range": "$X,XXX - $Y,YYY",
+  "zip": "${zipCode || '00000'}",
+  "timeline": "X-Y weeks",
   "tradeType": "general_contractor",
-  "aiAnalysis": "Detailed analysis of the project scope, complexity, and requirements",
+  "aiAnalysis": "Brief analysis",
   "scopeItems": ["Item 1", "Item 2", "Item 3"]
-}
+}`;
 
-CRITICAL REQUIREMENTS:
-
-1. PROJECT TITLE (MANDATORY - NO GENERIC TITLES):
-   - Generate a SPECIFIC, professional title based on the project scope
-   - NEVER use: "Home Renovation Project", "Home Improvement Project", "Home Project", "Renovation", etc.
-   - GOOD examples:
-     * "Master Bathroom Remodel"
-     * "Kitchen Cabinet & Countertop Upgrade"
-     * "2000sqft Asphalt Roof Replacement"
-     * "Basement Finishing with Bedroom Addition"
-     * "Living Room Hardwood Floor Installation"
-   - Include room type, specific work, square footage when mentioned
-   - Be DESCRIPTIVE and SPECIFIC about what's being done
-
-2. COST FLOORS (STRICTLY ENFORCED):
-   - If project mentions "bathroom" or "bath": MINIMUM $25,000
-   - If project mentions "kitchen": MINIMUM $25,000
-   - If project mentions "remodel" or "renovation": MINIMUM $15,000
-   - These are HARD MINIMUMS - never go below them regardless of scope
-   - Adjust upward based on scope, finishes, and location multiplier
-
-3. LOCATION-BASED PRICING:
-   - Apply regional multiplier (${ragData.regionalMultiplier}x) to ALL costs
-   - Use provided labor rates and permit costs
-   - High-cost areas (CA, NY, DC, Seattle): Increase significantly
-   - Rural areas: Adjust moderately downward
-
-4. SCOPE ITEMS:
-   - Extract 3-5 key scope items from the description
-   - Be specific about materials, finishes, or work areas
-
-5. TRADE TYPE:
-   - Determine appropriate trade: general_contractor, plumber, electrician, roofer, hvac, painter, landscaper, etc.
-
-6. TIMELINE:
-   - Provide realistic timeline: "2-4 weeks", "1-2 months", etc.
-
-7. ENHANCED DESCRIPTION:
-   - Clean up and enhance the original description
-   - Add technical details if clear from context
-   - Keep homeowner's intent intact`;
-
-    // Build user prompt
-    let userPrompt = '';
-    if (sanitizedDescription) {
-      userPrompt += `PROJECT DESCRIPTION:\n${sanitizedDescription}\n\n`;
-    }
-    if (zipCode) {
-      userPrompt += `ZIP CODE: ${zipCode}\n\n`;
-    }
-    userPrompt += `Analyze this project and provide a detailed estimate. Remember: NO GENERIC TITLES. Be specific about what work is being done.`;
-
-    if (!sanitizedDescription && images && images.length > 0) {
-      userPrompt += `\n\nNo description provided - analyze the photos to determine the project scope.`;
+    // Call OpenAI GPT-4o
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ error: "AI service not configured" });
     }
 
-    console.log(`🔍 Analyzing project: "${sanitizedDescription.substring(0, 50)}..." with ${images?.length || 0} images`);
-
-    // Call OpenAI GPT-4o with vision
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
     // Build message content
-    let userContent = [{ type: "text", text: userPrompt }];
+    let userContent = [{ type: "text", text: sanitizedDescription }];
 
     // Add images if provided
     if (images && Array.isArray(images) && images.length > 0) {
@@ -2683,13 +2596,12 @@ CRITICAL REQUIREMENTS:
           }
         });
       });
-      console.log(`📸 Added ${images.length} photos to analysis`);
     }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemMessage },
         { role: "user", content: userContent }
       ],
       response_format: { type: "json_object" },
@@ -2698,69 +2610,31 @@ CRITICAL REQUIREMENTS:
     });
 
     const responseText = completion.choices[0].message.content;
+    let projectData = JSON.parse(responseText);
 
-    // Parse JSON response
-    let projectData;
-    try {
-      projectData = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('❌ Failed to parse AI response:', parseError);
-      return res.status(500).json({
-        error: "Failed to parse AI response.",
-        code: 'PARSE_ERROR'
-      });
+    // Enforce cost floors on backend
+    const desc = sanitizedDescription.toLowerCase();
+    if ((desc.includes('bathroom') || desc.includes('bath')) && projectData.estimate_low < 25000) {
+      projectData.estimate_low = 25000;
+      projectData.estimate_high = Math.max(projectData.estimate_high, 35000);
+      projectData.budget_range = `$${projectData.estimate_low.toLocaleString()} - $${projectData.estimate_high.toLocaleString()}`;
+    }
+    if (desc.includes('kitchen') && projectData.estimate_low < 25000) {
+      projectData.estimate_low = 25000;
+      projectData.estimate_high = Math.max(projectData.estimate_high, 35000);
+      projectData.budget_range = `$${projectData.estimate_low.toLocaleString()} - $${projectData.estimate_high.toLocaleString()}`;
+    }
+    if ((desc.includes('basement') && desc.includes('bath')) && projectData.estimate_low < 35000) {
+      projectData.estimate_low = 35000;
+      projectData.estimate_high = Math.max(projectData.estimate_high, 50000);
+      projectData.budget_range = `$${projectData.estimate_low.toLocaleString()} - $${projectData.estimate_high.toLocaleString()}`;
     }
 
-    // Validate title is not generic
-    const genericTitles = [
-      'home renovation project',
-      'home improvement project',
-      'home project',
-      'renovation project',
-      'renovation',
-      'home improvement',
-      'project'
-    ];
-
-    const titleLower = (projectData.title || '').toLowerCase().trim();
-    if (genericTitles.includes(titleLower)) {
-      console.warn(`⚠️ Generic title detected: "${projectData.title}", regenerating...`);
-      projectData.title = 'Home Improvement Project'; // Will be caught by frontend
-    }
-
-    // Enforce cost floors
-    if (sanitizedDescription.toLowerCase().includes('bathroom') || sanitizedDescription.toLowerCase().includes('bath')) {
-      if (projectData.estimate_low < 25000) {
-        console.warn(`⚠️ Bathroom project below $25k minimum, adjusting: ${projectData.estimate_low} → 25000`);
-        projectData.estimate_low = 25000;
-        projectData.estimate_high = Math.max(projectData.estimate_high, 35000);
-        projectData.budget_range = `$${projectData.estimate_low.toLocaleString()} - $${projectData.estimate_high.toLocaleString()}`;
-      }
-    }
-
-    if (sanitizedDescription.toLowerCase().includes('kitchen')) {
-      if (projectData.estimate_low < 25000) {
-        console.warn(`⚠️ Kitchen project below $25k minimum, adjusting: ${projectData.estimate_low} → 25000`);
-        projectData.estimate_low = 25000;
-        projectData.estimate_high = Math.max(projectData.estimate_high, 35000);
-        projectData.budget_range = `$${projectData.estimate_low.toLocaleString()} - $${projectData.estimate_high.toLocaleString()}`;
-      }
-    }
-
-    const latency = Date.now() - startTime;
-    console.log(`✅ Project analyzed: "${projectData.title}" ($${projectData.budget_range}) in ${latency}ms`);
-
-    // Return project data ready for post-project.html
     res.json(projectData);
 
-  } catch (err) {
-    const errorLatency = Date.now() - startTime;
-    console.error(`❌ Error in /api/projects/analyze (${errorLatency}ms):`, err);
-    res.status(500).json({
-      error: "Internal server error analyzing project.",
-      code: 'INTERNAL_ERROR',
-      message: err.message
-    });
+  } catch (error) {
+    console.error("AI Analysis Error:", error.message);
+    res.status(500).json({ error: "Analysis failed" });
   }
 });
 

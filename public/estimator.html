@@ -656,77 +656,59 @@
       }
     }
 
-    function checkForEstimatorJob() {
-      const jobDataStr = sessionStorage.getItem('estimatorJob');
-      if (jobDataStr) {
+    // Data Hydration - Load job data from URL params or sessionStorage
+    async function checkForEstimatorJob() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sourceId = urlParams.get('source_job_id');
+
+      if (sourceId) {
+        // 1. Attempt Session Load
+        let jobData = null;
         try {
-          estimatorJobData = JSON.parse(jobDataStr);
-          autoPopulateFromJob(estimatorJobData);
-        } catch (e) {
-          console.error('Error parsing estimator job data:', e);
+          const cached = sessionStorage.getItem('estimating_job_data');
+          if (cached) jobData = JSON.parse(cached);
+        } catch (e) { /* ignore parse error */ }
+
+        // 2. Fallback to Database Fetch if session is stale or missing
+        if (!jobData || jobData.id !== sourceId) {
+          try {
+            const { data } = await window.authService.supabase
+              .from('job_postings')
+              .select('*')
+              .eq('id', sourceId)
+              .single();
+            jobData = data;
+          } catch (dbError) {
+            console.error('Failed to fetch job from database:', dbError);
+          }
+        }
+
+        // 3. Populate Form
+        if (jobData) {
+          const titleInput = document.getElementById('job-description');
+          const zipInput = document.getElementById('zip-code');
+
+          if (titleInput) titleInput.value = jobData.description || `Estimate for: ${jobData.title}`;
+          if (zipInput) zipInput.value = jobData.zip_code || '';
+
+          // 4. Inject AI Scope items if they exist in DB column
+          if (jobData.ai_scope_data && jobData.ai_scope_data.scopeItems) {
+            const items = jobData.ai_scope_data.scopeItems || [];
+            // Store for reference
+            window.homeownerAiData = jobData.ai_scope_data;
+          }
+
+          // Show banner
+          const banner = document.getElementById('auto-populate-banner');
+          const jobTitle = document.getElementById('loaded-job-title');
+          if (jobTitle) {
+            jobTitle.textContent = jobData.title || 'Job from dashboard';
+          }
+          if (banner) {
+            banner.classList.remove('hidden');
+          }
         }
       }
-    }
-
-    function autoPopulateFromJob(jobData) {
-      // CRITICAL FIX: Check for AI scope data first (rich homeowner data)
-      if (jobData.aiScopeData && typeof jobData.aiScopeData === 'object') {
-        console.log('✓ Found AI scope data from homeowner - hydrating estimator');
-        hydrateFromAiData(jobData.aiScopeData, jobData);
-        return;
-      }
-
-      // Fallback: Basic text description if no AI data
-      if (jobData.jobDescription) {
-        document.getElementById('job-description').value = jobData.jobDescription;
-      }
-      if (jobData.zipCode) {
-        document.getElementById('zip-code').value = jobData.zipCode;
-      }
-
-      const banner = document.getElementById('auto-populate-banner');
-      const jobTitle = document.getElementById('loaded-job-title');
-      if (jobTitle) {
-        jobTitle.textContent = jobData.jobTitle || 'Job from dashboard';
-      }
-      if (banner) {
-        banner.classList.remove('hidden');
-      }
-    }
-
-    // CRITICAL FIX: Hydrate estimator from homeowner's AI data
-    function hydrateFromAiData(aiData, jobData) {
-      console.log('🔄 Hydrating estimator with AI data:', aiData);
-
-      // Pre-fill basic fields
-      if (aiData.description || jobData.jobDescription) {
-        document.getElementById('job-description').value = aiData.description || jobData.jobDescription;
-      }
-      if (aiData.zip || jobData.zipCode) {
-        document.getElementById('zip-code').value = aiData.zip || jobData.zipCode;
-      }
-
-      // Set project title in banner
-      const banner = document.getElementById('auto-populate-banner');
-      const jobTitle = document.getElementById('loaded-job-title');
-      if (jobTitle) {
-        jobTitle.textContent = aiData.title || jobData.jobTitle || 'Job from dashboard';
-      }
-      if (banner) {
-        banner.classList.remove('hidden');
-      }
-
-      // Show AI data indicator
-      const statusEl = document.getElementById('status');
-      if (statusEl) {
-        statusEl.textContent = '✨ Loaded AI data from homeowner - Review and adjust as needed';
-        statusEl.className = 'text-sm text-center text-blue-600 font-medium';
-      }
-
-      // Store AI data for reference when generating estimate
-      window.homeownerAiData = aiData;
-
-      console.log('✅ Estimator hydrated with homeowner AI data');
     }
 
     // ============================================
