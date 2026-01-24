@@ -493,27 +493,11 @@
     // ============================================
     async function checkAuth() {
       try {
-        // Wait for app-controller.js to load and provide global checkAuth
-        if (typeof window.app?.checkAuth === 'function') {
-          const user = await window.app.checkAuth();
-          if (!user) {
-            window.location.href = "signin.html";
-            return false;
-          }
+        console.log('[checkAuth] Starting authentication check...');
 
-          // Get user profile
-          const userProfile = await window.authService.getUserProfile();
-          if (!userProfile || userProfile.role !== 'contractor') {
-            window.location.href = "index.html";
-            return false;
-          }
-
-          profile = userProfile;
-          return true;
-        }
-
-        // Fallback: Use authService directly if app-controller hasn't loaded yet
+        // STEP 1: Wait for authService to be initialized
         if (!window.authService || !window.authService.initialized) {
+          console.log('[checkAuth] Waiting for authService to initialize...');
           await new Promise(resolve => {
             const checkInterval = setInterval(() => {
               if (window.authService && window.authService.initialized) {
@@ -528,22 +512,53 @@
           });
         }
 
-        const user = await window.authService.getCurrentUser();
-        if (!user) {
+        // STEP 2: CRITICAL FIX - Poll for session to load from localStorage
+        // This prevents the race condition where checkAuth runs before getSession completes
+        console.log('[checkAuth] Polling for session...');
+        let session = null;
+
+        // Poll for up to 2 seconds (10 attempts x 200ms)
+        for (let i = 0; i < 10; i++) {
+          try {
+            if (window.authService && window.authService.supabase) {
+              const { data } = await window.authService.supabase.auth.getSession();
+              if (data && data.session) {
+                session = data.session;
+                console.log('[checkAuth] Session found on attempt', i + 1);
+                break;
+              }
+            }
+          } catch (err) {
+            console.warn('[checkAuth] Session check error:', err.message);
+          }
+
+          // Wait 200ms before next attempt
+          await new Promise(r => setTimeout(r, 200));
+        }
+
+        // STEP 3: Only redirect if session is STILL null after polling
+        if (!session) {
+          console.warn('[checkAuth] No session found after polling. Redirecting to signin.');
           window.location.href = "signin.html";
           return false;
         }
 
+        console.log('[checkAuth] Session validated. Checking user profile...');
+
+        // STEP 4: Get user profile
         const userProfile = await window.authService.getUserProfile();
         if (!userProfile || userProfile.role !== 'contractor') {
+          console.warn('[checkAuth] User is not a contractor. Redirecting to index.');
           window.location.href = "index.html";
           return false;
         }
 
+        console.log('[checkAuth] Access granted for contractor:', userProfile.email);
         profile = userProfile;
         return true;
+
       } catch (error) {
-        console.error('Auth check failed:', error);
+        console.error('[checkAuth] Auth check failed:', error);
         window.location.href = "signin.html";
         return false;
       }
