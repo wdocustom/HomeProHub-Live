@@ -14,6 +14,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/services/auth.js"></script>
 
+  <!-- Unified Navigation Component -->
+  <script src="/components/unified-navigation.js"></script>
+
   <style>
     body {
       background: #f9fafb;
@@ -24,6 +27,7 @@
       max-width: 900px;
       margin: 0 auto;
       padding: 40px 24px 120px;
+      width: 100%;
     }
 
     /* Header */
@@ -61,11 +65,13 @@
 
     /* Confirmation Receipt Card */
     .receipt-card {
-      background: white;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-radius: 20px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
       overflow: hidden;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(229, 231, 235, 0.8);
       margin-bottom: 32px;
     }
 
@@ -411,20 +417,28 @@
       cursor: not-allowed;
     }
 
-    /* Loading State */
+    /* Loading State - Enhanced for AI Processing */
     .loading {
       text-align: center;
       padding: 80px 24px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 20px;
+      margin: 40px auto;
+      max-width: 600px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     }
 
     .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid #e5e7eb;
+      width: 60px;
+      height: 60px;
+      border: 5px solid #e5e7eb;
       border-top-color: #10b981;
+      border-bottom-color: #3b82f6;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 20px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
     }
 
     @keyframes spin {
@@ -433,8 +447,21 @@
 
     .loading-text {
       font-size: 18px;
-      color: #6b7280;
-      font-weight: 500;
+      color: #111827;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .loading-text::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
     }
 
     /* Error State */
@@ -493,9 +520,10 @@
   </style>
 </head>
 <body class="zone-c app-page">
-  <div id="nav-container"></div>
+  <!-- Navigation component will be injected here by unified-navigation.js -->
 
-  <div class="page-container">
+  <main class="pt-24 px-4 bg-slate-50 min-h-screen">
+    <div class="page-container">
     <!-- Header -->
     <div class="page-header">
       <div class="page-badge">✨ AI-Generated Project</div>
@@ -620,18 +648,19 @@
     </div>
   </div>
 
-  <!-- Action Bar -->
-  <div class="action-bar" id="actionBar" style="display: none;">
-    <div class="action-bar-content">
-      <div class="action-bar-text">
-        <div class="action-bar-title">Everything look good?</div>
-        <div class="action-bar-subtitle">Post your project to start receiving bids from verified contractors</div>
+    <!-- Action Bar -->
+    <div class="action-bar" id="actionBar" style="display: none;">
+      <div class="action-bar-content">
+        <div class="action-bar-text">
+          <div class="action-bar-title">Everything look good?</div>
+          <div class="action-bar-subtitle">Post your project to start receiving bids from verified contractors</div>
+        </div>
+        <button class="confirm-button" id="confirmButton" onclick="confirmAndPost()">
+          ✅ Confirm & Post to Job Board
+        </button>
       </div>
-      <button class="confirm-button" id="confirmButton" onclick="confirmAndPost()">
-        ✅ Confirm & Post to Job Board
-      </button>
     </div>
-  </div>
+  </main>
 
 
   <script>
@@ -649,7 +678,70 @@
         return;
       }
 
-      // CRITICAL FIX: Check ALL possible localStorage keys (catch-all strategy)
+      // NEW FLOW: Check for ai_draft_prompt (deferred processing)
+      const promptStr = sessionStorage.getItem('ai_draft_prompt');
+      const resultStr = sessionStorage.getItem('ai_draft_result');
+
+      if (promptStr && !resultStr) {
+        // We have a prompt but no result yet - run the AI NOW
+        console.log('🔄 Deferred processing: Running AI analysis...');
+
+        // Update loading text
+        document.getElementById('loadingSection').querySelector('.loading-text').textContent =
+          'Analyzing your project with AI... This may take 15-30 seconds';
+
+        try {
+          const promptData = JSON.parse(promptStr);
+
+          // Call the AI endpoint
+          const response = await fetch('/api/projects/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              description: promptData.description,
+              images: promptData.images
+            })
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'AI analysis failed');
+          }
+
+          const result = await response.json();
+
+          // Save result to sessionStorage
+          sessionStorage.setItem('ai_draft_result', JSON.stringify(result));
+
+          // Clear the prompt so we don't re-run on refresh
+          sessionStorage.removeItem('ai_draft_prompt');
+
+          // Render the project review
+          projectData = result;
+          populateReceipt(projectData);
+
+          // Show receipt and action bar
+          document.getElementById('loadingSection').style.display = 'none';
+          document.getElementById('receiptCard').style.display = 'block';
+          document.getElementById('actionBar').style.display = 'block';
+
+          console.log('✅ AI analysis complete');
+
+        } catch (error) {
+          console.error('❌ AI analysis error:', error);
+          sessionStorage.removeItem('ai_draft_prompt'); // Clear to prevent infinite loop
+          document.getElementById('loadingSection').style.display = 'none';
+          document.getElementById('errorSection').style.display = 'flex';
+          document.getElementById('errorSection').querySelector('h3').textContent = 'AI Analysis Failed';
+          document.getElementById('errorSection').querySelector('p').textContent =
+            `Failed to analyze your project: ${error.message}. Please try again from the homepage.`;
+        }
+        return;
+      }
+
+      // EXISTING FLOW: Check ALL possible localStorage keys (catch-all strategy)
       // Different flows may save data under different keys
       let draftStr = localStorage.getItem('hot_lead_draft') ||
                      localStorage.getItem('pending_estimate') ||

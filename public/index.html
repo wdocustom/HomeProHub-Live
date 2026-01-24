@@ -1767,9 +1767,6 @@
         return;
       }
 
-      // Show loading overlay
-      document.getElementById('loading-overlay').style.display = 'flex';
-
       try {
         // Convert photos to base64
         const images = [];
@@ -1781,49 +1778,21 @@
           });
         }
 
-        // Call AI Check API (NO AUTH REQUIRED!)
-        const response = await fetch('/api/ai-check', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            description: description || undefined,
-            images: images.length > 0 ? images : undefined
-          })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Analysis failed');
-        }
-
-        const result = await response.json();
-
-        // Store result in sessionStorage (for "Save Report" feature)
-        sessionStorage.setItem('ai_check_result', JSON.stringify({
-          description,
-          output: result.output,
-          timestamp: new Date().toISOString()
+        // 1. Save intent to session (The Handoff)
+        sessionStorage.setItem('ai_draft_prompt', JSON.stringify({
+          description: description || '',
+          images: images.length > 0 ? images : []
         }));
 
-        // Render results inline
-        renderResults(result.output, description);
+        // Clear old data
+        sessionStorage.removeItem('ai_draft_result');
 
-        // Hide loading, show results
-        document.getElementById('loading-overlay').style.display = 'none';
-        document.getElementById('ai-results-section').style.display = 'block';
-
-        // Scroll to results
-        document.getElementById('ai-results-section').scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
+        // 2. Instant Redirect (No API calls here - prevents race condition)
+        window.location.href = '/post-project.html';
 
       } catch (error) {
-        console.error('AI Check error:', error);
-        document.getElementById('loading-overlay').style.display = 'none';
-        alert(`Analysis failed: ${error.message}. Please try again.`);
+        console.error('Error preparing analysis:', error);
+        alert('Failed to prepare analysis. Please try again.');
       }
     }
 
