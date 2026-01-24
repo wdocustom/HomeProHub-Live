@@ -155,9 +155,63 @@ class OrchestratorAgent {
   static async initializeProject(projectId) {
     console.log(`[Orchestrator] Initializing project ${projectId} from template...`);
 
-    const template = await getProjectTemplate(projectId);
+    // 1. FETCH JOB *AND* THE WINNING BID
+    // We strictly filter for the bid where status = 'accepted'
+    const { data: jobData, error: jobError } = await supabase
+      .from('job_postings')
+      .select(`
+        *,
+        project_templates (*),
+        bids!inner (
+          start_date,
+          proposal_text,
+          amount_low,
+          amount_high,
+          contractor_id,
+          status
+        )
+      `)
+      .eq('id', projectId)
+      .eq('bids.status', 'accepted')
+      .single();
 
-    if (!template.template_id) {
+    if (jobError || !jobData) {
+      throw new Error(`Job not found or DB Error: ${jobError?.message || 'Unknown error'}`);
+    }
+
+    // 2. DETERMINE THE TRUE START DATE
+    // Default to current date, but OVERWRITE if the winning bid has a specific date
+    let projectStartDate = new Date(); // Default to now
+    let projectBudget = jobData.budget_high || jobData.budget_max;
+
+    const winningBid = jobData.bids && jobData.bids[0]; // Get the first (and only) accepted bid
+
+    if (winningBid) {
+      console.log(`[Orchestrator] Found Winning Bid. Using Contractor Date: ${winningBid.start_date}`);
+
+      // CRITICAL: Use the Contractor's promised date if it exists
+      if (winningBid.start_date) {
+        projectStartDate = new Date(winningBid.start_date);
+      }
+      // Also update budget to match the real accepted price
+      if (winningBid.amount_high) {
+        projectBudget = winningBid.amount_high;
+      }
+    }
+
+    // 3. SANITY CHECK (Prevent Crash)
+    // Ensure projectStartDate is a valid Date object
+    if (isNaN(projectStartDate.getTime())) {
+      console.warn('[Orchestrator] Invalid start date, using current date');
+      projectStartDate = new Date();
+    }
+
+    console.log(`[Orchestrator] Project will start on: ${projectStartDate.toISOString()}`);
+    console.log(`[Orchestrator] Project budget: $${projectBudget}`);
+
+    const template = jobData.project_templates || {};
+
+    if (!jobData.template_id) {
       throw new Error('Project does not have a template assigned');
     }
 
@@ -165,7 +219,7 @@ class OrchestratorAgent {
     const { data: templateMilestones, error: tmError } = await supabase
       .from('template_milestones')
       .select('*')
-      .eq('template_id', template.template_id)
+      .eq('template_id', jobData.template_id)
       .order('milestone_order', { ascending: true });
 
     if (tmError) {
@@ -188,12 +242,12 @@ class OrchestratorAgent {
       };
 
       // Calculate planned dates based on order and estimated days
-      // (This is simplified - real implementation would use CPM)
+      // CRITICAL: Use projectStartDate from accepted bid, not Date.now()
       const startOffset = phases
         .filter(p => p.order < phase.order)
         .reduce((sum, p) => sum + p.estimated_days, 0);
 
-      milestone.planned_start_date = new Date(Date.now() + startOffset * 24 * 60 * 60 * 1000).toISOString();
+      milestone.planned_start_date = new Date(projectStartDate.getTime() + startOffset * 24 * 60 * 60 * 1000).toISOString();
       milestone.planned_end_date = new Date(new Date(milestone.planned_start_date).getTime() + phase.estimated_days * 24 * 60 * 60 * 1000).toISOString();
 
       projectMilestones.push(milestone);
@@ -233,9 +287,18 @@ class OrchestratorAgent {
       projectId,
       'orchestrator',
       'initialize_project',
-      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name || template.name || 'unknown'}`,
-      { template_id: template.template_id, template_name: template.template_name || template.name },
-      { milestones_created: projectMilestones.length },
+      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name || template.name || 'unknown'}. Start date: ${projectStartDate.toISOString().split('T')[0]}`,
+      {
+        template_id: jobData.template_id,
+        template_name: template.template_name || template.name,
+        start_date: projectStartDate.toISOString(),
+        budget: projectBudget,
+        bid_id: winningBid?.id
+      },
+      {
+        milestones_created: projectMilestones.length,
+        start_date: projectStartDate.toISOString()
+      },
       'completed'
     );
 
@@ -244,7 +307,9 @@ class OrchestratorAgent {
     return {
       success: true,
       milestones_created: projectMilestones.length,
-      template: template.template_name || template.name || 'unknown'
+      template: template.template_name || template.name || 'unknown',
+      start_date: projectStartDate.toISOString(),
+      budget: projectBudget
     };
   }
 
