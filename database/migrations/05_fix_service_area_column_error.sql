@@ -1,8 +1,10 @@
--- Contractor Grade Calculation Function
--- Fix for "Error" and 0/100 scores on My Grade page
--- Handles NULL values to prevent division by zero errors
+-- ========================================
+-- Migration: Fix service_area column reference in contractor grade function
+-- Issue: Function references non-existent 'service_area' column in user_profiles table
+-- Fix: Replace service_area check with city/zip_code check (which represent service area)
+-- ========================================
 
--- Drop existing function if it exists (CASCADE removes dependent views)
+-- Drop and recreate the function with correct column reference
 DROP FUNCTION IF EXISTS calculate_contractor_grade(TEXT) CASCADE;
 
 CREATE OR REPLACE FUNCTION calculate_contractor_grade(p_contractor_email TEXT)
@@ -21,21 +23,14 @@ DECLARE
   completed_jobs INTEGER := 0;
 BEGIN
   -- Get profile completeness (0-100 points)
-  -- Note: years_in_business is the correct column name in user_profiles
   -- Fixed: Use city/zip_code instead of non-existent service_area column
   SELECT
-    CASE
-      WHEN business_name IS NOT NULL THEN 20 ELSE 0 END +
-    CASE
-      WHEN phone IS NOT NULL THEN 15 ELSE 0 END +
-    CASE
-      WHEN bio IS NOT NULL AND LENGTH(bio) > 50 THEN 20 ELSE 0 END +
-    CASE
-      WHEN profile_photo_url IS NOT NULL THEN 15 ELSE 0 END +
-    CASE
-      WHEN years_in_business IS NOT NULL AND years_in_business > 0 THEN 15 ELSE 0 END +
-    CASE
-      WHEN (city IS NOT NULL OR zip_code IS NOT NULL) THEN 15 ELSE 0 END
+    CASE WHEN business_name IS NOT NULL THEN 20 ELSE 0 END +
+    CASE WHEN phone IS NOT NULL THEN 15 ELSE 0 END +
+    CASE WHEN bio IS NOT NULL AND LENGTH(bio) > 50 THEN 20 ELSE 0 END +
+    CASE WHEN profile_photo_url IS NOT NULL THEN 15 ELSE 0 END +
+    CASE WHEN years_in_business IS NOT NULL AND years_in_business > 0 THEN 15 ELSE 0 END +
+    CASE WHEN (city IS NOT NULL OR zip_code IS NOT NULL) THEN 15 ELSE 0 END
   INTO profile_score
   FROM user_profiles
   WHERE email = p_contractor_email;
@@ -144,3 +139,9 @@ $$ LANGUAGE plpgsql;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION calculate_contractor_grade(TEXT) TO authenticated;
+
+-- ========================================
+-- Verification Query
+-- ========================================
+-- Run this to verify the function was created successfully:
+-- SELECT calculate_contractor_grade('test@example.com');

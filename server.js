@@ -9094,4 +9094,17 @@ app.listen(PORT, async () => {
     console.error('⚠️  Forced migration failed (this may be OK if column already exists):', migrationError.message);
     // Don't crash the server - the migration is idempotent (safe to run multiple times)
   }
+
+  // CRITICAL FIX: Fix calculate_contractor_grade function to remove service_area column reference
+  // This fixes the "column service_area does not exist" error on contractor dashboard
+  try {
+    console.log('🔧 Applying forced migration: 05_fix_service_area_column_error.sql');
+    const migrationPath = path.join(__dirname, 'database/migrations/05_fix_service_area_column_error.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+    await db.query(migrationSQL);
+    console.log('✅ Forced migration completed: contractor grade function fixed');
+  } catch (migrationError) {
+    console.error('⚠️  Forced migration failed (this may be OK if function already fixed):', migrationError.message);
+    // Don't crash the server - the migration is idempotent (safe to run multiple times)
+  }
 });

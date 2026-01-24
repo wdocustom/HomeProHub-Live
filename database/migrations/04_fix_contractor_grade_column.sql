@@ -24,13 +24,14 @@ DECLARE
 BEGIN
   -- Get profile completeness (0-100 points)
   -- Fixed: Use years_in_business (correct column name) instead of years_experience
+  -- Fixed: Use city/zip_code instead of non-existent service_area column
   SELECT
     CASE WHEN business_name IS NOT NULL THEN 20 ELSE 0 END +
     CASE WHEN phone IS NOT NULL THEN 15 ELSE 0 END +
     CASE WHEN bio IS NOT NULL AND LENGTH(bio) > 50 THEN 20 ELSE 0 END +
     CASE WHEN profile_photo_url IS NOT NULL THEN 15 ELSE 0 END +
     CASE WHEN years_in_business IS NOT NULL AND years_in_business > 0 THEN 15 ELSE 0 END +
-    CASE WHEN service_area IS NOT NULL THEN 15 ELSE 0 END
+    CASE WHEN (city IS NOT NULL OR zip_code IS NOT NULL) THEN 15 ELSE 0 END
   INTO profile_score
   FROM user_profiles
   WHERE email = p_contractor_email;
