@@ -548,14 +548,22 @@
         }
       }
 
-      // Fallback: Try to extract first major word
-      const words = description.split(' ').filter(w => w.length > 3);
-      if (words.length > 0) {
+      // Fallback: Try to extract meaningful title from description
+      const words = description.trim().split(/\s+/).filter(w => w.length > 3);
+      if (words.length >= 2) {
+        // Use first 2-3 meaningful words
+        const titleWords = words.slice(0, 3);
+        const title = titleWords.map(w =>
+          w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+        ).join(' ');
+        return title.length > 50 ? title.substring(0, 47) + '...' : title;
+      } else if (words.length > 0) {
         const firstWord = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
         return `${firstWord} Project`;
       }
 
-      return 'Home Renovation Project';
+      // Absolute last resort
+      return 'Home Improvement Project';
     }
 
     // Auth check for download/post actions

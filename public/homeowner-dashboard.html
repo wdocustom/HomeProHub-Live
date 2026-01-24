@@ -1340,38 +1340,127 @@
       }
 
       /**
+       * Generate a specific, professional project title from description
+       * Prevents generic "Home Renovation Project" titles
+       */
+      function generateProjectTitle(description, aiSummary = '') {
+        if (!description && !aiSummary) {
+          return 'Home Improvement Project';
+        }
+
+        // Combine description and summary for analysis
+        const text = (description + ' ' + aiSummary).toLowerCase();
+
+        // Room/Area keywords with priority (more specific first)
+        const roomPatterns = [
+          { keywords: ['master bath', 'master bathroom', 'primary bath'], title: 'Master Bathroom' },
+          { keywords: ['guest bath', 'guest bathroom', 'hall bath'], title: 'Guest Bathroom' },
+          { keywords: ['powder room', 'half bath', 'half bathroom'], title: 'Powder Room' },
+          { keywords: ['bathroom', 'bath'], title: 'Bathroom' },
+          { keywords: ['master bedroom', 'primary bedroom'], title: 'Master Bedroom' },
+          { keywords: ['kitchen'], title: 'Kitchen' },
+          { keywords: ['basement'], title: 'Basement' },
+          { keywords: ['attic'], title: 'Attic' },
+          { keywords: ['garage'], title: 'Garage' },
+          { keywords: ['living room', 'family room'], title: 'Living Room' },
+          { keywords: ['dining room'], title: 'Dining Room' },
+          { keywords: ['laundry room', 'laundry'], title: 'Laundry Room' },
+          { keywords: ['deck', 'patio', 'porch'], title: 'Outdoor Living Space' },
+          { keywords: ['roof', 'roofing'], title: 'Roof' },
+          { keywords: ['floor', 'flooring'], title: 'Flooring' },
+          { keywords: ['exterior', 'siding'], title: 'Exterior' }
+        ];
+
+        // Work type keywords
+        const workPatterns = [
+          { keywords: ['remodel', 'renovation', 'renovate', 'redo', 'update'], term: 'Remodel' },
+          { keywords: ['finish', 'finishing'], term: 'Finish' },
+          { keywords: ['addition', 'add on', 'extension', 'expand'], term: 'Addition' },
+          { keywords: ['repair', 'fix'], term: 'Repair' },
+          { keywords: ['replace', 'replacement'], term: 'Replacement' },
+          { keywords: ['install', 'installation', 'new'], term: 'Installation' },
+          { keywords: ['upgrade', 'upgrading'], term: 'Upgrade' }
+        ];
+
+        // Find room/area
+        let room = null;
+        for (const pattern of roomPatterns) {
+          if (pattern.keywords.some(kw => text.includes(kw))) {
+            room = pattern.title;
+            break;
+          }
+        }
+
+        // Find work type
+        let workType = null;
+        for (const pattern of workPatterns) {
+          if (pattern.keywords.some(kw => text.includes(kw))) {
+            workType = pattern.term;
+            break;
+          }
+        }
+
+        // Extract square footage if mentioned
+        const sqftMatch = text.match(/(\d+[\s]*(?:x|by)[\s]*\d+|[\d,]+[\s]*(?:sq|square)[\s]*(?:ft|foot|feet))/i);
+        let sizeInfo = '';
+        if (sqftMatch) {
+          const sqftText = sqftMatch[1].trim();
+          // If it's dimensions like "10x15", keep as is
+          if (sqftText.match(/\d+[\s]*(?:x|by)[\s]*\d+/i)) {
+            sizeInfo = sqftText.replace(/\s/g, '').replace(/by/i, 'x') + ' ';
+          }
+        }
+
+        // Build title
+        let title = '';
+
+        if (room && workType) {
+          // "Bathroom Remodel" or "Kitchen Renovation"
+          title = `${room} ${workType}`;
+        } else if (room) {
+          // "Bathroom Project" or "Kitchen Work"
+          title = `${room} Project`;
+        } else if (workType) {
+          // "Home Remodel" or "Property Renovation"
+          title = `Home ${workType}`;
+        } else {
+          // Last resort: try to extract a meaningful first phrase
+          const cleanDesc = description.trim().replace(/[.!?]+/g, '.').split('.')[0];
+          if (cleanDesc.length > 10 && cleanDesc.length < 80) {
+            title = cleanDesc.charAt(0).toUpperCase() + cleanDesc.slice(1);
+          } else {
+            title = 'Home Improvement Project';
+          }
+        }
+
+        // Add size if available and makes sense
+        if (sizeInfo && (title.includes('Bathroom') || title.includes('Kitchen') || title.includes('Room'))) {
+          title = sizeInfo + title;
+        }
+
+        // Capitalize properly
+        title = title.split(' ').map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+
+        // Limit length
+        if (title.length > 60) {
+          title = title.substring(0, 57) + '...';
+        }
+
+        return title;
+      }
+
+      /**
        * Save hot_lead_draft for project posting
        */
       function saveHotLeadDraft() {
         const parsed = window.blueprintData.parsed;
 
-        // Extract clean title
-        let projectTitle = 'Home Renovation Project';
-        if (parsed.summary) {
-          let cleanSummary = cleanAIArtifacts(parsed.summary);
-          cleanSummary = cleanSummary.replace(/^Project\s+Summary:\s*/i, '').trim();
-          let firstSentence = cleanSummary.split('.')[0].trim();
-
-          const isValidTitle = firstSentence &&
-                              firstSentence.length > 5 &&
-                              firstSentence.length < 80 &&
-                              !firstSentence.toLowerCase().includes('intent') &&
-                              !firstSentence.toLowerCase().startsWith('based on');
-
-          if (isValidTitle) {
-            projectTitle = firstSentence.length > 60
-              ? firstSentence.substring(0, 57) + '...'
-              : firstSentence;
-          } else {
-            const userQuestion = window.blueprintData.question || '';
-            const questionFirstPart = userQuestion.split('.')[0].trim();
-            if (questionFirstPart.length > 10) {
-              projectTitle = questionFirstPart.length > 60
-                ? questionFirstPart.substring(0, 57) + '...'
-                : questionFirstPart;
-            }
-          }
-        }
+        // Generate smart title from description and AI response
+        const userDescription = window.blueprintData.question || '';
+        const aiSummary = parsed.summary || '';
+        const projectTitle = generateProjectTitle(userDescription, aiSummary);
 
         const tradeType = extractTradeType(window.blueprintData.answer);
 
