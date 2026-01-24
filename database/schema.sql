@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
   -- AI analysis
   original_question TEXT,
   ai_analysis TEXT,
+  ai_scope_data JSONB,  -- Stores full AI-generated project data (estimates, scope breakdown, work packages)
 
   -- Homeowner info
   homeowner_email TEXT NOT NULL,
@@ -160,6 +161,7 @@ CREATE INDEX IF NOT EXISTS idx_job_postings_category ON job_postings(category);
 CREATE INDEX IF NOT EXISTS idx_job_postings_zip_code ON job_postings(zip_code);
 CREATE INDEX IF NOT EXISTS idx_job_postings_homeowner_email ON job_postings(homeowner_email);
 CREATE INDEX IF NOT EXISTS idx_job_postings_posted_at ON job_postings(posted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_job_postings_ai_scope_data ON job_postings USING GIN (ai_scope_data);
 
 -- ========================================
 -- 4. Contractor Bids Table

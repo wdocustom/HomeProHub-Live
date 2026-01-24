@@ -2528,7 +2528,8 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
 
 /**
  * POST /api/projects/analyze
- * Senior Estimator AI with strict title enforcement and intelligent fallbacks
+ * Senior Estimator AI with strict title enforcement and safety fallback
+ * NEVER returns 500 errors - always returns valid project data
  */
 app.post('/api/projects/analyze', async (req, res) => {
   try {
@@ -2541,83 +2542,60 @@ app.post('/api/projects/analyze', async (req, res) => {
     const sanitizedDescription = sanitizeInput(description || '', 3000);
     const desc = sanitizedDescription.toLowerCase();
 
-    // Extract ZIP code for location-based pricing
+    // Extract ZIP code
     const zipMatch = sanitizedDescription.match(/\b(\d{5})\b/);
     const zipCode = zipMatch ? zipMatch[1] : null;
 
-    // SYSTEM PROMPT: STRICT SENIOR ESTIMATOR
-    const systemPrompt = `You are a Senior Construction Estimator.
+    // STRICT SYSTEM PROMPT
+    const systemMessage = `You are a Senior Estimator.
 INPUT: "${sanitizedDescription}"
 
-MANDATORY RULES:
-1. TITLE GENERATION:
-   - You MUST generate a technical, specific title (e.g., "Basement Bathroom Addition", "Kitchen Remodel with Island").
-   - STRICTLY FORBIDDEN: "Home Renovation Project", "Home Improvement", "Renovation", "Home Project".
-   - Include specific room names, work types, and square footage when mentioned.
+RULES:
+1. TITLE: Must be technical (e.g., "Basement Bathroom Addition"). NEVER use "Home Renovation" or "Home Improvement".
+2. COST LOGIC:
+   - Basement + Bath = Min $35,000
+   - Kitchen = Min $25,000
+   - Bathroom = Min $25,000
+3. OUTPUT: JSON object with { title, estimate_low, estimate_high, timeline, tradeType, scopeItems, description, budget_range, zip, aiAnalysis }`;
 
-2. PRICING FLOORS (Minimums):
-   - If text contains "Bathroom" AND "Basement": Minimum Low Estimate = $35,000
-   - If text contains "Kitchen": Minimum Low Estimate = $25,000
-   - If text contains "Bathroom" alone: Minimum Low Estimate = $25,000
-   - If text contains "Plumbing" or "Electrical" (New work): Increase base by 30%
-   - Deck/Patio: Minimum Low Estimate = $15,000
+    let projectData = null;
 
-3. OUTPUT FORMAT (JSON ONLY):
-{
-  "title": "String",
-  "description": "Enhanced description",
-  "estimate_low": Number,
-  "estimate_high": Number,
-  "budget_range": "$X,XXX - $Y,YYY",
-  "zip": "${zipCode || '00000'}",
-  "timeline": "X-Y weeks",
-  "tradeType": "general_contractor",
-  "aiAnalysis": "Brief analysis",
-  "scopeItems": ["Item 1", "Item 2", "Item 3"]
-}`;
+    // Attempt AI call with error handling
+    if (OPENAI_API_KEY) {
+      try {
+        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+        let userContent = [{ type: "text", text: sanitizedDescription }];
 
-    // Call OpenAI GPT-4o
-    if (!OPENAI_API_KEY) {
-      return res.status(503).json({ error: "AI service not configured" });
-    }
+        // Add images if provided
+        if (images && Array.isArray(images) && images.length > 0) {
+          images.slice(0, 5).forEach(img => {
+            const cleanBase64 = img.data || img;
+            userContent.push({
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${cleanBase64}`,
+                detail: "high"
+              }
+            });
+          });
+        }
 
-    const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-
-    // Build message content
-    let userContent = [{ type: "text", text: sanitizedDescription }];
-
-    // Add images if provided
-    if (images && Array.isArray(images) && images.length > 0) {
-      images.slice(0, 5).forEach(img => {
-        const cleanBase64 = img.data || img;
-        userContent.push({
-          type: "image_url",
-          image_url: {
-            url: `data:image/jpeg;base64,${cleanBase64}`,
-            detail: "high"
-          }
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: userContent }
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 2048,
+          temperature: 0.7
         });
-      });
-    }
 
-    let projectData;
-    try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent }
-        ],
-        response_format: { type: "json_object" },
-        max_tokens: 2048,
-        temperature: 0.7
-      });
-
-      const responseText = completion.choices[0].message.content;
-      projectData = JSON.parse(responseText);
-    } catch (aiError) {
-      console.error("AI Service Failed:", aiError.message);
-      projectData = null;
+        projectData = JSON.parse(completion.choices[0].message.content);
+      } catch (aiError) {
+        console.error("AI Error:", aiError.message);
+        projectData = null;
+      }
     }
 
     // INTELLIGENT FALLBACK: If AI fails or returns garbage, generate smart defaults
@@ -2696,7 +2674,19 @@ MANDATORY RULES:
 
   } catch (error) {
     console.error("AI Analysis Error:", error.message);
-    res.status(500).json({ error: "Analysis failed" });
+    // SAFETY FALLBACK: Return valid data to keep UI alive (NEVER crash)
+    res.json({
+      title: "Custom Home Project",
+      description: description || "Project analysis",
+      estimate_low: 20000,
+      estimate_high: 35000,
+      budget_range: "$20,000 - $35,000",
+      zip: "00000",
+      timeline: "4-8 weeks",
+      tradeType: "general_contractor",
+      aiAnalysis: "Fallback estimate - please review project details",
+      scopeItems: ["Planning", "Materials", "Labor", "Finishes", "Cleanup"]
+    });
   }
 });
 
