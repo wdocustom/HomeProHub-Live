@@ -11,6 +11,7 @@ class AuthService {
   constructor() {
     this.supabase = null;
     this.currentUser = null;
+    this.token = null;  // Cached access token for authenticatedFetch
     this.cachedProfile = null;  // Cache profile from signin to avoid redundant API calls
     this.initialized = false;
     this.isAuthenticated = false;  // Track authentication status
@@ -123,11 +124,13 @@ class AuthService {
       if (session && session.user) {
         this.currentUser = session.user;
         this.isAuthenticated = true;
+        this.token = session.access_token; // CRITICAL: Hydrate token for authenticatedFetch
         window.currentUser = session.user;
         console.log('✅ [Auth] Session restored for user:', session.user.email);
       } else {
         this.currentUser = null;
         this.isAuthenticated = false;
+        this.token = null;
         window.currentUser = null;
       }
 
@@ -138,13 +141,15 @@ class AuthService {
         // CRITICAL FIX: Handle SIGNED_OUT first before any other logic
         if (event === 'SIGNED_OUT') {
           this.currentUser = null;
+          this.token = null;
           this.handleSignOut();
           // Don't redirect here - let the signOut method handle it
           return;
         }
 
-        // Update current user reference
+        // Update current user reference and token
         this.currentUser = session?.user || null;
+        this.token = session?.access_token || null;
 
         // 2. GUEST GUARD: If no session, stop everything.
         if (!session || !session.user) {
@@ -226,17 +231,13 @@ class AuthService {
             }
           }
 
-          // 3. If still not found, fetch from profile with timeout (slowest)
+          // 3. If still not found, fetch from profile (slowest)
           if (!role) {
             try {
-              const profilePromise = this.getUserProfile();
-              const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
-              );
-
-              const profile = await Promise.race([profilePromise, timeoutPromise]);
+              const profile = await this.getUserProfile();
               role = profile?.role || 'homeowner';
             } catch (err) {
+              console.warn('⚠️ Profile fetch failed, defaulting to homeowner:', err.message);
               role = 'homeowner';
             }
           }
@@ -396,6 +397,7 @@ class AuthService {
 
       // Update local state
       this.currentUser = data.user;
+      this.token = data.session?.access_token || null; // CRITICAL: Hydrate token
 
       // Set session in Supabase client
       if (data.session && this.supabase) {
@@ -441,6 +443,7 @@ class AuthService {
 
       // Update local state
       this.currentUser = data.user;
+      this.token = data.session?.access_token || null; // CRITICAL: Hydrate token
 
       // CRITICAL FIX: Cache the profile so auth state change handler can access it
       // This prevents redundant API calls during redirect
@@ -503,21 +506,14 @@ class AuthService {
         return null;
       }
 
-      // Add timeout protection to prevent AbortError from hanging
-      const getUserWithTimeout = Promise.race([
-        this.supabase.auth.getUser(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Auth timeout')), 5000)
-        )
-      ]);
-
-      const { data: { user } } = await getUserWithTimeout;
+      // Wait for Supabase response - no artificial timeout
+      const { data: { user } } = await this.supabase.auth.getUser();
       this.currentUser = user;
       return user;
     } catch (error) {
-      // Silently handle AbortError and timeout errors
-      if (error.name === 'AbortError' || error.message === 'Auth timeout') {
-        console.warn('⚠️ Auth request timed out or was aborted - using cached session');
+      // Silently handle AbortError from legitimate navigation/cancellation
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ Auth request was cancelled (likely due to navigation)');
         return null;
       }
       console.error('Get user error:', error);
@@ -535,20 +531,19 @@ class AuthService {
         return null;
       }
 
-      // Add timeout protection to prevent AbortError from hanging
-      const getSessionWithTimeout = Promise.race([
-        this.supabase.auth.getSession(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Session timeout')), 5000)
-        )
-      ]);
+      // Wait for Supabase response - no artificial timeout
+      const { data: { session } } = await this.supabase.auth.getSession();
 
-      const { data: { session } } = await getSessionWithTimeout;
+      // Ensure token is hydrated when session exists
+      if (session && session.access_token) {
+        this.token = session.access_token;
+      }
+
       return session;
     } catch (error) {
-      // Silently handle AbortError and timeout errors
-      if (error.name === 'AbortError' || error.message === 'Session timeout') {
-        console.warn('⚠️ Session request timed out or was aborted');
+      // Silently handle AbortError from legitimate navigation/cancellation
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ Session request was cancelled (likely due to navigation)');
         return null;
       }
       console.error('Get session error:', error);
@@ -569,11 +564,21 @@ class AuthService {
    */
   async getAccessToken() {
     try {
+      // Return cached token if available (performance optimization)
+      if (this.token) {
+        return this.token;
+      }
+
       // Check if supabase is initialized before accessing it
       if (!this.supabase) {
         return null;
       }
+
+      // Fetch fresh session and cache the token
       const { data: { session } } = await this.supabase.auth.getSession();
+      if (session && session.access_token) {
+        this.token = session.access_token;
+      }
       return session?.access_token || null;
     } catch (error) {
       console.error('Get token error:', error);
@@ -877,6 +882,7 @@ class AuthService {
   handleSignOut() {
     // Clear any local state
     this.currentUser = null;
+    this.token = null;
     this.cachedProfile = null;
 
     // CRITICAL FIX: Aggressively clear all auth-related storage
