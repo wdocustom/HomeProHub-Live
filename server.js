@@ -2528,8 +2528,7 @@ Use the labor rates, regional multiplier, and permit costs provided in the RAG c
 
 /**
  * POST /api/projects/analyze
- * Production-grade AI project analysis endpoint
- * Strict title generation and pricing floor enforcement
+ * Senior Estimator AI with strict title enforcement and intelligent fallbacks
  */
 app.post('/api/projects/analyze', async (req, res) => {
   try {
@@ -2540,27 +2539,30 @@ app.post('/api/projects/analyze', async (req, res) => {
     }
 
     const sanitizedDescription = sanitizeInput(description || '', 3000);
+    const desc = sanitizedDescription.toLowerCase();
 
     // Extract ZIP code for location-based pricing
     const zipMatch = sanitizedDescription.match(/\b(\d{5})\b/);
     const zipCode = zipMatch ? zipMatch[1] : null;
 
-    // SYSTEM PROMPT: PRODUCTION GRADE ESTIMATOR
-    const systemMessage = `You are a Senior Construction Estimator.
+    // SYSTEM PROMPT: STRICT SENIOR ESTIMATOR
+    const systemPrompt = `You are a Senior Construction Estimator.
 INPUT: "${sanitizedDescription}"
 
 MANDATORY RULES:
-1. TITLE: Generate a specific technical title (e.g., "Basement Bathroom Addition", "2000sqft Roof Replacement").
-   - CRITICAL: Do NOT use generic titles like "Home Renovation Project" or "Home Improvement Project".
+1. TITLE GENERATION:
+   - You MUST generate a technical, specific title (e.g., "Basement Bathroom Addition", "Kitchen Remodel with Island").
+   - STRICTLY FORBIDDEN: "Home Renovation Project", "Home Improvement", "Renovation", "Home Project".
+   - Include specific room names, work types, and square footage when mentioned.
 
-2. PRICING FLOORS:
-   - Basement + Bath: Min $35,000
-   - Kitchen Remodel: Min $25,000
-   - Bathroom Remodel: Min $25,000
-   - Deck/Patio: Min $15,000
-   - General Remodel: Min $15,000
+2. PRICING FLOORS (Minimums):
+   - If text contains "Bathroom" AND "Basement": Minimum Low Estimate = $35,000
+   - If text contains "Kitchen": Minimum Low Estimate = $25,000
+   - If text contains "Bathroom" alone: Minimum Low Estimate = $25,000
+   - If text contains "Plumbing" or "Electrical" (New work): Increase base by 30%
+   - Deck/Patio: Minimum Low Estimate = $15,000
 
-3. OUTPUT: Return valid JSON only.
+3. OUTPUT FORMAT (JSON ONLY):
 {
   "title": "String",
   "description": "Enhanced description",
@@ -2598,22 +2600,82 @@ MANDATORY RULES:
       });
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemMessage },
-        { role: "user", content: userContent }
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 2048,
-      temperature: 0.7
-    });
+    let projectData;
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 2048,
+        temperature: 0.7
+      });
 
-    const responseText = completion.choices[0].message.content;
-    let projectData = JSON.parse(responseText);
+      const responseText = completion.choices[0].message.content;
+      projectData = JSON.parse(responseText);
+    } catch (aiError) {
+      console.error("AI Service Failed:", aiError.message);
+      projectData = null;
+    }
 
-    // Enforce cost floors on backend
-    const desc = sanitizedDescription.toLowerCase();
+    // INTELLIGENT FALLBACK: If AI fails or returns garbage, generate smart defaults
+    const genericTitles = ['home renovation project', 'home improvement', 'renovation', 'home project', 'project'];
+    const titleLower = (projectData?.title || '').toLowerCase().trim();
+
+    if (!projectData || !projectData.title || genericTitles.includes(titleLower)) {
+      console.error("AI returned generic/invalid response, using intelligent fallback");
+
+      // Smart title generation based on keywords
+      const isBathroom = desc.includes('bathroom') || desc.includes('bath');
+      const isBasement = desc.includes('basement');
+      const isKitchen = desc.includes('kitchen');
+      const isDeck = desc.includes('deck') || desc.includes('patio');
+      const isRemodel = desc.includes('remodel');
+      const isAddition = desc.includes('addition') || desc.includes('add');
+
+      let smartTitle = "Custom Home Project";
+      let estimateLow = 15000;
+      let estimateHigh = 25000;
+
+      if (isBathroom && isBasement) {
+        smartTitle = "Basement Bathroom Addition";
+        estimateLow = 35000;
+        estimateHigh = 55000;
+      } else if (isKitchen) {
+        smartTitle = isRemodel ? "Kitchen Remodel" : "Kitchen Renovation";
+        estimateLow = 25000;
+        estimateHigh = 45000;
+      } else if (isBathroom) {
+        smartTitle = isRemodel ? "Bathroom Remodel" : "Bathroom Renovation";
+        estimateLow = 25000;
+        estimateHigh = 40000;
+      } else if (isBasement) {
+        smartTitle = "Basement Finishing";
+        estimateLow = 20000;
+        estimateHigh = 35000;
+      } else if (isDeck) {
+        smartTitle = "Deck Construction";
+        estimateLow = 15000;
+        estimateHigh = 30000;
+      }
+
+      projectData = {
+        title: smartTitle,
+        description: sanitizedDescription,
+        estimate_low: estimateLow,
+        estimate_high: estimateHigh,
+        budget_range: `$${estimateLow.toLocaleString()} - $${estimateHigh.toLocaleString()}`,
+        zip: zipCode || '00000',
+        timeline: "4-8 weeks",
+        tradeType: "general_contractor",
+        aiAnalysis: "Smart estimate generated based on project keywords",
+        scopeItems: ["Permits", "Materials", "Labor", "Finishes", "Cleanup"]
+      };
+    }
+
+    // Backend enforcement of cost floors (safety net)
     if ((desc.includes('bathroom') || desc.includes('bath')) && projectData.estimate_low < 25000) {
       projectData.estimate_low = 25000;
       projectData.estimate_high = Math.max(projectData.estimate_high, 35000);
