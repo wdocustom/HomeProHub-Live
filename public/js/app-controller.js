@@ -4,8 +4,6 @@
  * Loads dependencies dynamically to ensure strict execution order.
  */
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-
 (async function initializeApp() {
   // 1. Immediate Visual Feedback (Anti-Flicker)
   // We ensure the body exists before trying to style it
