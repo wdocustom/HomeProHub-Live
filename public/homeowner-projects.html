@@ -1463,8 +1463,8 @@
         </div>
       `;
 
-      const container = document.querySelector('.dashboard-container');
-      container.insertBefore(banner, container.firstChild);
+      const errorContainer = document.querySelector('.dashboard-container');
+      errorContainer.insertBefore(banner, errorContainer.firstChild);
 
       setTimeout(() => banner.remove(), 5000);
     }
