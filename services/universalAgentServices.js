@@ -27,6 +27,21 @@ const openai = new OpenAI({
 });
 
 // ========================================
+// Helper: Safe Date Validator
+// ========================================
+/**
+ * Safely parse and validate date inputs
+ * Returns a valid Date object or defaults to current date if invalid
+ * @param {string|Date} dateInput - The date input to validate
+ * @returns {Date} - A valid Date object
+ */
+function getSafeDate(dateInput) {
+  if (!dateInput) return new Date(); // Default to NOW if empty
+  const d = new Date(dateInput);
+  return isNaN(d.getTime()) ? new Date() : d; // Default to NOW if invalid
+}
+
+// ========================================
 // Helper: Get Project Template
 // ========================================
 async function getProjectTemplate(projectId) {
@@ -1072,7 +1087,7 @@ class WhipAgent {
 
       // Calculate duration (days between planned start and end)
       const duration = milestone.planned_end_date && milestone.planned_start_date
-        ? Math.ceil((new Date(milestone.planned_end_date) - new Date(milestone.planned_start_date)) / (1000 * 60 * 60 * 24))
+        ? Math.ceil((getSafeDate(milestone.planned_end_date) - getSafeDate(milestone.planned_start_date)) / (1000 * 60 * 60 * 24))
         : 1;
 
       node.earliest_finish = node.earliest_start + duration;
@@ -1118,7 +1133,7 @@ class WhipAgent {
     // Update project_states with critical path status
     const behindSchedule = milestones.some(m => {
       if (m.status === 'completed' && m.actual_end_date && m.planned_end_date) {
-        return new Date(m.actual_end_date) > new Date(m.planned_end_date);
+        return getSafeDate(m.actual_end_date) > getSafeDate(m.planned_end_date);
       }
       return false;
     });
@@ -1165,7 +1180,7 @@ class WhipAgent {
     for (const milestone of milestones) {
       if (milestone.status === 'in_progress' && milestone.planned_end_date) {
         const today = new Date();
-        const plannedEnd = new Date(milestone.planned_end_date);
+        const plannedEnd = getSafeDate(milestone.planned_end_date);
 
         if (today > plannedEnd) {
           const daysLate = Math.ceil((today - plannedEnd) / (1000 * 60 * 60 * 24));
@@ -1191,10 +1206,10 @@ class WhipAgent {
 
         for (const dependent of dependentMilestones) {
           // Push out start date by number of days late
-          const newStart = new Date(dependent.planned_start_date);
+          const newStart = getSafeDate(dependent.planned_start_date);
           newStart.setDate(newStart.getDate() + delay.days_late);
 
-          const newEnd = new Date(dependent.planned_end_date);
+          const newEnd = getSafeDate(dependent.planned_end_date);
           newEnd.setDate(newEnd.getDate() + delay.days_late);
 
           // Reschedule milestone using Supabase
