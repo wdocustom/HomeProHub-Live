@@ -79,6 +79,7 @@
         logo: { text: 'HomeProHub', href: '/contractor-dashboard.html' },
         centerLinks: [
           { text: 'Dashboard', href: '/contractor-dashboard.html' },
+          { text: 'Command Center', href: '/command-center.html' },
           { text: 'Tools', href: '/contractor-estimator' },
           { text: 'Lead Scout', href: '/lead-scout.html' },
           { text: 'Job Board', href: '/job-board.html' },
@@ -89,6 +90,7 @@
       mobile: {
         items: [
           { label: 'Dashboard', icon: 'fa-home', href: '/contractor-dashboard.html' },
+          { label: 'Command Center', icon: 'fa-microchip', href: '/command-center.html' },
           { label: 'Tools', icon: 'fa-wrench', href: '/contractor-estimator' },
           { label: 'Lead Scout', icon: 'fa-map-pin', href: '/lead-scout.html' },
           { label: 'Job Board', icon: 'fa-briefcase', href: '/job-board.html' },

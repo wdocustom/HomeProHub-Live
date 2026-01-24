@@ -162,17 +162,16 @@ class OrchestratorAgent {
       .select(`
         *,
         project_templates (*),
-        bids!inner (
+        contractor_bids!inner (
           start_date,
           proposal_text,
-          amount_low,
-          amount_high,
+          bid_amount,
           contractor_id,
           status
         )
       `)
       .eq('id', projectId)
-      .eq('bids.status', 'accepted')
+      .eq('contractor_bids.status', 'accepted')
       .single();
 
     if (jobError || !jobData) {
@@ -184,7 +183,7 @@ class OrchestratorAgent {
     let projectStartDate = new Date(); // Default to now
     let projectBudget = jobData.budget_high || jobData.budget_max;
 
-    const winningBid = jobData.bids && jobData.bids[0]; // Get the first (and only) accepted bid
+    const winningBid = jobData.contractor_bids && jobData.contractor_bids[0]; // Get the first (and only) accepted bid
 
     if (winningBid) {
       console.log(`[Orchestrator] Found Winning Bid. Using Contractor Date: ${winningBid.start_date}`);
@@ -194,8 +193,8 @@ class OrchestratorAgent {
         projectStartDate = new Date(winningBid.start_date);
       }
       // Also update budget to match the real accepted price
-      if (winningBid.amount_high) {
-        projectBudget = winningBid.amount_high;
+      if (winningBid.bid_amount) {
+        projectBudget = winningBid.bid_amount;
       }
     }
 

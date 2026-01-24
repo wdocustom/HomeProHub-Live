@@ -387,14 +387,23 @@
     </div>
   </div>
 
-  <!-- Project Timeline Dashboard (Tactical Gantt for Contractors) -->
-  <div id="projectTimelineSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12" style="display: none;">
-    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-      <div class="mb-6">
-        <h2 class="text-2xl font-bold text-slate-900 mb-2">Active Project Timeline</h2>
-        <p class="text-slate-600 text-sm">Tactical Gantt chart for managing your active jobs</p>
+  <!-- Active Projects List -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">Active Projects</h2>
+          <p class="text-sm text-gray-500">Real-time status from AI Command Center</p>
+        </div>
+        <select id="project-limit" onchange="loadActiveProjects(this.value)" class="border p-2 rounded text-sm">
+          <option value="3">Top 3</option>
+          <option value="5">Top 5</option>
+          <option value="100">All</option>
+        </select>
       </div>
-      <div id="contractor-project-dashboard"></div>
+      <div id="active-projects-list" class="space-y-3">
+        <p class="text-gray-500">Loading...</p>
+      </div>
     </div>
   </div>
 
@@ -906,6 +915,59 @@
       });
     }
 
+    async function loadActiveProjects(limit = 3) {
+      const container = document.getElementById('active-projects-list');
+      container.innerHTML = '<p class="text-gray-500">Loading...</p>';
+
+      try {
+        // Get current user
+        const user = await window.authService.getCurrentUser();
+        if (!user) {
+          container.innerHTML = '<p class="text-gray-500">Please sign in to view projects.</p>';
+          return;
+        }
+
+        // Fetch Active Jobs + AI Phase
+        const { data: projects, error } = await window.authService.supabase
+          .from('job_postings')
+          .select('id, title, address, project_states(current_phase)')
+          .eq('contractor_id', user.id)
+          .eq('status', 'in_progress')
+          .limit(parseInt(limit));
+
+        if (error) {
+          console.error('Error fetching projects:', error);
+          container.innerHTML = '<p class="text-gray-500">Error loading projects.</p>';
+          return;
+        }
+
+        if (!projects || projects.length === 0) {
+          container.innerHTML = '<p class="text-gray-500">No active projects.</p>';
+          return;
+        }
+
+        container.innerHTML = projects.map(p => {
+          const phase = p.project_states?.[0]?.current_phase || 'Planning';
+          const location = p.address || 'Location not set';
+          return `
+            <div class="flex items-center justify-between p-4 border rounded hover:shadow-md transition">
+              <div>
+                <h3 class="font-bold text-gray-800">${p.title || 'Untitled Project'}</h3>
+                <p class="text-xs text-gray-500">${location}</p>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full uppercase">${phase}</span>
+                <a href="/command-center.html?job_id=${p.id}" class="text-blue-600 font-medium text-sm hover:underline">Manage &rarr;</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Error in loadActiveProjects:', error);
+        container.innerHTML = '<p class="text-gray-500">Error loading projects.</p>';
+      }
+    }
+
     async function submitRating() {
       if (selectedRating === 0) {
         alert('Please select a star rating');
@@ -970,6 +1032,7 @@
       loadPendingReviews();
       checkAutoGCAccess(); // Check Auto-GC access and display appropriate card
       initializeProjectDashboard(); // Initialize dual-lens dashboard
+      loadActiveProjects(3); // Load active projects list
 
       // Rating star click handlers
       document.querySelectorAll('.rating-star').forEach((star, index) => {
