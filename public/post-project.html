@@ -1296,9 +1296,35 @@
           console.warn('Could not clear user metadata (non-critical):', metaError);
         }
 
-        // Redirect to dashboard with success message
+        // 1. HIDE the Form/Loading Spinner
+        document.getElementById('receiptCard').classList.add('hidden');
+        document.getElementById('actionBar').classList.add('hidden');
+
+        // 2. SHOW the Success Message
+        const projectTitle = projectData.title || 'Your Project';
+        const successHtml = `
+          <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-lg shadow-xl max-w-md text-center border-t-4 border-green-500">
+              <div class="text-green-500 text-5xl mb-4">✓</div>
+              <h2 class="text-2xl font-bold mb-2">Project Posted Successfully!</h2>
+              <p class="text-gray-600 mb-6">
+                Your project <strong>"${escapeHtml(projectTitle)}"</strong> is now live.
+                Contractors have been notified.
+              </p>
+              <button onclick="window.location.href='/homeowner-dashboard.html'"
+                      class="bg-green-600 text-white px-6 py-3 rounded-full font-bold hover:bg-green-700 transition">
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        `;
+
+        // Append to body
+        document.body.insertAdjacentHTML('beforeend', successHtml);
+
+        // Store success flag for dashboard
         sessionStorage.setItem('project_posted_success', 'true');
-        window.location.href = 'homeowner-dashboard.html';
+
 
       } catch (error) {
         console.error('Error posting project:', error);
