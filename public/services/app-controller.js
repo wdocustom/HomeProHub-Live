@@ -5,15 +5,13 @@
  */
 
 (async function initializeApp() {
-  // Show loading state
-  showLoadingState();
-
   try {
     // ============================================
-    // STEP 1: AUTHENTICATE USER (NON-BLOCKING)
+    // STEP 1: AUTHENTICATE USER FIRST (CRITICAL)
     // ============================================
+    // ARCHITECTURAL FIX: Authentication MUST happen before ANY UI rendering
+    // This prevents false "Logged Out" redirects when UI code crashes
 
-    // CRITICAL FIX: Wrap in AbortError handler to prevent crashes during navigation
     let user = null;
     let authInitialized = false;
 
@@ -29,6 +27,7 @@
 
       user = window.currentUser;
       authInitialized = true;
+      console.log('✅ [AppController] Authentication completed successfully');
     } catch (authError) {
       // Handle AbortError gracefully (happens when navigation interrupts initialization)
       if (authError.name === 'AbortError' || authError.message?.includes('aborted')) {
@@ -43,10 +42,21 @@
       authInitialized = false;
     }
 
+    // ============================================
+    // STEP 2: SHOW LOADING STATE (AFTER AUTH)
+    // ============================================
+    // Wrap loading spinner in try-catch to prevent crashes
+    try {
+      showLoadingState();
+    } catch (loadingError) {
+      console.warn('⚠️ [AppController] Loading state render failed:', loadingError.message);
+      // Continue - loading spinner is optional
+    }
+
     const userState = determineUserState(user);
 
     // ============================================
-    // STEP 2: DETERMINE GLOBAL STATE
+    // STEP 3: DETERMINE GLOBAL STATE
     // ============================================
 
     const appState = {
@@ -61,7 +71,7 @@
     window.appState = appState;
 
     // ============================================
-    // STEP 3: RENDER CORE UI (NON-BLOCKING)
+    // STEP 4: RENDER CORE UI (NON-BLOCKING)
     // ============================================
 
     // REFACTORED: Pass user data to navigation to prevent duplicate auth fetches
@@ -102,7 +112,7 @@
     }
 
     // ============================================
-    // STEP 4: HYDRATE PAGE CONTENT
+    // STEP 5: HYDRATE PAGE CONTENT
     // ============================================
 
     // Dispatch event for page-specific initialization
