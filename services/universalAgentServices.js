@@ -157,12 +157,13 @@ class OrchestratorAgent {
 
     // 1. FETCH JOB *AND* THE WINNING BID
     // We strictly filter for the bid where status = 'accepted'
+    // CRITICAL: Explicitly use the FK constraint name to avoid PostgREST ambiguity
     const { data: jobData, error: jobError } = await supabase
       .from('job_postings')
       .select(`
         *,
         project_templates (*),
-        contractor_bids!inner (
+        contractor_bids!fk_contractor_bids_job (
           start_date,
           proposal_text,
           bid_amount,
@@ -174,8 +175,13 @@ class OrchestratorAgent {
       .eq('contractor_bids.status', 'accepted')
       .single();
 
-    if (jobError || !jobData) {
-      throw new Error(`Job not found or DB Error: ${jobError?.message || 'Unknown error'}`);
+    if (jobError) {
+      console.error('[Orchestrator] DB Error:', jobError);
+      throw new Error(`Failed to fetch job and bid data: ${jobError.message}`);
+    }
+
+    if (!jobData) {
+      throw new Error(`Job ${projectId} not found`);
     }
 
     // 2. DETERMINE THE TRUE START DATE
