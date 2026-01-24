@@ -79,7 +79,7 @@
         logo: { text: 'HomeProHub', href: '/contractor-dashboard.html' },
         centerLinks: [
           { text: 'Dashboard', href: '/contractor-dashboard.html' },
-          { text: 'Tools', href: '/contractor-tools.html' },
+          { text: 'Tools', href: '/contractor-estimator' },
           { text: 'Job Board', href: '/job-board.html' },
           { text: 'Messages', href: '/messages.html' }
         ],
@@ -88,7 +88,7 @@
       mobile: {
         items: [
           { label: 'Dashboard', icon: 'fa-home', href: '/contractor-dashboard.html' },
-          { label: 'Tools', icon: 'fa-wrench', href: '/contractor-tools.html' },
+          { label: 'Tools', icon: 'fa-wrench', href: '/contractor-estimator' },
           { label: 'Job Board', icon: 'fa-briefcase', href: '/job-board.html' },
           { label: 'Messages', icon: 'fa-message', href: '/messages.html' },
           { label: 'Profile', icon: 'fa-user', href: '/contractor-profile.html' }

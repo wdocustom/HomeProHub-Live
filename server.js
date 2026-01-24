@@ -109,6 +109,11 @@ app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'favicon.svg'));
 });
 
+// Contractor Estimator Tool (serves the main estimator page)
+app.get('/contractor-estimator', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'estimator.html'));
+});
+
 // ====== UTILITY FUNCTIONS ======
 
 /**
@@ -2277,6 +2282,7 @@ Permit Cost Samples: ${JSON.stringify(ragData.samplePermitFees)}
 
 You MUST return a JSON object with this EXACT structure:
 {
+  "title": "Master Bathroom Remodel",
   "subtotal_low": 15000,
   "subtotal_high": 22000,
   "summary": "Brief scope overview highlighting key project elements and any notable observations from photos",
@@ -2315,13 +2321,31 @@ You MUST return a JSON object with this EXACT structure:
 }
 
 CRITICAL REQUIREMENTS:
-1. Every major task (Flooring, Drywall, Electrical, Plumbing, Cabinets, etc.) MUST have both 'Material' and 'Labor' lines grouped under it
-2. Do NOT list materials and labor separately - they must be paired within each work_package
-3. Use the RAG context labor rates and regional multiplier to calculate realistic costs
-4. Analyze all provided photos for scope details, finishes, and complexity
-5. Field names: "cost" (not "cost_range"), "summary" (not "designer_note")
-6. subtotal_low and subtotal_high should match the sum of all work_packages
-7. Cost format: "$X,XXX - $Y,YYY" as a string with commas and dollar signs
+1. PROJECT TITLE (MANDATORY): Generate a specific, professional title based on the project scope. Examples:
+   - "Master Bathroom Remodel" (NOT "Bathroom Project" or "Home Renovation Project")
+   - "2000sqft Asphalt Roof Replacement" (NOT "Roofing Work")
+   - "Kitchen Cabinet & Countertop Upgrade" (NOT "Kitchen Project")
+   - NEVER use generic terms like "Home Project", "Renovation Project", or "Home Improvement"
+   - Include key details like room type, square footage, or specific work when applicable
+
+2. Every major task (Flooring, Drywall, Electrical, Plumbing, Cabinets, etc.) MUST have both 'Material' and 'Labor' lines grouped under it
+
+3. Do NOT list materials and labor separately - they must be paired within each work_package
+
+4. LOCATION-BASED PRICING (CRITICAL): You MUST adjust ALL labor and material rates based on ZIP ${zipCode}:
+   - Apply the regional multiplier (${ragData.regionalMultiplier}x) to ALL labor costs
+   - High-cost areas (CA, NY, DC, Seattle): Increase base rates by 40-60%
+   - Rural/low-cost areas: Adjust downward by 10-20%
+   - Use the provided labor rates and regional multiplier for accurate calculations
+   - Material costs also vary by region - adjust accordingly
+
+5. Analyze all provided photos for scope details, finishes, and complexity
+
+6. Field names: "cost" (not "cost_range"), "summary" (not "designer_note"), "title" (not "project_name")
+
+7. subtotal_low and subtotal_high should match the sum of all work_packages
+
+8. Cost format: "$X,XXX - $Y,YYY" as a string with commas and dollar signs
 
 IMPORTANT: Do NOT calculate overhead, profit, or contingency - just return subtotal. Server will add those.`;
 
