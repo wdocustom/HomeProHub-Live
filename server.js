@@ -4300,7 +4300,8 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       ai_assisted,
       homeowner_email,
       original_question,
-      ai_analysis
+      ai_analysis,
+      ai_scope_data
     } = req.body;
 
     // Debug logging to diagnose 500 errors
@@ -4354,7 +4355,8 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       homeowner_email: homeowner_email,
       homeowner_id: homeownerProfile.id,
       original_question: original_question || null,
-      ai_analysis: ai_analysis || null
+      ai_analysis: ai_analysis || null,
+      ai_scope_data: ai_scope_data || null  // CRITICAL FIX: Store full AI data for contractor hydration
     };
 
     console.log('💾 Attempting to create job posting with data:', {

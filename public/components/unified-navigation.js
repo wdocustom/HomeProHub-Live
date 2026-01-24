@@ -80,6 +80,7 @@
         centerLinks: [
           { text: 'Dashboard', href: '/contractor-dashboard.html' },
           { text: 'Tools', href: '/contractor-estimator' },
+          { text: 'Lead Scout', href: '/lead-scout.html' },
           { text: 'Job Board', href: '/job-board.html' },
           { text: 'Messages', href: '/messages.html' }
         ],
@@ -89,6 +90,7 @@
         items: [
           { label: 'Dashboard', icon: 'fa-home', href: '/contractor-dashboard.html' },
           { label: 'Tools', icon: 'fa-wrench', href: '/contractor-estimator' },
+          { label: 'Lead Scout', icon: 'fa-map-pin', href: '/lead-scout.html' },
           { label: 'Job Board', icon: 'fa-briefcase', href: '/job-board.html' },
           { label: 'Messages', icon: 'fa-message', href: '/messages.html' },
           { label: 'Profile', icon: 'fa-user', href: '/contractor-profile.html' }

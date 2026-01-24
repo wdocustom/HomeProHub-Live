@@ -1149,6 +1149,19 @@
 
         console.log('✓ Final zip_code confirmed:', finalZip);
 
+        // CRITICAL FIX: Get full AI result from sessionStorage for ai_scope_data
+        const aiResultStr = sessionStorage.getItem('ai_draft_result');
+        let aiScopeData = null;
+
+        if (aiResultStr) {
+          try {
+            aiScopeData = JSON.parse(aiResultStr);
+            console.log('✓ AI scope data found and will be saved to database');
+          } catch (parseErr) {
+            console.warn('Failed to parse ai_draft_result:', parseErr);
+          }
+        }
+
         // TASK 2: Map category values (lowercase to Title Case for database)
         const categoryMap = {
           'general': 'General Contractor',
@@ -1212,7 +1225,8 @@
           urgency: projectData.urgency || 'flexible',
           homeowner_email: user.email,  // REQUIRED by backend
           original_question: projectData.description,
-          ai_analysis: projectData.aiAnalysis || null
+          ai_analysis: projectData.aiAnalysis || null,
+          ai_scope_data: aiScopeData  // CRITICAL FIX: Include full AI data for contractor hydration
         };
 
         // Debug logging to verify payload structure

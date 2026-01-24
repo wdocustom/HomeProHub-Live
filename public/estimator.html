@@ -669,6 +669,14 @@
     }
 
     function autoPopulateFromJob(jobData) {
+      // CRITICAL FIX: Check for AI scope data first (rich homeowner data)
+      if (jobData.aiScopeData && typeof jobData.aiScopeData === 'object') {
+        console.log('✓ Found AI scope data from homeowner - hydrating estimator');
+        hydrateFromAiData(jobData.aiScopeData, jobData);
+        return;
+      }
+
+      // Fallback: Basic text description if no AI data
       if (jobData.jobDescription) {
         document.getElementById('job-description').value = jobData.jobDescription;
       }
@@ -684,6 +692,41 @@
       if (banner) {
         banner.classList.remove('hidden');
       }
+    }
+
+    // CRITICAL FIX: Hydrate estimator from homeowner's AI data
+    function hydrateFromAiData(aiData, jobData) {
+      console.log('🔄 Hydrating estimator with AI data:', aiData);
+
+      // Pre-fill basic fields
+      if (aiData.description || jobData.jobDescription) {
+        document.getElementById('job-description').value = aiData.description || jobData.jobDescription;
+      }
+      if (aiData.zip || jobData.zipCode) {
+        document.getElementById('zip-code').value = aiData.zip || jobData.zipCode;
+      }
+
+      // Set project title in banner
+      const banner = document.getElementById('auto-populate-banner');
+      const jobTitle = document.getElementById('loaded-job-title');
+      if (jobTitle) {
+        jobTitle.textContent = aiData.title || jobData.jobTitle || 'Job from dashboard';
+      }
+      if (banner) {
+        banner.classList.remove('hidden');
+      }
+
+      // Show AI data indicator
+      const statusEl = document.getElementById('status');
+      if (statusEl) {
+        statusEl.textContent = '✨ Loaded AI data from homeowner - Review and adjust as needed';
+        statusEl.className = 'text-sm text-center text-blue-600 font-medium';
+      }
+
+      // Store AI data for reference when generating estimate
+      window.homeownerAiData = aiData;
+
+      console.log('✅ Estimator hydrated with homeowner AI data');
     }
 
     // ============================================

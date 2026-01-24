@@ -606,8 +606,9 @@
         </div>
 
         <div class="form-group">
-          <label>Start Availability</label>
-          <input type="text" id="bidAvailability" placeholder="e.g., Next week, ASAP" />
+          <label>Start Availability Date</label>
+          <input type="date" id="bidAvailability" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+          <p class="text-xs text-gray-500 mt-1 italic">Select your earliest available start date</p>
         </div>
 
         <div class="form-group">
@@ -1638,6 +1639,7 @@
       }
 
       // Store job data for estimator to use
+      // CRITICAL FIX: Include ai_scope_data if available for intelligent hydration
       sessionStorage.setItem('estimatorJob', JSON.stringify({
         jobId: job.id,
         jobTitle: job.title,
@@ -1646,11 +1648,17 @@
         budgetLow: job.budget_low,
         budgetHigh: job.budget_high,
         zipCode: job.zip_code,
+        aiScopeData: job.ai_scope_data || null,  // CRITICAL FIX: Pass AI data for pre-fill
         returnToBid: true
       }));
 
-      // Redirect to estimator
-      window.location.href = 'contractor-tools.html';
+      console.log('✓ Passing job to estimator:', {
+        jobId: job.id,
+        hasAiData: !!job.ai_scope_data
+      });
+
+      // Redirect to estimator (Note: The route /contractor-estimator redirects to estimator.html)
+      window.location.href = '/contractor-estimator';
     }
     window.useEstimator = useEstimator;
 
