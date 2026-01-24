@@ -797,6 +797,11 @@
      * Populate the receipt with project data
      */
     function populateReceipt(data) {
+      // SAFETY FALLBACKS: Ensure critical fields are never null/undefined
+      const title = data.title || "Project Draft";
+      const category = data.category || data.tradeType || "General";
+      const timeline = data.timeline || "Flexible";
+
       // Parse budget_range string to extract low/high values for dark box display
       let budgetLow = '$15,000';
       let budgetHigh = '$22,000';
@@ -826,17 +831,17 @@
         document.getElementById('zipDisplay').textContent = data.zip;
       }
 
-      document.getElementById('timelineDisplay').textContent = data.timeline || '2-4 weeks';
+      document.getElementById('timelineDisplay').textContent = timeline;
 
       // Category - abbreviate "General Contractor" to "GC"
-      let displayCategory = data.tradeType ? capitalize(data.tradeType) : 'General';
+      let displayCategory = capitalize(category);
       if (displayCategory.toLowerCase() === 'general') {
         displayCategory = 'GC';
       }
       document.getElementById('categoryDisplay').textContent = displayCategory;
 
       // Title
-      document.getElementById('titleDisplay').textContent = data.title || 'Home Renovation Project';
+      document.getElementById('titleDisplay').textContent = title;
 
       // Designer Note (if available) - TASK 3: Type check before .trim()
       if (data.designerNote && typeof data.designerNote === 'string' && data.designerNote.trim().length > 0) {
@@ -1320,7 +1325,13 @@
       return text.replace(/[&<>"']/g, m => map[m]);
     }
 
+    // SAFE CAPITALIZE FUNCTION (Prevents Page Crash)
     function capitalize(str) {
+      // 1. Safety Check: If str is null, undefined, or not a string, return empty
+      if (!str || typeof str !== 'string') {
+        return '';
+      }
+      // 2. Safe Execution
       return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
