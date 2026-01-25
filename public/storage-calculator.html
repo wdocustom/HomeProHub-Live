@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WDO Custom Organizer Pricing</title>
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --accent: #2563eb;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
+
+        /* HEADER */
+        .header-section { text-align: center; margin-bottom: 30px; }
+        h1 { margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+        .subtitle { font-size: 1rem; color: var(--text-muted); margin-top: 5px; }
+
+        /* CARDS */
+        .card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        /* HEADER INSIDE CARD */
+        .unit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .unit-title { font-weight: 700; color: var(--text-main); font-size: 1.1rem; }
+        .btn-remove { color: #ef4444; background: none; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; }
+
+        /* INPUTS */
+        label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
+        .input-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .input-group { flex: 1; }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 1rem;
+            background: #f1f5f9;
+            color: var(--text-main);
+            box-sizing: border-box;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
+
+        /* TOGGLES */
+        .toggle-container { display: flex; flex-direction: column; gap: 10px; }
+        .toggle-row { display: flex; align-items: center; cursor: pointer; }
+        .toggle-row input { width: 20px; height: 20px; margin-right: 12px; cursor: pointer; flex: 0 0 20px; }
+        .toggle-row span { font-size: 0.95rem; font-weight: 500; }
+
+        /* BUTTONS */
+        .btn-add { width: 100%; background: white; border: 2px dashed var(--accent); color: var(--accent); padding: 15px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 1rem; margin-bottom: 30px; transition: all 0.2s; }
+        .btn-add:hover { background: #eff6ff; }
+
+        .btn-email { width: 100%; background: var(--accent); border: none; color: white; padding: 18px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); }
+        .btn-email:hover { background: #1d4ed8; }
+
+        /* TOTALS */
+        .total-section { background: var(--text-main); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .total-label { text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; opacity: 0.8; margin-bottom: 5px; }
+        .total-price { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-section">
+        <h1>WDO Custom</h1>
+        <div class="subtitle">Storage Solution Pricing Tool</div>
+    </div>
+
+    <div id="units-container"></div>
+
+    <button class="btn-add" onclick="addUnit()">+ Add Another Unit</button>
+
+    <div class="total-section">
+        <div class="total-label">Estimated Total Price</div>
+        <div class="total-price" id="display-total">$0</div>
+    </div>
+
+    <button class="btn-email" onclick="sendEmail()">📧 Send Order Inquiry</button>
+    <div style="text-align:center; font-size:0.8rem; color:#94a3b8; margin-top:10px;">
+        Clicking this will open your email app with these details pre-filled.
+    </div>
+
+</div>
+
+<script>
+    // --- CONFIGURATION ---
+    const myEmail = "camachoskyler@gmail.com";
+    // ---------------------
+
+    let unitCount = 0;
+
+    function addUnit() {
+        unitCount++;
+        const id = unitCount;
+
+        const html = `
+        <div class="card unit-card" id="unit-${id}">
+            <div class="unit-header">
+                <div class="unit-title">Unit #${id}</div>
+                <button class="btn-remove" onclick="removeUnit(${id})">Remove</button>
+            </div>
+
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Columns Wide</label>
+                    <input type="number" class="in-cols" value="4" min="1" oninput="calculate()">
+                </div>
+                <div class="input-group">
+                    <label>Rows High</label>
+                    <input type="number" class="in-rows" value="4" min="1" oninput="calculate()">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Tote Type</label>
+                    <select class="in-tote" onchange="calculate()">
+                        <option value="HDX">HDX (19.6")</option>
+                        <option value="GM">Greenmade (20.6")</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="toggle-container">
+                <label class="toggle-row">
+                    <input type="checkbox" class="in-wheels" checked onchange="calculate()">
+                    <span>Add Wheels (+$45)</span>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" class="in-top" checked onchange="calculate()">
+                    <span>Add Plywood Top (+$75 per section)</span>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" class="in-totes" onchange="calculate()">
+                    <span>Include Totes (+$12 ea)</span>
+                </label>
+            </div>
+        </div>`;
+
+        const container = document.getElementById('units-container');
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        container.appendChild(div.firstElementChild);
+        calculate();
+    }
+
+    function removeUnit(id) {
+        const el = document.getElementById(`unit-${id}`);
+        if(el) el.remove();
+        calculate();
+    }
+
+    function calculate() {
+        let grandTotal = 0;
+        const units = document.querySelectorAll('.unit-card');
+
+        units.forEach(unit => {
+            const cols = parseInt(unit.querySelector('.in-cols').value) || 0;
+            const rows = parseInt(unit.querySelector('.in-rows').value) || 0;
+            const toteType = unit.querySelector('.in-tote').value;
+
+            const hasWheels = unit.querySelector('.in-wheels').checked;
+            const hasTop = unit.querySelector('.in-top').checked;
+            const inclTotes = unit.querySelector('.in-totes').checked;
+
+            if(cols > 0 && rows > 0) {
+                const slots = cols * rows;
+
+                // Base Price ($40/slot)
+                let unitPrice = slots * 40;
+
+                // Totes ($12/ea)
+                if(inclTotes) unitPrice += (slots * 12);
+
+                // Wheels ($45 fixed)
+                if(hasWheels) unitPrice += 45;
+
+                // Top Logic ($75 per sheet width)
+                if(hasTop) {
+                    const opening = (toteType === 'HDX') ? 19.75 : 20.75;
+                    const totalWidth = (cols * opening) + ((cols+1) * 1.5);
+
+                    let sheets = 1;
+                    if(totalWidth > 192) sheets = 3;
+                    else if(totalWidth > 96) sheets = 2;
+
+                    unitPrice += (sheets * 75);
+                }
+
+                grandTotal += unitPrice;
+            }
+        });
+
+        document.getElementById('display-total').innerText = "$" + grandTotal.toLocaleString();
+    }
+
+    function sendEmail() {
+        const total = document.getElementById('display-total').innerText;
+        let body = `Hi WDO Custom,\n\nI would like to order the following organizer setup:\n\n`;
+
+        const units = document.querySelectorAll('.unit-card');
+        units.forEach((unit, index) => {
+            const cols = unit.querySelector('.in-cols').value;
+            const rows = unit.querySelector('.in-rows').value;
+            const type = unit.querySelector('.in-tote').value;
+            const wheels = unit.querySelector('.in-wheels').checked ? "Yes" : "No";
+            const top = unit.querySelector('.in-top').checked ? "Yes" : "No";
+            const totes = unit.querySelector('.in-totes').checked ? "Yes" : "No";
+
+            body += `UNIT #${index + 1}:\n`;
+            body += `- Size: ${cols} Wide x ${rows} High\n`;
+            body += `- Tote Type: ${type}\n`;
+            body += `- Wheels: ${wheels}\n`;
+            body += `- Top: ${top}\n`;
+            body += `- Include Totes: ${totes}\n\n`;
+        });
+
+        body += `ESTIMATED TOTAL: ${total}\n\n`;
+        body += `Please contact me to confirm details and availability.`;
+
+        const subject = encodeURIComponent("New Organizer Order Inquiry - " + total);
+        const encodedBody = encodeURIComponent(body);
+
+        window.location.href = `mailto:${myEmail}?subject=${subject}&body=${encodedBody}`;
+    }
+
+    // Init
+    window.onload = function() {
+        addUnit();
+    }
+</script>
+
+</body>
+</html>
