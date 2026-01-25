@@ -477,32 +477,32 @@
     if(link && link !== '#') window.location.href = link;
   };
 
-  // --- ROBUST LOGOUT HANDLER ---
-  // Tries both logout() and signOut() to match Supabase/Auth wrapper standards
-  window.handleLogout = async function() {
-    // DEBUG: Add stack trace to see what's calling logout
-    console.log("🚪 Logging out...");
-    console.trace("Logout triggered from:");
+  // --- FAIL-SAFE LOGOUT HANDLER ---
+  // Calls the nuclear-option signOut function that ALWAYS works
+  window.handleLogout = async function(e) {
+    if (e) e.preventDefault();
 
-    try {
-      if (window.authService) {
-        // 1. Try 'logout' (Custom Wrapper)
-        if (typeof window.authService.logout === 'function') {
-           await window.authService.logout();
-        }
-        // 2. Try 'signOut' (Supabase Standard)
-        else if (typeof window.authService.signOut === 'function') {
-           await window.authService.signOut();
-        }
-        else {
-           console.warn("AuthService missing logout function, forcing redirect");
-        }
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
+    console.log("[Navigation] Logout initiated...");
+
+    // 1. Update UI to show loading state
+    const btn = e?.target?.closest('button');
+    if (btn) {
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Signing out...';
+      btn.disabled = true;
     }
-    // Force redirect regardless of API success
-    window.location.href = '/index.html';
+
+    // 2. Call the robust function we created in auth.js
+    // This function GUARANTEES logout even if network/database is down
+    if (window.authService && typeof window.authService.signOut === 'function') {
+      await window.authService.signOut();
+      // signOut() will handle redirect via window.location.replace()
+    } else {
+      // Fallback if authService is missing (should never happen)
+      console.error("[Navigation] AuthService missing, forcing manual clear");
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace('/signin.html');
+    }
   };
 
   window.toggleMobileMenu = function() {

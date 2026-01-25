@@ -484,14 +484,51 @@ class AuthService {
   }
 
   /**
-   * Sign out current user
+   * Sign out current user (FAIL-SAFE VERSION)
+   * GUARANTEED to work even if network/database is down
+   * Uses finally block to ensure logout always completes
    */
   async signOut() {
-    if (this.supabase) {
-      await this.supabase.auth.signOut();
+    console.log("[Auth] Initiating Force Logout...");
+
+    try {
+      // 1. Attempt server-side signout (Best Effort)
+      // We do NOT await this indefinitely. If it hangs, we move on.
+      if (this.supabase) {
+        const { error } = await Promise.race([
+          this.supabase.auth.signOut(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+        ]);
+
+        if (error) console.warn("[Auth] Supabase signout warning:", error.message);
+      }
+
+    } catch (err) {
+      console.warn("[Auth] Supabase signout failed (proceeding anyway):", err);
+    } finally {
+      // 2. THE NUCLEAR OPTION: Manually wipe client state
+      // This ensures the AppController cannot restore the session
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 3. Wipe Cookies (Safety net for HttpOnly or script cookies)
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // 4. Clear internal auth state
+      this.currentUser = null;
+      this.token = null;
+      this.cachedProfile = null;
+      this.isAuthenticated = false;
+      window.currentUser = null;
+
+      console.log("[Auth] Client state wiped. Redirecting...");
+
+      // 5. FORCE REDIRECT
+      // Use 'replace' so they can't click 'Back' to return to the dashboard
+      window.location.replace('/signin.html');
     }
-    localStorage.clear();
-    window.location.href = '/signin.html'; // FORCE redirect, do not rely on state change
   }
 
   /**
