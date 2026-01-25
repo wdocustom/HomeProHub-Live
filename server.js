@@ -5208,55 +5208,60 @@ app.post("/api/contractor/import-project", requireAuth, requireRole('contractor'
 
     // STEP 2: CREATE PRIVATE JOB POSTING
     // Status: 'in_progress' (skip 'open' status since contractor is already assigned)
-    // Visibility: 'private' (hidden from public job board)
+    // Use direct Supabase insert to ensure exact schema match
     console.log('📝 Creating private job posting...');
 
-    const jobData = {
-      title: sanitizeInput(title, 200),
-      description: sanitizeInput(scope, 5000),
-      category: 'general', // Could be enhanced with AI classification
-      address: homeowner.address || `ZIP: ${homeowner.zip_code || 'N/A'}`,
-      zip_code: homeowner.zip_code || contractorProfile?.zip_code,
-      budget_low: budgetNum,
-      budget_high: budgetNum,
-      budget_max: budgetNum,
-      urgency: 'scheduled',
-      status: 'in_progress', // Already assigned, skip 'open' status
-      visibility: 'private', // Hide from public board
-      homeowner_email: client_email,
-      homeowner_id: homeowner.id,
-      contractor_id: contractor_id, // Pre-assigned to importing contractor
-      start_date: start_date,
-      target_completion_date: end_date || null,
-      created_at: new Date().toISOString()
-    };
+    const { data: job, error: jobError } = await db.supabase
+      .from('job_postings')
+      .insert([{
+        contractor_id: contractor_id,      // Pre-assigned to importing contractor
+        homeowner_id: homeowner.id,
+        homeowner_email: client_email,
+        title: sanitizeInput(title, 200),
+        description: sanitizeInput(scope, 5000),
+        category: 'general',               // Could be enhanced with AI classification
+        address: homeowner.address || `ZIP: ${homeowner.zip_code || 'N/A'}`,
+        zip_code: homeowner.zip_code || contractorProfile?.zip_code,
+        budget_low: budgetNum,
+        budget_high: budgetNum,
+        budget_max: budgetNum,             // Some schemas have this field
+        urgency: 'scheduled',
+        status: 'in_progress',             // Already assigned, skip 'open' status
+        start_date: start_date,
+        target_completion_date: end_date || null,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
 
-    const job = await db.createJobPosting(jobData);
+    if (jobError) {
+      console.error('❌ Failed to create job posting:', jobError);
+      throw jobError;
+    }
+
     console.log(`✓ Private job created: ${job.id}`);
 
     // STEP 3: CREATE ACCEPTED BID
     // This is CRITICAL for the AI Orchestrator - it needs start_date and proposal_text
     console.log('💰 Creating pre-accepted bid...');
 
-    const bidData = {
-      job_id: job.id,
-      contractor_id: contractor_id,
-      contractor_email: contractor_email,
-      contractor_business_name: contractorName,
-      bid_amount: budgetNum,
-      bid_amount_low: budgetNum,
-      bid_amount_high: budgetNum,
-      status: 'accepted',
-      start_date: start_date, // CRITICAL: Feeds the AI scheduler
-      proposal_text: scope,   // CRITICAL: Feeds the AI analyzer
-      message: `Imported from contractor's existing client project`,
-      created_at: new Date().toISOString(),
-      accepted_at: new Date().toISOString()
-    };
-
     const { data: acceptedBid, error: bidError } = await db.supabase
       .from('contractor_bids')
-      .insert([bidData])
+      .insert([{
+        job_id: job.id,
+        contractor_id: contractor_id,
+        contractor_email: contractor_email,
+        contractor_business_name: contractorName,
+        bid_amount: budgetNum,           // Primary amount field
+        bid_amount_low: budgetNum,
+        bid_amount_high: budgetNum,
+        status: 'accepted',
+        start_date: start_date,          // CRITICAL: Feeds the AI scheduler
+        proposal_text: scope,            // CRITICAL: Feeds the AI analyzer
+        message: `Imported from contractor's existing client project`,
+        created_at: new Date().toISOString(),
+        accepted_at: new Date().toISOString()
+      }])
       .select()
       .single();
 
