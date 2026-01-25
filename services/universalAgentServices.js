@@ -211,7 +211,24 @@ class OrchestratorAgent {
       projectStartDate = new Date();
     }
 
+    // 4. CALCULATE SAFE END DATE
+    // Helper: Calculate safe end date with fallback to Start + 6 weeks
+    const calculateSafeEndDate = (startDate, targetEndDateStr) => {
+      // If we have a valid hard end date, use it
+      if (targetEndDateStr && !isNaN(new Date(targetEndDateStr).getTime())) {
+        return new Date(targetEndDateStr).toISOString();
+      }
+
+      // Fallback: Start Date + 6 Weeks (Default Construction Phase)
+      const defaultDuration = 6 * 7 * 24 * 60 * 60 * 1000; // 6 weeks in ms
+      return new Date(startDate.getTime() + defaultDuration).toISOString();
+    };
+
+    // Calculate target completion date
+    const targetEndDate = calculateSafeEndDate(projectStartDate, jobData.target_completion_date);
+
     console.log(`[Orchestrator] Project will start on: ${projectStartDate.toISOString()}`);
+    console.log(`[Orchestrator] Target end date: ${targetEndDate}`);
     console.log(`[Orchestrator] Project budget: $${projectBudget}`);
 
     const template = jobData.project_templates || {};
@@ -292,28 +309,32 @@ class OrchestratorAgent {
       projectId,
       'orchestrator',
       'initialize_project',
-      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name || template.name || 'unknown'}. Start date: ${projectStartDate.toISOString().split('T')[0]}`,
+      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name || template.name || 'unknown'}. Start: ${projectStartDate.toISOString().split('T')[0]}, End: ${targetEndDate.split('T')[0]}`,
       {
         template_id: jobData.template_id,
         template_name: template.template_name || template.name,
         start_date: projectStartDate.toISOString(),
+        target_end_date: targetEndDate,
         budget: projectBudget,
         bid_id: winningBid?.id
       },
       {
         milestones_created: projectMilestones.length,
-        start_date: projectStartDate.toISOString()
+        start_date: projectStartDate.toISOString(),
+        target_end_date: targetEndDate
       },
       'completed'
     );
 
     console.log(`[Orchestrator] Created ${projectMilestones.length} milestones for project`);
+    console.log(`[Orchestrator] Project timeline: ${projectStartDate.toISOString().split('T')[0]} to ${targetEndDate.split('T')[0]}`);
 
     return {
       success: true,
       milestones_created: projectMilestones.length,
       template: template.template_name || template.name || 'unknown',
       start_date: projectStartDate.toISOString(),
+      target_end_date: targetEndDate,
       budget: projectBudget
     };
   }
