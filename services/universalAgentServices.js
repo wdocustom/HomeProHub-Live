@@ -155,79 +155,67 @@ class OrchestratorAgent {
   static async initializeProject(projectId) {
     console.log(`[Orchestrator] Initializing project ${projectId} from template...`);
 
-    // 1. FETCH JOB *AND* THE WINNING BID
-    // We strictly filter for the bid where status = 'accepted'
-    // CRITICAL: Explicitly use the FK constraint name to avoid PostgREST ambiguity
+    // 1. ROBUST DATA FETCHING (Select ALL columns to prevent "undefined" errors)
     const { data: jobData, error: jobError } = await supabase
       .from('job_postings')
       .select(`
         *,
         project_templates (*),
-        contractor_bids!fk_contractor_bids_job (
-          start_date,
-          proposal_text,
-          bid_amount,
-          contractor_id,
-          status
-        )
+        contractor_bids!fk_contractor_bids_job (*)
       `)
       .eq('id', projectId)
       .eq('contractor_bids.status', 'accepted')
       .single();
 
     if (jobError) {
-      console.error('[Orchestrator] DB Error:', jobError);
-      throw new Error(`Failed to fetch job and bid data: ${jobError.message}`);
+      console.error('[Orchestrator] DB Fetch Error:', jobError);
+      throw new Error(`Failed to load project data: ${jobError.message}`);
     }
 
     if (!jobData) {
       throw new Error(`Job ${projectId} not found`);
     }
 
-    // 2. DETERMINE THE TRUE START DATE
-    // Default to current date, but OVERWRITE if the winning bid has a specific date
-    let projectStartDate = new Date(); // Default to now
-    let projectBudget = jobData.budget_high || jobData.budget_max;
-
-    const winningBid = jobData.contractor_bids && jobData.contractor_bids[0]; // Get the first (and only) accepted bid
-
-    if (winningBid) {
-      console.log(`[Orchestrator] Found Winning Bid. Using Contractor Date: ${winningBid.start_date}`);
-
-      // CRITICAL: Use the Contractor's promised date if it exists
-      if (winningBid.start_date) {
-        projectStartDate = new Date(winningBid.start_date);
+    // 2. FAIL-SAFE DATE HELPER (Prevents Server Crashes)
+    const safeISO = (val, fallbackDays = 0) => {
+      try {
+        if (!val) {
+          // Return Now + Offset Days
+          const d = new Date();
+          d.setDate(d.getDate() + fallbackDays);
+          return d.toISOString();
+        }
+        const d = new Date(val);
+        // If date is invalid (NaN), return Now + Offset
+        if (isNaN(d.getTime())) {
+          const fallback = new Date();
+          fallback.setDate(fallback.getDate() + fallbackDays);
+          return fallback.toISOString();
+        }
+        return d.toISOString();
+      } catch (e) {
+        console.warn('[Orchestrator] Date parse error, defaulting to Now:', e);
+        const fallback = new Date();
+        fallback.setDate(fallback.getDate() + fallbackDays);
+        return fallback.toISOString();
       }
-      // Also update budget to match the real accepted price
-      if (winningBid.bid_amount) {
-        projectBudget = winningBid.bid_amount;
-      }
-    }
-
-    // 3. SANITY CHECK (Prevent Crash)
-    // Ensure projectStartDate is a valid Date object
-    if (isNaN(projectStartDate.getTime())) {
-      console.warn('[Orchestrator] Invalid start date, using current date');
-      projectStartDate = new Date();
-    }
-
-    // 4. CALCULATE SAFE END DATE
-    // Helper: Calculate safe end date with fallback to Start + 6 weeks
-    const calculateSafeEndDate = (startDate, targetEndDateStr) => {
-      // If we have a valid hard end date, use it
-      if (targetEndDateStr && !isNaN(new Date(targetEndDateStr).getTime())) {
-        return new Date(targetEndDateStr).toISOString();
-      }
-
-      // Fallback: Start Date + 6 Weeks (Default Construction Phase)
-      const defaultDuration = 6 * 7 * 24 * 60 * 60 * 1000; // 6 weeks in ms
-      return new Date(startDate.getTime() + defaultDuration).toISOString();
     };
 
-    // Calculate target completion date
-    const targetEndDate = calculateSafeEndDate(projectStartDate, jobData.target_completion_date);
+    // 3. EXTRACT BID DATA
+    const winningBid = jobData.contractor_bids && jobData.contractor_bids[0];
+    const projectStart = winningBid?.start_date || jobData.start_date;
 
-    console.log(`[Orchestrator] Project will start on: ${projectStartDate.toISOString()}`);
+    console.log(`[Orchestrator] Found Winning Bid: ${!!winningBid}`);
+    if (winningBid) {
+      console.log(`[Orchestrator] Bid Start Date: ${winningBid.start_date}`);
+    }
+
+    // 4. CONSTRUCT SAFE DATES (Wrapped in Safety)
+    const startDate = safeISO(projectStart);
+    const targetEndDate = safeISO(jobData.target_completion_date || jobData.end_date, 42); // Default 6 weeks
+    const projectBudget = winningBid?.bid_amount || jobData.budget_high || jobData.budget_max || 0;
+
+    console.log(`[Orchestrator] Project will start on: ${startDate}`);
     console.log(`[Orchestrator] Target end date: ${targetEndDate}`);
     console.log(`[Orchestrator] Project budget: $${projectBudget}`);
 
@@ -264,13 +252,22 @@ class OrchestratorAgent {
       };
 
       // Calculate planned dates based on order and estimated days
-      // CRITICAL: Use projectStartDate from accepted bid, not Date.now()
+      // CRITICAL: Use safe date calculations to prevent crashes
       const startOffset = phases
         .filter(p => p.order < phase.order)
-        .reduce((sum, p) => sum + p.estimated_days, 0);
+        .reduce((sum, p) => sum + (p.estimated_days || 0), 0);
 
-      milestone.planned_start_date = new Date(projectStartDate.getTime() + startOffset * 24 * 60 * 60 * 1000).toISOString();
-      milestone.planned_end_date = new Date(new Date(milestone.planned_start_date).getTime() + phase.estimated_days * 24 * 60 * 60 * 1000).toISOString();
+      const estimatedDays = phase.estimated_days || 7; // Default to 1 week if undefined
+
+      // Use Date object for milestone start, then convert to ISO
+      const milestoneStart = new Date(startDate);
+      milestoneStart.setDate(milestoneStart.getDate() + startOffset);
+
+      const milestoneEnd = new Date(milestoneStart);
+      milestoneEnd.setDate(milestoneEnd.getDate() + estimatedDays);
+
+      milestone.planned_start_date = milestoneStart.toISOString();
+      milestone.planned_end_date = milestoneEnd.toISOString();
 
       projectMilestones.push(milestone);
     }
@@ -309,31 +306,31 @@ class OrchestratorAgent {
       projectId,
       'orchestrator',
       'initialize_project',
-      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name || template.name || 'unknown'}. Start: ${projectStartDate.toISOString().split('T')[0]}, End: ${targetEndDate.split('T')[0]}`,
+      `Initialized project with ${projectMilestones.length} milestones from template ${template.template_name || template.name || 'unknown'}. Start: ${startDate.split('T')[0]}, End: ${targetEndDate.split('T')[0]}`,
       {
         template_id: jobData.template_id,
         template_name: template.template_name || template.name,
-        start_date: projectStartDate.toISOString(),
+        start_date: startDate,
         target_end_date: targetEndDate,
         budget: projectBudget,
         bid_id: winningBid?.id
       },
       {
         milestones_created: projectMilestones.length,
-        start_date: projectStartDate.toISOString(),
+        start_date: startDate,
         target_end_date: targetEndDate
       },
       'completed'
     );
 
     console.log(`[Orchestrator] Created ${projectMilestones.length} milestones for project`);
-    console.log(`[Orchestrator] Project timeline: ${projectStartDate.toISOString().split('T')[0]} to ${targetEndDate.split('T')[0]}`);
+    console.log(`[Orchestrator] Project timeline: ${startDate.split('T')[0]} to ${targetEndDate.split('T')[0]}`);
 
     return {
       success: true,
       milestones_created: projectMilestones.length,
       template: template.template_name || template.name || 'unknown',
-      start_date: projectStartDate.toISOString(),
+      start_date: startDate,
       target_end_date: targetEndDate,
       budget: projectBudget
     };
