@@ -5117,6 +5117,267 @@ app.post("/api/bid/decline", requireAuth, requireRole('homeowner'), async (req, 
 });
 
 // =====
+// PRIVATE PROJECT IMPORT (Contractor CRM Feature)
+// =====
+
+/**
+ * POST /api/contractor/import-project
+ * Import an off-platform project into the system
+ * Creates private job posting, homeowner account (shadow if new), accepted bid, and initializes AI
+ */
+app.post("/api/contractor/import-project", requireAuth, requireRole('contractor'), async (req, res) => {
+  try {
+    const {
+      client_email,
+      title,
+      scope,
+      budget,
+      start_date,
+      end_date
+    } = req.body;
+
+    const contractor_id = req.user.id;
+    const contractor_email = req.user.email;
+
+    console.log('📥 Received private project import:', {
+      client_email,
+      title: title ? '✓' : '❌',
+      contractor_id,
+      budget,
+      start_date
+    });
+
+    // Validation
+    if (!client_email || !title || !scope || !budget || !start_date) {
+      return res.status(400).json({
+        error: "Missing required fields: client_email, title, scope, budget, start_date",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(client_email)) {
+      return res.status(400).json({
+        error: "Invalid email format for client_email",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Validate budget is a positive number
+    const budgetNum = parseFloat(budget);
+    if (isNaN(budgetNum) || budgetNum <= 0) {
+      return res.status(400).json({
+        error: "Budget must be a positive number",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Validate start_date is a valid date
+    const startDateObj = new Date(start_date);
+    if (isNaN(startDateObj.getTime())) {
+      return res.status(400).json({
+        error: "Invalid start_date format",
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    // Get contractor profile for notifications
+    const contractorProfile = await db.getUserProfile(contractor_email);
+    const contractorName = contractorProfile?.business_name ||
+                          contractorProfile?.company_name ||
+                          contractor_email.split('@')[0];
+
+    // STEP 1: HOMEOWNER HANDLING
+    // Check if homeowner exists. If not, create a "Shadow User" placeholder.
+    console.log(`🔍 Checking for existing homeowner: ${client_email}`);
+    let homeowner = await db.getUserProfile(client_email);
+
+    if (!homeowner) {
+      console.log('👤 Creating new shadow homeowner account...');
+      homeowner = await db.upsertUserProfile({
+        email: client_email,
+        role: 'homeowner',
+        status: 'invited', // Mark as invited (pending account activation)
+        zip_code: contractorProfile?.zip_code || null // Inherit contractor's zip if available
+      });
+      console.log(`✓ Shadow homeowner created: ${homeowner.id}`);
+    } else {
+      console.log(`✓ Existing homeowner found: ${homeowner.id}`);
+    }
+
+    // STEP 2: CREATE PRIVATE JOB POSTING
+    // Status: 'in_progress' (skip 'open' status since contractor is already assigned)
+    // Visibility: 'private' (hidden from public job board)
+    console.log('📝 Creating private job posting...');
+
+    const jobData = {
+      title: sanitizeInput(title, 200),
+      description: sanitizeInput(scope, 5000),
+      category: 'general', // Could be enhanced with AI classification
+      address: homeowner.address || `ZIP: ${homeowner.zip_code || 'N/A'}`,
+      zip_code: homeowner.zip_code || contractorProfile?.zip_code,
+      budget_low: budgetNum,
+      budget_high: budgetNum,
+      budget_max: budgetNum,
+      urgency: 'scheduled',
+      status: 'in_progress', // Already assigned, skip 'open' status
+      visibility: 'private', // Hide from public board
+      homeowner_email: client_email,
+      homeowner_id: homeowner.id,
+      contractor_id: contractor_id, // Pre-assigned to importing contractor
+      start_date: start_date,
+      target_completion_date: end_date || null,
+      created_at: new Date().toISOString()
+    };
+
+    const job = await db.createJobPosting(jobData);
+    console.log(`✓ Private job created: ${job.id}`);
+
+    // STEP 3: CREATE ACCEPTED BID
+    // This is CRITICAL for the AI Orchestrator - it needs start_date and proposal_text
+    console.log('💰 Creating pre-accepted bid...');
+
+    const bidData = {
+      job_id: job.id,
+      contractor_id: contractor_id,
+      contractor_email: contractor_email,
+      contractor_business_name: contractorName,
+      bid_amount: budgetNum,
+      bid_amount_low: budgetNum,
+      bid_amount_high: budgetNum,
+      status: 'accepted',
+      start_date: start_date, // CRITICAL: Feeds the AI scheduler
+      proposal_text: scope,   // CRITICAL: Feeds the AI analyzer
+      message: `Imported from contractor's existing client project`,
+      created_at: new Date().toISOString(),
+      accepted_at: new Date().toISOString()
+    };
+
+    const { data: acceptedBid, error: bidError } = await db.supabase
+      .from('contractor_bids')
+      .insert([bidData])
+      .select()
+      .single();
+
+    if (bidError) {
+      console.error('❌ Failed to create bid:', bidError);
+      // Rollback: Delete the job we just created
+      await db.supabase.from('job_postings').delete().eq('id', job.id);
+      throw bidError;
+    }
+
+    console.log(`✓ Accepted bid created: ${acceptedBid.id}`);
+
+    // STEP 4: INITIALIZE AI ORCHESTRATOR
+    // Now that all data is in place, activate the AI Command Center
+    console.log('🤖 Initializing AI Orchestrator...');
+
+    try {
+      const { OrchestratorAgent } = require('./services/universalAgentServices');
+      const initResult = await OrchestratorAgent.initializeProject(job.id);
+      console.log(`✓ AI initialized: ${initResult.milestones_created} milestones created`);
+    } catch (aiError) {
+      console.error('⚠️  AI initialization failed (non-fatal):', aiError.message);
+      // Don't fail the entire request if AI fails - project is still created
+    }
+
+    // STEP 5: CREATE NOTIFICATIONS
+    // Notify homeowner about their new project dashboard
+    await db.createNotification({
+      user_email: client_email,
+      user_id: homeowner.id,
+      type: 'project_created',
+      title: 'Project Dashboard Ready',
+      message: `${contractorName} has invited you to track your project "${title}" on HomeProHub.`,
+      job_id: job.id,
+      action_url: `/homeowner-dashboard.html`
+    });
+
+    // Notify contractor of successful import
+    await db.createNotification({
+      user_email: contractor_email,
+      user_id: contractor_id,
+      type: 'project_imported',
+      title: 'Project Imported Successfully',
+      message: `"${title}" has been imported and AI Command Center is active.`,
+      job_id: job.id,
+      action_url: `/command-center.html?job_id=${job.id}`
+    });
+
+    // STEP 6: SEND WELCOME EMAIL (Optional)
+    // Invite homeowner to view their project dashboard
+    try {
+      if (emailService && emailService.sendEmail) {
+        const homeownerName = homeowner.full_name ||
+                             homeowner.first_name ||
+                             client_email.split('@')[0];
+
+        await emailService.sendEmail({
+          to: client_email,
+          subject: `Project Dashboard Ready: ${title}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2563eb;">Your Project Dashboard is Ready</h2>
+              <p>Hi ${homeownerName},</p>
+              <p><strong>${contractorName}</strong> has invited you to track your project progress on HomeProHub.</p>
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">${title}</h3>
+                <p style="margin: 5px 0;"><strong>Start Date:</strong> ${new Date(start_date).toLocaleDateString()}</p>
+                <p style="margin: 5px 0;"><strong>Budget:</strong> $${budgetNum.toLocaleString()}</p>
+              </div>
+              <p>View real-time updates, milestones, and communicate with your contractor all in one place.</p>
+              <a href="${process.env.BASE_URL || 'https://www.homeprohub.today'}/homeowner-dashboard.html"
+                 style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0;">
+                View Your Dashboard
+              </a>
+              <p style="color: #6b7280; font-size: 14px;">If you didn't expect this invitation, you can safely ignore this email.</p>
+            </div>
+          `
+        });
+        console.log(`✓ Welcome email sent to ${client_email}`);
+      }
+    } catch (emailErr) {
+      console.error('⚠️  Failed to send welcome email:', emailErr.message);
+      // Don't fail the request if email fails
+    }
+
+    // SUCCESS RESPONSE
+    console.log(`✅ Project imported successfully: ${job.id}`);
+    res.json({
+      success: true,
+      job_id: job.id,
+      message: "Project imported and AI activated.",
+      data: {
+        job: {
+          id: job.id,
+          title: job.title,
+          status: job.status
+        },
+        bid: {
+          id: acceptedBid.id,
+          amount: acceptedBid.bid_amount
+        },
+        homeowner: {
+          id: homeowner.id,
+          email: homeowner.email,
+          is_new: !homeowner.full_name // Indicates if this was a shadow account
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /api/contractor/import-project:", err);
+    console.error("Error stack:", err.stack);
+    res.status(500).json({
+      error: "Import failed. Transaction rolled back.",
+      code: 'INTERNAL_ERROR',
+      message: err.message
+    });
+  }
+});
+
+// =====
 // SUB-HUNTER (CREW CONNECT) API ENDPOINTS
 // =====
 
