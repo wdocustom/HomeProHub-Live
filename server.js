@@ -4257,6 +4257,64 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       });
     }
 
+    // INTELLIGENT TEMPLATE ASSIGNMENT
+    // Match project to appropriate template based on description and title
+    const matchTemplate = (title, description) => {
+      const text = `${title} ${description}`.toLowerCase();
+
+      // Basement projects
+      if ((text.includes('basement') && (text.includes('bathroom') || text.includes('bath')))) {
+        return 'basement_bathroom_addition';
+      }
+      if (text.includes('basement') && (text.includes('finish') || text.includes('refinish'))) {
+        return 'basement_refinish';
+      }
+
+      // Bathroom projects
+      if ((text.includes('master') || text.includes('primary')) && text.includes('bath')) {
+        return 'master_bathroom_addition';
+      }
+      if (text.includes('bathroom') && text.includes('remodel')) {
+        return 'bathroom_remodel_full';
+      }
+
+      // Kitchen projects
+      if (text.includes('kitchen') && (text.includes('remodel') || text.includes('renovation'))) {
+        return 'kitchen_remodel_high_end';
+      }
+
+      // Deck projects
+      if (text.includes('deck') && (text.includes('build') || text.includes('construct') || text.includes('new'))) {
+        return 'deck_construction_400sqft';
+      }
+
+      // Roof projects
+      if (text.includes('roof') && (text.includes('replace') || text.includes('new'))) {
+        return 'roof_replacement_2000sqft';
+      }
+
+      // Garage projects
+      if (text.includes('garage') && (text.includes('build') || text.includes('construct') || text.includes('detached'))) {
+        return 'garage_2car_detached';
+      }
+
+      // Room additions
+      if (text.includes('addition') || text.includes('add')) {
+        return 'room_addition_1000sqft';
+      }
+
+      // New construction (catch-all for large projects)
+      if (text.includes('new home') || text.includes('custom home') || text.includes('ground up')) {
+        return 'new_custom_home_2500sqft';
+      }
+
+      // Default to room addition for general construction
+      return 'room_addition_1000sqft';
+    };
+
+    const recommended_template = matchTemplate(title, description);
+    console.log(`🎯 AI recommended template: ${recommended_template}`);
+
     // Get or create user profile
     let homeownerProfile = await db.getUserProfile(homeowner_email);
     if (!homeownerProfile) {
@@ -4280,6 +4338,7 @@ app.post("/api/jobs", requireAuth, requireRole('homeowner'), async (req, res) =>
       status: 'open',
       homeowner_email: homeowner_email,
       homeowner_id: homeownerProfile.id,
+      template_id: recommended_template,  // AI-recommended template based on project description
       original_question: original_question || null,
       ai_analysis: ai_analysis || null,
       ai_scope_data: ai_scope_data || null  // CRITICAL FIX: Store full AI data for contractor hydration
