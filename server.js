@@ -5225,7 +5225,7 @@ app.post("/api/contractor/import-project", requireAuth, requireRole('contractor'
         budget_low: budgetNum,
         budget_high: budgetNum,
         budget_max: budgetNum,             // Some schemas have this field
-        urgency: 'scheduled',
+        urgency: 'flexible',               // Valid constraint value (immediate/flexible/emergency)
         status: 'in_progress',             // Already assigned, skip 'open' status
         start_date: start_date,
         target_completion_date: end_date || null,
