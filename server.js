@@ -5280,17 +5280,38 @@ app.post("/api/contractor/import-project", requireAuth, requireRole('contractor'
 
     console.log(`✓ Accepted bid created: ${acceptedBid.id}`);
 
-    // STEP 4: INITIALIZE AI ORCHESTRATOR
-    // Now that all data is in place, activate the AI Command Center
-    console.log('🤖 Initializing AI Orchestrator...');
+    // STEP 4: INITIALIZE AI ORCHESTRATOR (if contractor has AI beta enabled)
+    // Check if contractor has AI beta access before initializing
+    const { data: contractorProfile } = await db.supabase
+      .from('user_profiles')
+      .select('ai_beta_enabled, ai_automation_mode')
+      .eq('id', contractor_id)
+      .single();
 
-    try {
-      const { OrchestratorAgent } = require('./services/universalAgentServices');
-      const initResult = await OrchestratorAgent.initializeProject(job.id);
-      console.log(`✓ AI initialized: ${initResult.milestones_created} milestones created`);
-    } catch (aiError) {
-      console.error('⚠️  AI initialization failed (non-fatal):', aiError.message);
-      // Don't fail the entire request if AI fails - project is still created
+    if (contractorProfile && contractorProfile.ai_beta_enabled) {
+      console.log('🤖 Contractor has AI beta enabled, initializing AI Orchestrator...');
+
+      try {
+        const { OrchestratorAgent } = require('./services/universalAgentServices');
+        const initResult = await OrchestratorAgent.initializeProject(job.id);
+        console.log(`✓ AI initialized: ${initResult.milestones_created} milestones created`);
+
+        // Mark project as AI initialized
+        await db.supabase
+          .from('job_postings')
+          .update({
+            ai_initialized: true,
+            ai_initialized_at: new Date().toISOString(),
+            ai_initialization_mode: 'auto'
+          })
+          .eq('id', job.id);
+
+      } catch (aiError) {
+        console.error('⚠️  AI initialization failed (non-fatal):', aiError.message);
+        // Don't fail the entire request if AI fails - project is still created
+      }
+    } else {
+      console.log('ℹ️  AI not initialized - contractor has not enrolled in AI beta program');
     }
 
     // STEP 5: CREATE NOTIFICATIONS
@@ -8465,10 +8486,10 @@ app.post('/api/agents/initialize-project/:project_id', requireAuth, async (req, 
       });
     }
 
-    // Verify user is the contractor for this project
+    // Verify user is the contractor for this project and check AI beta status
     const { data: contractor } = await db.supabase
       .from('user_profiles')
-      .select('id')
+      .select('id, ai_beta_enabled')
       .eq('email', userEmail)
       .single();
 
@@ -8477,6 +8498,16 @@ app.post('/api/agents/initialize-project/:project_id', requireAuth, async (req, 
       return res.status(403).json({
         success: false,
         error: 'You do not have permission to initialize this project'
+      });
+    }
+
+    // Check if user has AI beta enabled
+    if (!contractor.ai_beta_enabled) {
+      console.log(`[Manual Init API] User ${userEmail} does not have AI beta enabled`);
+      return res.status(403).json({
+        success: false,
+        error: 'AI features are not enabled for your account',
+        message: 'Please enroll in the AI beta program to use AI Command Center'
       });
     }
 
@@ -8509,6 +8540,16 @@ app.post('/api/agents/initialize-project/:project_id', requireAuth, async (req, 
       milestones_created: initResult.milestones_created,
       tasks_created: initResult.tasks_created
     });
+
+    // Mark project as AI initialized
+    await db.supabase
+      .from('job_postings')
+      .update({
+        ai_initialized: true,
+        ai_initialized_at: new Date().toISOString(),
+        ai_initialization_mode: 'manual'
+      })
+      .eq('id', project_id);
 
     // Fetch the newly created state
     const newState = await db.getProjectState(project_id);
@@ -8711,6 +8752,170 @@ app.delete('/api/agents/log/:log_id', requireAuth, async (req, res) => {
       error: 'Failed to delete log entry',
       message: error.message
     });
+  }
+});
+
+// ====== AI BETA PROGRAM & FEATURE FLAGS ======
+
+/**
+ * GET /api/ai/preferences
+ * Get current user's AI preferences
+ */
+app.get('/api/ai/preferences', requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    const { data: profile, error } = await db.supabase
+      .from('user_profiles')
+      .select('ai_beta_enabled, ai_enrolled_at, ai_automation_mode')
+      .eq('email', userEmail)
+      .single();
+
+    if (error) {
+      console.error('[AI Prefs API] Error fetching preferences:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    res.json({
+      success: true,
+      ai_enabled: profile.ai_beta_enabled || false,
+      enrolled_at: profile.ai_enrolled_at,
+      automation_mode: profile.ai_automation_mode || 'assisted'
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching AI preferences:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/ai/enroll
+ * Enroll user in AI beta program
+ */
+app.post('/api/ai/enroll', requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { automation_mode = 'assisted' } = req.body;
+
+    console.log(`[AI Enroll API] Enrolling user: ${userEmail}`);
+
+    const { data, error } = await db.supabase
+      .from('user_profiles')
+      .update({
+        ai_beta_enabled: true,
+        ai_enrolled_at: new Date().toISOString(),
+        ai_automation_mode: automation_mode
+      })
+      .eq('email', userEmail)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[AI Enroll API] Error enrolling user:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    console.log(`✅ [AI Enroll API] User ${userEmail} enrolled successfully`);
+
+    res.json({
+      success: true,
+      message: 'Successfully enrolled in AI beta program',
+      ai_enabled: true,
+      automation_mode: automation_mode
+    });
+
+  } catch (error) {
+    console.error('❌ Error enrolling in AI beta:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/ai/preferences
+ * Update user's AI preferences
+ */
+app.post('/api/ai/preferences', requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { ai_enabled, automation_mode } = req.body;
+
+    console.log(`[AI Prefs API] Updating preferences for: ${userEmail}`);
+
+    const updates = {};
+    if (typeof ai_enabled === 'boolean') {
+      updates.ai_beta_enabled = ai_enabled;
+      if (!ai_enabled) {
+        // If disabling, clear enrollment date
+        updates.ai_enrolled_at = null;
+      }
+    }
+    if (automation_mode && ['manual', 'assisted', 'automatic'].includes(automation_mode)) {
+      updates.ai_automation_mode = automation_mode;
+    }
+
+    const { data, error } = await db.supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('email', userEmail)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[AI Prefs API] Error updating preferences:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    console.log(`✅ [AI Prefs API] Preferences updated for ${userEmail}`);
+
+    res.json({
+      success: true,
+      message: 'AI preferences updated',
+      ai_enabled: data.ai_beta_enabled,
+      automation_mode: data.ai_automation_mode
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating AI preferences:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/ai/project-status/:project_id
+ * Check if AI is enabled for a specific project
+ */
+app.get('/api/ai/project-status/:project_id', requireAuth, async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const userEmail = req.user.email;
+
+    // Check user AI preference
+    const { data: profile } = await db.supabase
+      .from('user_profiles')
+      .select('ai_beta_enabled, ai_automation_mode')
+      .eq('email', userEmail)
+      .single();
+
+    // Check project AI status
+    const { data: project } = await db.supabase
+      .from('job_postings')
+      .select('ai_initialized, ai_initialized_at, ai_initialization_mode')
+      .eq('id', project_id)
+      .single();
+
+    res.json({
+      success: true,
+      user_ai_enabled: profile?.ai_beta_enabled || false,
+      automation_mode: profile?.ai_automation_mode || 'assisted',
+      project_ai_initialized: project?.ai_initialized || false,
+      initialized_at: project?.ai_initialized_at,
+      initialization_mode: project?.ai_initialization_mode
+    });
+
+  } catch (error) {
+    console.error('❌ Error checking AI status:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

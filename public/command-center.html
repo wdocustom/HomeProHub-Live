@@ -220,6 +220,56 @@
         </div>
       </div>
 
+      <!-- AI Beta Enrollment Banner (shown when user is not enrolled) -->
+      <div id="ai-beta-banner" class="hidden bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-300 rounded-2xl p-6 mb-8 shadow-lg">
+        <div class="flex items-start gap-4">
+          <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 animate-pulse">
+            <i class="fa-solid fa-sparkles text-2xl text-white"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-black text-2xl text-blue-900 mb-2">🚀 Unlock AI Command Center</h3>
+            <p class="text-slate-700 text-base mb-4 leading-relaxed">
+              Join our beta program and get access to AI-powered project management! Your AI team will automatically:
+            </p>
+            <ul class="text-sm text-slate-700 space-y-2 mb-4 ml-4">
+              <li class="flex items-start gap-2">
+                <span class="text-blue-600">✓</span>
+                <span><strong>Create project milestones</strong> and track progress automatically</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-blue-600">✓</span>
+                <span><strong>Analyze blueprints</strong> and extract requirements from PDFs</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-blue-600">✓</span>
+                <span><strong>Manage schedules</strong> with critical path analysis</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-blue-600">✓</span>
+                <span><strong>Generate summaries</strong> and updates for homeowners</span>
+              </li>
+            </ul>
+            <div class="flex items-center gap-4">
+              <button
+                id="enroll-beta-btn"
+                onclick="enrollInAIBeta()"
+                class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-6 py-3 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+              >
+                <i class="fa-solid fa-rocket"></i>
+                Join AI Beta Program
+              </button>
+              <button
+                onclick="document.getElementById('ai-beta-banner').classList.add('hidden')"
+                class="text-slate-600 hover:text-slate-900 font-semibold px-4 py-2 transition-all"
+              >
+                Maybe later
+              </button>
+            </div>
+            <div id="enroll-status" class="mt-3 text-sm font-semibold"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Command Center Content -->
       <div id="command-center-content" class="space-y-8">
 
@@ -1382,6 +1432,17 @@
             loadProjectDetails();
           }, 2500);
 
+        } else if (response.status === 403 && data.message && data.message.includes('AI beta')) {
+          // User not enrolled in AI beta
+          console.log('⚠️  User not enrolled in AI beta');
+          statusEl.innerHTML = `<span style="color: #dc2626;">❌ Please enroll in the AI Beta Program first (see banner above)</span>`;
+
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Initialize AI Command Center';
+
+          // Scroll to top to show banner
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+
         } else {
           console.error('Failed to initialize AI:', data.error);
           statusEl.innerHTML = `<span style="color: #dc2626;">❌ ${data.error || 'Failed to initialize AI'}</span>`;
@@ -1402,6 +1463,95 @@
 
     // Make initializeProjectAI available globally for onclick handlers
     window.initializeProjectAI = initializeProjectAI;
+
+    /**
+     * Check if user has AI beta enabled
+     * Show enrollment banner if not
+     */
+    async function checkAIBetaStatus() {
+      try {
+        const token = await window.authService.getAccessToken();
+        const response = await fetch('/api/ai/preferences', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🤖 AI Beta Status:', data);
+
+          if (!data.ai_enabled) {
+            // User not enrolled - show banner
+            document.getElementById('ai-beta-banner').classList.remove('hidden');
+          } else {
+            // User enrolled - hide banner
+            document.getElementById('ai-beta-banner').classList.add('hidden');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking AI beta status:', error);
+      }
+    }
+
+    /**
+     * Enroll user in AI beta program
+     */
+    async function enrollInAIBeta() {
+      const statusEl = document.getElementById('enroll-status');
+      const btn = document.getElementById('enroll-beta-btn');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enrolling...';
+        statusEl.innerHTML = '<span style="color: #2563eb;">⏳ Setting up your AI access...</span>';
+
+        const token = await window.authService.getAccessToken();
+        const response = await fetch('/api/ai/enroll', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            automation_mode: 'assisted' // Default to assisted mode
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log('✅ Successfully enrolled in AI beta');
+
+          statusEl.innerHTML = '<span style="color: #16a34a;">✅ Welcome to the AI Beta Program!</span>';
+
+          // Hide banner after a brief delay
+          setTimeout(() => {
+            document.getElementById('ai-beta-banner').classList.add('hidden');
+            showToast('🤖 AI Command Center activated! Initialize AI on your projects to get started.');
+          }, 2000);
+
+          // Reload page to show AI features
+          setTimeout(() => {
+            window.location.reload();
+          }, 2500);
+
+        } else {
+          console.error('Failed to enroll:', data.error);
+          statusEl.innerHTML = `<span style="color: #dc2626;">❌ ${data.error || 'Failed to enroll'}</span>`;
+
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-rocket"></i> Join AI Beta Program';
+        }
+      } catch (error) {
+        console.error('Error enrolling in AI beta:', error);
+        statusEl.innerHTML = '<span style="color: #dc2626;">❌ Error enrolling. Please try again.</span>';
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rocket"></i> Join AI Beta Program';
+      }
+    }
+
+    // Make enrollInAIBeta available globally for onclick handlers
+    window.enrollInAIBeta = enrollInAIBeta;
 
     // ============================================
     // HAWK AGENT (PLACEHOLDER)
@@ -1670,6 +1820,9 @@
       }
 
       console.log('✅ Authentication successful, profile set:', profile);
+
+      // Check AI beta status
+      await checkAIBetaStatus();
 
       // Handle deep link from Job Board
       if (source === 'job_board' && jobId) {
