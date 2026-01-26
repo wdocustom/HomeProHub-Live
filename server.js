@@ -8377,30 +8377,100 @@ app.get('/api/agents/project-state/:project_id', async (req, res) => {
 
 /**
  * GET /api/agents/activity-log/:project_id
- * Get AI agent activity log for a project
+ * Get unified activity log for a project (AI agents + contractor manual updates)
  */
 app.get('/api/agents/activity-log/:project_id', async (req, res) => {
   try {
     const { project_id } = req.params;
     const limit = parseInt(req.query.limit) || 50;
 
-    console.log(`[Activity Log API] Fetching activity for project: ${project_id}`);
+    console.log(`[Activity Log API] Fetching unified activity for project: ${project_id}`);
 
-    const { data: activities, error } = await db.supabase
+    // Fetch AI agent activities
+    const { data: aiActivities, error: aiError } = await db.supabase
       .from('ai_agent_activity')
       .select('*')
       .eq('project_id', project_id)
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (aiError) {
+      console.error('[Activity Log API] Error fetching AI activities:', aiError);
+    }
 
-    console.log(`[Activity Log API] Found ${activities?.length || 0} activities`);
+    // Fetch contractor manual updates (project logs)
+    const { data: contractorLogs, error: logError } = await db.supabase
+      .from('project_logs')
+      .select('*')
+      .eq('project_id', project_id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (logError) {
+      console.error('[Activity Log API] Error fetching contractor logs:', logError);
+    }
+
+    // Merge and normalize both data sources
+    const activities = [];
+
+    // Add AI activities
+    if (aiActivities) {
+      aiActivities.forEach(activity => {
+        activities.push({
+          id: activity.id,
+          type: 'ai_activity',
+          agent_type: activity.agent_type,
+          action_type: activity.action_type,
+          description: activity.action_description,
+          status: activity.status,
+          created_at: activity.created_at,
+          created_by: 'AI Agent',
+          metadata: {
+            input_data: activity.input_data,
+            output_data: activity.output_data,
+            error_message: activity.error_message
+          }
+        });
+      });
+    }
+
+    // Add contractor manual updates
+    if (contractorLogs) {
+      contractorLogs.forEach(log => {
+        activities.push({
+          id: log.id,
+          type: 'contractor_update',
+          agent_type: 'contractor',
+          action_type: 'manual_update',
+          description: log.entry_text,
+          status: 'completed',
+          created_at: log.created_at,
+          created_by: log.created_by_name || log.created_by_email || 'Contractor',
+          metadata: {
+            source: log.source,
+            photos: log.photos,
+            metadata: log.metadata
+          }
+        });
+      });
+    }
+
+    // Sort by created_at descending (most recent first)
+    activities.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Apply limit to merged results
+    const limitedActivities = activities.slice(0, limit);
+
+    console.log(`[Activity Log API] Found ${limitedActivities.length} total activities (${aiActivities?.length || 0} AI, ${contractorLogs?.length || 0} manual)`);
 
     res.json({
       success: true,
-      activities: activities || [],
-      count: activities?.length || 0
+      activities: limitedActivities,
+      count: limitedActivities.length,
+      breakdown: {
+        ai_activities: aiActivities?.length || 0,
+        contractor_updates: contractorLogs?.length || 0
+      }
     });
 
   } catch (error) {
