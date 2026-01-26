@@ -5282,13 +5282,13 @@ app.post("/api/contractor/import-project", requireAuth, requireRole('contractor'
 
     // STEP 4: INITIALIZE AI ORCHESTRATOR (if contractor has AI beta enabled)
     // Check if contractor has AI beta access before initializing
-    const { data: contractorProfile } = await db.supabase
+    const { data: contractorAISettings } = await db.supabase
       .from('user_profiles')
       .select('ai_beta_enabled, ai_automation_mode')
       .eq('id', contractor_id)
       .single();
 
-    if (contractorProfile && contractorProfile.ai_beta_enabled) {
+    if (contractorAISettings && contractorAISettings.ai_beta_enabled) {
       console.log('🤖 Contractor has AI beta enabled, initializing AI Orchestrator...');
 
       try {
