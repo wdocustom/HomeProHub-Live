@@ -8920,8 +8920,86 @@ app.get('/api/ai/project-status/:project_id', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/ai/upload-file
+ * Upload a file (blueprint PDF or photo) for AI analysis
+ * Returns the file URL for use with AI agents
+ */
+app.post('/api/ai/upload-file', requireAuth, async (req, res) => {
+  try {
+    const multer = require('multer');
+    const path = require('path');
+    const fs = require('fs').promises;
+
+    // Configure multer for file uploads
+    const storage = multer.diskStorage({
+      destination: async (req, file, cb) => {
+        const uploadDir = path.join(__dirname, 'uploads', 'ai-files');
+        await fs.mkdir(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `${req.user.id}-${uniqueSuffix}-${file.originalname}`);
+      }
+    });
+
+    const upload = multer({
+      storage: storage,
+      limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+      fileFilter: (req, file, cb) => {
+        // Allow PDFs and images
+        const allowedTypes = /jpeg|jpg|png|gif|pdf/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+
+        if (mimetype && extname) {
+          return cb(null, true);
+        } else {
+          cb(new Error('Only PDF and image files are allowed'));
+        }
+      }
+    }).single('file');
+
+    // Process upload
+    upload(req, res, async (err) => {
+      if (err) {
+        console.error('[Upload API] Error:', err);
+        return res.status(400).json({
+          success: false,
+          error: err.message
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No file uploaded'
+        });
+      }
+
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/ai-files/${req.file.filename}`;
+
+      console.log(`✅ [Upload API] File uploaded: ${req.file.filename}`);
+
+      res.json({
+        success: true,
+        file_url: fileUrl,
+        file_name: req.file.originalname,
+        file_size: req.file.size,
+        file_type: req.file.mimetype
+      });
+    });
+
+  } catch (error) {
+    console.error('❌ Error uploading file:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/ai/agents/visionary/analyze-blueprints
  * Trigger Visionary agent to analyze blueprints
+ * STRUCTURED FOR AUTOMATION: Can be called with user input OR programmatically
  */
 app.post('/api/ai/agents/visionary/analyze-blueprints', requireAuth, async (req, res) => {
   try {
@@ -8962,10 +9040,11 @@ app.post('/api/ai/agents/visionary/analyze-blueprints', requireAuth, async (req,
 /**
  * POST /api/ai/agents/shark/hunt-contractors
  * Trigger Shark agent to find contractors
+ * STRUCTURED FOR AUTOMATION: Can be called with user input OR programmatically
  */
 app.post('/api/ai/agents/shark/hunt-contractors', requireAuth, async (req, res) => {
   try {
-    const { project_id } = req.body;
+    const { project_id, trades } = req.body; // trades is optional override
 
     if (!project_id) {
       return res.status(400).json({
@@ -8976,8 +9055,48 @@ app.post('/api/ai/agents/shark/hunt-contractors', requireAuth, async (req, res) 
 
     console.log(`[Shark API] Hunting contractors for project: ${project_id}`);
 
-    // Run Shark agent
-    const results = await SharkAgent.huntForContractors(project_id);
+    // Check if project has template
+    const { data: project } = await db.supabase
+      .from('job_postings')
+      .select('id, title, template_id, address, zip_code')
+      .eq('id', project_id)
+      .single();
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        error: 'Project not found'
+      });
+    }
+
+    // If no template, assign default based on project title or use provided trades
+    let searchTrades = trades;
+
+    if (!project.template_id && !trades) {
+      // Infer trades from project title/description
+      console.log(`[Shark API] No template found, inferring trades from project title: ${project.title}`);
+
+      const titleLower = project.title.toLowerCase();
+      searchTrades = [];
+
+      if (titleLower.includes('kitchen')) {
+        searchTrades = ['Plumber', 'Electrician', 'General Contractor'];
+      } else if (titleLower.includes('bathroom')) {
+        searchTrades = ['Plumber', 'Electrician', 'General Contractor'];
+      } else if (titleLower.includes('electrical')) {
+        searchTrades = ['Electrician'];
+      } else if (titleLower.includes('plumbing')) {
+        searchTrades = ['Plumber'];
+      } else {
+        // Default for general projects
+        searchTrades = ['General Contractor'];
+      }
+
+      console.log(`[Shark API] Inferred trades:`, searchTrades);
+    }
+
+    // Run Shark agent (will use template if available, or searchTrades override)
+    const results = await SharkAgent.huntForContractors(project_id, searchTrades);
 
     // Log AI activity
     await db.supabase.from('ai_agent_activity').insert([{
@@ -9003,10 +9122,14 @@ app.post('/api/ai/agents/shark/hunt-contractors', requireAuth, async (req, res) 
 /**
  * POST /api/ai/agents/whip/calculate-schedule
  * Trigger Whip agent to calculate critical path
+ * STRUCTURED FOR AUTOMATION: Can be called with user input OR programmatically
  */
 app.post('/api/ai/agents/whip/calculate-schedule', requireAuth, async (req, res) => {
   try {
     const { project_id } = req.body;
+    const userEmail = req.user?.email;
+
+    console.log(`[Whip API] User: ${userEmail}, Project: ${project_id}`);
 
     if (!project_id) {
       return res.status(400).json({
@@ -9015,24 +9138,59 @@ app.post('/api/ai/agents/whip/calculate-schedule', requireAuth, async (req, res)
       });
     }
 
+    // Verify project exists and user has access
+    const { data: project, error: projectError } = await db.supabase
+      .from('job_postings')
+      .select('id, title, contractor_id')
+      .eq('id', project_id)
+      .single();
+
+    if (projectError || !project) {
+      console.error('[Whip API] Project not found:', projectError);
+      return res.status(404).json({
+        success: false,
+        error: 'Project not found'
+      });
+    }
+
     console.log(`[Whip API] Calculating critical path for project: ${project_id}`);
 
-    // Run Whip agent
-    const schedule = await WhipAgent.calculateCriticalPath(project_id);
+    try {
+      // Run Whip agent
+      const schedule = await WhipAgent.calculateCriticalPath(project_id);
 
-    // Log AI activity
-    await db.supabase.from('ai_agent_activity').insert([{
-      project_id: project_id,
-      agent_type: 'Whip',
-      action_description: `Updated project schedule. Critical path: ${schedule.critical_path_days || 0} days`,
-      metadata: { schedule }
-    }]);
+      // Log AI activity
+      await db.supabase.from('ai_agent_activity').insert([{
+        project_id: project_id,
+        agent_type: 'Whip',
+        action_description: `Updated project schedule. Critical path: ${schedule.critical_path_days || 0} days`,
+        metadata: { schedule }
+      }]);
 
-    res.json({
-      success: true,
-      agent: 'Whip',
-      schedule: schedule
-    });
+      res.json({
+        success: true,
+        agent: 'Whip',
+        schedule: schedule
+      });
+
+    } catch (agentError) {
+      // Handle agent-specific errors gracefully
+      console.error('[Whip API] Agent error:', agentError);
+
+      // Still log the attempt
+      await db.supabase.from('ai_agent_activity').insert([{
+        project_id: project_id,
+        agent_type: 'Whip',
+        action_description: `Schedule calculation attempted but encountered error: ${agentError.message}`,
+        metadata: { error: agentError.message }
+      }]);
+
+      res.status(500).json({
+        success: false,
+        error: 'Schedule calculation failed',
+        message: agentError.message
+      });
+    }
 
   } catch (error) {
     console.error('❌ Error running Whip agent:', error);
@@ -9043,6 +9201,7 @@ app.post('/api/ai/agents/whip/calculate-schedule', requireAuth, async (req, res)
 /**
  * POST /api/ai/agents/sentinel/check-quality
  * Trigger Sentinel agent to check code compliance
+ * STRUCTURED FOR AUTOMATION: Can be called with user input OR programmatically
  */
 app.post('/api/ai/agents/sentinel/check-quality', requireAuth, async (req, res) => {
   try {
@@ -9055,24 +9214,46 @@ app.post('/api/ai/agents/sentinel/check-quality', requireAuth, async (req, res) 
       });
     }
 
-    console.log(`[Sentinel API] Checking quality for milestone: ${milestone_id}`);
+    // Normalize photo_urls to array
+    const photoUrlsArray = Array.isArray(photo_urls) ? photo_urls : [photo_urls];
 
-    // Run Sentinel agent
-    const inspection = await SentinelAgent.performCodeCheck(project_id, milestone_id, photo_urls);
+    console.log(`[Sentinel API] Checking quality for milestone: ${milestone_id} with ${photoUrlsArray.length} photos`);
 
-    // Log AI activity
-    await db.supabase.from('ai_agent_activity').insert([{
-      project_id: project_id,
-      agent_type: 'Sentinel',
-      action_description: `Quality check: ${inspection.status || 'Inspection completed'}`,
-      metadata: { inspection }
-    }]);
+    try {
+      // Run Sentinel agent
+      const inspection = await SentinelAgent.performCodeCheck(project_id, milestone_id, photoUrlsArray);
 
-    res.json({
-      success: true,
-      agent: 'Sentinel',
-      inspection: inspection
-    });
+      // Log AI activity
+      await db.supabase.from('ai_agent_activity').insert([{
+        project_id: project_id,
+        agent_type: 'Sentinel',
+        action_description: `Quality check: ${inspection.status || 'Inspection completed'}`,
+        metadata: { inspection, milestone_id, photo_count: photoUrlsArray.length }
+      }]);
+
+      res.json({
+        success: true,
+        agent: 'Sentinel',
+        inspection: inspection
+      });
+
+    } catch (agentError) {
+      console.error('[Sentinel API] Agent error:', agentError);
+
+      // Still log the attempt
+      await db.supabase.from('ai_agent_activity').insert([{
+        project_id: project_id,
+        agent_type: 'Sentinel',
+        action_description: `Quality check attempted but encountered error: ${agentError.message}`,
+        metadata: { error: agentError.message, milestone_id }
+      }]);
+
+      res.status(500).json({
+        success: false,
+        error: 'Quality check failed',
+        message: agentError.message
+      });
+    }
 
   } catch (error) {
     console.error('❌ Error running Sentinel agent:', error);

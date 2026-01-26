@@ -907,18 +907,28 @@ class SharkAgent {
   /**
    * Hunt for contractors based on template's required trades
    * ENHANCED: Now creates trade opportunities for contractors
+   * STRUCTURED FOR AUTOMATION: Can work with or without template
+   *
+   * @param {string} projectId - Project UUID
+   * @param {array} tradesOverride - Optional array of trades to search (bypasses template)
    */
-  static async huntForContractors(projectId) {
+  static async huntForContractors(projectId, tradesOverride = null) {
     console.log('[Shark] Hunting for contractors...');
 
     const template = await getProjectTemplate(projectId);
 
-    if (!template.template_id) {
-      throw new Error('Project must have a template to hunt for contractors');
-    }
+    // STEP 1: Get required trades (from override, template, or default)
+    let requiredTrades = tradesOverride;
 
-    // STEP 1: Get required trades from template
-    const requiredTrades = template.required_trades || [];
+    if (!requiredTrades) {
+      if (template.template_id && template.required_trades) {
+        requiredTrades = template.required_trades;
+      } else {
+        // Fallback: use generic trades if no template
+        console.log('[Shark] No template or trades override, using default trades');
+        requiredTrades = ['General Contractor'];
+      }
+    }
 
     console.log(`[Shark] Template requires ${requiredTrades.length} trade types: ${requiredTrades.join(', ')}`);
 

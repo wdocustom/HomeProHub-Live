@@ -446,13 +446,26 @@
                 </div>
               </div>
               <p class="text-xs mb-3" style="color: #475569;">Analyzes PDF blueprints and extracts project requirements, measurements, and material quantities.</p>
-              <input
-                type="text"
-                id="blueprint-url-input"
-                placeholder="Blueprint PDF URL..."
-                class="w-full p-2 mb-2 text-xs"
-                style="border: 1px solid #e2e8f0; border-radius: 4px;"
-              />
+
+              <div class="mb-2">
+                <label class="block text-xs font-semibold mb-1" style="color: #475569;">Upload Blueprint PDF:</label>
+                <input
+                  type="file"
+                  id="blueprint-file-input"
+                  accept=".pdf"
+                  class="w-full p-2 text-xs"
+                  style="border: 1px solid #e2e8f0; border-radius: 4px; background: white;"
+                />
+                <p class="text-xs mt-1" style="color: #94a3b8;">Or paste URL below (optional)</p>
+                <input
+                  type="text"
+                  id="blueprint-url-input"
+                  placeholder="https://example.com/blueprint.pdf"
+                  class="w-full p-2 mt-1 text-xs"
+                  style="border: 1px solid #e2e8f0; border-radius: 4px;"
+                />
+              </div>
+
               <button
                 onclick="runVisionaryAgent()"
                 id="visionary-btn"
@@ -522,20 +535,35 @@
                 </div>
               </div>
               <p class="text-xs mb-3" style="color: #475569;">Analyzes work photos for code compliance and quality issues before official inspections.</p>
-              <input
-                type="text"
-                id="photo-urls-input"
-                placeholder="Photo URLs (comma-separated)..."
-                class="w-full p-2 mb-2 text-xs"
-                style="border: 1px solid #e2e8f0; border-radius: 4px;"
-              />
-              <input
-                type="text"
-                id="milestone-id-input"
-                placeholder="Milestone ID (e.g., 'electrical_rough_in')..."
-                class="w-full p-2 mb-2 text-xs"
-                style="border: 1px solid #e2e8f0; border-radius: 4px;"
-              />
+
+              <div class="mb-2">
+                <label class="block text-xs font-semibold mb-1" style="color: #475569;">Upload Photos:</label>
+                <input
+                  type="file"
+                  id="photo-files-input"
+                  accept="image/*"
+                  multiple
+                  capture="environment"
+                  class="w-full p-2 text-xs"
+                  style="border: 1px solid #e2e8f0; border-radius: 4px; background: white;"
+                />
+                <p class="text-xs mt-1" style="color: #94a3b8;">Or paste URLs below (optional)</p>
+                <input
+                  type="text"
+                  id="photo-urls-input"
+                  placeholder="https://example.com/photo1.jpg, photo2.jpg..."
+                  class="w-full p-2 mt-1 text-xs"
+                  style="border: 1px solid #e2e8f0; border-radius: 4px;"
+                />
+                <input
+                  type="text"
+                  id="milestone-id-input"
+                  placeholder="Milestone ID (e.g., 'electrical_rough_in')..."
+                  class="w-full p-2 mt-2 text-xs"
+                  style="border: 1px solid #e2e8f0; border-radius: 4px;"
+                />
+              </div>
+
               <button
                 onclick="runSentinelAgent()"
                 id="sentinel-btn"
@@ -1685,20 +1713,67 @@
     /**
      * Trigger Visionary Agent to analyze blueprints
      */
+    /**
+     * Upload file to server and get URL
+     * HELPER FUNCTION for file uploads
+     */
+    async function uploadFile(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const token = await window.authService.getAccessToken();
+      const response = await fetch('/api/ai/upload-file', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+      return data.file_url;
+    }
+
     async function runVisionaryAgent() {
       if (!selectedProjectId) {
         showToast('Please select a project first');
         return;
       }
 
-      const blueprintUrl = document.getElementById('blueprint-url-input').value.trim();
-      if (!blueprintUrl) {
-        showToast('Please enter a blueprint PDF URL');
-        return;
-      }
-
+      const fileInput = document.getElementById('blueprint-file-input');
+      const urlInput = document.getElementById('blueprint-url-input');
       const statusEl = document.getElementById('visionary-status');
       const btn = document.getElementById('visionary-btn');
+
+      let blueprintUrl = urlInput.value.trim();
+
+      // Check if file is uploaded
+      if (fileInput.files && fileInput.files[0]) {
+        try {
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Uploading...';
+          statusEl.innerHTML = '<span style="color: #2563eb;">⏳ Uploading blueprint...</span>';
+
+          blueprintUrl = await uploadFile(fileInput.files[0]);
+          console.log('✅ Blueprint uploaded:', blueprintUrl);
+        } catch (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          statusEl.innerHTML = '<span style="color: #dc2626;">❌ Upload failed</span>';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Analyze Blueprints';
+          return;
+        }
+      }
+
+      if (!blueprintUrl) {
+        showToast('Please upload a blueprint PDF or enter a URL');
+        return;
+      }
 
       try {
         btn.disabled = true;
@@ -1724,6 +1799,10 @@
           console.log('✅ Visionary analysis:', data.analysis);
           statusEl.innerHTML = '<span style="color: #16a34a;">✅ Analysis complete! Check Activity Log</span>';
           showToast('🤖 Blueprints analyzed successfully!');
+
+          // Clear inputs
+          fileInput.value = '';
+          urlInput.value = '';
 
           // Refresh activity log to show new AI activity
           await refreshActivityLog();
@@ -1851,16 +1930,49 @@
         return;
       }
 
-      const photoUrls = document.getElementById('photo-urls-input').value.trim();
-      const milestoneId = document.getElementById('milestone-id-input').value.trim();
+      const fileInput = document.getElementById('photo-files-input');
+      const urlInput = document.getElementById('photo-urls-input');
+      const milestoneInput = document.getElementById('milestone-id-input');
+      const statusEl = document.getElementById('sentinel-status');
+      const btn = document.getElementById('sentinel-btn');
 
-      if (!photoUrls || !milestoneId) {
-        showToast('Please enter photo URLs and milestone ID');
+      const milestoneId = milestoneInput.value.trim();
+      if (!milestoneId) {
+        showToast('Please enter milestone ID');
         return;
       }
 
-      const statusEl = document.getElementById('sentinel-status');
-      const btn = document.getElementById('sentinel-btn');
+      let photoUrlsArray = [];
+
+      // Check if files are uploaded
+      if (fileInput.files && fileInput.files.length > 0) {
+        try {
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Uploading...';
+          statusEl.innerHTML = `<span style="color: #2563eb;">⏳ Uploading ${fileInput.files.length} photo(s)...</span>`;
+
+          // Upload all files
+          for (let i = 0; i < fileInput.files.length; i++) {
+            const fileUrl = await uploadFile(fileInput.files[i]);
+            photoUrlsArray.push(fileUrl);
+            console.log(`✅ Photo ${i + 1} uploaded:`, fileUrl);
+          }
+        } catch (uploadError) {
+          console.error('Error uploading photos:', uploadError);
+          statusEl.innerHTML = '<span style="color: #dc2626;">❌ Upload failed</span>';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-camera mr-1"></i>Check Quality';
+          return;
+        }
+      } else if (urlInput.value.trim()) {
+        // Use URLs if provided
+        photoUrlsArray = urlInput.value.split(',').map(url => url.trim()).filter(url => url);
+      }
+
+      if (photoUrlsArray.length === 0) {
+        showToast('Please upload photos or enter URLs');
+        return;
+      }
 
       try {
         btn.disabled = true;
@@ -1877,7 +1989,7 @@
           body: JSON.stringify({
             project_id: selectedProjectId,
             milestone_id: milestoneId,
-            photo_urls: photoUrls.split(',').map(url => url.trim())
+            photo_urls: photoUrlsArray
           })
         });
 
@@ -1887,6 +1999,10 @@
           console.log('✅ Sentinel inspection:', data.inspection);
           statusEl.innerHTML = '<span style="color: #16a34a;">✅ Quality check complete!</span>';
           showToast('🤖 Quality inspection completed!');
+
+          // Clear inputs
+          fileInput.value = '';
+          urlInput.value = '';
 
           // Refresh activity log
           await refreshActivityLog();
