@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WDO Custom Organizer Pricing</title>
+    <title>WDO Builder Tool v42</title>
     <style>
         :root {
-            --bg-body: #f8fafc;
-            --bg-card: #ffffff;
-            --accent: #2563eb;
-            --text-main: #1e293b;
+            --bg-body: #f8fafc;       
+            --bg-card: #ffffff;       
+            --accent: #2563eb;        
+            --text-main: #0f172a;     
             --text-muted: #64748b;
-            --border: #e2e8f0;
-            --success: #10b981;
+            --wood-fill: #e2b686;
+            --wood-stroke: #925f32;
         }
 
         body {
@@ -21,239 +21,365 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
             padding: 20px;
-            line-height: 1.5;
         }
 
-        .container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
+        .container { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 30px; }
+        .controls-area { flex: 1; min-width: 300px; max-width: 400px; }
+        .visual-area { flex: 2; min-width: 320px; }
 
         /* HEADER */
-        .header-section { text-align: center; margin-bottom: 30px; }
-        h1 { margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
-        .subtitle { font-size: 1rem; color: var(--text-muted); margin-top: 5px; }
+        .header-section { width: 100%; margin-bottom: 30px; text-align: center; }
+        h1 { margin: 0; font-size: 2rem; font-weight: 800; color: var(--text-main); letter-spacing: -1px; }
+        .brand-accent { color: var(--accent); }
+        .subtitle { font-size: 1rem; color: var(--text-muted); margin-top: 5px; font-weight: 500; }
 
         /* CARDS */
-        .card {
-            background: var(--bg-card);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-            position: relative;
+        .card { 
+            background: var(--bg-card); padding: 30px; border-radius: 16px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;
         }
 
-        /* HEADER INSIDE CARD */
-        .unit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-        .unit-title { font-weight: 700; color: var(--text-main); font-size: 1.1rem; }
-        .btn-remove { color: #ef4444; background: none; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; }
-
-        /* INPUTS */
-        label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
-        .input-row { display: flex; gap: 15px; margin-bottom: 15px; }
-        .input-group { flex: 1; }
-
-        input, select {
+        /* 2D CANVAS STAGE */
+        .drawing-container {
+            width: 100%; 
+            /* Aspect ratio trick to keep canvas stable */
+            aspect-ratio: 4/3; 
+            background-color: #ffffff;
+            /* Blueprint Grid */
+            background-image: 
+                linear-gradient(#e5e7eb 1px, transparent 1px),
+                linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 16px; border: 1px solid #cbd5e1;
+            position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        canvas {
             width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* DYNAMIC DIMENSIONS TEXT */
+        .dimensions-display {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem; 
+            font-weight: 500;  
+            color: var(--text-muted);
+            background: #f8fafc; 
             padding: 12px;
             border-radius: 8px;
-            border: 1px solid var(--border);
-            font-size: 1rem;
-            background: #f1f5f9;
-            color: var(--text-main);
-            box-sizing: border-box;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* INPUTS */
+        label { display: block; font-size: 0.7rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-group { margin-bottom: 20px; }
+        
+        input[type="number"], select {
+            width: 100%; padding: 14px; border-radius: 8px; border: 2px solid #e2e8f0;
+            font-size: 1rem; font-weight: 600; color: var(--text-main); background: #f8fafc;
+            transition: border 0.2s; box-sizing: border-box;
         }
         input:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
 
+        /* HELPER TEXT */
+        .helper-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            line-height: 1.4;
+            font-style: italic;
+        }
+
         /* TOGGLES */
-        .toggle-container { display: flex; flex-direction: column; gap: 10px; }
-        .toggle-row { display: flex; align-items: center; cursor: pointer; }
-        .toggle-row input { width: 20px; height: 20px; margin-right: 12px; cursor: pointer; flex: 0 0 20px; }
-        .toggle-row span { font-size: 0.95rem; font-weight: 500; }
+        .toggle-row { 
+            display: flex; align-items: center; margin-bottom: 12px; cursor: pointer; 
+            padding: 10px; border-radius: 8px; border: 1px solid transparent; transition: all 0.2s; 
+        }
+        .toggle-row:hover { background: #f1f5f9; border-color: #e2e8f0; }
+        .toggle-row input { width: 22px; height: 22px; margin-right: 15px; accent-color: var(--accent); cursor: pointer; }
+        .toggle-row span { font-size: 1rem; font-weight: 500; color: var(--text-main); }
 
-        /* BUTTONS */
-        .btn-add { width: 100%; background: white; border: 2px dashed var(--accent); color: var(--accent); padding: 15px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 1rem; margin-bottom: 30px; transition: all 0.2s; }
-        .btn-add:hover { background: #eff6ff; }
+        /* PRICE BOX */
+        .price-box { 
+            background: #1e293b; color: white; padding: 25px; 
+            border-radius: 12px; text-align: center; margin-top: 30px; 
+            box-shadow: 0 10px 20px -5px rgba(30, 41, 59, 0.3);
+        }
+        .price-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; margin-bottom: 5px; }
+        .price-val { font-size: 3rem; font-weight: 800; line-height: 1; letter-spacing: -1px; }
 
-        .btn-email { width: 100%; background: var(--accent); border: none; color: white; padding: 18px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); }
-        .btn-email:hover { background: #1d4ed8; }
+        /* BUTTON */
+        .btn-email {
+            width: 100%; background: var(--accent); color: white; border: none;
+            padding: 18px; border-radius: 10px; font-weight: 700; font-size: 1.1rem;
+            cursor: pointer; margin-top: 20px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-email:hover { background: #1d4ed8; transform: translateY(-2px); }
 
-        /* TOTALS */
-        .total-section { background: var(--text-main); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .total-label { text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; opacity: 0.8; margin-bottom: 5px; }
-        .total-price { font-size: 2.5rem; font-weight: 800; line-height: 1; }
-
+        @media (max-width: 768px) {
+            .container { flex-direction: column-reverse; }
+        }
     </style>
 </head>
 <body>
 
+<div class="header-section">
+    <h1>WDO <span class="brand-accent">Custom</span></h1>
+    <div class="subtitle">Builder Configuration Tool</div>
+</div>
+
 <div class="container">
-    <div class="header-section">
-        <h1>WDO Custom</h1>
-        <div class="subtitle">Storage Solution Pricing Tool</div>
+    
+    <div class="controls-area">
+        <div class="card">
+            <div class="input-group">
+                <label>Dimensions</label>
+                <div style="display:flex; gap:15px;">
+                    <div style="flex:1">
+                        <input type="number" id="in_cols" value="4" min="1" max="12" oninput="update()">
+                        <div style="font-size:0.65rem; font-weight:700; color:var(--text-muted); text-align:center; margin-top:6px;">COLUMNS</div>
+                    </div>
+                    <div style="flex:1">
+                        <input type="number" id="in_rows" value="4" min="1" max="10" oninput="update()">
+                        <div style="font-size:0.65rem; font-weight:700; color:var(--text-muted); text-align:center; margin-top:6px;">TIERS HIGH</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Tote Model</label>
+                <select id="in_tote" onchange="update()">
+                    <option value="HDX">HDX / Standard (19.6" Wide)</option>
+                    <option value="GM">Greenmade / Large (20.6" Wide)</option>
+                </select>
+                <div class="helper-text">
+                    *Have your own totes? Measure the top width rim-to-rim. Select the size above that matches (19.6" or 20.6").
+                </div>
+            </div>
+
+            <div style="margin-top:25px; border-top:1px solid #e2e8f0; padding-top:20px;">
+                <label style="margin-bottom:10px;">Configuration</label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="in_totes" checked onchange="update()">
+                    <span>Show Totes (+$12 ea)</span>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="in_wheels" checked onchange="update()">
+                    <span>Add Wheels (+$45)</span>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="in_top" checked onchange="update()">
+                    <span>Plywood Top (+$75)</span>
+                </label>
+            </div>
+
+            <div class="price-box">
+                <div class="price-label">Estimated Total</div>
+                <div class="price-val" id="display_price">$0</div>
+            </div>
+
+            <button class="btn-email" onclick="sendEmail()">
+                <span>Request Quote</span>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            </button>
+        </div>
     </div>
 
-    <div id="units-container"></div>
-
-    <button class="btn-add" onclick="addUnit()">+ Add Another Unit</button>
-
-    <div class="total-section">
-        <div class="total-label">Estimated Total Price</div>
-        <div class="total-price" id="display-total">$0</div>
-    </div>
-
-    <button class="btn-email" onclick="sendEmail()">📧 Send Order Inquiry</button>
-    <div style="text-align:center; font-size:0.8rem; color:#94a3b8; margin-top:10px;">
-        Clicking this will open your email app with these details pre-filled.
+    <div class="visual-area">
+        <div class="drawing-container">
+            <canvas id="blueprint" width="1200" height="900"></canvas>
+        </div>
+        <div class="dimensions-display" id="dim_text">
+            Loading...
+        </div>
     </div>
 
 </div>
 
 <script>
-    // --- CONFIGURATION ---
-    const myEmail = "camachoskyler@gmail.com";
-    // ---------------------
+    const myEmail = "camachoskyler@gmail.com"; 
 
-    let unitCount = 0;
+    function update() {
+        const cols = parseInt(document.getElementById('in_cols').value) || 4;
+        const rows = parseInt(document.getElementById('in_rows').value) || 4;
+        const toteType = document.getElementById('in_tote').value;
+        const hasTotes = document.getElementById('in_totes').checked;
+        const hasWheels = document.getElementById('in_wheels').checked;
+        const hasTop = document.getElementById('in_top').checked;
 
-    function addUnit() {
-        unitCount++;
-        const id = unitCount;
+        // MATH
+        const opening = (toteType === 'HDX') ? 19.75 : 20.75;
+        const stud = 1.5; 
+        const totalW_in = (cols * opening) + ((cols+1) * stud); 
+        const topGap = 2.5;
+        const totalH_in = (rows * 16) + 3 + topGap; 
+        
+        // PRICING
+        const slots = cols * rows;
+        let price = slots * 40;
+        if(hasTotes) price += (slots * 12);
+        if(hasWheels) price += 45;
+        let topSheets = 0;
+        if(totalW_in > 192) topSheets = 3;
+        else if(totalW_in > 96) topSheets = 2;
+        else topSheets = 1;
+        if(hasTop) price += (topSheets * 75);
 
-        const html = `
-        <div class="card unit-card" id="unit-${id}">
-            <div class="unit-header">
-                <div class="unit-title">Unit #${id}</div>
-                <button class="btn-remove" onclick="removeUnit(${id})">Remove</button>
-            </div>
+        document.getElementById('display_price').innerText = "$" + price.toLocaleString();
 
-            <div class="input-row">
-                <div class="input-group">
-                    <label>Columns Wide</label>
-                    <input type="number" class="in-cols" value="4" min="1" oninput="calculate()">
-                </div>
-                <div class="input-group">
-                    <label>Rows High</label>
-                    <input type="number" class="in-rows" value="4" min="1" oninput="calculate()">
-                </div>
-            </div>
+        // UPDATE DIMENSION TEXT
+        const dimStr = `Overall Dimensions: ${totalW_in.toFixed(0)}" Width  ×  ${totalH_in.toFixed(0)}" Height  ×  30" Depth`;
+        document.getElementById('dim_text').innerText = dimStr;
 
-            <div class="input-row">
-                <div class="input-group">
-                    <label>Tote Type</label>
-                    <select class="in-tote" onchange="calculate()">
-                        <option value="HDX">HDX (19.6")</option>
-                        <option value="GM">Greenmade (20.6")</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="toggle-container">
-                <label class="toggle-row">
-                    <input type="checkbox" class="in-wheels" checked onchange="calculate()">
-                    <span>Add Wheels (+$45)</span>
-                </label>
-                <label class="toggle-row">
-                    <input type="checkbox" class="in-top" checked onchange="calculate()">
-                    <span>Add Plywood Top (+$75 per section)</span>
-                </label>
-                <label class="toggle-row">
-                    <input type="checkbox" class="in-totes" onchange="calculate()">
-                    <span>Include Totes (+$12 ea)</span>
-                </label>
-            </div>
-        </div>`;
-
-        const container = document.getElementById('units-container');
-        const div = document.createElement('div');
-        div.innerHTML = html;
-        container.appendChild(div.firstElementChild);
-        calculate();
+        drawBlueprint(cols, rows, opening, hasTotes, hasWheels, hasTop, totalW_in, totalH_in, topGap);
     }
 
-    function removeUnit(id) {
-        const el = document.getElementById(`unit-${id}`);
-        if(el) el.remove();
-        calculate();
-    }
+    function drawBlueprint(cols, rows, bayWidth, showTotes, showWheels, showTop, realW, realH, topGap) {
+        const canvas = document.getElementById('blueprint');
+        const ctx = canvas.getContext('2d');
+        
+        // Fixed internal resolution
+        const W = 1200;
+        const H = 900;
+        
+        // Clear
+        ctx.clearRect(0, 0, W, H);
 
-    function calculate() {
-        let grandTotal = 0;
-        const units = document.querySelectorAll('.unit-card');
+        // Styling
+        const woodFill = '#e2b686';
+        const woodStroke = '#925f32';
 
-        units.forEach(unit => {
-            const cols = parseInt(unit.querySelector('.in-cols').value) || 0;
-            const rows = parseInt(unit.querySelector('.in-rows').value) || 0;
-            const toteType = unit.querySelector('.in-tote').value;
+        // --- STABLE AUTO-SCALING ---
+        const margin = 60; 
+        const safeW = W - (margin * 2);
+        const safeH = H - (margin * 2);
 
-            const hasWheels = unit.querySelector('.in-wheels').checked;
-            const hasTop = unit.querySelector('.in-top').checked;
-            const inclTotes = unit.querySelector('.in-totes').checked;
+        let visualH_in = realH;
+        if(showWheels) visualH_in += 6;
+        if(showTop) visualH_in += 1;
 
-            if(cols > 0 && rows > 0) {
-                const slots = cols * rows;
+        const scaleX = safeW / realW;
+        const scaleY = safeH / visualH_in;
+        const scale = Math.min(scaleX, scaleY);
 
-                // Base Price ($40/slot)
-                let unitPrice = slots * 40;
+        const pTotalW = realW * scale;
+        const pTotalH = realH * scale;
+        const pStud = 1.5 * scale;
+        const pBay = bayWidth * scale;
+        const pPlate = 1.5 * scale;
+        const pTopGap = topGap * scale;
 
-                // Totes ($12/ea)
-                if(inclTotes) unitPrice += (slots * 12);
+        const startX = (W - pTotalW) / 2;
+        const visualPixelH = visualH_in * scale;
+        const startY = (H - visualPixelH) / 2 + (showTop ? 1*scale : 0);
 
-                // Wheels ($45 fixed)
-                if(hasWheels) unitPrice += 45;
+        // --- DRAW STRUCTURE ---
+        ctx.fillStyle = woodFill; ctx.strokeStyle = woodStroke; ctx.lineWidth = 2;
 
-                // Top Logic ($75 per sheet width)
-                if(hasTop) {
-                    const opening = (toteType === 'HDX') ? 19.75 : 20.75;
-                    const totalWidth = (cols * opening) + ((cols+1) * 1.5);
+        // Bottom Plate
+        ctx.fillRect(startX, startY + pTotalH - pPlate, pTotalW, pPlate);
+        ctx.strokeRect(startX, startY + pTotalH - pPlate, pTotalW, pPlate);
 
-                    let sheets = 1;
-                    if(totalWidth > 192) sheets = 3;
-                    else if(totalWidth > 96) sheets = 2;
+        // Top Plate
+        ctx.fillRect(startX, startY, pTotalW, pPlate);
+        ctx.strokeRect(startX, startY, pTotalW, pPlate);
 
-                    unitPrice += (sheets * 75);
+        // Vertical Posts
+        const postH = pTotalH - (pPlate * 2);
+        const postY = startY + pPlate;
+        for(let i=0; i <= cols; i++) {
+            const x = startX + (i * (pBay + pStud));
+            ctx.fillRect(x, postY, pStud, postH);
+            ctx.strokeRect(x, postY, pStud, postH);
+        }
+
+        // --- RAILS & TOTES ---
+        const railH = 1.5 * scale; 
+        const railW = 1.5 * scale; 
+
+        for(let c=0; c < cols; c++) {
+            const bayLeftX = startX + pStud + (c * (pBay + pStud));
+            const bayRightX = bayLeftX + pBay;
+
+            for(let r=1; r <= rows; r++) {
+                // Position: Start after top plate + 2.5" gap + (Row Index * 16")
+                const levelY = startY + pPlate + pTopGap + ((r-1) * 16 * scale);
+                
+                // Draw Rails
+                ctx.fillStyle = woodFill;
+                ctx.fillRect(bayLeftX, levelY, railW, railH);
+                ctx.strokeRect(bayLeftX, levelY, railW, railH);
+                ctx.fillRect(bayRightX - railW, levelY, railW, railH);
+                ctx.strokeRect(bayRightX - railW, levelY, railW, railH);
+
+                // Draw Tote
+                if(showTotes) {
+                    const tW = pBay * 0.94; 
+                    const tH = 12 * scale;
+                    const tX = bayLeftX + (pBay - tW)/2;
+                    
+                    const tY = levelY; 
+                    
+                    // Lid (Yellow)
+                    const lidH = 1.5 * scale;
+                    ctx.fillStyle = '#fbbf24'; 
+                    ctx.strokeStyle = '#d97706';
+                    ctx.fillRect(tX, tY - lidH, tW, lidH);
+                    ctx.strokeRect(tX, tY - lidH, tW, lidH);
+
+                    // Body (Black)
+                    const bodyW = tW * 0.9;
+                    const bodyX = tX + (tW - bodyW)/2;
+                    ctx.fillStyle = '#1e293b'; 
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.fillRect(bodyX, tY, bodyW, tH);
+                    ctx.strokeRect(bodyX, tY, bodyW, tH);
                 }
-
-                grandTotal += unitPrice;
             }
-        });
+        }
 
-        document.getElementById('display-total').innerText = "$" + grandTotal.toLocaleString();
+        // Plywood Top
+        if(showTop) {
+            const topThick = 0.75 * scale;
+            const overhang = 1 * scale;
+            ctx.fillStyle = '#f3d2a3'; 
+            ctx.fillRect(startX - overhang, startY - topThick, pTotalW + (overhang*2), topThick);
+            ctx.strokeRect(startX - overhang, startY - topThick, pTotalW + (overhang*2), topThick);
+        }
+
+        // Wheels
+        if(showWheels) {
+            const wSize = 5 * scale;
+            const wY = startY + pTotalH;
+            
+            ctx.fillStyle = '#334155'; ctx.strokeStyle = '#1e293b';
+            // Left
+            ctx.beginPath(); ctx.arc(startX + pStud*2, wY + wSize/2, wSize/2, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
+            // Right
+            ctx.beginPath(); ctx.arc(startX + pTotalW - pStud*2, wY + wSize/2, wSize/2, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
+        }
     }
 
     function sendEmail() {
-        const total = document.getElementById('display-total').innerText;
-        let body = `Hi WDO Custom,\n\nI would like to order the following organizer setup:\n\n`;
-
-        const units = document.querySelectorAll('.unit-card');
-        units.forEach((unit, index) => {
-            const cols = unit.querySelector('.in-cols').value;
-            const rows = unit.querySelector('.in-rows').value;
-            const type = unit.querySelector('.in-tote').value;
-            const wheels = unit.querySelector('.in-wheels').checked ? "Yes" : "No";
-            const top = unit.querySelector('.in-top').checked ? "Yes" : "No";
-            const totes = unit.querySelector('.in-totes').checked ? "Yes" : "No";
-
-            body += `UNIT #${index + 1}:\n`;
-            body += `- Size: ${cols} Wide x ${rows} High\n`;
-            body += `- Tote Type: ${type}\n`;
-            body += `- Wheels: ${wheels}\n`;
-            body += `- Top: ${top}\n`;
-            body += `- Include Totes: ${totes}\n\n`;
-        });
-
-        body += `ESTIMATED TOTAL: ${total}\n\n`;
-        body += `Please contact me to confirm details and availability.`;
-
-        const subject = encodeURIComponent("New Organizer Order Inquiry - " + total);
-        const encodedBody = encodeURIComponent(body);
-
-        window.location.href = `mailto:${myEmail}?subject=${subject}&body=${encodedBody}`;
+        const cols = document.getElementById('in_cols').value;
+        const rows = document.getElementById('in_rows').value;
+        const price = document.getElementById('display_price').innerText;
+        const tote = document.getElementById('in_tote').value;
+        const dimText = document.getElementById('dim_text').innerText;
+        
+        const body = `I am interested in:\n\nConfiguration: ${cols} Wide x ${rows} High\n${dimText}\nTote Fit: ${tote}\nEst Price: ${price}\n\nPlease contact me to finalize.`;
+        
+        window.location.href = `mailto:${myEmail}?subject=Custom Organizer Quote&body=${encodeURIComponent(body)}`;
     }
 
     // Init
-    window.onload = function() {
-        addUnit();
-    }
+    update();
+
 </script>
 
 </body>
