@@ -4929,18 +4929,23 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
     if (error) throw error;
 
     // Flatten the data structure to match expected format
-    const jobs = bidsData ? bidsData.map(bid => ({
-      id: bid.job_postings.id,
-      title: bid.job_postings.title,
-      address: bid.job_postings.address,
-      location_zip: bid.job_postings.location_zip,
-      description: bid.job_postings.description,
-      status: bid.job_postings.status,
-      created_at: bid.job_postings.created_at,
-      bid_amount: `$${bid.bid_amount_low.toLocaleString()} - $${bid.bid_amount_high.toLocaleString()}`,
-      estimated_duration: bid.estimated_duration,
-      bid_status: bid.status
-    })) : [];
+    const jobs = bidsData ? bidsData.map(bid => {
+      const lowAmount = bid.bid_amount_low || bid.bid_amount || 0;
+      const highAmount = bid.bid_amount_high || bid.bid_amount || 0;
+
+      return {
+        id: bid.job_postings.id,
+        title: bid.job_postings.title,
+        address: bid.job_postings.address,
+        location_zip: bid.job_postings.location_zip,
+        description: bid.job_postings.description,
+        status: bid.job_postings.status,
+        created_at: bid.job_postings.created_at,
+        bid_amount: `$${lowAmount.toLocaleString()} - $${highAmount.toLocaleString()}`,
+        estimated_duration: bid.estimated_duration,
+        bid_status: bid.status
+      };
+    }) : [];
 
     console.log(`[Jobs API] Found ${jobs.length} awarded jobs for ${email}`);
 
@@ -8312,6 +8317,44 @@ app.get('/api/agents/project-state/:project_id', async (req, res) => {
     console.error('❌ Error fetching project state:', error);
     res.status(500).json({
       error: 'Failed to fetch project state',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/agents/activity-log/:project_id
+ * Get AI agent activity log for a project
+ */
+app.get('/api/agents/activity-log/:project_id', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+
+    console.log(`[Activity Log API] Fetching activity for project: ${project_id}`);
+
+    const { data: activities, error } = await db.supabase
+      .from('ai_agent_activity')
+      .select('*')
+      .eq('project_id', project_id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    console.log(`[Activity Log API] Found ${activities?.length || 0} activities`);
+
+    res.json({
+      success: true,
+      activities: activities || [],
+      count: activities?.length || 0
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching activity log:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch activity log',
       message: error.message
     });
   }
