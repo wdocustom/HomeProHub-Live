@@ -11,6 +11,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 const db = require('./database/db');
 const { runAutoMigrations } = require('./database/auto-migrations');
 
@@ -103,6 +104,9 @@ app.use(cors({
 
 // Serve static files from /public directory
 app.use(express.static("public"));
+
+// Serve uploaded files (AI blueprints, photos, etc.)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve favicon
 app.get('/favicon.ico', (req, res) => {
@@ -8926,15 +8930,14 @@ app.get('/api/ai/project-status/:project_id', requireAuth, async (req, res) => {
  */
 app.post('/api/ai/upload-file', requireAuth, async (req, res) => {
   try {
-    const multer = require('multer');
-    const path = require('path');
-    const fs = require('fs').promises;
-
     // Configure multer for file uploads
     const storage = multer.diskStorage({
-      destination: async (req, file, cb) => {
+      destination: (req, file, cb) => {
         const uploadDir = path.join(__dirname, 'uploads', 'ai-files');
-        await fs.mkdir(uploadDir, { recursive: true });
+        // Create directory synchronously if it doesn't exist
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
         cb(null, uploadDir);
       },
       filename: (req, file, cb) => {
