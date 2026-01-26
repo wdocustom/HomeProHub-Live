@@ -423,6 +423,133 @@
           </div>
         </div>
 
+        <!-- AI Agent Actions Section -->
+        <div id="ai-actions-section" class="hidden industrial-card">
+          <h3 class="section-title flex items-center gap-3">
+            <div class="w-10 h-10 flex items-center justify-center" style="background: #8b5cf6; color: white; border-radius: 4px;">
+              <i class="fa-solid fa-robot text-lg"></i>
+            </div>
+            AI Agent Actions
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <!-- Visionary Agent -->
+            <div class="p-4" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 flex items-center justify-center" style="background: #3b82f6; color: white; border-radius: 50%;">
+                  <i class="fa-solid fa-eye"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm" style="color: #0f172a;">👁️ Visionary</h4>
+                  <p class="text-xs" style="color: #64748b;">Blueprint Analysis</p>
+                </div>
+              </div>
+              <p class="text-xs mb-3" style="color: #475569;">Analyzes PDF blueprints and extracts project requirements, measurements, and material quantities.</p>
+              <input
+                type="text"
+                id="blueprint-url-input"
+                placeholder="Blueprint PDF URL..."
+                class="w-full p-2 mb-2 text-xs"
+                style="border: 1px solid #e2e8f0; border-radius: 4px;"
+              />
+              <button
+                onclick="runVisionaryAgent()"
+                id="visionary-btn"
+                class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all"
+                style="border-radius: 4px;"
+              >
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Analyze Blueprints
+              </button>
+              <div id="visionary-status" class="mt-2 text-xs font-semibold"></div>
+            </div>
+
+            <!-- Shark Agent -->
+            <div class="p-4" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 flex items-center justify-center" style="background: #ef4444; color: white; border-radius: 50%;">
+                  <i class="fa-solid fa-fish-fins"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm" style="color: #0f172a;">🦈 Shark</h4>
+                  <p class="text-xs" style="color: #64748b;">Contractor Finder</p>
+                </div>
+              </div>
+              <p class="text-xs mb-3" style="color: #475569;">Finds qualified subcontractors for your project based on required trades and location.</p>
+              <button
+                onclick="runSharkAgent()"
+                id="shark-btn"
+                class="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-all"
+                style="border-radius: 4px;"
+              >
+                <i class="fa-solid fa-users mr-1"></i>Find Contractors
+              </button>
+              <div id="shark-status" class="mt-2 text-xs font-semibold"></div>
+            </div>
+
+            <!-- Whip Agent -->
+            <div class="p-4" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 flex items-center justify-center" style="background: #f59e0b; color: white; border-radius: 50%;">
+                  <i class="fa-solid fa-clock"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm" style="color: #0f172a;">⏰ Whip</h4>
+                  <p class="text-xs" style="color: #64748b;">Schedule Manager</p>
+                </div>
+              </div>
+              <p class="text-xs mb-3" style="color: #475569;">Calculates critical path, identifies schedule conflicts, and optimizes project timeline.</p>
+              <button
+                onclick="runWhipAgent()"
+                id="whip-btn"
+                class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-all"
+                style="border-radius: 4px;"
+              >
+                <i class="fa-solid fa-calendar-days mr-1"></i>Update Schedule
+              </button>
+              <div id="whip-status" class="mt-2 text-xs font-semibold"></div>
+            </div>
+
+            <!-- Sentinel Agent -->
+            <div class="p-4" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 flex items-center justify-center" style="background: #10b981; color: white; border-radius: 50%;">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm" style="color: #0f172a;">🛡️ Sentinel</h4>
+                  <p class="text-xs" style="color: #64748b;">Quality Inspector</p>
+                </div>
+              </div>
+              <p class="text-xs mb-3" style="color: #475569;">Analyzes work photos for code compliance and quality issues before official inspections.</p>
+              <input
+                type="text"
+                id="photo-urls-input"
+                placeholder="Photo URLs (comma-separated)..."
+                class="w-full p-2 mb-2 text-xs"
+                style="border: 1px solid #e2e8f0; border-radius: 4px;"
+              />
+              <input
+                type="text"
+                id="milestone-id-input"
+                placeholder="Milestone ID (e.g., 'electrical_rough_in')..."
+                class="w-full p-2 mb-2 text-xs"
+                style="border: 1px solid #e2e8f0; border-radius: 4px;"
+              />
+              <button
+                onclick="runSentinelAgent()"
+                id="sentinel-btn"
+                class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all"
+                style="border-radius: 4px;"
+              >
+                <i class="fa-solid fa-camera mr-1"></i>Check Quality
+              </button>
+              <div id="sentinel-status" class="mt-2 text-xs font-semibold"></div>
+            </div>
+
+          </div>
+        </div>
+
         <!-- Project Activity Log - Timeline Layout -->
         <div id="project-activity-section" class="hidden industrial-card">
           <div class="flex justify-between items-center mb-6">
@@ -1019,6 +1146,7 @@
       if (!projectId) {
         document.getElementById('project-status-card').classList.add('hidden');
         document.getElementById('contractor-update-section').classList.add('hidden');
+        document.getElementById('ai-actions-section').classList.add('hidden');
         document.getElementById('project-activity-section').classList.add('hidden');
         selectedProjectId = null;
         return;
@@ -1029,6 +1157,7 @@
       // Show sections
       document.getElementById('project-status-card').classList.remove('hidden');
       document.getElementById('contractor-update-section').classList.remove('hidden');
+      document.getElementById('ai-actions-section').classList.remove('hidden');
       document.getElementById('project-activity-section').classList.remove('hidden');
 
       try {
@@ -1552,6 +1681,233 @@
 
     // Make enrollInAIBeta available globally for onclick handlers
     window.enrollInAIBeta = enrollInAIBeta;
+
+    /**
+     * Trigger Visionary Agent to analyze blueprints
+     */
+    async function runVisionaryAgent() {
+      if (!selectedProjectId) {
+        showToast('Please select a project first');
+        return;
+      }
+
+      const blueprintUrl = document.getElementById('blueprint-url-input').value.trim();
+      if (!blueprintUrl) {
+        showToast('Please enter a blueprint PDF URL');
+        return;
+      }
+
+      const statusEl = document.getElementById('visionary-status');
+      const btn = document.getElementById('visionary-btn');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Analyzing...';
+        statusEl.innerHTML = '<span style="color: #2563eb;">⏳ Analyzing blueprints with AI...</span>';
+
+        const token = await window.authService.getAccessToken();
+        const response = await fetch('/api/ai/agents/visionary/analyze-blueprints', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            project_id: selectedProjectId,
+            blueprint_url: blueprintUrl
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log('✅ Visionary analysis:', data.analysis);
+          statusEl.innerHTML = '<span style="color: #16a34a;">✅ Analysis complete! Check Activity Log</span>';
+          showToast('🤖 Blueprints analyzed successfully!');
+
+          // Refresh activity log to show new AI activity
+          await refreshActivityLog();
+        } else {
+          statusEl.innerHTML = `<span style="color: #dc2626;">❌ ${data.error || 'Analysis failed'}</span>`;
+        }
+
+      } catch (error) {
+        console.error('Error running Visionary:', error);
+        statusEl.innerHTML = '<span style="color: #dc2626;">❌ Error analyzing blueprints</span>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Analyze Blueprints';
+      }
+    }
+
+    /**
+     * Trigger Shark Agent to find contractors
+     */
+    async function runSharkAgent() {
+      if (!selectedProjectId) {
+        showToast('Please select a project first');
+        return;
+      }
+
+      const statusEl = document.getElementById('shark-status');
+      const btn = document.getElementById('shark-btn');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Searching...';
+        statusEl.innerHTML = '<span style="color: #2563eb;">⏳ Finding contractors...</span>';
+
+        const token = await window.authService.getAccessToken();
+        const response = await fetch('/api/ai/agents/shark/hunt-contractors', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            project_id: selectedProjectId
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log('✅ Shark found contractors:', data.results);
+          statusEl.innerHTML = `<span style="color: #16a34a;">✅ Found ${data.contractors_found} contractors</span>`;
+          showToast(`🤖 Found ${data.contractors_found} qualified contractors!`);
+
+          // Refresh activity log
+          await refreshActivityLog();
+        } else {
+          statusEl.innerHTML = `<span style="color: #dc2626;">❌ ${data.error || 'Search failed'}</span>`;
+        }
+
+      } catch (error) {
+        console.error('Error running Shark:', error);
+        statusEl.innerHTML = '<span style="color: #dc2626;">❌ Error finding contractors</span>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-users mr-1"></i>Find Contractors';
+      }
+    }
+
+    /**
+     * Trigger Whip Agent to calculate schedule
+     */
+    async function runWhipAgent() {
+      if (!selectedProjectId) {
+        showToast('Please select a project first');
+        return;
+      }
+
+      const statusEl = document.getElementById('whip-status');
+      const btn = document.getElementById('whip-btn');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Calculating...';
+        statusEl.innerHTML = '<span style="color: #2563eb;">⏳ Calculating critical path...</span>';
+
+        const token = await window.authService.getAccessToken();
+        const response = await fetch('/api/ai/agents/whip/calculate-schedule', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            project_id: selectedProjectId
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log('✅ Whip schedule:', data.schedule);
+          statusEl.innerHTML = '<span style="color: #16a34a;">✅ Schedule updated! Check Activity Log</span>';
+          showToast('🤖 Project schedule optimized!');
+
+          // Refresh activity log
+          await refreshActivityLog();
+        } else {
+          statusEl.innerHTML = `<span style="color: #dc2626;">❌ ${data.error || 'Schedule calculation failed'}</span>`;
+        }
+
+      } catch (error) {
+        console.error('Error running Whip:', error);
+        statusEl.innerHTML = '<span style="color: #dc2626;">❌ Error calculating schedule</span>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-calendar-days mr-1"></i>Update Schedule';
+      }
+    }
+
+    /**
+     * Trigger Sentinel Agent to check quality
+     */
+    async function runSentinelAgent() {
+      if (!selectedProjectId) {
+        showToast('Please select a project first');
+        return;
+      }
+
+      const photoUrls = document.getElementById('photo-urls-input').value.trim();
+      const milestoneId = document.getElementById('milestone-id-input').value.trim();
+
+      if (!photoUrls || !milestoneId) {
+        showToast('Please enter photo URLs and milestone ID');
+        return;
+      }
+
+      const statusEl = document.getElementById('sentinel-status');
+      const btn = document.getElementById('sentinel-btn');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Inspecting...';
+        statusEl.innerHTML = '<span style="color: #2563eb;">⏳ Analyzing photos...</span>';
+
+        const token = await window.authService.getAccessToken();
+        const response = await fetch('/api/ai/agents/sentinel/check-quality', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            project_id: selectedProjectId,
+            milestone_id: milestoneId,
+            photo_urls: photoUrls.split(',').map(url => url.trim())
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log('✅ Sentinel inspection:', data.inspection);
+          statusEl.innerHTML = '<span style="color: #16a34a;">✅ Quality check complete!</span>';
+          showToast('🤖 Quality inspection completed!');
+
+          // Refresh activity log
+          await refreshActivityLog();
+        } else {
+          statusEl.innerHTML = `<span style="color: #dc2626;">❌ ${data.error || 'Inspection failed'}</span>`;
+        }
+
+      } catch (error) {
+        console.error('Error running Sentinel:', error);
+        statusEl.innerHTML = '<span style="color: #dc2626;">❌ Error checking quality</span>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-camera mr-1"></i>Check Quality';
+      }
+    }
+
+    // Make AI agent functions available globally
+    window.runVisionaryAgent = runVisionaryAgent;
+    window.runSharkAgent = runSharkAgent;
+    window.runWhipAgent = runWhipAgent;
+    window.runSentinelAgent = runSentinelAgent;
 
     // ============================================
     // HAWK AGENT (PLACEHOLDER)

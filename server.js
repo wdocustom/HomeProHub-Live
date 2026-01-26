@@ -8919,6 +8919,167 @@ app.get('/api/ai/project-status/:project_id', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/ai/agents/visionary/analyze-blueprints
+ * Trigger Visionary agent to analyze blueprints
+ */
+app.post('/api/ai/agents/visionary/analyze-blueprints', requireAuth, async (req, res) => {
+  try {
+    const { project_id, blueprint_url } = req.body;
+
+    if (!project_id || !blueprint_url) {
+      return res.status(400).json({
+        success: false,
+        error: 'project_id and blueprint_url are required'
+      });
+    }
+
+    console.log(`[Visionary API] Analyzing blueprints for project: ${project_id}`);
+
+    // Run Visionary agent
+    const analysis = await VisionaryAgent.analyzeBlueprints(project_id, blueprint_url);
+
+    // Log AI activity
+    await db.supabase.from('ai_agent_activity').insert([{
+      project_id: project_id,
+      agent_type: 'Visionary',
+      action_description: `Analyzed blueprints: ${analysis.summary || 'Blueprint analysis completed'}`,
+      metadata: { analysis }
+    }]);
+
+    res.json({
+      success: true,
+      agent: 'Visionary',
+      analysis: analysis
+    });
+
+  } catch (error) {
+    console.error('❌ Error running Visionary agent:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/ai/agents/shark/hunt-contractors
+ * Trigger Shark agent to find contractors
+ */
+app.post('/api/ai/agents/shark/hunt-contractors', requireAuth, async (req, res) => {
+  try {
+    const { project_id } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'project_id is required'
+      });
+    }
+
+    console.log(`[Shark API] Hunting contractors for project: ${project_id}`);
+
+    // Run Shark agent
+    const results = await SharkAgent.huntForContractors(project_id);
+
+    // Log AI activity
+    await db.supabase.from('ai_agent_activity').insert([{
+      project_id: project_id,
+      agent_type: 'Shark',
+      action_description: `Found ${results.contractors_found || 0} contractors for required trades`,
+      metadata: { results }
+    }]);
+
+    res.json({
+      success: true,
+      agent: 'Shark',
+      contractors_found: results.contractors_found || 0,
+      results: results
+    });
+
+  } catch (error) {
+    console.error('❌ Error running Shark agent:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/ai/agents/whip/calculate-schedule
+ * Trigger Whip agent to calculate critical path
+ */
+app.post('/api/ai/agents/whip/calculate-schedule', requireAuth, async (req, res) => {
+  try {
+    const { project_id } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'project_id is required'
+      });
+    }
+
+    console.log(`[Whip API] Calculating critical path for project: ${project_id}`);
+
+    // Run Whip agent
+    const schedule = await WhipAgent.calculateCriticalPath(project_id);
+
+    // Log AI activity
+    await db.supabase.from('ai_agent_activity').insert([{
+      project_id: project_id,
+      agent_type: 'Whip',
+      action_description: `Updated project schedule. Critical path: ${schedule.critical_path_days || 0} days`,
+      metadata: { schedule }
+    }]);
+
+    res.json({
+      success: true,
+      agent: 'Whip',
+      schedule: schedule
+    });
+
+  } catch (error) {
+    console.error('❌ Error running Whip agent:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/ai/agents/sentinel/check-quality
+ * Trigger Sentinel agent to check code compliance
+ */
+app.post('/api/ai/agents/sentinel/check-quality', requireAuth, async (req, res) => {
+  try {
+    const { project_id, milestone_id, photo_urls } = req.body;
+
+    if (!project_id || !milestone_id || !photo_urls) {
+      return res.status(400).json({
+        success: false,
+        error: 'project_id, milestone_id, and photo_urls are required'
+      });
+    }
+
+    console.log(`[Sentinel API] Checking quality for milestone: ${milestone_id}`);
+
+    // Run Sentinel agent
+    const inspection = await SentinelAgent.performCodeCheck(project_id, milestone_id, photo_urls);
+
+    // Log AI activity
+    await db.supabase.from('ai_agent_activity').insert([{
+      project_id: project_id,
+      agent_type: 'Sentinel',
+      action_description: `Quality check: ${inspection.status || 'Inspection completed'}`,
+      metadata: { inspection }
+    }]);
+
+    res.json({
+      success: true,
+      agent: 'Sentinel',
+      inspection: inspection
+    });
+
+  } catch (error) {
+    console.error('❌ Error running Sentinel agent:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ====== UNIVERSAL AUTO-GC AGENT ROUTES ======
 
 // Import Universal Agent Services
