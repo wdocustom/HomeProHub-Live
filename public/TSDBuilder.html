@@ -6,81 +6,61 @@
 <title>The Shelf Dude Builder</title>
 <style>
     :root{--bg-brand-yellow:#FFD200;--bg-card:#ffffff;--accent:#000000;--accent-hover:#333333;--text-main:#0f172a;--text-muted:#64748b;--wood-fill:#e2b686;--wood-stroke:#925f32;--danger:#ef4444}
-
+    
     body{background-color:var(--bg-brand-yellow);color:var(--text-main);font-family:'Wix Madefor','Helvetica Neue',Helvetica,Arial,sans-serif;margin:0;padding:20px;position:relative;overflow-x:hidden;min-height:100vh}
-
+    
     /* WALLPAPER BACKGROUND */
     body::before{content:"";position:fixed;top:-50%;left:-50%;width:200%;height:200%;background-image:url('image_48.png');background-repeat:repeat;background-size:150px;opacity:0.12;transform:rotate(-15deg);z-index:-1;pointer-events:none}
-
-    /* HERO LOGO - FIXED TO REMOVE WHITE BOX */
-    .hero-logo{
-        position:fixed;
-        top:50%;
-        left:-5%;
-        transform:translateY(-50%) rotate(-10deg);
-        width:500px;
-        max-width:45vw;
-        height:auto;
-        z-index:0;
-        opacity:1;
-        pointer-events:none;
-        user-select:none;
-        -webkit-user-drag:none;
-        /* THIS LINE REMOVES THE WHITE BOX AUTOMATICALLY */
-        mix-blend-mode: multiply;
-        filter:drop-shadow(0 10px 20px rgba(0,0,0,0.15));
-    }
-
+    
     .container{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:40px;justify-content:center;position:relative;z-index:10}
     .controls-area{flex:1;min-width:340px;max-width:450px}
     .visual-area{flex:2;min-width:320px}
-
+    
     .header-section{width:100%;margin-bottom:40px;text-align:center;padding-bottom:20px;position:relative;z-index:10}
-
+    
     h1{margin:0;font-size:3rem;font-weight:900;color:black;letter-spacing:-0.02em;line-height:1;text-transform:uppercase}
     .subtitle{font-size:1.2rem;color:black;margin-top:10px;font-weight:600;opacity:0.9;letter-spacing:0}
-
+    
     .card{background:var(--bg-card);padding:25px;border-radius:12px;border:none;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);margin-bottom:25px}
-
+    
     @media (max-width:768px){
         .container{flex-direction:column-reverse}
-        .hero-logo{width:300px;max-width:70vw;left:-15%;top:15%;transform:rotate(-10deg);opacity:0.8}
         h1{font-size:2.2rem}
     }
-
+    
     .autofit-box{background:#fffbeb;border:2px dashed #fcd34d;padding:20px;border-radius:12px;margin-bottom:25px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05)}
     .autofit-title{font-weight:800;color:black;font-size:0.9rem;margin-bottom:10px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:0.5px}
     .btn-calc{background:black;color:white;border:none;width:100%;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;margin-top:15px;transition:background 0.2s;font-size:0.9rem}
     .btn-calc:hover{background:#333}
-
+    
     .drawing-container{width:100%;aspect-ratio:4/3;background-color:#ffffff;background-image:linear-gradient(#f1f5f9 1px,transparent 1px),linear-gradient(90deg,#f1f5f9 1px,transparent 1px);background-size:20px 20px;border:2px solid #e2e8f0;border-radius:12px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1)}
     canvas{width:100%;height:100%;display:block}
-
+    
     .dimensions-display{text-align:center;margin-top:20px;font-size:1rem;font-weight:500;color:var(--text-muted);background:#f8fafc;padding:15px;border-radius:8px;border:1px solid #e2e8f0;box-shadow:0 2px 4px rgba(0,0,0,0.05)}
-
+    
     .builder-signature{text-align:center;margin-top:20px;font-size:0.65rem;color:rgba(0,0,0,0.4);text-transform:uppercase;letter-spacing:0.5px;line-height:1.6}
     .builder-signature a{color:rgba(0,0,0,0.4);text-decoration:none;font-weight:700;border-bottom:1px dotted rgba(0,0,0,0.2);transition:all 0.2s}
     .builder-signature a:hover{color:black;border-bottom:1px solid black}
-
+    
     label{display:block;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
     .input-group{margin-bottom:25px}
     input[type="number"],select{width:100%;padding:12px;border-radius:6px;border:1px solid #cbd5e1;font-size:1rem;font-weight:600;color:var(--text-main);background:#ffffff;transition:border 0.2s;box-sizing:border-box}
     input:focus,select:focus{outline:none;border-color:black;ring:2px solid black}
-
+    
     .helper-text{font-size:0.8rem;color:var(--text-muted);margin-top:8px;line-height:1.4;font-style:italic}
-
+    
     .toggle-row{display:flex;align-items:center;margin-bottom:12px;cursor:pointer;padding:10px;border-radius:8px;border:1px solid transparent;transition:all 0.2s}
     .toggle-row:hover{background:#f8fafc;border-color:#e2e8f0}
     .toggle-row input{width:20px;height:20px;margin-right:12px;accent-color:black;cursor:pointer}
     .toggle-row span{font-size:1rem;font-weight:600;color:var(--text-main)}
-
+    
     .action-row{display:flex;align-items:center;gap:15px;margin-top:25px;border-top:1px solid #e2e8f0;padding-top:20px}
     .unit-price{flex:1;text-align:center;font-size:1.8rem;font-weight:800;color:var(--text-main)}
     .unit-price span{display:block;font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
-
+    
     .btn-add{flex:1.5;background:white;color:black;border:2px solid black;padding:14px;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.2s}
     .btn-add:hover{background:black;color:white;transform:translateY(-1px)}
-
+    
     .order-list{list-style:none;padding:0;margin:0}
     .order-item{background:#ffffff;border:1px solid #e2e8f0;padding:15px;border-radius:8px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 4px rgba(0,0,0,0.02)}
     .item-details{font-size:0.95rem;font-weight:700;color:var(--text-main)}
@@ -89,18 +69,16 @@
     .item-price{font-weight:700;font-size:1.1rem}
     .btn-remove{color:#94a3b8;background:none;border:none;font-size:1.5rem;cursor:pointer;padding:0 5px;line-height:1}
     .btn-remove:hover{color:var(--danger)}
-
+    
     .grand-total-box{margin-top:30px;background:black;color:white;padding:25px;border-radius:12px;text-align:center}
     .gt-label{font-size:0.85rem;text-transform:uppercase;font-weight:700;opacity:0.8;letter-spacing:1px}
     .gt-val{font-size:3rem;font-weight:800;line-height:1;margin:10px 0 20px 0;color:var(--bg-brand-yellow)}
-
+    
     .btn-email{width:100%;background:var(--bg-brand-yellow);color:black;border:none;padding:18px;border-radius:8px;font-weight:700;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:all 0.2s}
     .btn-email:hover{background:#fbbf24;transform:translateY(-2px)}
 </style>
 </head>
 <body>
-
-<img src="logo_hero.png" alt="" class="hero-logo">
 
 <div class="header-section">
     <h1>The Shelf Dude Builder</h1>
