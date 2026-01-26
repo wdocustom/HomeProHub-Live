@@ -100,6 +100,33 @@
       margin-bottom: 20px;
       letter-spacing: -0.01em;
     }
+
+    /* Activity log delete button */
+    .timeline-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .delete-log-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+
+    .delete-log-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .delete-log-btn:active {
+      transform: scale(0.95);
+    }
   </style>
 </head>
 
@@ -230,6 +257,31 @@
             <div class="industrial-card mb-6">
               <h3 class="section-title">Project Progress</h3>
               <div id="metro-tracker-container"></div>
+            </div>
+
+            <!-- AI Initialization Alert (shown when project has no AI state) -->
+            <div id="ai-init-alert" class="hidden bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-2xl p-6 mb-6">
+              <div class="flex items-start gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 animate-pulse">
+                  <i class="fa-solid fa-robot text-2xl text-white"></i>
+                </div>
+                <div class="flex-1">
+                  <h4 class="font-black text-xl text-blue-900 mb-2">🚀 AI Command Center Not Yet Initialized</h4>
+                  <p class="text-slate-700 mb-4 font-medium">
+                    This project doesn't have AI agents activated yet. Click the button below to initialize your AI team
+                    and unlock automated project management, progress tracking, and intelligent summaries.
+                  </p>
+                  <button
+                    id="init-ai-btn"
+                    onclick="initializeProjectAI()"
+                    class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-6 py-3 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+                  >
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    Initialize AI Command Center
+                  </button>
+                  <div id="init-status" class="mt-3 text-sm font-semibold"></div>
+                </div>
+              </div>
             </div>
 
             <!-- Blockers Alert -->
@@ -941,6 +993,9 @@
         if (stateResponse.ok) {
           const state = await stateResponse.json();
 
+          // Hide AI init alert since project has state
+          document.getElementById('ai-init-alert').classList.add('hidden');
+
           currentPhase = state.current_phase || 'planning';
           document.getElementById('project-phase').textContent = currentPhase;
 
@@ -958,8 +1013,14 @@
             document.getElementById('getting-started-guide').classList.remove('hidden');
             localStorage.setItem(guideKey, 'true');
           }
+        } else if (stateResponse.status === 404) {
+          // Project state doesn't exist - show AI initialization alert
+          console.log('⚠️ Project has no AI state, showing initialization option');
+          document.getElementById('ai-init-alert').classList.remove('hidden');
+          document.getElementById('getting-started-guide').classList.add('hidden');
         } else {
-          // If project state doesn't exist yet, show guide anyway
+          // Other error - hide init alert
+          document.getElementById('ai-init-alert').classList.add('hidden');
           document.getElementById('getting-started-guide').classList.remove('hidden');
         }
 
@@ -1150,8 +1211,15 @@
 
         const displayName = isContractor ? (log.created_by || 'Contractor') : log.agent_name;
 
+        // Add delete button for contractor manual updates
+        const deleteButton = (isContractor && log.id) ? `
+          <button class="delete-log-btn" onclick="deleteLog('${log.id}')" title="Delete this update">
+            <i class="fas fa-trash"></i>
+          </button>
+        ` : '';
+
         return `
-          <div class="timeline-item">
+          <div class="timeline-item" data-log-id="${log.id || ''}">
             <div class="timeline-icon ${agentConfig.class}">
               <i class="fas ${agentConfig.icon}"></i>
             </div>
@@ -1161,7 +1229,10 @@
                   <span>${agentConfig.emoji} ${displayName}</span>
                   <span class="timeline-agent-badge ${agentConfig.class}">${isContractor ? 'Manual Update' : log.agent_name}</span>
                 </div>
-                <div class="timeline-timestamp">${timeStr}</div>
+                <div class="timeline-actions">
+                  ${deleteButton}
+                  <div class="timeline-timestamp">${timeStr}</div>
+                </div>
               </div>
               <div class="timeline-message">${log.message}</div>
             </div>
@@ -1187,6 +1258,7 @@
 
           // Transform API response to match expected format
           logs = activities.map(activity => ({
+            id: activity.id,
             agent_name: activity.agent_type === 'contractor' ? 'Contractor' : activity.agent_type,
             message: activity.description,
             created_at: activity.created_at,
@@ -1219,6 +1291,117 @@
         document.getElementById('project-log-count').textContent = mockLogs.length;
       }
     }
+
+    /**
+     * Delete a contractor manual log update
+     */
+    async function deleteLog(logId) {
+      if (!logId) {
+        console.error('No log ID provided');
+        return;
+      }
+
+      // Confirm deletion
+      if (!confirm('Are you sure you want to delete this update? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const token = await window.authService.getAccessToken();
+        const response = await fetch(`/api/agents/log/${logId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log(`✅ Successfully deleted log ${logId}`);
+          showToast('Update deleted successfully');
+
+          // Refresh the activity log to show updated list
+          await refreshActivityLog();
+        } else {
+          console.error('Failed to delete log:', data.error);
+          showToast(data.error || 'Failed to delete update');
+        }
+      } catch (error) {
+        console.error('Error deleting log:', error);
+        showToast('Error deleting update');
+      }
+    }
+
+    // Make deleteLog available globally for onclick handlers
+    window.deleteLog = deleteLog;
+
+    /**
+     * Manually initialize AI Command Center for the selected project
+     */
+    async function initializeProjectAI() {
+      if (!selectedProjectId) {
+        console.error('No project selected');
+        return;
+      }
+
+      const statusEl = document.getElementById('init-status');
+      const btn = document.getElementById('init-ai-btn');
+
+      try {
+        // Disable button and show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing AI...';
+        statusEl.innerHTML = '<span style="color: #2563eb;">⏳ Setting up your AI team...</span>';
+
+        const token = await window.authService.getAccessToken();
+        const response = await fetch(`/api/agents/initialize-project/${selectedProjectId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log('✅ Project AI initialized:', data);
+
+          statusEl.innerHTML = `<span style="color: #16a34a;">✅ AI initialized successfully! Created ${data.initialization_result.milestones_created} milestones.</span>`;
+
+          // Hide the init alert after a brief delay
+          setTimeout(() => {
+            document.getElementById('ai-init-alert').classList.add('hidden');
+            showToast('🤖 AI Command Center activated!');
+          }, 2000);
+
+          // Reload project details to show the new state
+          setTimeout(() => {
+            loadProjectDetails();
+          }, 2500);
+
+        } else {
+          console.error('Failed to initialize AI:', data.error);
+          statusEl.innerHTML = `<span style="color: #dc2626;">❌ ${data.error || 'Failed to initialize AI'}</span>`;
+
+          // Re-enable button
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Initialize AI Command Center';
+        }
+      } catch (error) {
+        console.error('Error initializing AI:', error);
+        statusEl.innerHTML = '<span style="color: #dc2626;">❌ Error initializing AI. Please try again.</span>';
+
+        // Re-enable button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Initialize AI Command Center';
+      }
+    }
+
+    // Make initializeProjectAI available globally for onclick handlers
+    window.initializeProjectAI = initializeProjectAI;
 
     // ============================================
     // HAWK AGENT (PLACEHOLDER)

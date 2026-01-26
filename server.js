@@ -8253,6 +8253,68 @@ app.post('/api/agents/log-contractor-update', async (req, res) => {
 
     console.log('✅ Contractor update logged successfully');
 
+    // Send notification to homeowner
+    try {
+      // Get project/job details to find homeowner
+      const { data: project, error: projectError } = await db.supabase
+        .from('job_postings')
+        .select('id, title, homeowner_email, homeowner_id')
+        .eq('id', project_id)
+        .single();
+
+      if (!projectError && project && project.homeowner_email) {
+        console.log(`📧 Sending notification to homeowner: ${project.homeowner_email}`);
+
+        // Create in-app notification
+        await db.createNotification({
+          user_email: project.homeowner_email,
+          user_id: project.homeowner_id,
+          type: 'contractor_update',
+          title: '📝 New Project Update',
+          message: `${contractor_name || contractor_email} posted an update on "${project.title}": ${update_text.substring(0, 100)}${update_text.length > 100 ? '...' : ''}`,
+          job_id: project_id,
+          action_url: `/homeowner-dashboard.html?project=${project_id}`
+        });
+
+        // Send email notification
+        if (emailService && emailService.sendEmail) {
+          const homeownerName = project.homeowner_email.split('@')[0];
+          const contractorDisplayName = contractor_name || contractor_email;
+
+          await emailService.sendEmail({
+            to: project.homeowner_email,
+            subject: `New Update on "${project.title}"`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2563eb;">📝 New Project Update</h2>
+                <p>Hi ${homeownerName},</p>
+                <p><strong>${contractorDisplayName}</strong> posted a new update on your project <strong>"${project.title}"</strong>:</p>
+                <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                  <p style="margin: 0; color: #0f172a;">${update_text}</p>
+                </div>
+                <p>
+                  <a href="${process.env.BASE_URL || 'https://homeprohub.today'}/homeowner-dashboard.html?project=${project_id}"
+                     style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    View Project Dashboard
+                  </a>
+                </p>
+                <p style="color: #64748b; font-size: 14px; margin-top: 30px;">
+                  This is an automated notification from HomeProHub. You can manage your notification preferences in your account settings.
+                </p>
+              </div>
+            `
+          });
+
+          console.log('✅ Email notification sent to homeowner');
+        }
+      } else {
+        console.log('⚠️ Could not find homeowner for project, skipping notification');
+      }
+    } catch (notificationError) {
+      // Don't fail the request if notification fails
+      console.error('⚠️ Failed to send notification to homeowner:', notificationError);
+    }
+
     res.json({
       success: true,
       log_id: logEntry.id,
@@ -8377,6 +8439,104 @@ app.get('/api/agents/project-state/:project_id', async (req, res) => {
 });
 
 /**
+ * POST /api/agents/initialize-project/:project_id
+ * Manually initialize AI Command Center for an existing project
+ * Allows contractors to test AI features on existing projects
+ */
+app.post('/api/agents/initialize-project/:project_id', requireAuth, async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const userEmail = req.user.email;
+
+    console.log(`[Manual Init API] User ${userEmail} requesting initialization for project: ${project_id}`);
+
+    // Check if project exists and user has access
+    const { data: project, error: projectError } = await db.supabase
+      .from('job_postings')
+      .select('id, title, status, contractor_id, homeowner_email')
+      .eq('id', project_id)
+      .single();
+
+    if (projectError || !project) {
+      console.log(`[Manual Init API] Project not found: ${project_id}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Project not found'
+      });
+    }
+
+    // Verify user is the contractor for this project
+    const { data: contractor } = await db.supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('email', userEmail)
+      .single();
+
+    if (!contractor || contractor.id !== project.contractor_id) {
+      console.log(`[Manual Init API] Unauthorized: ${userEmail} is not the contractor for project ${project_id}`);
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to initialize this project'
+      });
+    }
+
+    // Check if already initialized
+    const existingState = await db.getProjectState(project_id);
+    if (existingState) {
+      console.log(`[Manual Init API] Project ${project_id} already initialized`);
+      return res.json({
+        success: true,
+        message: 'Project AI is already initialized',
+        already_initialized: true,
+        state: existingState
+      });
+    }
+
+    // Check if project has an accepted bid (recommended but not required for manual init)
+    const { data: acceptedBid } = await db.supabase
+      .from('contractor_bids')
+      .select('id, start_date, bid_amount, estimated_duration')
+      .eq('job_id', project_id)
+      .eq('status', 'accepted')
+      .single();
+
+    console.log(`[Manual Init API] Initializing project ${project_id} (has bid: ${!!acceptedBid})...`);
+
+    // Initialize the project with OrchestratorAgent
+    const initResult = await OrchestratorAgent.initializeProject(project_id);
+
+    console.log(`✅ [Manual Init API] Project initialized successfully:`, {
+      milestones_created: initResult.milestones_created,
+      tasks_created: initResult.tasks_created
+    });
+
+    // Fetch the newly created state
+    const newState = await db.getProjectState(project_id);
+
+    res.json({
+      success: true,
+      message: 'AI Command Center initialized successfully',
+      project_id: project_id,
+      project_title: project.title,
+      initialization_result: {
+        milestones_created: initResult.milestones_created,
+        tasks_created: initResult.tasks_created,
+        has_accepted_bid: !!acceptedBid
+      },
+      state: newState
+    });
+
+  } catch (error) {
+    console.error('❌ [Manual Init API] Error initializing project:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to initialize project',
+      message: error.message
+    });
+  }
+});
+
+/**
  * GET /api/agents/activity-log/:project_id
  * Get unified activity log for a project (AI agents + contractor manual updates)
  */
@@ -8479,6 +8639,76 @@ app.get('/api/agents/activity-log/:project_id', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch activity log',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/agents/log/:log_id
+ * Delete a contractor manual update from project logs
+ * Only allows deletion of contractor's own logs
+ */
+app.delete('/api/agents/log/:log_id', requireAuth, async (req, res) => {
+  try {
+    const { log_id } = req.params;
+    const userEmail = req.user.email;
+
+    console.log(`[Delete Log API] User ${userEmail} attempting to delete log ${log_id}`);
+
+    // First, fetch the log to verify ownership
+    const { data: log, error: fetchError } = await db.supabase
+      .from('project_logs')
+      .select('id, created_by_email, project_id, entry_text')
+      .eq('id', log_id)
+      .single();
+
+    if (fetchError || !log) {
+      console.error('[Delete Log API] Log not found:', fetchError);
+      return res.status(404).json({
+        success: false,
+        error: 'Log entry not found'
+      });
+    }
+
+    // Verify the user owns this log entry
+    if (log.created_by_email !== userEmail) {
+      console.warn(`[Delete Log API] Unauthorized: ${userEmail} tried to delete log owned by ${log.created_by_email}`);
+      return res.status(403).json({
+        success: false,
+        error: 'You can only delete your own log entries'
+      });
+    }
+
+    // Delete the log
+    const { error: deleteError } = await db.supabase
+      .from('project_logs')
+      .delete()
+      .eq('id', log_id);
+
+    if (deleteError) {
+      console.error('[Delete Log API] Error deleting log:', deleteError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to delete log entry',
+        message: deleteError.message
+      });
+    }
+
+    console.log(`✅ [Delete Log API] Successfully deleted log ${log_id} from project ${log.project_id}`);
+
+    res.json({
+      success: true,
+      message: 'Log entry deleted successfully',
+      deleted_log_id: log_id,
+      project_id: log.project_id
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting log entry:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete log entry',
       message: error.message
     });
   }
