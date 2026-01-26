@@ -8298,16 +8298,69 @@ app.get('/api/agents/project-logs/:project_id', async (req, res) => {
 /**
  * GET /api/agents/project-state/:project_id
  * Get the current state of a project
+ * Auto-initializes if project exists but has no state
  */
 app.get('/api/agents/project-state/:project_id', async (req, res) => {
   try {
     const { project_id } = req.params;
 
-    const state = await db.getProjectState(project_id);
+    console.log(`[Project State API] Fetching state for project: ${project_id}`);
 
+    let state = await db.getProjectState(project_id);
+
+    // If state doesn't exist, check if project exists and auto-initialize
     if (!state) {
+      console.log(`[Project State API] No state found, checking if project exists...`);
+
+      const { data: project, error: projectError } = await db.supabase
+        .from('job_postings')
+        .select('id, title, status, contractor_id')
+        .eq('id', project_id)
+        .single();
+
+      if (projectError || !project) {
+        console.log(`[Project State API] Project not found: ${project_id}`);
+        return res.status(404).json({
+          error: 'Project not found',
+          message: 'The specified project does not exist'
+        });
+      }
+
+      // Check if project has an accepted bid (required for initialization)
+      const { data: acceptedBid } = await db.supabase
+        .from('contractor_bids')
+        .select('id, start_date, bid_amount')
+        .eq('job_id', project_id)
+        .eq('status', 'accepted')
+        .single();
+
+      if (project.status === 'in_progress' && acceptedBid) {
+        console.log(`[Project State API] Project ready for initialization, calling OrchestratorAgent...`);
+
+        try {
+          // Initialize the project with OrchestratorAgent
+          const initResult = await OrchestratorAgent.initializeProject(project_id);
+          console.log(`[Project State API] Project initialized: ${initResult.milestones_created} milestones created`);
+
+          // Fetch the newly created state
+          state = await db.getProjectState(project_id);
+
+          if (state) {
+            return res.json(state);
+          }
+        } catch (initError) {
+          console.error('[Project State API] Initialization failed:', initError);
+          // Continue to return 404 below
+        }
+      }
+
+      // If we still don't have state, return 404
+      console.log(`[Project State API] Project exists but cannot be initialized (status: ${project.status}, has bid: ${!!acceptedBid})`);
       return res.status(404).json({
-        error: 'Project state not found'
+        error: 'Project state not initialized',
+        message: 'This project has not been initialized yet. Ensure it has an accepted bid and is in progress.',
+        project_status: project.status,
+        has_accepted_bid: !!acceptedBid
       });
     }
 
