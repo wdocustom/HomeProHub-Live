@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WDO Builder Tool v42</title>
+    <title>WDO Multi-Unit Builder v43</title>
     <style>
         :root {
             --bg-body: #f8fafc;       
             --bg-card: #ffffff;       
             --accent: #2563eb;        
+            --accent-hover: #1d4ed8;
             --text-main: #0f172a;     
             --text-muted: #64748b;
             --wood-fill: #e2b686;
             --wood-stroke: #925f32;
+            --danger: #ef4444;
         }
 
         body {
@@ -24,7 +26,7 @@
         }
 
         .container { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 30px; }
-        .controls-area { flex: 1; min-width: 300px; max-width: 400px; }
+        .controls-area { flex: 1; min-width: 340px; max-width: 450px; }
         .visual-area { flex: 2; min-width: 320px; }
 
         /* HEADER */
@@ -35,17 +37,16 @@
 
         /* CARDS */
         .card { 
-            background: var(--bg-card); padding: 30px; border-radius: 16px; 
+            background: var(--bg-card); padding: 25px; border-radius: 16px; 
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
         }
 
         /* 2D CANVAS STAGE */
         .drawing-container {
             width: 100%; 
-            /* Aspect ratio trick to keep canvas stable */
             aspect-ratio: 4/3; 
             background-color: #ffffff;
-            /* Blueprint Grid */
             background-image: 
                 linear-gradient(#e5e7eb 1px, transparent 1px),
                 linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
@@ -55,23 +56,13 @@
             display: flex; align-items: center; justify-content: center;
         }
         
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+        canvas { width: 100%; height: 100%; display: block; }
 
         /* DYNAMIC DIMENSIONS TEXT */
         .dimensions-display {
-            text-align: center;
-            margin-top: 15px;
-            font-size: 0.9rem; 
-            font-weight: 500;  
-            color: var(--text-muted);
-            background: #f8fafc; 
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
+            text-align: center; margin-top: 15px; font-size: 0.9rem; 
+            font-weight: 500; color: var(--text-muted); background: #f8fafc; 
+            padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;
         }
 
         /* INPUTS */
@@ -79,47 +70,61 @@
         .input-group { margin-bottom: 20px; }
         
         input[type="number"], select {
-            width: 100%; padding: 14px; border-radius: 8px; border: 2px solid #e2e8f0;
+            width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e2e8f0;
             font-size: 1rem; font-weight: 600; color: var(--text-main); background: #f8fafc;
             transition: border 0.2s; box-sizing: border-box;
         }
         input:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
 
-        /* HELPER TEXT */
-        .helper-text {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 8px;
-            line-height: 1.4;
-            font-style: italic;
-        }
+        .helper-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4; font-style: italic; }
 
         /* TOGGLES */
         .toggle-row { 
-            display: flex; align-items: center; margin-bottom: 12px; cursor: pointer; 
-            padding: 10px; border-radius: 8px; border: 1px solid transparent; transition: all 0.2s; 
+            display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; 
+            padding: 8px 12px; border-radius: 8px; border: 1px solid transparent; transition: all 0.2s; 
         }
         .toggle-row:hover { background: #f1f5f9; border-color: #e2e8f0; }
-        .toggle-row input { width: 22px; height: 22px; margin-right: 15px; accent-color: var(--accent); cursor: pointer; }
-        .toggle-row span { font-size: 1rem; font-weight: 500; color: var(--text-main); }
+        .toggle-row input { width: 20px; height: 20px; margin-right: 12px; accent-color: var(--accent); cursor: pointer; }
+        .toggle-row span { font-size: 0.95rem; font-weight: 500; color: var(--text-main); }
 
-        /* PRICE BOX */
-        .price-box { 
-            background: #1e293b; color: white; padding: 25px; 
-            border-radius: 12px; text-align: center; margin-top: 30px; 
-            box-shadow: 0 10px 20px -5px rgba(30, 41, 59, 0.3);
+        /* PRICE & ADD BUTTON */
+        .action-row { display: flex; align-items: center; gap: 15px; margin-top: 20px; }
+        
+        .unit-price { flex: 1; text-align: center; font-size: 1.5rem; font-weight: 800; color: var(--text-main); }
+        .unit-price span { display: block; font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+        .btn-add {
+            flex: 2; background: white; color: var(--accent); border: 2px solid var(--accent);
+            padding: 12px; border-radius: 8px; font-weight: 700; font-size: 1rem;
+            cursor: pointer; transition: all 0.2s;
         }
-        .price-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; margin-bottom: 5px; }
-        .price-val { font-size: 3rem; font-weight: 800; line-height: 1; letter-spacing: -1px; }
+        .btn-add:hover { background: #eff6ff; }
 
-        /* BUTTON */
+        /* ORDER SUMMARY LIST */
+        .order-list { list-style: none; padding: 0; margin: 0; }
+        .order-item { 
+            background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; 
+            border-radius: 8px; margin-bottom: 10px; display: flex; 
+            justify-content: space-between; align-items: center; 
+        }
+        .item-details { font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+        .item-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        .item-actions { display: flex; align-items: center; gap: 15px; }
+        .item-price { font-weight: 700; font-size: 1rem; }
+        .btn-remove { color: var(--danger); background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 5px; }
+
+        /* GRAND TOTAL AREA */
+        .grand-total-box { margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; text-align: center; }
+        .gt-label { font-size: 0.8rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); }
+        .gt-val { font-size: 2.5rem; font-weight: 900; color: var(--text-main); line-height: 1; margin: 5px 0 15px 0; }
+
         .btn-email {
             width: 100%; background: var(--accent); color: white; border: none;
-            padding: 18px; border-radius: 10px; font-weight: 700; font-size: 1.1rem;
-            cursor: pointer; margin-top: 20px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 16px; border-radius: 10px; font-weight: 700; font-size: 1.1rem;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transition: all 0.2s;
         }
-        .btn-email:hover { background: #1d4ed8; transform: translateY(-2px); }
+        .btn-email:hover { background: var(--accent-hover); transform: translateY(-2px); }
 
         @media (max-width: 768px) {
             .container { flex-direction: column-reverse; }
@@ -136,16 +141,21 @@
 <div class="container">
     
     <div class="controls-area">
+        
         <div class="card">
+            <div style="font-size:0.85rem; font-weight:800; text-transform:uppercase; color:#94a3b8; margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">
+                Configure Unit
+            </div>
+
             <div class="input-group">
                 <label>Dimensions</label>
                 <div style="display:flex; gap:15px;">
                     <div style="flex:1">
-                        <input type="number" id="in_cols" value="4" min="1" max="12" oninput="update()">
+                        <input type="number" id="in_cols" value="4" min="1" max="12" oninput="updateVisual()">
                         <div style="font-size:0.65rem; font-weight:700; color:var(--text-muted); text-align:center; margin-top:6px;">COLUMNS</div>
                     </div>
                     <div style="flex:1">
-                        <input type="number" id="in_rows" value="4" min="1" max="10" oninput="update()">
+                        <input type="number" id="in_rows" value="4" min="1" max="10" oninput="updateVisual()">
                         <div style="font-size:0.65rem; font-weight:700; color:var(--text-muted); text-align:center; margin-top:6px;">TIERS HIGH</div>
                     </div>
                 </div>
@@ -153,67 +163,80 @@
 
             <div class="input-group">
                 <label>Tote Model</label>
-                <select id="in_tote" onchange="update()">
+                <select id="in_tote" onchange="updateVisual()">
                     <option value="HDX">HDX / Standard (19.6" Wide)</option>
                     <option value="GM">Greenmade / Large (20.6" Wide)</option>
                 </select>
-                <div class="helper-text">
-                    *Have your own totes? Measure the top width rim-to-rim. Select the size above that matches (19.6" or 20.6").
-                </div>
+                <div class="helper-text">*Have your own? Measure top width rim-to-rim. Select closest size.</div>
             </div>
 
-            <div style="margin-top:25px; border-top:1px solid #e2e8f0; padding-top:20px;">
-                <label style="margin-bottom:10px;">Configuration</label>
+            <div style="margin-top:20px;">
                 <label class="toggle-row">
-                    <input type="checkbox" id="in_totes" checked onchange="update()">
+                    <input type="checkbox" id="in_totes" checked onchange="updateVisual()">
                     <span>Show Totes (+$12 ea)</span>
                 </label>
                 <label class="toggle-row">
-                    <input type="checkbox" id="in_wheels" checked onchange="update()">
+                    <input type="checkbox" id="in_wheels" checked onchange="updateVisual()">
                     <span>Add Wheels (+$45)</span>
                 </label>
                 <label class="toggle-row">
-                    <input type="checkbox" id="in_top" checked onchange="update()">
+                    <input type="checkbox" id="in_top" checked onchange="updateVisual()">
                     <span>Plywood Top (+$75)</span>
                 </label>
             </div>
 
-            <div class="price-box">
-                <div class="price-label">Estimated Total</div>
-                <div class="price-val" id="display_price">$0</div>
+            <div class="action-row">
+                <div class="unit-price">
+                    <span id="current_unit_price">$0</span>
+                    <span>Current Unit</span>
+                </div>
+                <button class="btn-add" onclick="addUnitToList()">+ Add to Quote</button>
             </div>
-
-            <button class="btn-email" onclick="sendEmail()">
-                <span>Request Quote</span>
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            </button>
         </div>
+
+        <div class="card" id="order_card" style="display:none;">
+            <div style="font-size:0.85rem; font-weight:800; text-transform:uppercase; color:#94a3b8; margin-bottom:15px;">
+                Your Quote List
+            </div>
+            
+            <ul class="order-list" id="order_list_dom">
+                </ul>
+
+            <div class="grand-total-box">
+                <div class="gt-label">Estimated Grand Total</div>
+                <div class="gt-val" id="grand_total">$0</div>
+                <button class="btn-email" onclick="sendEmail()">Send Order Inquiry</button>
+            </div>
+        </div>
+
     </div>
 
     <div class="visual-area">
         <div class="drawing-container">
             <canvas id="blueprint" width="1200" height="900"></canvas>
         </div>
-        <div class="dimensions-display" id="dim_text">
-            Loading...
-        </div>
+        <div class="dimensions-display" id="dim_text">Loading...</div>
     </div>
 
 </div>
 
 <script>
     const myEmail = "camachoskyler@gmail.com"; 
+    
+    // State
+    let orderItems = [];
+    let currentConfig = {}; 
 
-    function update() {
-        const cols = parseInt(document.getElementById('in_cols').value) || 4;
-        const rows = parseInt(document.getElementById('in_rows').value) || 4;
-        const toteType = document.getElementById('in_tote').value;
+    function updateVisual() {
+        const cols = parseInt(document.getElementById('in_cols').value) || 1;
+        const rows = parseInt(document.getElementById('in_rows').value) || 1;
+        const toteTypeRaw = document.getElementById('in_tote').value;
         const hasTotes = document.getElementById('in_totes').checked;
         const hasWheels = document.getElementById('in_wheels').checked;
         const hasTop = document.getElementById('in_top').checked;
 
         // MATH
-        const opening = (toteType === 'HDX') ? 19.75 : 20.75;
+        const opening = (toteTypeRaw === 'HDX') ? 19.75 : 20.75;
         const stud = 1.5; 
         const totalW_in = (cols * opening) + ((cols+1) * stud); 
         const topGap = 2.5;
@@ -230,31 +253,81 @@
         else topSheets = 1;
         if(hasTop) price += (topSheets * 75);
 
-        document.getElementById('display_price').innerText = "$" + price.toLocaleString();
-
-        // UPDATE DIMENSION TEXT
-        const dimStr = `Overall Dimensions: ${totalW_in.toFixed(0)}" Width  ×  ${totalH_in.toFixed(0)}" Height  ×  30" Depth`;
+        // Update UI
+        document.getElementById('current_unit_price').innerText = "$" + price.toLocaleString();
+        const dimStr = `Visualizing: ${totalW_in.toFixed(0)}" Width  ×  ${totalH_in.toFixed(0)}" Height  ×  30" Depth`;
         document.getElementById('dim_text').innerText = dimStr;
 
+        // Store current config for "Add" button
+        currentConfig = {
+            cols, rows, toteTypeRaw, hasTotes, hasWheels, hasTop, 
+            price, totalW_in, totalH_in,
+            desc: `${cols} Wide x ${rows} High (${toteTypeRaw})`
+        };
+
+        // Draw
         drawBlueprint(cols, rows, opening, hasTotes, hasWheels, hasTop, totalW_in, totalH_in, topGap);
+    }
+
+    function addUnitToList() {
+        orderItems.push({...currentConfig}); // Copy object
+        renderList();
+        
+        // Show the order card if hidden
+        document.getElementById('order_card').style.display = 'block';
+    }
+
+    function removeUnit(index) {
+        orderItems.splice(index, 1);
+        renderList();
+        if(orderItems.length === 0) {
+            document.getElementById('order_card').style.display = 'none';
+        }
+    }
+
+    function renderList() {
+        const listEl = document.getElementById('order_list_dom');
+        listEl.innerHTML = "";
+        let grandTotal = 0;
+
+        orderItems.forEach((item, index) => {
+            grandTotal += item.price;
+            
+            // Build sub-description
+            let extras = [];
+            if(item.hasTotes) extras.push("W/ Totes");
+            if(item.hasWheels) extras.push("Wheels");
+            if(item.hasTop) extras.push("Top");
+            const extraStr = extras.length > 0 ? extras.join(", ") : "Frame Only";
+
+            const li = document.createElement('li');
+            li.className = 'order-item';
+            li.innerHTML = `
+                <div>
+                    <div class="item-details">Unit #${index+1}: ${item.desc}</div>
+                    <div class="item-sub">${extraStr}</div>
+                </div>
+                <div class="item-actions">
+                    <div class="item-price">$${item.price.toLocaleString()}</div>
+                    <button class="btn-remove" onclick="removeUnit(${index})">&times;</button>
+                </div>
+            `;
+            listEl.appendChild(li);
+        });
+
+        document.getElementById('grand_total').innerText = "$" + grandTotal.toLocaleString();
     }
 
     function drawBlueprint(cols, rows, bayWidth, showTotes, showWheels, showTop, realW, realH, topGap) {
         const canvas = document.getElementById('blueprint');
         const ctx = canvas.getContext('2d');
-        
-        // Fixed internal resolution
         const W = 1200;
         const H = 900;
-        
-        // Clear
         ctx.clearRect(0, 0, W, H);
 
-        // Styling
         const woodFill = '#e2b686';
         const woodStroke = '#925f32';
 
-        // --- STABLE AUTO-SCALING ---
         const margin = 60; 
         const safeW = W - (margin * 2);
         const safeH = H - (margin * 2);
@@ -263,9 +336,7 @@
         if(showWheels) visualH_in += 6;
         if(showTop) visualH_in += 1;
 
-        const scaleX = safeW / realW;
-        const scaleY = safeH / visualH_in;
-        const scale = Math.min(scaleX, scaleY);
+        const scale = Math.min(safeW / realW, safeH / visualH_in);
 
         const pTotalW = realW * scale;
         const pTotalH = realH * scale;
@@ -278,18 +349,15 @@
         const visualPixelH = visualH_in * scale;
         const startY = (H - visualPixelH) / 2 + (showTop ? 1*scale : 0);
 
-        // --- DRAW STRUCTURE ---
         ctx.fillStyle = woodFill; ctx.strokeStyle = woodStroke; ctx.lineWidth = 2;
 
-        // Bottom Plate
+        // Plates
         ctx.fillRect(startX, startY + pTotalH - pPlate, pTotalW, pPlate);
         ctx.strokeRect(startX, startY + pTotalH - pPlate, pTotalW, pPlate);
-
-        // Top Plate
         ctx.fillRect(startX, startY, pTotalW, pPlate);
         ctx.strokeRect(startX, startY, pTotalW, pPlate);
 
-        // Vertical Posts
+        // Posts
         const postH = pTotalH - (pPlate * 2);
         const postY = startY + pPlate;
         for(let i=0; i <= cols; i++) {
@@ -298,7 +366,7 @@
             ctx.strokeRect(x, postY, pStud, postH);
         }
 
-        // --- RAILS & TOTES ---
+        // Rails & Totes
         const railH = 1.5 * scale; 
         const railW = 1.5 * scale; 
 
@@ -307,43 +375,31 @@
             const bayRightX = bayLeftX + pBay;
 
             for(let r=1; r <= rows; r++) {
-                // Position: Start after top plate + 2.5" gap + (Row Index * 16")
                 const levelY = startY + pPlate + pTopGap + ((r-1) * 16 * scale);
                 
-                // Draw Rails
                 ctx.fillStyle = woodFill;
                 ctx.fillRect(bayLeftX, levelY, railW, railH);
                 ctx.strokeRect(bayLeftX, levelY, railW, railH);
                 ctx.fillRect(bayRightX - railW, levelY, railW, railH);
                 ctx.strokeRect(bayRightX - railW, levelY, railW, railH);
 
-                // Draw Tote
                 if(showTotes) {
                     const tW = pBay * 0.94; 
                     const tH = 12 * scale;
                     const tX = bayLeftX + (pBay - tW)/2;
-                    
                     const tY = levelY; 
-                    
-                    // Lid (Yellow)
                     const lidH = 1.5 * scale;
-                    ctx.fillStyle = '#fbbf24'; 
-                    ctx.strokeStyle = '#d97706';
-                    ctx.fillRect(tX, tY - lidH, tW, lidH);
-                    ctx.strokeRect(tX, tY - lidH, tW, lidH);
-
-                    // Body (Black)
-                    const bodyW = tW * 0.9;
-                    const bodyX = tX + (tW - bodyW)/2;
-                    ctx.fillStyle = '#1e293b'; 
-                    ctx.strokeStyle = '#0f172a';
-                    ctx.fillRect(bodyX, tY, bodyW, tH);
-                    ctx.strokeRect(bodyX, tY, bodyW, tH);
+                    
+                    ctx.fillStyle = '#fbbf24'; ctx.strokeStyle = '#d97706';
+                    ctx.fillRect(tX, tY - lidH, tW, lidH); ctx.strokeRect(tX, tY - lidH, tW, lidH);
+                    
+                    const bodyW = tW * 0.9; const bodyX = tX + (tW - bodyW)/2;
+                    ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#0f172a';
+                    ctx.fillRect(bodyX, tY, bodyW, tH); ctx.strokeRect(bodyX, tY, bodyW, tH);
                 }
             }
         }
 
-        // Plywood Top
         if(showTop) {
             const topThick = 0.75 * scale;
             const overhang = 1 * scale;
@@ -352,33 +408,38 @@
             ctx.strokeRect(startX - overhang, startY - topThick, pTotalW + (overhang*2), topThick);
         }
 
-        // Wheels
         if(showWheels) {
             const wSize = 5 * scale;
             const wY = startY + pTotalH;
-            
             ctx.fillStyle = '#334155'; ctx.strokeStyle = '#1e293b';
-            // Left
             ctx.beginPath(); ctx.arc(startX + pStud*2, wY + wSize/2, wSize/2, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
-            // Right
             ctx.beginPath(); ctx.arc(startX + pTotalW - pStud*2, wY + wSize/2, wSize/2, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
         }
     }
 
     function sendEmail() {
-        const cols = document.getElementById('in_cols').value;
-        const rows = document.getElementById('in_rows').value;
-        const price = document.getElementById('display_price').innerText;
-        const tote = document.getElementById('in_tote').value;
-        const dimText = document.getElementById('dim_text').innerText;
+        if(orderItems.length === 0) return alert("Please add at least one unit to your quote.");
+
+        let body = "Hi WDO Custom,\n\nI would like to order the following:\n\n";
+        let grandTotal = 0;
+
+        orderItems.forEach((item, index) => {
+            grandTotal += item.price;
+            body += `UNIT #${index+1}:\n`;
+            body += `Size: ${item.cols} Wide x ${item.rows} High\n`;
+            body += `Tote Type: ${item.toteTypeRaw}\n`;
+            body += `Includes: ${item.hasTotes ? 'Totes, ' : ''}${item.hasWheels ? 'Wheels, ' : ''}${item.hasTop ? 'Top' : ''}\n`;
+            body += `Unit Price: $${item.price.toLocaleString()}\n`;
+            body += `--------------------------------\n`;
+        });
+
+        body += `\nESTIMATED GRAND TOTAL: $${grandTotal.toLocaleString()}\n\nPlease contact me to finalize this order.`;
         
-        const body = `I am interested in:\n\nConfiguration: ${cols} Wide x ${rows} High\n${dimText}\nTote Fit: ${tote}\nEst Price: ${price}\n\nPlease contact me to finalize.`;
-        
-        window.location.href = `mailto:${myEmail}?subject=Custom Organizer Quote&body=${encodeURIComponent(body)}`;
+        window.location.href = `mailto:${myEmail}?subject=Multi-Unit Order Inquiry&body=${encodeURIComponent(body)}`;
     }
 
     // Init
-    update();
+    updateVisual();
 
 </script>
 
