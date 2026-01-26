@@ -94,7 +94,14 @@
 
         userData = {
           email: user.email,
-          name: profile?.full_name || profile?.company_name || user.user_metadata?.full_name || user.email.split('@')[0]
+          // Priority: business_name/company_name → first+last name → email
+          name: profile?.business_name ||
+                profile?.company_name ||
+                user.user_metadata?.company_name ||
+                (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : null) ||
+                profile?.full_name ||
+                user.user_metadata?.full_name ||
+                user.email.split('@')[0]
         };
       }
 

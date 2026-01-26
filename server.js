@@ -4904,6 +4904,7 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
     console.log(`[Jobs API] Fetching awarded jobs for contractor: ${email}`);
 
     // Query for jobs where this contractor has won the bid
+    // Use explicit FK name to avoid ambiguity
     const { data: bidsData, error } = await db.supabase
       .from('contractor_bids')
       .select(`
@@ -4911,7 +4912,7 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
         bid_amount_high,
         estimated_duration,
         status,
-        job_postings!inner (
+        job_postings!fk_contractor_bids_job!inner (
           id,
           title,
           address,
@@ -4923,7 +4924,7 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
       `)
       .eq('contractor_email', email)
       .eq('status', 'accepted')
-      .order('created_at', { ascending: false, foreignTable: 'job_postings' })
+      .order('created_at', { ascending: false, foreignTable: 'job_postings')
       .limit(50);
 
     if (error) throw error;

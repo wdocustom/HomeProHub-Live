@@ -482,7 +482,8 @@
       'Diplomat': { icon: 'fa-handshake', class: 'diplomat', emoji: '🤝' },
       'Summarizer': { icon: 'fa-file-lines', class: 'summarizer', emoji: '📊' },
       'Hawk': { icon: 'fa-users', class: 'hawk', emoji: '🦅' },
-      'Whip': { icon: 'fa-calendar-check', class: 'whip', emoji: '📋' }
+      'Whip': { icon: 'fa-calendar-check', class: 'whip', emoji: '📋' },
+      'Contractor': { icon: 'fa-user', class: 'contractor', emoji: '👷' }
     };
 
     // Allowed agents for clean activity log (filter out DEBUG, DB, API, System)
@@ -1110,26 +1111,33 @@
      * Render activity log in timeline format
      */
     function renderTimelineLog(logs) {
-      // Filter to only show allowed agents
+      // Filter to only show allowed agents OR contractor manual updates
       const filteredLogs = logs.filter(log =>
-        ALLOWED_AGENTS.includes(log.agent_name)
+        ALLOWED_AGENTS.includes(log.agent_name) || log.agent_name === 'Contractor'
       );
 
       if (filteredLogs.length === 0) {
         return `
           <div class="timeline-empty">
             <i class="fa-solid fa-clock-rotate-left"></i>
-            <p>No agent activity yet. AI agents will log updates here.</p>
+            <p>No activity logged yet. Start by logging an update above.</p>
           </div>
         `;
       }
 
       return filteredLogs.map(log => {
-        const agentConfig = AGENT_CONFIG[log.agent_name] || {
+        // Handle contractor updates differently
+        const isContractor = log.agent_name === 'Contractor';
+
+        const agentConfig = isContractor ? {
+          icon: 'fa-user',
+          class: 'contractor',
+          emoji: '👷'
+        } : (AGENT_CONFIG[log.agent_name] || {
           icon: 'fa-robot',
           class: 'default',
           emoji: '🤖'
-        };
+        });
 
         const timestamp = new Date(log.created_at);
         const timeStr = timestamp.toLocaleString('en-US', {
@@ -1140,6 +1148,8 @@
           hour12: true
         });
 
+        const displayName = isContractor ? (log.created_by || 'Contractor') : log.agent_name;
+
         return `
           <div class="timeline-item">
             <div class="timeline-icon ${agentConfig.class}">
@@ -1148,8 +1158,8 @@
             <div class="timeline-content">
               <div class="timeline-header">
                 <div class="timeline-agent-name">
-                  <span>${agentConfig.emoji} ${log.agent_name}</span>
-                  <span class="timeline-agent-badge ${agentConfig.class}">${log.agent_name}</span>
+                  <span>${agentConfig.emoji} ${displayName}</span>
+                  <span class="timeline-agent-badge ${agentConfig.class}">${isContractor ? 'Manual Update' : log.agent_name}</span>
                 </div>
                 <div class="timeline-timestamp">${timeStr}</div>
               </div>
@@ -1173,7 +1183,18 @@
 
         if (response.ok) {
           const data = await response.json();
-          logs = data.logs || [];
+          const activities = data.activities || [];
+
+          // Transform API response to match expected format
+          logs = activities.map(activity => ({
+            agent_name: activity.agent_type === 'contractor' ? 'Contractor' : activity.agent_type,
+            message: activity.description,
+            created_at: activity.created_at,
+            created_by: activity.created_by,
+            type: activity.type
+          }));
+
+          console.log(`✅ Loaded ${logs.length} activity logs (${data.breakdown?.ai_activities || 0} AI, ${data.breakdown?.contractor_updates || 0} manual)`);
         } else {
           // API endpoint doesn't exist or database tables not set up
           // Show mock activity to demonstrate what the system would look like
