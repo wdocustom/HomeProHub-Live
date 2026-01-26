@@ -4924,7 +4924,7 @@ app.get('/api/jobs/contractor/:email', async (req, res) => {
       `)
       .eq('contractor_email', email)
       .eq('status', 'accepted')
-      .order('created_at', { ascending: false, foreignTable: 'job_postings')
+      .order('created_at', { ascending: false, foreignTable: 'job_postings' })
       .limit(50);
 
     if (error) throw error;
