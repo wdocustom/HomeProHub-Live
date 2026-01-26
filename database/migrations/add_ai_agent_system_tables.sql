@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS ai_agent_activity (
 
   -- Agent type that performed the action
   agent_type TEXT NOT NULL CHECK (agent_type IN (
+    'Orchestrator', 'Visionary', 'Shark', 'Whip', 'Sentinel', 'Diplomat', 'Summarizer',
     'orchestrator', 'visionary', 'hawk', 'whip', 'diplomat', 'summarizer'
   )),
 
