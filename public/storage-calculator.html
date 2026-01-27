@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WDO Builder Tool v44</title>
+    <meta name="copyright" content="WDO Custom - All Rights Reserved">
+    <meta name="author" content="Home Pro Hub">
+    <title>WDO Builder Tool v44 | Protected</title>
     <style>
+        /* SECURITY CSS: PREVENT SELECTION */
+        body {
+            -webkit-user-select: none; /* Safari */
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* IE10+/Edge */
+            user-select: none; /* Standard */
+        }
+
         :root {
             --bg-body: #f8fafc;       
             --bg-card: #ffffff;       
@@ -143,12 +153,24 @@
         }
         .btn-email:hover { background: var(--accent-hover); transform: translateY(-2px); }
 
+        /* SECURITY WARNING BOX */
+        #_security_lockout {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; color: white; z-index: 99999;
+            flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+
         @media (max-width: 768px) {
             .container { flex-direction: column-reverse; }
         }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
+
+<div id="_security_lockout">
+    <h1 style="color:white;">ACCESS DENIED</h1>
+    <p>This software is licensed exclusively for use on homeprohub.com</p>
+</div>
 
 <div class="header-section">
     <h1>WDO <span class="brand-accent">Custom</span></h1>
@@ -156,9 +178,7 @@
 </div>
 
 <div class="container">
-    
     <div class="controls-area">
-        
         <div class="autofit-box">
             <div class="autofit-title">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
@@ -243,7 +263,6 @@
                 <button class="btn-email" onclick="sendEmail()">Send Order Inquiry</button>
             </div>
         </div>
-
     </div>
 
     <div class="visual-area">
@@ -252,10 +271,61 @@
         </div>
         <div class="dimensions-display" id="dim_text">Loading...</div>
     </div>
-
 </div>
 
 <script>
+/**
+ * ----------------------------------------------------
+ * WDO SECURITY PROTOCOLS - DO NOT EDIT THIS SECTION
+ * ----------------------------------------------------
+ */
+(function(){
+    // CONFIGURATION
+    const _0x4e2 = "homeprohub.com"; // Allowed Domain
+    
+    // IMPORTANT: Set this to FALSE when deploying to the live site
+    // This allows you to open the HTML file on your desktop for testing
+    const _0x4e3 = true; 
+
+    // Protocol 1: Domain Lock
+    function _0x8f1() {
+        const _h = window.location.hostname;
+        const _p = window.location.protocol;
+        
+        // Allow if local testing enabled AND protocol is file:// or localhost
+        if(_0x4e3 && (_p === 'file:' || _h === 'localhost' || _h === '127.0.0.1')) {
+            return;
+        }
+        
+        // Block if domain doesn't match
+        if (!_h.includes(_0x4e2)) {
+            document.body.innerHTML = "";
+            document.getElementById('_security_lockout').style.display = 'flex';
+            throw new Error("Unauthorized Domain");
+        }
+    }
+
+    // Protocol 2: Anti-Inspection (Keyboard Shortcuts)
+    document.addEventListener('keydown', function(e) {
+        if (
+            e.keyCode === 123 || // F12
+            (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+            (e.ctrlKey && e.keyCode === 85) || // Ctrl+U
+            (e.ctrlKey && e.keyCode === 83) // Ctrl+S
+        ) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Run Security Check
+    try { _0x8f1(); } catch(e) { window.location.href = "about:blank"; }
+})();
+
+// ----------------------------------------------------
+// CALCULATOR LOGIC
+// ----------------------------------------------------
+
     const myEmail = "camachoskyler@gmail.com"; 
     
     // State
@@ -274,26 +344,16 @@
 
         const opening = (toteType.includes('HDX')) ? 19.75 : 20.75;
         const stud = 1.5;
-        
-        // SOLVE WIDTH: Max Cols = (Wall - Stud) / (Opening + Stud)
-        // W = CO + CS + S  ->  W - S = C(O + S)
         let maxCols = Math.floor((wallW - stud) / (opening + stud));
-        
-        // SOLVE HEIGHT: Max Rows = (Wall - 3 - 2.5) / 16
-        // H = 16R + 5.5
         let maxRows = Math.floor((wallH - 5.5) / 16);
 
         if(maxCols < 1) maxCols = 1;
         if(maxRows < 1) maxRows = 1;
 
-        // Update Inputs
         document.getElementById('in_cols').value = maxCols;
         document.getElementById('in_rows').value = maxRows;
         
-        // Trigger visual update
         updateVisual();
-        
-        // Feedback
         alert(`We can fit a ${maxCols} Wide x ${maxRows} High unit in that space!`);
     }
 
@@ -305,14 +365,12 @@
         const hasWheels = document.getElementById('in_wheels').checked;
         const hasTop = document.getElementById('in_top').checked;
 
-        // MATH
         const opening = (toteTypeRaw.includes('HDX')) ? 19.75 : 20.75;
         const stud = 1.5; 
         const totalW_in = (cols * opening) + ((cols+1) * stud); 
         const topGap = 2.5;
         const totalH_in = (rows * 16) + 3 + topGap; 
         
-        // PRICING
         const slots = cols * rows;
         let price = slots * 40;
         if(hasTotes) price += (slots * 12);
@@ -323,19 +381,16 @@
         else topSheets = 1;
         if(hasTop) price += (topSheets * 75);
 
-        // Update UI
         document.getElementById('current_unit_price').innerText = "$" + price.toLocaleString();
         const dimStr = `Visualizing: ${totalW_in.toFixed(0)}" Width  ×  ${totalH_in.toFixed(0)}" Height  ×  30" Depth`;
         document.getElementById('dim_text').innerText = dimStr;
 
-        // Store current config
         currentConfig = {
             cols, rows, toteTypeRaw, hasTotes, hasWheels, hasTop, 
             price, totalW_in, totalH_in,
             desc: `${cols} Wide x ${rows} High`
         };
 
-        // Draw
         drawBlueprint(cols, rows, opening, hasTotes, hasWheels, hasTop, totalW_in, totalH_in, topGap);
     }
 
@@ -360,8 +415,6 @@
 
         orderItems.forEach((item, index) => {
             grandTotal += item.price;
-            
-            // Build sub-description
             let extras = [];
             if(item.hasTotes) extras.push("W/ Totes");
             if(item.hasWheels) extras.push("Wheels");
@@ -419,13 +472,11 @@
 
         ctx.fillStyle = woodFill; ctx.strokeStyle = woodStroke; ctx.lineWidth = 2;
 
-        // Plates
         ctx.fillRect(startX, startY + pTotalH - pPlate, pTotalW, pPlate);
         ctx.strokeRect(startX, startY + pTotalH - pPlate, pTotalW, pPlate);
         ctx.fillRect(startX, startY, pTotalW, pPlate);
         ctx.strokeRect(startX, startY, pTotalW, pPlate);
 
-        // Posts
         const postH = pTotalH - (pPlate * 2);
         const postY = startY + pPlate;
         for(let i=0; i <= cols; i++) {
@@ -434,7 +485,6 @@
             ctx.strokeRect(x, postY, pStud, postH);
         }
 
-        // Rails & Totes
         const railH = 1.5 * scale; 
         const railW = 1.5 * scale; 
 
@@ -483,6 +533,19 @@
             ctx.beginPath(); ctx.arc(startX + pStud*2, wY + wSize/2, wSize/2, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
             ctx.beginPath(); ctx.arc(startX + pTotalW - pStud*2, wY + wSize/2, wSize/2, 0, 2*Math.PI); ctx.fill(); ctx.stroke();
         }
+
+        // --------------------------------------------------------
+        // SECURITY: WATERMARK LAYER
+        // --------------------------------------------------------
+        ctx.save();
+        ctx.translate(W/2, H/2);
+        ctx.rotate(-Math.PI / 6); // Rotate 30 degrees
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(0,0,0,0.04)"; // Very faint grey
+        ctx.font = "bold 120px Arial";
+        ctx.fillText("PROPERTY OF", 0, -60);
+        ctx.fillText("WDO CUSTOM", 0, 60);
+        ctx.restore();
     }
 
     function sendEmail() {
