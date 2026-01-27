@@ -5,15 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="copyright" content="WDO Custom - All Rights Reserved">
     <meta name="author" content="Home Pro Hub">
-    <title>WDO Builder Tool v44 | Protected</title>
+    <title>WDO Custom Storage Builder</title>
     <style>
         /* SECURITY CSS: PREVENT SELECTION */
-        body {
-            -webkit-user-select: none; /* Safari */
-            -moz-user-select: none; /* Firefox */
-            -ms-user-select: none; /* IE10+/Edge */
-            user-select: none; /* Standard */
-        }
+        body { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 
         :root {
             --bg-body: #f8fafc;       
@@ -169,7 +164,7 @@
 
 <div id="_security_lockout">
     <h1 style="color:white;">ACCESS DENIED</h1>
-    <p>This software is licensed exclusively for use on homeprohub.com</p>
+    <p>This software is protected by WDO Custom Digital Rights Management.</p>
 </div>
 
 <div class="header-section">
@@ -276,54 +271,59 @@
 <script>
 /**
  * ----------------------------------------------------
- * WDO SECURITY PROTOCOLS - DO NOT EDIT THIS SECTION
+ * WDO SECURITY CONFIGURATION
  * ----------------------------------------------------
  */
-(function(){
-    // CONFIGURATION
-    const _0x4e2 = "homeprohub.com"; // Allowed Domain
-    
-    // IMPORTANT: Set this to FALSE when deploying to the live site
-    // This allows you to open the HTML file on your desktop for testing
-    const _0x4e3 = true; 
 
-    // Protocol 1: Domain Lock
-    function _0x8f1() {
+// 1. SET YOUR DOMAIN HERE
+const ALLOWED_DOMAIN = "homeprohub.today"; 
+
+// 2. SECURITY MODE
+//    TRUE = Works on your desktop for testing.
+//    FALSE = ONLY works on homeprohub.today.
+const ALLOW_LOCAL_TESTING = false; 
+
+/**
+ * SECURITY LOGIC (Anti-Copy, Domain Lock)
+ */
+(function(){
+    function checkSecurity() {
         const _h = window.location.hostname;
         const _p = window.location.protocol;
         
-        // Allow if local testing enabled AND protocol is file:// or localhost
-        if(_0x4e3 && (_p === 'file:' || _h === 'localhost' || _h === '127.0.0.1')) {
+        // If testing mode is ON, and we are on a local machine, allow access
+        if(ALLOW_LOCAL_TESTING && (_p === 'file:' || _h === 'localhost' || _h === '127.0.0.1')) {
+            console.log("WDO Security: Local Testing Mode Enabled.");
             return;
         }
         
-        // Block if domain doesn't match
-        if (!_h.includes(_0x4e2)) {
+        // Otherwise, enforce domain lock
+        // We use 'includes' so it works on www.homeprohub.today OR homeprohub.today
+        if (!_h.includes(ALLOWED_DOMAIN)) {
             document.body.innerHTML = "";
             document.getElementById('_security_lockout').style.display = 'flex';
-            throw new Error("Unauthorized Domain");
+            throw new Error("WDO Security: Unauthorized Domain Access.");
         }
     }
 
-    // Protocol 2: Anti-Inspection (Keyboard Shortcuts)
+    // Disable Shortcuts (F12, Ctrl+U, etc.)
     document.addEventListener('keydown', function(e) {
         if (
-            e.keyCode === 123 || // F12
-            (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
-            (e.ctrlKey && e.keyCode === 85) || // Ctrl+U
-            (e.ctrlKey && e.keyCode === 83) // Ctrl+S
+            e.keyCode === 123 || 
+            (e.ctrlKey && e.shiftKey && e.keyCode === 73) || 
+            (e.ctrlKey && e.keyCode === 85) || 
+            (e.ctrlKey && e.keyCode === 83)
         ) {
             e.preventDefault();
             return false;
         }
     });
 
-    // Run Security Check
-    try { _0x8f1(); } catch(e) { window.location.href = "about:blank"; }
+    try { checkSecurity(); } catch(e) { window.location.href = "about:blank"; }
 })();
 
 // ----------------------------------------------------
-// CALCULATOR LOGIC
+// CALCULATOR LOGIC (FULLY FUNCTIONAL)
 // ----------------------------------------------------
 
     const myEmail = "camachoskyler@gmail.com"; 
@@ -539,9 +539,9 @@
         // --------------------------------------------------------
         ctx.save();
         ctx.translate(W/2, H/2);
-        ctx.rotate(-Math.PI / 6); // Rotate 30 degrees
+        ctx.rotate(-Math.PI / 6); 
         ctx.textAlign = "center";
-        ctx.fillStyle = "rgba(0,0,0,0.04)"; // Very faint grey
+        ctx.fillStyle = "rgba(0,0,0,0.04)"; 
         ctx.font = "bold 120px Arial";
         ctx.fillText("PROPERTY OF", 0, -60);
         ctx.fillText("WDO CUSTOM", 0, 60);
